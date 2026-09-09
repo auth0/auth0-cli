@@ -7,6 +7,7 @@ import (
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/cobra"
 
 	"github.com/stretchr/testify/assert"
 
@@ -173,6 +174,113 @@ func TestBuildNetworkACLRule_Auth0Managed(t *testing.T) {
 
 			assert.NoError(t, err)
 			test.assertRule(t, rule)
+		})
+	}
+}
+
+func TestBuildNetworkACLRule_MatchAll(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputs      *ruleInputs
+		assertRule  func(t testing.TB, rule *management.NetworkACLRule)
+		expectError bool
+	}{
+		{
+			name: "match_all block rule sets match_all and skips criteria",
+			inputs: &ruleInputs{
+				Scope:    "tenant",
+				Action:   "block",
+				MatchAll: true,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.Nil(t, rule.Match)
+				assert.Nil(t, rule.NotMatch)
+				assert.NotNil(t, rule.MatchAll)
+				assert.True(t, *rule.MatchAll)
+				assert.NotNil(t, rule.Action.Block)
+				assert.True(t, *rule.Action.Block)
+				assert.Equal(t, "tenant", *rule.Scope)
+			},
+		},
+		{
+			name: "match_all ignores any match criteria provided",
+			inputs: &ruleInputs{
+				Scope:       "tenant",
+				Action:      "block",
+				MatchAll:    true,
+				IPv4CIDRs:   []string{"192.168.1.0/24"},
+				IsMatchRule: true,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.Nil(t, rule.Match)
+				assert.Nil(t, rule.NotMatch)
+				assert.NotNil(t, rule.MatchAll)
+				assert.True(t, *rule.MatchAll)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rule, err := buildNetworkACLRule(test.inputs)
+
+			if test.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			test.assertRule(t, rule)
+		})
+	}
+}
+
+func TestPromptForRuleDetails_MatchAll(t *testing.T) {
+	// In tests there is no TTY, so canPrompt is false and every interactive prompt is
+	// skipped, falling back to the supplied defaults. Seeding MatchAll through the
+	// defaults confirms it short-circuits before the match/not_match selection and
+	// criteria prompts, which is the interactive-only path (there is no --match-all flag).
+	cmd := &cobra.Command{Use: "create"}
+	cli := &cli{renderer: testRenderer()}
+	defaults := &ruleDefaults{Scope: "tenant", Action: "block", MatchAll: true}
+
+	inputs, err := promptForRuleDetails(cmd, cli, defaults, false)
+	assert.NoError(t, err)
+	assert.True(t, inputs.MatchAll)
+}
+
+func TestExtractCurrentRuleDefaults_MatchAll(t *testing.T) {
+	tests := []struct {
+		name         string
+		acl          *management.NetworkACL
+		wantMatchAll bool
+	}{
+		{
+			name: "extracts match_all when true",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					MatchAll: auth0.Bool(true),
+				},
+			},
+			wantMatchAll: true,
+		},
+		{
+			name: "no match_all set",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					Match: &management.NetworkACLRuleMatch{
+						IPv4Cidrs: &[]string{"192.168.1.0/24"},
+					},
+				},
+			},
+			wantMatchAll: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defaults := extractCurrentRuleDefaults(test.acl)
+			assert.Equal(t, test.wantMatchAll, defaults.MatchAll)
 		})
 	}
 }

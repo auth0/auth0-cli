@@ -80,6 +80,26 @@ func TestNetworkACLView_KeyValues_Auth0Managed(t *testing.T) {
 	}
 }
 
+func TestNetworkACLView_KeyValues_MatchAll(t *testing.T) {
+	acl := &management.NetworkACL{
+		ID:          strPtr("acl-match-all"),
+		Description: strPtr("Deny All"),
+		Priority:    intPtr(99),
+		Active:      boolPtr(true),
+		Rule: &management.NetworkACLRule{
+			Scope:    strPtr("tenant"),
+			Action:   &management.NetworkACLRuleAction{Block: boolPtr(true)},
+			MatchAll: boolPtr(true),
+		},
+	}
+
+	kvs := makeNetworkACLView(acl).KeyValues()
+
+	value, ok := keyValue(kvs, "MATCH ALL")
+	assert.True(t, ok, "expected key \"MATCH ALL\" to be present in KeyValues()")
+	assert.Equal(t, "true", value)
+}
+
 func TestNetworkACLView_KeyValues_HTTPMessageSignature(t *testing.T) {
 	tests := []struct {
 		name      string
