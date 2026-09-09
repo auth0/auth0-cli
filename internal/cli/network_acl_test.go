@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/spf13/cobra"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
 	"go.uber.org/mock/gomock"
