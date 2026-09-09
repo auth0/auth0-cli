@@ -245,7 +245,7 @@ type ruleDefaults struct {
 	IsMatchRule     bool
 	HasMatchRule    bool
 	HasNotMatch     bool
-	MatchAll     bool
+	MatchAll        bool
 }
 
 // extractCurrentRuleDefaults extracts default values from current ACL rule for interactive prompts.
@@ -363,7 +363,7 @@ type ruleInputs struct {
 	IsMatchRule     bool
 	MatchRule       bool
 	NoMatchRule     bool
-	MatchAll     bool
+	MatchAll        bool
 }
 
 // promptForRuleDetails handles interactive prompting for rule configuration.
