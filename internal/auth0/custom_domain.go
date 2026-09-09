@@ -1,4 +1,4 @@
-//go:generate mockgen -source=custom_domain.go -destination=mock/custom_domain_mock.go -package=mock
+//go:generate go tool mockgen -source=custom_domain.go -destination=mock/custom_domain_mock.go -package=mock
 
 package auth0
 

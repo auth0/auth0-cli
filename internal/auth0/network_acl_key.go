@@ -1,4 +1,4 @@
-//go:generate mockgen -source=network_acl_key.go -destination=mock/network_acl_key_mock.go -package=mock
+//go:generate go tool mockgen -source=network_acl_key.go -destination=mock/network_acl_key_mock.go -package=mock
 
 package auth0
 

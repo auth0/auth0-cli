@@ -14,7 +14,6 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/getsentry/sentry-go v0.49.0
-	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -38,6 +37,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.8
+	go.uber.org/mock v0.6.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.23.0
 	golang.org/x/sys v0.48.0
@@ -106,3 +106,5 @@ require (
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
 )
+
+tool go.uber.org/mock/mockgen

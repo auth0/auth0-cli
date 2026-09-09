@@ -10,7 +10,7 @@ import (
 
 	management "github.com/auth0/go-auth0/v3/management"
 	option "github.com/auth0/go-auth0/v3/management/option"
-	gomock "github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 // MockNetworkACLKeyAPIV3 is a mock of NetworkACLKeyAPIV3 interface.
