@@ -237,7 +237,8 @@ func (c *cli) resolveConnectionPlaceholders(
 // resolveFormEnvelope turns a Dashboard-style envelope into a flat form body
 // ready for create/update: it maps connection placeholders to existing vault
 // connections, creates the bundled flows (substituting the resolved connection
-// IDs into them), and swaps the form's #FLOW-N# references for the new flow IDs.
+// IDs into them), and swaps the form's #FLOW-N# and #CONN-N# references for the
+// new flow IDs and resolved connection IDs.
 func (c *cli) resolveFormEnvelope(
 	cmd *cobra.Command,
 	body []byte,
