@@ -76,7 +76,7 @@ func TestCreateFormCmdUsesRawClientForSimpleScaffold(t *testing.T) {
 	require.NoError(t, cmd.Execute())
 	assert.Equal(t, http.MethodPost, httpClient.method)
 	require.IsType(t, json.RawMessage{}, httpClient.payload)
-	assert.JSONEq(t, `{"name":"Simple Form","start":{},"nodes":[],"ending":{}}`, string(httpClient.payload.(json.RawMessage)))
+	assert.JSONEq(t, `{"name":"Simple Form","messages":{},"languages":{},"translations":{},"nodes":[],"start":{},"ending":{},"style":{}}`, string(httpClient.payload.(json.RawMessage)))
 	assert.Contains(t, stdout.String(), "Simple Form")
 }
 
