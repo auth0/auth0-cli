@@ -1,4 +1,4 @@
-//go:generate mockgen -source=self_service_profiles.go -destination=mock/self_service_profiles.go -package=mock
+//go:generate go tool mockgen -source=self_service_profiles.go -destination=mock/self_service_profiles.go -package=mock
 
 package auth0
 

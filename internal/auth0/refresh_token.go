@@ -1,4 +1,4 @@
-//go:generate mockgen -source=refresh_token.go -destination=mock/refresh_token_mock.go -package=mock
+//go:generate go tool mockgen -source=refresh_token.go -destination=mock/refresh_token_mock.go -package=mock
 
 package auth0
 

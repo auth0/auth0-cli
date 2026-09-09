@@ -1,4 +1,4 @@
-//go:generate mockgen -source auth.go -destination mock/auth.go -package mock
+//go:generate go tool mockgen -source auth.go -destination mock/auth.go -package mock
 package auth
 
 import (
