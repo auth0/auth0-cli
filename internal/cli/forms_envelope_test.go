@@ -194,6 +194,35 @@ func TestResolveFormEnvelope(t *testing.T) {
 		assert.Equal(t, "fl_created", config["flow_id"])
 	})
 
+	t.Run("resolves connection placeholders in the form body", func(t *testing.T) {
+		envelopeWithConnInForm := []byte(`{
+			"version": "4.0.0",
+			"form": {
+				"name": "Test Form",
+				"nodes": [{"config": {"connection_id": "#CONN-1#"}}]
+			},
+			"flows": {},
+			"connections": {
+				"#CONN-1#": {"id": "ac_placeholder", "app_id": "AUTH0", "name": "My Connection"}
+			}
+		}`)
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		flowMock := mock.NewMockFlowAPI(ctrl)
+		cli := &cli{api: &auth0.API{Flow: flowMock}}
+
+		body, err := cli.resolveFormEnvelope(&cobra.Command{}, envelopeWithConnInForm, map[string]string{"#CONN-1#": "ac_resolved"})
+		require.NoError(t, err)
+
+		var formMap map[string]interface{}
+		require.NoError(t, json.Unmarshal(body, &formMap))
+		node := formMap["nodes"].([]interface{})[0].(map[string]interface{})
+		config := node["config"].(map[string]interface{})
+		assert.Equal(t, "ac_resolved", config["connection_id"])
+	})
+
 	t.Run("errors when a connection cannot be resolved without a terminal", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()

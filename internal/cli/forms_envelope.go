@@ -282,7 +282,11 @@ func (c *cli) resolveFormEnvelope(
 		flowReplacements[ph] = flow.GetID()
 	}
 
-	return substituteIDs(env.Form, flowReplacements)
+	formBody, err := substituteIDs(env.Form, connReplacements)
+	if err != nil {
+		return nil, err
+	}
+	return substituteIDs(formBody, flowReplacements)
 }
 
 // buildFormEnvelope turns a fetched form (raw wire JSON) into a Dashboard-style

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,12 +19,15 @@ import (
 )
 
 // formCreateSkeleton seeds the editor for interactive form creation. The name is
-// prompted separately, so the seed only carries the empty graph containers, which
-// are all valid on their own.
+// prompted separately, so the seed carries empty containers for all writable fields.
 const formCreateSkeleton = `{
-  "start": {},
+  "messages": {},
+  "languages": {},
+  "translations": {},
   "nodes": [],
-  "ending": {}
+  "start": {},
+  "ending": {},
+  "style": {}
 }
 `
 
@@ -96,6 +98,18 @@ var formServerManagedFields = []string{
 	"submitted_at",
 	"flow_count",
 	"links",
+}
+
+// formEditorSeed controls the field order in the interactive editor seed.
+type formEditorSeed struct {
+	Name         json.RawMessage `json:"name,omitempty"`
+	Messages     json.RawMessage `json:"messages,omitempty"`
+	Languages    json.RawMessage `json:"languages,omitempty"`
+	Translations json.RawMessage `json:"translations,omitempty"`
+	Nodes        json.RawMessage `json:"nodes,omitempty"`
+	Start        json.RawMessage `json:"start,omitempty"`
+	Ending       json.RawMessage `json:"ending,omitempty"`
+	Style        json.RawMessage `json:"style,omitempty"`
 }
 
 var (
@@ -361,9 +375,8 @@ func createFormCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// createFormFromJSON creates a form from a --data JSON payload. The body is
-// checked for valid JSON and a form name, then sent verbatim, so node config the
-// v3 SDK's union types would drop is preserved.
+// createFormFromJSON creates a form from a --data JSON payload, sent verbatim
+// to preserve node config the v3 SDK's union types would drop.
 func (c *cli) createFormFromJSON(cmd *cobra.Command, dataStr string) error {
 	payload, err := validateFormData(c, dataStr, "auth0 forms create", true, nil)
 	if err != nil {
@@ -440,15 +453,14 @@ func updateFormCmd(cli *cli) *cobra.Command {
 
 			switch {
 			case provided:
-				// --data / stdin: whole-payload overwrite. Server-managed fields are
-				// stripped so an exported form body round-trips, then the payload is
-				// checked for valid JSON and sent verbatim.
+				// --data / stdin: whole-payload overwrite. Validated for JSON and sent
+				// verbatim; server-managed fields are stripped inside formRawUpdate.
 				rawBody, err = validateFormData(
 					cli,
 					dataStr,
 					"auth0 forms update",
 					false,
-					stripFormServerManagedFields,
+					nil,
 				)
 				if err != nil {
 					return err
@@ -484,18 +496,35 @@ func updateFormCmd(cli *cli) *cobra.Command {
 					return fmt.Errorf("failed to build form update: %w", err)
 				}
 			case canPrompt(cmd):
-				// Editor fallback: pre-load the exact wire body and full-replace.
+				// Editor fallback: strip server-managed fields, reorder for DX, and full-replace.
 				current, err := cli.formRawGet(cmd.Context(), inputs.ID)
 				if err != nil {
 					return fmt.Errorf("failed to read form with ID %q: %w", inputs.ID, err)
 				}
 
-				var seed bytes.Buffer
-				if err := json.Indent(&seed, current, "", "  "); err != nil {
+				var form map[string]json.RawMessage
+				if err := json.Unmarshal(current, &form); err != nil {
 					return fmt.Errorf("failed to parse form with ID %q: %w", inputs.ID, err)
 				}
+				for _, f := range formServerManagedFields {
+					delete(form, f)
+				}
 
-				if err := editFormJSON(cli, seed.String(), &rawBody); err != nil {
+				seedBytes, err := json.MarshalIndent(formEditorSeed{
+					Name:         form["name"],
+					Messages:     form["messages"],
+					Languages:    form["languages"],
+					Translations: form["translations"],
+					Nodes:        form["nodes"],
+					Start:        form["start"],
+					Ending:       form["ending"],
+					Style:        form["style"],
+				}, "", "  ")
+				if err != nil {
+					return fmt.Errorf("failed to build form editor seed for %q: %w", inputs.ID, err)
+				}
+
+				if err := editFormJSON(cli, string(seedBytes), &rawBody); err != nil {
 					return err
 				}
 			default:
@@ -793,11 +822,9 @@ func formNextStepsHint(cli *cli, id string) {
 	cli.renderer.Infof("Edit it in the dashboard with: %s", ansi.Faint("auth0 forms open "+id))
 }
 
-// readFormData resolves a JSON body from --data (inline JSON or an @file.json
-// reference) or piped stdin, returning nil when no such source is available so the
-// caller can decide whether to fall back to an editor or error. Unlike ResolveData
-// it does not reject other set flags, so `import` can combine a body with its
-// --id and --connection modifiers.
+// readFormData resolves a JSON body from --data or piped stdin, returning nil
+// when neither is available. Does not reject other set flags, so import can
+// combine --data with --id and --connection.
 func readFormData(cmd *cobra.Command) ([]byte, error) {
 	if HasData(cmd) {
 		value, _ := GetData(cmd)
@@ -816,18 +843,12 @@ func readFormData(cmd *cobra.Command) ([]byte, error) {
 	return nil, nil
 }
 
-// validateFormData reads a --data JSON payload (inline JSON, an @file.json
-// reference, or the resolved stdin string), applies preClean when it is non-nil,
-// and returns the raw bytes to send verbatim.
-//
-// Forms are sent as raw JSON rather than through the v3 SDK's lossy union types,
-// and the published OpenAPI schema likewise cannot faithfully describe a real form
-// graph (for example the reserved "$ending" node pointer trips the schema's
-// non-exclusive oneOf). So we validate only what we can trust locally: the payload
-// is a JSON object and, when requireName is set (create), it carries a non-empty
-// "name". The API validates the node graph server-side. The preClean hook runs
-// first so an exported form body whose server-managed fields are stripped is
-// checked in the same shape it will be sent.
+// validateFormData validates a --data JSON payload and returns the raw bytes to
+// send verbatim. Only the envelope is checked locally (valid JSON object, non-empty
+// "name" when requireName is set) because the v3 SDK's union types are lossy and
+// the OpenAPI schema cannot faithfully represent the form graph (e.g. the "$ending"
+// node pointer trips the schema's non-exclusive oneOf). The API validates the graph
+// server-side. PreClean runs before validation when non-nil.
 func validateFormData(
 	cli *cli,
 	dataStr, schemaCmd string,
@@ -865,7 +886,7 @@ func validateFormData(
 		}
 	}
 
-	return json.RawMessage(raw), nil
+	return raw, nil
 }
 
 // stripFormServerManagedFields removes the fields the API sets and rejects on
@@ -958,10 +979,8 @@ func (c *cli) formRawGet(ctx context.Context, id string) (json.RawMessage, error
 	return c.formRawRequest(ctx, http.MethodGet, c.api.HTTPClient.URI("forms", id), nil)
 }
 
-// formRawCreate creates a form from raw JSON, preserving node config that the
-// typed CreateFormRequestContent would drop. Server-managed fields are stripped
-// first so a body read or exported from the API round-trips into create the same
-// way it does into update. It returns the created form JSON.
+// formRawCreate creates a form from raw JSON, stripping server-managed fields
+// and preserving node config the typed CreateFormRequestContent would drop.
 func (c *cli) formRawCreate(ctx context.Context, body json.RawMessage) (json.RawMessage, error) {
 	cleanBody, err := stripFormServerManagedFields(body)
 	if err != nil {
