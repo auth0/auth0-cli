@@ -24,7 +24,8 @@ auth0 network-acl update [flags]
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
-  
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
+
   # Early Access (auth0_managed match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
   

@@ -243,6 +243,7 @@ type ruleDefaults struct {
 	IsMatchRule  bool
 	HasMatchRule bool
 	HasNotMatch  bool
+	MatchAll     bool
 }
 
 // extractCurrentRuleDefaults extracts default values from current ACL rule for interactive prompts.
@@ -275,6 +276,10 @@ func extractCurrentRuleDefaults(currentACL *management.NetworkACL) *ruleDefaults
 				defaults.RedirectURI = *currentACL.Rule.Action.RedirectURI
 			}
 		}
+	}
+
+	if currentACL.Rule.MatchAll != nil && *currentACL.Rule.MatchAll {
+		defaults.MatchAll = true
 	}
 
 	// Extract match criteria from either Match or NotMatch.
@@ -339,6 +344,7 @@ type ruleInputs struct {
 	IsMatchRule  bool
 	MatchRule    bool
 	NoMatchRule  bool
+	MatchAll     bool
 }
 
 // promptForRuleDetails handles interactive prompting for rule configuration.
@@ -376,6 +382,13 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 		if inputs.RedirectURI == "" {
 			return nil, fmt.Errorf("redirect URI is required when action is redirect")
 		}
+	}
+
+	if err := prompt.AskBool("Match all traffic unconditionally? (Eg. block all). Cannot be combined with match/not_match criteria.", &inputs.MatchAll, defaults.MatchAll); err != nil {
+		return nil, err
+	}
+	if inputs.MatchAll {
+		return inputs, nil
 	}
 
 	// Handle Match/NotMatch rule changes for updates.
@@ -537,6 +550,11 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 		rule.Action.RedirectURI = &inputs.RedirectURI
 	}
 
+	if inputs.MatchAll {
+		rule.MatchAll = auth0.Bool(true)
+		return rule, nil
+	}
+
 	// Build match criteria.
 	match := &management.NetworkACLRuleMatch{}
 	matchProvided := false
@@ -695,7 +713,8 @@ The --rule parameter is required and must contain a valid JSON object with actio
   auth0 network-acl create --description "Redirect Traffic" --priority 3 --active true --rule '{"action":{"redirect":true,"redirect_uri":"https://example.com"},"scope":"management","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl create -d "Block Bots" -p 4 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"user_agents":["badbot/*","malicious/*"],"ja3_fingerprints":["deadbeef","cafebabe"]}}'
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
-  
+  auth0 network-acl create --description "Deny All" --priority 7 --active true --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
+
   # Early Access (auth0_managed match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
   `,
@@ -797,7 +816,8 @@ To update non-interactively, supply the description, active, priority, and rule 
   auth0 network-acl update <id> --description "Updated description"
   auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}'
   auth0 network-acl update <id> --description "Complex Rule updated" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
-  
+  auth0 network-acl update <id> --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
+
   # Early Access (auth0_managed match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
   `,
