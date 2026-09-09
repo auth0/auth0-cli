@@ -100,6 +100,72 @@ func TestNetworkACLView_KeyValues_MatchAll(t *testing.T) {
 	assert.Equal(t, "true", value)
 }
 
+func TestNetworkACLView_KeyValues_HTTPMessageSignature(t *testing.T) {
+	tests := []struct {
+		name      string
+		acl       *management.NetworkACL
+		wantKey   string
+		wantValue string
+	}{
+		{
+			name: "http_message_signature on match",
+			acl: &management.NetworkACL{
+				ID:          strPtr("acl-1"),
+				Description: strPtr("Only Signed"),
+				Priority:    intPtr(1),
+				Active:      boolPtr(true),
+				Rule: &management.NetworkACLRule{
+					Scope:  strPtr("authentication"),
+					Action: &management.NetworkACLRuleAction{Block: boolPtr(true)},
+					Match: &management.NetworkACLRuleMatch{
+						HTTPMessageSignature: &management.NetworkACLHTTPMessageSignature{
+							Keys: []*management.NetworkACLHTTPMessageSignatureKey{
+								{ID: strPtr("key_123")},
+								{ID: strPtr("key_456")},
+							},
+						},
+					},
+				},
+			},
+			wantKey:   "SIGNATURE KEY IDS",
+			wantValue: "key_123, key_456",
+		},
+		{
+			name: "http_message_signature on not_match",
+			acl: &management.NetworkACL{
+				ID:          strPtr("acl-2"),
+				Description: strPtr("Reject Signed"),
+				Priority:    intPtr(2),
+				Active:      boolPtr(true),
+				Rule: &management.NetworkACLRule{
+					Scope:  strPtr("authentication"),
+					Action: &management.NetworkACLRuleAction{Block: boolPtr(true)},
+					NotMatch: &management.NetworkACLRuleMatch{
+						HTTPMessageSignature: &management.NetworkACLHTTPMessageSignature{
+							Keys: []*management.NetworkACLHTTPMessageSignatureKey{
+								{ID: strPtr("key_123")},
+							},
+						},
+					},
+				},
+			},
+			wantKey:   "NOT SIGNATURE KEY IDS",
+			wantValue: "key_123",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			view := makeNetworkACLView(test.acl)
+			kvs := view.KeyValues()
+
+			value, ok := keyValue(kvs, test.wantKey)
+			assert.True(t, ok, "expected key %q to be present in KeyValues()", test.wantKey)
+			assert.Equal(t, test.wantValue, value)
+		})
+	}
+}
+
 // TestNetworkACLView_Object_IncludesID guards against a regression where storing
 // a *management.NetworkACL in the view's raw field engaged that type's pointer
 // receiver MarshalJSON, which emits only the writable subset of fields and drops

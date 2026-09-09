@@ -26,8 +26,9 @@ auth0 network-acl create [flags]
   auth0 network-acl create --description "Complex Rule" --priority 5 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"],"geo_country_codes":["US"]}}'
   auth0 network-acl create --description "Deny All" --priority 7 --active true --rule '{"action":{"block":true},"scope":"tenant","match_all":true}'
 
-  # Early Access (auth0_managed match/not_match value):
+  # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
+  auth0 network-acl create -d "Only Signed" -p 8 --active true --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"}]}}}'
   
 ```
 

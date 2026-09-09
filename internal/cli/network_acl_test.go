@@ -285,6 +285,146 @@ func TestExtractCurrentRuleDefaults_MatchAll(t *testing.T) {
 	}
 }
 
+func TestBuildNetworkACLRule_HTTPMessageSignature(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputs      *ruleInputs
+		assertRule  func(t testing.TB, rule *management.NetworkACLRule)
+		expectError bool
+	}{
+		{
+			name: "http_message_signature on match",
+			inputs: &ruleInputs{
+				Scope:           "authentication",
+				Action:          "block",
+				SignatureKeyIDs: []string{"key_123", "key_456"},
+				IsMatchRule:     true,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.Nil(t, rule.NotMatch)
+				assert.NotNil(t, rule.Match)
+				assert.NotNil(t, rule.Match.HTTPMessageSignature)
+				assert.Len(t, rule.Match.HTTPMessageSignature.Keys, 2)
+				assert.Equal(t, "key_123", *rule.Match.HTTPMessageSignature.Keys[0].ID)
+				assert.Equal(t, "key_456", *rule.Match.HTTPMessageSignature.Keys[1].ID)
+			},
+		},
+		{
+			name: "http_message_signature on not_match",
+			inputs: &ruleInputs{
+				Scope:           "authentication",
+				Action:          "block",
+				SignatureKeyIDs: []string{"key_123"},
+				IsMatchRule:     false,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.Nil(t, rule.Match)
+				assert.NotNil(t, rule.NotMatch)
+				assert.NotNil(t, rule.NotMatch.HTTPMessageSignature)
+				assert.Len(t, rule.NotMatch.HTTPMessageSignature.Keys, 1)
+				assert.Equal(t, "key_123", *rule.NotMatch.HTTPMessageSignature.Keys[0].ID)
+			},
+		},
+		{
+			name: "http_message_signature coexists with other criteria",
+			inputs: &ruleInputs{
+				Scope:           "authentication",
+				Action:          "block",
+				IPv4CIDRs:       []string{"192.168.1.0/24"},
+				SignatureKeyIDs: []string{"key_123"},
+				IsMatchRule:     true,
+			},
+			assertRule: func(t testing.TB, rule *management.NetworkACLRule) {
+				assert.NotNil(t, rule.Match)
+				assert.NotNil(t, rule.Match.IPv4Cidrs)
+				assert.NotNil(t, rule.Match.HTTPMessageSignature)
+				assert.Len(t, rule.Match.HTTPMessageSignature.Keys, 1)
+			},
+		},
+		{
+			name: "http_message_signature empty is not set",
+			inputs: &ruleInputs{
+				Scope:       "authentication",
+				Action:      "block",
+				IsMatchRule: true,
+			},
+			expectError: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rule, err := buildNetworkACLRule(test.inputs)
+
+			if test.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			test.assertRule(t, rule)
+		})
+	}
+}
+
+func TestExtractCurrentRuleDefaults_HTTPMessageSignature(t *testing.T) {
+	tests := []struct {
+		name     string
+		acl      *management.NetworkACL
+		wantKeys []string
+	}{
+		{
+			name: "extracts signature key ids from match",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					Match: &management.NetworkACLRuleMatch{
+						HTTPMessageSignature: &management.NetworkACLHTTPMessageSignature{
+							Keys: []*management.NetworkACLHTTPMessageSignatureKey{
+								{ID: auth0.String("key_123")},
+								{ID: auth0.String("key_456")},
+							},
+						},
+					},
+				},
+			},
+			wantKeys: []string{"key_123", "key_456"},
+		},
+		{
+			name: "extracts signature key ids from not_match",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					NotMatch: &management.NetworkACLRuleMatch{
+						HTTPMessageSignature: &management.NetworkACLHTTPMessageSignature{
+							Keys: []*management.NetworkACLHTTPMessageSignatureKey{
+								{ID: auth0.String("key_123")},
+							},
+						},
+					},
+				},
+			},
+			wantKeys: []string{"key_123"},
+		},
+		{
+			name: "no signature keys set",
+			acl: &management.NetworkACL{
+				Rule: &management.NetworkACLRule{
+					Match: &management.NetworkACLRuleMatch{
+						IPv4Cidrs: &[]string{"192.168.1.0/24"},
+					},
+				},
+			},
+			wantKeys: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defaults := extractCurrentRuleDefaults(test.acl)
+			assert.Equal(t, test.wantKeys, defaults.SignatureKeyIDs)
+		})
+	}
+}
+
 func TestExtractCurrentRuleDefaults_Auth0Managed(t *testing.T) {
 	tests := []struct {
 		name             string
