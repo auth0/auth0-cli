@@ -358,13 +358,19 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 
 	// Ask for action.
 	actions := []string{"block", "allow", "log", "redirect"}
-	if err := networkACLRuleAction.Select(cmd, &inputs.Action, actions, &defaults.Action); err != nil {
+	if err := (&Flag{
+		Name: "Action",
+		Help: "Action for the rule (block, allow, log, redirect)",
+	}).Select(cmd, &inputs.Action, actions, &defaults.Action); err != nil {
 		return nil, err
 	}
 
 	// If action is redirect, ask for redirect URI.
 	if inputs.Action == "redirect" {
-		if err := networkACLRedirectURI.Ask(cmd, &inputs.RedirectURI, &defaults.RedirectURI); err != nil {
+		if err := (&Flag{
+			Name: "RedirectURI",
+			Help: "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
+		}).Ask(cmd, &inputs.RedirectURI, &defaults.RedirectURI); err != nil {
 			return nil, err
 		}
 		if inputs.RedirectURI == "" {
@@ -420,63 +426,90 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 // promptForMatchCriteria handles prompting for all match criteria based on selected parameters.
 func promptForMatchCriteria(cmd *cobra.Command, selectedParams map[string]bool, inputs *ruleInputs, defaults *ruleDefaults) error {
 	if selectedParams["ASNs"] {
-		if err := networkACLASNs.AskIntSlice(cmd, &inputs.ASNs, &defaults.ASNs); err != nil {
+		if err := (&Flag{
+			Name: "ASNs",
+			Help: "Comma-separated list of ASNs to match (Eg. 64496,64497,64498)",
+		}).AskIntSlice(cmd, &inputs.ASNs, &defaults.ASNs); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["Country Codes"] {
 		currentCountryCodesStr := strings.Join(defaults.CountryCodes, ",")
-		if err := networkACLCountryCodes.AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
+		if err := (&Flag{
+			Name: "CountryCodes",
+			Help: "Comma-separated list of country codes to match (Eg. US,CA,MX)",
+		}).AskMany(cmd, &inputs.CountryCodes, &currentCountryCodesStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["Subdivision Codes"] {
 		currentSubDivCodesStr := strings.Join(defaults.SubdivCodes, ",")
-		if err := networkACLSubdivisionCodes.AskMany(cmd, &inputs.SubdivCodes, &currentSubDivCodesStr); err != nil {
+		if err := (&Flag{
+			Name: "SubdivisionCodes",
+			Help: "Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)",
+		}).AskMany(cmd, &inputs.SubdivCodes, &currentSubDivCodesStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["IPv4CIDRs"] {
 		currentIPv4CIDRsStr := strings.Join(defaults.IPv4CIDRs, ",")
-		if err := networkACLIPv4CIDRs.AskMany(cmd, &inputs.IPv4CIDRs, &currentIPv4CIDRsStr); err != nil {
+		if err := (&Flag{
+			Name: "IPv4CIDRs",
+			Help: "Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)",
+		}).AskMany(cmd, &inputs.IPv4CIDRs, &currentIPv4CIDRsStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["IPv6CIDRs"] {
 		currentIPv6CIDRsStr := strings.Join(defaults.IPv6CIDRs, ",")
-		if err := networkACLIPv6CIDRs.AskMany(cmd, &inputs.IPv6CIDRs, &currentIPv6CIDRsStr); err != nil {
+		if err := (&Flag{
+			Name: "IPv6CIDRs",
+			Help: "Comma-separated list of IPv6 CIDR ranges (Eg. 2001:db8::/32,2001:db8:1234::/48)",
+		}).AskMany(cmd, &inputs.IPv6CIDRs, &currentIPv6CIDRsStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["JA3Fingerprints"] {
 		currentJA3Str := strings.Join(defaults.JA3, ",")
-		if err := networkACLJA3Fingerprints.AskMany(cmd, &inputs.JA3, &currentJA3Str); err != nil {
+		if err := (&Flag{
+			Name: "JA3Fingerprints",
+			Help: "Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)",
+		}).AskMany(cmd, &inputs.JA3, &currentJA3Str); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["JA4Fingerprints"] {
 		currentJA4Str := strings.Join(defaults.JA4, ",")
-		if err := networkACLJA4Fingerprints.AskMany(cmd, &inputs.JA4, &currentJA4Str); err != nil {
+		if err := (&Flag{
+			Name: "JA4Fingerprints",
+			Help: "Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)",
+		}).AskMany(cmd, &inputs.JA4, &currentJA4Str); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["User Agents"] {
 		currentUserAgentsStr := strings.Join(defaults.UserAgents, ",")
-		if err := networkACLUserAgents.AskMany(cmd, &inputs.UserAgents, &currentUserAgentsStr); err != nil {
+		if err := (&Flag{
+			Name: "UserAgents",
+			Help: "Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)",
+		}).AskMany(cmd, &inputs.UserAgents, &currentUserAgentsStr); err != nil {
 			return err
 		}
 	}
 
 	if selectedParams["Auth0 Managed"] {
 		currentAuth0ManagedStr := strings.Join(defaults.Auth0Managed, ",")
-		if err := networkACLAuth0Managed.AskMany(cmd, &inputs.Auth0Managed, &currentAuth0ManagedStr); err != nil {
+		if err := (&Flag{
+			Name: "Auth0Managed",
+			Help: "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
+		}).AskMany(cmd, &inputs.Auth0Managed, &currentAuth0ManagedStr); err != nil {
 			return err
 		}
 	}
