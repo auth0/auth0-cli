@@ -7,7 +7,7 @@ has_toc: false
 
 Update a form.
 
-Passing `--data` as inline JSON, a file (`@form.json`), or piped stdin replaces every top-level field present in the payload, which is validated against the OpenAPI schema before it is sent. Passing only scalar flags such as `--name` performs a merge that preserves the form's graph fields (nodes, style, translations). Server-managed fields such as `id`, `created_at`, and `updated_at` are removed before the update request is sent.
+Passing `--data` as inline JSON, a file (`@form.json`), or piped stdin replaces every top-level field present in the payload. The payload is checked for valid JSON before it is sent, and the form graph itself is validated by the API. Passing only scalar flags such as `--name` performs a merge that preserves the form's graph fields (nodes, style, translations). Server-managed fields such as `id`, `created_at`, and `updated_at` are removed before the update request is sent.
 
 `--data` provides the whole payload and cannot be combined with `--name` or the `--language-*` flags. Run `auth0 forms update --schema` to print the accepted payload schema.
 

@@ -402,8 +402,9 @@ func updateFormCmd(cli *cli) *cobra.Command {
 		Short: "Update a form",
 		Long: "Update a form.\n\n" +
 			"Passing `--data` as inline JSON, a file (`@form.json`), or piped stdin replaces every " +
-			"top-level field present in the payload, which is validated against the OpenAPI schema " +
-			"before it is sent. Passing only scalar flags such as `--name` performs a merge that " +
+			"top-level field present in the payload. The payload is checked for valid JSON before it " +
+			"is sent, and the form graph itself is validated by the API. Passing only scalar flags " +
+			"such as `--name` performs a merge that " +
 			"preserves the form's graph fields (nodes, style, translations). Server-managed fields " +
 			"such as `id`, `created_at`, and `updated_at` are removed before the update request is " +
 			"sent.\n\n" +
@@ -958,9 +959,16 @@ func (c *cli) formRawGet(ctx context.Context, id string) (json.RawMessage, error
 }
 
 // formRawCreate creates a form from raw JSON, preserving node config that the
-// typed CreateFormRequestContent would drop. It returns the created form JSON.
+// typed CreateFormRequestContent would drop. Server-managed fields are stripped
+// first so a body read or exported from the API round-trips into create the same
+// way it does into update. It returns the created form JSON.
 func (c *cli) formRawCreate(ctx context.Context, body json.RawMessage) (json.RawMessage, error) {
-	return c.formRawRequest(ctx, http.MethodPost, c.api.HTTPClient.URI("forms"), body)
+	cleanBody, err := stripFormServerManagedFields(body)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.formRawRequest(ctx, http.MethodPost, c.api.HTTPClient.URI("forms"), cleanBody)
 }
 
 // formRawUpdate replaces a form from raw JSON, preserving node config that the
