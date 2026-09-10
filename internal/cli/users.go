@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/auth0/go-auth0/management"
@@ -185,21 +186,30 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 		sort   string
 		number int
 		picker bool
+		schema bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "search",
 		Args:  cobra.NoArgs,
 		Short: "Search for users",
-		Long:  "Search for users. To create one, run: `auth0 users create`.",
+		Long: `Search for users. To create one, run: ` + "`auth0 users create`" + `.
+
+Use '--schema' to see available query parameters.`,
 		Example: `  auth0 users search
   auth0 users search --query user_id:"<user-id>"
   auth0 users search --query name:"Bob" --sort "name:1"
   auth0 users search --query name:"Bob" --sort "name:1 --picker"
   auth0 users search -q name:"Bob" -s "name:1" --number 200
   auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
-  auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv`,
+  auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv
+  auth0 users search --schema
+  auth0 users search --schema --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, "GET", "/users")
+			}
+
 			if err := userQuery.Ask(cmd, &inputs.query, nil); err != nil {
 				return err
 			}
@@ -281,6 +291,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 	userSort.RegisterString(cmd, &inputs.sort, "")
 	userPicker.RegisterBool(cmd, &inputs.picker, false)
 	userNumber.RegisterInt(cmd, &inputs.number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
 
 	return cmd
 }
@@ -364,17 +375,26 @@ type userInput struct {
 }
 
 func createUserCmd(cli *cli) *cobra.Command {
-	var inputs userInput
+	var (
+		inputs userInput
+		data   string
+		schema bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new user",
-		Long: "Create a new user.\n\n" +
-			"To create interactively, use `auth0 users create` with no flags.\n\n" +
-			"To create non-interactively, supply the name and other information through the available flags.",
-		Example: `  auth0 users create 
-  auth0 users create --name "John Doe" 
+		Long: `Create a new user.
+
+To create interactively, use ` + "`auth0 users create`" + ` with no flags.
+
+To create non-interactively, supply the name and other information through the available flags.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
+		Example: `  auth0 users create
+  auth0 users create --name "John Doe"
   auth0 users create --name "John Doe" --email john@example.com
   auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json
@@ -383,8 +403,29 @@ func createUserCmd(cli *cli) *cobra.Command {
   auth0 users create -e john@example.com -c "email"
   auth0 users create --phone-number +916898989898 --connection-name "sms"
   auth0 users create -m +916898989898 -c "sms" --json
-  auth0 users create -m +916898989898 -c "sms" --json-compact`,
+  auth0 users create -m +916898989898 -c "sms" --json-compact
+
+  # Discover the payload schema
+  auth0 users create --schema
+  auth0 users create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 users create --data '{"email":"john@example.com","password":"...","connection":"Username-Password-Authentication"}'
+  auth0 users create --data @user.json
+  cat user.json | auth0 users create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if schema {
+				return printOperationSchema(cli, "POST", "/users")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createUserFromJSON(cli, cmd, payload)
+			}
+
 			// Validate provided flags basis on the given connection type.
 			if cli.noInput {
 				if err := validateRequiredFlags(&inputs); err != nil {
@@ -474,6 +515,9 @@ func createUserCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	registerDetailsInfo(cmd, &inputs)
+	dataFlag.RegisterString(cmd, &data, "")
+	schemaFlag.RegisterBool(cmd, &schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -683,20 +727,27 @@ func updateUserCmd(cli *cli) *cobra.Command {
 		inputs  = &userInput{}
 		blocked bool
 		id      string
+		data    string
+		schema  bool
 	)
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a user",
-		Long: "Update a user.\n\n" +
-			"To update interactively, use `auth0 users update` with no arguments.\n\n" +
-			"To update non-interactively, supply the user id and other information through the available flags.",
-		Example: `  auth0 users update 
-  auth0 users update <user-id> 
+		Long: `Update a user.
+
+To update interactively, use ` + "`auth0 users update`" + ` with no arguments.
+
+To update non-interactively, supply the user id and other information through the available flags.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
+		Example: `  auth0 users update
+  auth0 users update <user-id>
   auth0 users update <user-id> --name "John Doe"
-  auth0 users update <user-id> --blocked=true"
-  auth0 users update <user-id> --blocked=false"
+  auth0 users update <user-id> --blocked=true
+  auth0 users update <user-id> --blocked=false
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json-compact
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
@@ -704,15 +755,36 @@ func updateUserCmd(cli *cli) *cobra.Command {
   auth0 users update <user-id> -p <newPassword>
   auth0 users update <user-id> -e johnk@example.com
   auth0 users update <user-id> --phone-number +916898989899
-  auth0 users update <user-id> -m +916898989899 --json`,
+  auth0 users update <user-id> -m +916898989899 --json
+
+  # Discover the payload schema
+  auth0 users update --schema
+  auth0 users update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 users update <user-id> --data '{"name":"John Doe","email":"john@example.com"}'
+  auth0 users update <user-id> --data @user.json
+  cat user.json | auth0 users update <user-id>`,
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if schema {
+				return printOperationSchema(cli, "PATCH", "/users/{id}")
+			}
+
 			if len(args) == 0 {
 				if err := userID.Ask(cmd, &id); err != nil {
 					return err
 				}
 			} else {
 				id = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateUserFromJSON(cli, cmd, id, payload)
 			}
 
 			var current *management.User
@@ -765,6 +837,9 @@ func updateUserCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	registerDetailsInfo(cmd, inputs)
 	userBlock.RegisterBool(cmd, &blocked, false)
+	dataFlag.RegisterString(cmd, &data, "")
+	schemaFlag.RegisterBool(cmd, &schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -987,6 +1062,36 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 	cmd.MarkFlagsMutuallyExclusive("template", "users")
 
 	return cmd
+}
+
+func createUserFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	user, err := runJSONWrite[management.User](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/users",
+		URI:        cli.api.HTTPClient.URI("users"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 users create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+	cli.renderer.UserCreate(user, false)
+	return nil
+}
+
+func updateUserFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	user, err := runJSONWrite[management.User](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/users/{id}",
+		URI:        cli.api.HTTPClient.URI("users", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 users update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update user with ID %q: %w", id, err)
+	}
+	cli.renderer.UserUpdate(user, false)
+	return nil
 }
 
 func formatUserDetailsPath(id string) string {
