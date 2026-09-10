@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
+
+### Added
+- Add support for managing forms via `auth0 forms` commands [#1626]
+- Add `confirmation` screen support to `auth0 universal-login customize` [#1648]
+- Add `match_all` rule support to `auth0 network-acl create` and `update` [#1652]
+- Add `http_message_signature` signal to `auth0 network-acl` rules (EA only) [#1653]
+
+### Deprecated
+- Deprecate redundant rule flags from `auth0 network-acl create` and `update` in favor of `--rule` [#1647]
+
 # [v1.34.0](https://github.com/auth0/auth0-cli/tree/v1.34.0) (September 2, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.33.0...v1.34.0)
@@ -793,7 +806,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.34.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.35.0...HEAD
+[#1653]: https://github.com/auth0/auth0-cli/pull/1653
+[#1652]: https://github.com/auth0/auth0-cli/pull/1652
+[#1648]: https://github.com/auth0/auth0-cli/pull/1648
+[#1647]: https://github.com/auth0/auth0-cli/pull/1647
+[#1626]: https://github.com/auth0/auth0-cli/pull/1626
 [#1639]: https://github.com/auth0/auth0-cli/pull/1639
 [#1638]: https://github.com/auth0/auth0-cli/pull/1638
 [#1632]: https://github.com/auth0/auth0-cli/pull/1632
