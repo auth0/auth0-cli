@@ -76,13 +76,6 @@ var (
 		Help:      "Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.",
 	}
 
-	actionListQuery = Flag{
-		Name:      "Query",
-		LongForm:  "query",
-		ShortForm: "q",
-		Help:      "Filter actions with a JSON object of query parameters (e.g. '{\"triggerId\":\"post-login\"}'). Any API-supported parameter works immediately. Run '--schema' to see documented parameters.",
-	}
-
 	actionTemplates = map[string]string{
 		"post-login":             actionTemplatePostLogin,
 		"credentials-exchange":   actionTemplateCredentialsExchange,
@@ -187,7 +180,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
-	actionListQuery.RegisterString(cmd, &inputs.Query, "")
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }

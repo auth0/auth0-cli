@@ -11,6 +11,9 @@ To update interactively, use `auth0 roles update` with no arguments.
 
 To update non-interactively, supply the role id, name and description through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 roles update [flags]
@@ -24,16 +27,27 @@ auth0 roles update [flags]
   auth0 roles update <role-id> --name myrole --description "awesome role"
   auth0 roles update <role-id> -n myrole -d "awesome role" --json
   auth0 roles update <role-id> -n myrole -d "awesome role" --json-compact
+
+  # Discover the payload schema
+  auth0 roles update --schema
+  auth0 roles update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 roles update <role-id> --data '{"name":"myrole","description":"awesome role"}'
+  auth0 roles update <role-id> --data @role.json
+  cat role.json | auth0 roles update <role-id>
 ```
 
 
 ## Flags
 
 ```
+      --data string          JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string   Description of the role.
       --json                 Output in json format.
       --json-compact         Output in compact json format.
   -n, --name string          Name of the role.
+      --schema               Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

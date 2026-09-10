@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing roles. To create one, run: `auth0 roles create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 roles list [flags]
@@ -21,6 +24,10 @@ auth0 roles list [flags]
   auth0 roles ls -n 100 --json
   auth0 roles ls -n 100 --json-compact
   auth0 roles ls --csv
+  auth0 roles list --schema
+  auth0 roles list --schema --json
+  auth0 roles list --query '{"name_filter":"admin"}'
+  auth0 roles list --query '{"name_filter":"admin"}' --json
 ```
 
 
@@ -31,6 +38,8 @@ auth0 roles list [flags]
       --json           Output in json format.
       --json-compact   Output in compact json format.
   -n, --number int     Number of roles to retrieve. Minimum 1, maximum 1000. (default 100)
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters.
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
