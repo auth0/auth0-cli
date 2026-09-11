@@ -300,6 +300,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(apiCmd(cli))
 	rootCmd.AddCommand(terraformCmd(cli))
 	rootCmd.AddCommand(eventStreamsCmd(cli))
+	rootCmd.AddCommand(formsCmd(cli))
 	rootCmd.AddCommand(flowsCmd(cli))
 	rootCmd.AddCommand(networkACLCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))

@@ -131,6 +131,7 @@ var PromptScreenMap = map[string][]string{
 	"consent":                     {"consent"},
 	"customized-consent":          {"customized-consent"},
 	"email-otp-challenge":         {"email-otp-challenge"},
+	"confirmation":                {"confirmation"},
 	"mfa-webauthn": {
 		"mfa-webauthn-change-key-nickname",
 		"mfa-webauthn-enrollment-success",

@@ -1,4 +1,4 @@
-//go:generate mockgen -source=guardian_policy.go -destination=mock/guardian_policy_mock.go -package=mock
+//go:generate go tool mockgen -source=guardian_policy.go -destination=mock/guardian_policy_mock.go -package=mock
 
 package auth0
 

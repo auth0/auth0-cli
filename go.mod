@@ -1,12 +1,12 @@
 module github.com/auth0/auth0-cli
 
-go 1.25.8
+go 1.26.0
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
-	github.com/auth0/go-auth0 v1.48.0
+	github.com/auth0/go-auth0 v1.49.0
 	github.com/auth0/go-auth0/v3 v3.4.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v1.0.0
@@ -14,7 +14,6 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/getsentry/sentry-go v0.49.0
-	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -38,9 +37,10 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/pretty v1.2.1
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.22.0
-	golang.org/x/sys v0.47.0
+	go.uber.org/mock v0.6.0
+	golang.org/x/oauth2 v0.37.0
+	golang.org/x/sync v0.23.0
+	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.41.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -106,3 +106,5 @@ require (
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
 )
+
+tool go.uber.org/mock/mockgen

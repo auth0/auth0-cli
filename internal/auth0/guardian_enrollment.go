@@ -1,4 +1,4 @@
-//go:generate mockgen -source=guardian_enrollment.go -destination=mock/guardian_enrollment_mock.go -package=mock
+//go:generate go tool mockgen -source=guardian_enrollment.go -destination=mock/guardian_enrollment_mock.go -package=mock
 
 package auth0
 
