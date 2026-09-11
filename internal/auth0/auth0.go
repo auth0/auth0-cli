@@ -89,6 +89,13 @@ type APIV3 struct {
 	UserRefreshToken             UserRefreshTokenAPIV3
 	ActionModule                 ActionModuleAPIV3
 	ActionModuleVersion          ActionModuleVersionAPIV3
+	GuardianPolicy               GuardianPolicyAPIV3
+	GuardianEnrollment           GuardianEnrollmentAPIV3
+	GuardianFactor               GuardianFactorAPIV3
+	GuardianFactorPhone          GuardianFactorPhoneAPIV3
+	GuardianFactorSms            GuardianFactorSmsAPIV3
+	GuardianFactorPush           GuardianFactorPushAPIV3
+	GuardianFactorDuo            GuardianFactorDuoAPIV3
 	NetworkACLKey                NetworkACLKeyAPIV3
 }
 
@@ -109,6 +116,13 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		UserRefreshToken:             m.Users.RefreshToken,
 		ActionModule:                 m.Actions.Modules,
 		ActionModuleVersion:          m.Actions.Modules.Versions,
+		GuardianPolicy:               m.Guardian.Policies,
+		GuardianEnrollment:           m.Guardian.Enrollments,
+		GuardianFactor:               m.Guardian.Factors,
+		GuardianFactorPhone:          m.Guardian.Factors.Phone,
+		GuardianFactorSms:            m.Guardian.Factors.Sms,
+		GuardianFactorPush:           m.Guardian.Factors.PushNotification,
+		GuardianFactorDuo:            m.Guardian.Factors.Duo.Settings,
 		NetworkACLKey:                m.Keys.NetworkACLs,
 	}
 }

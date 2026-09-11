@@ -1,0 +1,479 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  # ----------------------------------------------------------------------------
+  # Factors: list and enable/disable for every supported factor value.
+  # ----------------------------------------------------------------------------
+  001 - guardian factors list:
+    command: auth0 guardian factors list
+    exit-code: 0
+    stdout:
+      contains:
+        - FACTOR
+        - STATUS
+
+  002 - guardian factors list (json):
+    command: auth0 guardian factors list --json
+    exit-code: 0
+    stdout:
+      contains:
+        - '"name"'
+        - '"enabled"'
+
+  003 - guardian factors set sms enabled:
+    command: auth0 guardian factors set sms --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - sms
+        - enabled
+
+  004 - guardian factors set push-notification enabled:
+    command: auth0 guardian factors set push-notification --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - push-notification
+        - enabled
+
+  005 - guardian factors set otp enabled:
+    command: auth0 guardian factors set otp --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - otp
+        - enabled
+
+  006 - guardian factors set duo enabled:
+    command: auth0 guardian factors set duo --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - duo
+        - enabled
+
+  007 - guardian factors set webauthn-roaming enabled:
+    command: auth0 guardian factors set webauthn-roaming --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - webauthn-roaming
+        - enabled
+
+  008 - guardian factors set webauthn-platform enabled:
+    command: auth0 guardian factors set webauthn-platform --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - webauthn-platform
+        - enabled
+
+  009 - guardian factors set recovery-code enabled:
+    command: auth0 guardian factors set recovery-code --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - recovery-code
+        - enabled
+
+  010 - guardian factors set email enabled:
+    command: auth0 guardian factors set email --enabled
+    exit-code: 0
+    stdout:
+      contains:
+        - email
+        - enabled
+
+  011 - guardian factors set otp disabled:
+    command: auth0 guardian factors set otp --enabled=false
+    exit-code: 0
+    stdout:
+      contains:
+        - otp
+        - disabled
+
+  012 - guardian factors set otp enabled (json):
+    command: auth0 guardian factors set otp --enabled --json
+    exit-code: 0
+    stdout:
+      contains:
+        - '"enabled"'
+
+  013 - guardian factors set invalid factor fails:
+    command: auth0 guardian factors set bogus-factor --enabled
+    exit-code: 1
+    stderr:
+      contains:
+        - 'Invalid factor'
+
+  # ----------------------------------------------------------------------------
+  # Policies: mutually-exclusive single value plus the clear paths.
+  # ----------------------------------------------------------------------------
+  014 - guardian policies show:
+    command: auth0 guardian policies show
+    exit-code: 0
+
+  015 - guardian policies show (json):
+    command: auth0 guardian policies show --json
+    exit-code: 0
+
+  016 - guardian policies set all-applications:
+    command: auth0 guardian policies set --policy all-applications
+    exit-code: 0
+    stdout:
+      contains:
+        - POLICY
+        - all-applications
+
+  017 - guardian policies set confidence-score:
+    command: auth0 guardian policies set --policy confidence-score
+    exit-code: 0
+    stdout:
+      contains:
+        - POLICY
+        - confidence-score
+
+  018 - guardian policies set policy none clears:
+    command: auth0 guardian policies set --policy none
+    exit-code: 0
+
+  019 - guardian policies set --none clears:
+    command: auth0 guardian policies set --none
+    exit-code: 0
+
+  020 - guardian policies set invalid value fails:
+    command: auth0 guardian policies set --policy bogus
+    exit-code: 1
+    stderr:
+      contains:
+        - 'valid values are all-applications, confidence-score, none'
+
+  # ----------------------------------------------------------------------------
+  # Enrollments: error paths (create/show/delete require real users/enrollments).
+  # ----------------------------------------------------------------------------
+  021 - guardian enrollments show unknown id fails:
+    command: auth0 guardian enrollments show dev_invalid_enrollment_id
+    exit-code: 1
+    stderr:
+      contains:
+        - read guardian enrollment with ID
+
+  022 - guardian enrollments delete unknown id fails:
+    command: auth0 guardian enrollments delete dev_invalid_enrollment_id --force
+    exit-code: 1
+    stderr:
+      contains:
+        - delete guardian enrollment with ID
+
+  023 - guardian enrollments create-ticket unknown user fails:
+    command: auth0 guardian enrollments create-ticket --user-id "auth0|000000000000000000000000"
+    exit-code: 1
+    stderr:
+      contains:
+        - create guardian enrollment ticket for user
+
+  # ----------------------------------------------------------------------------
+  # Phone factor: message-types are tenant-agnostic and covered here. The legacy
+  # provider/templates/twilio endpoints have tenant-dependent behaviour (403 on
+  # tenants moved to the unified phone experience, success or an empty-body error
+  # on tenants where the legacy provider is still enabled), so they cannot be
+  # asserted deterministically against a single live tenant. The deprecation-hint
+  # logic is covered by a unit test instead (internal/cli/guardian_test.go).
+  # ----------------------------------------------------------------------------
+  024 - guardian factors phone show-message-types:
+    command: auth0 guardian factors phone show-message-types
+    exit-code: 0
+    stdout:
+      contains:
+        - MESSAGE TYPES
+
+  025 - guardian factors phone set-message-types sms:
+    command: auth0 guardian factors phone set-message-types --message-type sms
+    exit-code: 0
+    stdout:
+      contains:
+        - MESSAGE TYPES
+        - sms
+
+  026 - guardian factors phone set-message-types voice:
+    command: auth0 guardian factors phone set-message-types --message-type voice
+    exit-code: 0
+    stdout:
+      contains:
+        - MESSAGE TYPES
+        - voice
+
+  027 - guardian factors phone set-message-types sms and voice:
+    command: auth0 guardian factors phone set-message-types --message-type sms --message-type voice
+    exit-code: 0
+    stdout:
+      contains:
+        - MESSAGE TYPES
+        - sms
+        - voice
+
+  # ----------------------------------------------------------------------------
+  # Push factor: provider selection plus APNs, FCM, FCM v1 and SNS config.
+  # ----------------------------------------------------------------------------
+  034 - guardian factors push show-provider:
+    command: auth0 guardian factors push show-provider
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER
+
+  035 - guardian factors push set-provider sns:
+    command: auth0 guardian factors push set-provider --provider sns
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER
+        - sns
+
+  036 - guardian factors push set-provider direct:
+    command: auth0 guardian factors push set-provider --provider direct
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER
+        - direct
+
+  037 - guardian factors push set-provider guardian:
+    command: auth0 guardian factors push set-provider --provider guardian
+    exit-code: 0
+    stdout:
+      contains:
+        - PROVIDER
+        - guardian
+
+  038 - guardian factors push set-provider invalid fails:
+    command: auth0 guardian factors push set-provider --provider bogus
+    exit-code: 1
+    stderr:
+      contains:
+        - 'valid values are guardian, sns, direct'
+
+  039 - guardian factors push show-apns:
+    command: auth0 guardian factors push show-apns
+    exit-code: 0
+    stdout:
+      contains:
+        - BUNDLE ID
+        - SANDBOX
+
+  040 - guardian factors push set-apns:
+    command: auth0 guardian factors push set-apns --sandbox --bundle-id com.example.app
+    exit-code: 0
+    stdout:
+      contains:
+        - BUNDLE ID
+        - com.example.app
+        - SANDBOX
+
+  041 - guardian factors push update-apns sandbox only:
+    command: auth0 guardian factors push update-apns --sandbox=false
+    exit-code: 0
+    stdout:
+      contains:
+        - SANDBOX
+
+  042 - guardian factors push show-sns:
+    command: auth0 guardian factors push show-sns
+    exit-code: 0
+    stdout:
+      contains:
+        - AWS ACCESS KEY ID
+        - AWS REGION
+
+  043 - guardian factors push set-sns masks the secret in its response:
+    command: auth0 guardian factors push set-sns --aws-access-key-id AKIAEXAMPLE --aws-secret-access-key secretexample --aws-region us-east-1 --apns-platform-arn arn:aws:sns:us-east-1:apns --gcm-platform-arn arn:aws:sns:us-east-1:gcm
+    exit-code: 0
+    stdout:
+      contains:
+        - AWS ACCESS KEY ID
+        - AKIAEXAMPLE
+        - AWS REGION
+        - us-east-1
+        - AWS SECRET ACCESS KEY
+        - (set)
+      not-contains:
+        - secretexample
+
+  044 - guardian factors push show-sns does not echo the secret:
+    command: auth0 guardian factors push show-sns
+    exit-code: 0
+    stdout:
+      contains:
+        - AWS SECRET ACCESS KEY
+        - (not set)
+      not-contains:
+        - secretexample
+
+  045 - guardian factors push update-sns region only:
+    command: auth0 guardian factors push update-sns --aws-region us-west-2
+    exit-code: 0
+    stdout:
+      contains:
+        - AWS REGION
+        - us-west-2
+
+  046 - guardian factors push set-fcm masks the server key:
+    command: auth0 guardian factors push set-fcm --server-key dummy-server-key
+    exit-code: 0
+    stdout:
+      contains:
+        - SERVER KEY
+        - (set)
+      not-contains:
+        - dummy-server-key
+
+  047 - guardian factors push update-fcm masks the server key:
+    command: auth0 guardian factors push update-fcm --server-key another-dummy-key
+    exit-code: 0
+    stdout:
+      contains:
+        - SERVER KEY
+        - (set)
+      not-contains:
+        - another-dummy-key
+
+  048 - guardian factors push set-fcmv1 validates credentials:
+    command: auth0 guardian factors push set-fcmv1 --server-credentials '{"type":"service_account"}'
+    exit-code: 1
+    stderr:
+      contains:
+        - set FCM v1 configuration
+
+  # ----------------------------------------------------------------------------
+  # Duo factor settings: show, replace and partial update.
+  # ----------------------------------------------------------------------------
+  049 - guardian factors duo settings show:
+    command: auth0 guardian factors duo settings show
+    exit-code: 0
+    stdout:
+      contains:
+        - HOST
+        - INTEGRATION KEY
+        - SECRET KEY
+
+  050 - guardian factors duo settings set:
+    command: auth0 guardian factors duo settings set --ikey IKEYEXAMPLE --skey skeyexample --host api-example.duosecurity.com
+    exit-code: 0
+    stdout:
+      contains:
+        - HOST
+        - api-example.duosecurity.com
+        - INTEGRATION KEY
+        - IKEYEXAMPLE
+
+  051 - guardian factors duo settings set masks the secret key:
+    command: auth0 guardian factors duo settings show
+    exit-code: 0
+    stdout:
+      contains:
+        - SECRET KEY
+        - (set)
+      not-contains:
+        - skeyexample
+
+  052 - guardian factors duo settings update host only:
+    command: auth0 guardian factors duo settings update --host api-updated.duosecurity.com
+    exit-code: 0
+    stdout:
+      contains:
+        - HOST
+        - api-updated.duosecurity.com
+
+  # ----------------------------------------------------------------------------
+  # Guards: a bare "set" (full replace) must not silently wipe configuration.
+  # ----------------------------------------------------------------------------
+  053 - guardian factors push set-provider requires a provider:
+    command: auth0 guardian factors push set-provider
+    exit-code: 1
+    stderr:
+      contains:
+        - '--provider is required'
+
+  054 - guardian factors push set-apns rejects an empty replace:
+    command: auth0 guardian factors push set-apns
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the entire APNs configuration
+
+  055 - guardian factors push set-sns rejects an empty replace:
+    command: auth0 guardian factors push set-sns
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the entire SNS configuration
+
+  056 - guardian factors duo settings set rejects an empty replace:
+    command: auth0 guardian factors duo settings set
+    exit-code: 1
+    stderr:
+      contains:
+        - are all required for set
+
+  057 - guardian policies set rejects an empty invocation:
+    command: auth0 guardian policies set
+    exit-code: 1
+    stderr:
+      contains:
+        - '--policy or --none is required'
+
+  058 - guardian factors set rejects a missing enabled flag:
+    command: auth0 guardian factors set sms
+    exit-code: 1
+    stderr:
+      contains:
+        - '--enabled is required'
+
+  # ----------------------------------------------------------------------------
+  # Partial update preserves the fields it does not touch and renders the full
+  # current state (the PATCH response only echoes changed fields, so the command
+  # re-fetches before rendering).
+  # ----------------------------------------------------------------------------
+  059 - guardian factors duo settings set full config:
+    command: auth0 guardian factors duo settings set --host api-preserve.duosecurity.com --ikey IKEYPRESERVE --skey skeypreserve
+    exit-code: 0
+    stdout:
+      contains:
+        - api-preserve.duosecurity.com
+        - IKEYPRESERVE
+
+  060 - guardian factors duo settings update host preserves ikey:
+    command: auth0 guardian factors duo settings update --host api-updated2.duosecurity.com
+    exit-code: 0
+    stdout:
+      contains:
+        - api-updated2.duosecurity.com
+        - IKEYPRESERVE
+        - (set)
+      not-contains:
+        - skeypreserve
+
+  # ----------------------------------------------------------------------------
+  # Restore a sensible baseline for the test tenant.
+  #
+  # The Duo, APNs and FCM secrets configured by the tests above are write-only,
+  # so once set they cannot be read back and there is no API to clear them.
+  # Left enabled, the auth0_guardian resource would export those required
+  # sensitive fields as null, and `auth0 tf generate` (terraform-test-cases,
+  # which runs after this suite) would fail `terraform plan` with "Missing
+  # required argument". Disabling the duo and push-notification factors drops
+  # those sub-blocks and returns auth0_guardian to a terraform-plannable state.
+  # ----------------------------------------------------------------------------
+  061 - restore otp factor enabled:
+    command: auth0 guardian factors set otp --enabled
+    exit-code: 0
+
+  062 - reset duo factor to a terraform-clean state:
+    command: auth0 guardian factors set duo --enabled=false
+    exit-code: 0
+
+  063 - reset push factor to a terraform-clean state:
+    command: auth0 guardian factors set push-notification --enabled=false
+    exit-code: 0
