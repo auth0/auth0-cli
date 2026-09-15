@@ -175,6 +175,14 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 tenants use",
 		"auth0 tenants list",
 		"auth0 agent skills install",
+		// Plugin management touches only the public registry or the local store;
+		// only running a plugin (`auth0 <plugin>`) needs a tenant session, which
+		// that path establishes itself.
+		"auth0 plugins available",
+		"auth0 plugins install",
+		"auth0 plugins update",
+		"auth0 plugins list",
+		"auth0 plugins remove",
 	}
 
 	for _, cmd := range commandsWithNoAuthRequired {
@@ -310,6 +318,10 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.AddCommand(commandsCmd(cli))
 	rootCmd.AddCommand(agentCmd(cli))
+	rootCmd.AddCommand(pluginsCmd(cli))
+
+	// Register installed plugins as hidden top-level `auth0 <name>` commands.
+	registerInstalledPlugins(rootCmd, cli)
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))

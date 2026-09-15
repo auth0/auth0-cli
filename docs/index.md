@@ -105,6 +105,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 - [auth0 network-acl](auth0_network-acl.md) - Manage network ACL settings
 - [auth0 orgs](auth0_orgs.md) - Manage resources for organizations
 - [auth0 phone](auth0_phone.md) - Manage phone providers
+- [auth0 plugins](auth0_plugins.md) - Run external tools as Auth0 CLI plugins
 - [auth0 protection](auth0_protection.md) - Manage resources for attack protection
 - [auth0 quickstarts](auth0_quickstarts.md) - Quickstart support for getting bootstrapped
 - [auth0 refresh-tokens](auth0_refresh-tokens.md) - Manage resources for refresh tokens

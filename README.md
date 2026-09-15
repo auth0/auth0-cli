@@ -279,6 +279,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 logout](https://auth0.github.io/auth0-cli/auth0_logout.html) - Log out of a tenant's session
 - [auth0 logs](https://auth0.github.io/auth0-cli/auth0_logs.html) - View tenant logs
 - [auth0 orgs](https://auth0.github.io/auth0-cli/auth0_orgs.html) - Manage resources for organizations
+- [auth0 plugins](https://auth0.github.io/auth0-cli/auth0_plugins.html) - Run external tools as Auth0 CLI plugins
 - [auth0 protection](https://auth0.github.io/auth0-cli/auth0_protection.html) - Manage resources for attack protection
 - [auth0 quickstarts](https://auth0.github.io/auth0-cli/auth0_quickstarts.html) - Quickstart support for getting bootstrapped
 - [auth0 refresh-tokens](https://auth0.github.io/auth0-cli/auth0_refresh-tokens.html) - Manage resources for refresh tokens
