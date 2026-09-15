@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing APIs. To create one, run: `auth0 apis create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 apis list [flags]
@@ -21,6 +24,10 @@ auth0 apis list [flags]
   auth0 apis ls -n 100 --json
   auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv
+  auth0 apis list --schema
+  auth0 apis list --schema --json
+  auth0 apis list --query '{"name":"My API"}'
+  auth0 apis list --query '{"name":"My API"}' --json
 ```
 
 
@@ -31,6 +38,8 @@ auth0 apis list [flags]
       --json           Output in json format.
       --json-compact   Output in compact json format.
   -n, --number int     Number of APIs to retrieve. Minimum 1, maximum 1000. (default 100)
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters.
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

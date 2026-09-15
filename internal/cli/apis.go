@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 
@@ -135,6 +136,8 @@ func scopesCmd(cli *cli) *cobra.Command {
 func listApisCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -142,14 +145,32 @@ func listApisCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your APIs",
-		Long:    "List your existing APIs. To create one, run: `auth0 apis create`.",
+		Long: `List your existing APIs. To create one, run: ` + "`auth0 apis create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 apis list
   auth0 apis ls
   auth0 apis ls --number 100
   auth0 apis ls -n 100 --json
   auth0 apis ls -n 100 --json-compact
-  auth0 apis ls --csv`,
+  auth0 apis ls --csv
+  auth0 apis list --schema
+  auth0 apis list --schema --json
+  auth0 apis list --query '{"name":"My API"}'
+  auth0 apis list --query '{"name":"My API"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/resource-servers")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "resource-servers",
+					SchemaCmd: "auth0 apis list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
@@ -190,6 +211,8 @@ func listApisCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	apiNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -250,16 +273,22 @@ func createAPICmd(cli *cli) *cobra.Command {
 		SubjectTypeAuthorization string
 		EnforcePolicies          bool
 		TokenDialect             string
+		Data                     string
+		Schema                   bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new API",
-		Long: "Create a new API.\n\n" +
-			"To create interactively, use `auth0 apis create` with no flags.\n\n" +
-			"To create non-interactively, supply the name, identifier, scopes, " +
-			"token lifetime and whether to allow offline access through the flags.",
+		Long: `Create a new API.
+
+To create interactively, use ` + "`auth0 apis create`" + ` with no flags.
+
+To create non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 apis create
   auth0 apis create --name myapi
   auth0 apis create --name myapi --identifier http://my-api
@@ -270,8 +299,29 @@ func createAPICmd(cli *cli) *cobra.Command {
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
   auth0 apis create -n myapi -i http://my-api -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
   auth0 apis create --name myapi --identifier http://my-api --subject-type-authorization '{"user":{"policy":"allow_all"},"client":{"policy":"deny_all"}}'
-  auth0 apis create --name myapi --identifier http://my-api --enforce-policies --token-dialect access_token_authz`,
+  auth0 apis create --name myapi --identifier http://my-api --enforce-policies --token-dialect access_token_authz
+
+  # Discover the payload schema
+  auth0 apis create --schema
+  auth0 apis create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apis create --data '{"name":"myapi","identifier":"https://my-api"}'
+  auth0 apis create --data @api.json
+  cat api.json | auth0 apis create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/resource-servers")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createAPIFromJSON(cli, cmd, payload)
+			}
+
 			if err := apiName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -368,6 +418,9 @@ func createAPICmd(cli *cli) *cobra.Command {
 	apiSubjectTypeAuthorization.RegisterString(cmd, &inputs.SubjectTypeAuthorization, "{}")
 	apiEnforcePolicies.RegisterBool(cmd, &inputs.EnforcePolicies, false)
 	apiTokenDialect.RegisterString(cmd, &inputs.TokenDialect, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -383,16 +436,22 @@ func updateAPICmd(cli *cli) *cobra.Command {
 		SubjectTypeAuthorization string
 		EnforcePolicies          bool
 		TokenDialect             string
+		Data                     string
+		Schema                   bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an API",
-		Long: "Update an API.\n\n" +
-			"To update interactively, use `auth0 apis update` with no arguments.\n\n" +
-			"To update non-interactively, supply the name, identifier, scopes, " +
-			"token lifetime and whether to allow offline access through the flags.",
+		Long: `Update an API.
+
+To update interactively, use ` + "`auth0 apis update`" + ` with no arguments.
+
+To update non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 apis update
   auth0 apis update <api-id|api-audience>
   auth0 apis update <api-id|api-audience> --name myapi
@@ -402,14 +461,35 @@ func updateAPICmd(cli *cli) *cobra.Command {
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
   auth0 apis update <api-id|api-audience> --subject-type-authorization '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'
-  auth0 apis update <api-id|api-audience> --enforce-policies=false --token-dialect rfc9068_profile_authz`,
+  auth0 apis update <api-id|api-audience> --enforce-policies=false --token-dialect rfc9068_profile_authz
+
+  # Discover the payload schema
+  auth0 apis update --schema
+  auth0 apis update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apis update <api-id|api-audience> --data '{"token_lifetime":7200}'
+  auth0 apis update <api-id|api-audience> --data @api.json
+  cat api.json | auth0 apis update <api-id|api-audience>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/resource-servers/{id}")
+			}
+
 			if len(args) == 0 {
 				if err := apiID.Pick(cmd, &inputs.ID, cli.apiPickerOptions); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateAPIFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			var current *management.ResourceServer
@@ -529,6 +609,9 @@ func updateAPICmd(cli *cli) *cobra.Command {
 	apiSubjectTypeAuthorization.RegisterStringU(cmd, &inputs.SubjectTypeAuthorization, "{}")
 	apiEnforcePolicies.RegisterBoolU(cmd, &inputs.EnforcePolicies, false)
 	apiTokenDialect.RegisterStringU(cmd, &inputs.TokenDialect, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -692,6 +775,36 @@ func formatAPISettingsPath(id string) string {
 		return ""
 	}
 	return fmt.Sprintf("apis/%s/settings", id)
+}
+
+func createAPIFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	api, err := runJSONWrite[management.ResourceServer](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/resource-servers",
+		URI:        cli.api.HTTPClient.URI("resource-servers"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 apis create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create API: %w", err)
+	}
+	cli.renderer.APICreate(api)
+	return nil
+}
+
+func updateAPIFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	api, err := runJSONWrite[management.ResourceServer](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/resource-servers/{id}",
+		URI:        cli.api.HTTPClient.URI("resource-servers", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 apis update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update API with ID %q: %w", id, err)
+	}
+	cli.renderer.APIUpdate(api)
+	return nil
 }
 
 func apiScopesFor(scopes []string) *[]management.ResourceServerScope {
