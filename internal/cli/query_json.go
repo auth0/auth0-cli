@@ -34,6 +34,15 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	}
 	q := u.Query()
 	for key, val := range queryParams {
+		// JSON arrays (e.g. {"strategy":["auth0","oidc"]}) become repeated query
+		// params, matching how the Management API expects list-valued filters.
+		// Scalars are set as-is.
+		if items, ok := val.([]interface{}); ok {
+			for _, item := range items {
+				q.Add(key, fmt.Sprintf("%v", item))
+			}
+			continue
+		}
 		q.Set(key, fmt.Sprintf("%v", val))
 	}
 	u.RawQuery = q.Encode()

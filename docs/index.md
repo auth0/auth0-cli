@@ -94,6 +94,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 - [auth0 client-grants](auth0_client-grants.md) - Manage client grants
 - [auth0 commands](auth0_commands.md) - Discover every CLI command in one place, for humans and AI agents
 - [auth0 completion](auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
+- [auth0 connections](auth0_connections.md) - Manage resources for connections
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers
 - [auth0 event-streams](auth0_event-streams.md) - Manage Event Stream

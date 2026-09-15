@@ -90,6 +90,8 @@ type APIV3 struct {
 	ActionModule                 ActionModuleAPIV3
 	ActionModuleVersion          ActionModuleVersionAPIV3
 	NetworkACLKey                NetworkACLKeyAPIV3
+	Connection                   ConnectionAPIV3
+	ConnectionEnabledClient      ConnectionEnabledClientAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -110,6 +112,8 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		ActionModule:                 m.Actions.Modules,
 		ActionModuleVersion:          m.Actions.Modules.Versions,
 		NetworkACLKey:                m.Keys.NetworkACLs,
+		Connection:                   m.Connections,
+		ConnectionEnabledClient:      m.Connections.Clients,
 	}
 }
 
