@@ -36,7 +36,7 @@ auth0 actions list [flags]
       --csv            Output in csv format.
       --json           Output in json format.
       --json-compact   Output in compact json format.
-  -q, --query string   Filter actions with a JSON object of query parameters (e.g. '{"triggerId":"post-login"}'). Any API-supported parameter works immediately. Run '--schema' to see documented parameters.
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters.
       --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
