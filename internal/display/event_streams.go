@@ -555,7 +555,9 @@ func (r *Renderer) ConfirmPrompt(prompt string) bool {
 
 	rn, err := ContTty.ReadRune()
 	if err != nil {
-		panic(err)
+		// No readable TTY (an agent or piped run): do not confirm the action.
+		fmt.Println("Error: Unable to read user input.")
+		return false
 	}
 	fmt.Printf("%c\n", rn)
 

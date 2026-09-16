@@ -354,10 +354,12 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 // command with subcommands, including the root) without choosing one, so cobra
 // would fall back to printing that namespace's help. A bare `auth0` or
 // `auth0 apps` qualifies. It does not qualify when `--version`/`-v` is present
-// (which prints the version), or when a leftover positional token remains, which
-// means a command was named (possibly mistyped) and must run so it can succeed
-// or report "unknown command" itself. The remaining slice is the leftover after
-// cobra matched the command path, so it holds flags and any un-matched positional.
+// (which prints the version), when a leftover positional token remains (a command
+// was named, possibly mistyped, and must run so it can report "unknown command"),
+// or when an unrecognized flag is present (for example `auth0 apps --bogus`), which
+// must fail as a usage error rather than be answered with help. The remaining slice
+// is the leftover after cobra matched the command path, so it holds flags and any
+// un-matched positional.
 func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bool {
 	for _, arg := range args {
 		if arg == "-v" || arg == "--version" {
@@ -373,9 +375,30 @@ func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bo
 		if !strings.HasPrefix(arg, "-") {
 			return false
 		}
+		if !flagTokenIsKnown(target, arg) {
+			return false
+		}
 	}
 
 	return true
+}
+
+// flagTokenIsKnown reports whether a "-"-prefixed token names a flag defined on
+// cmd or inherited from a parent. A bare "-" or "--" is treated as known (it is not
+// an unknown flag). It is used to tell an accidental unknown flag on a namespace
+// apart from a legitimate global flag such as --debug.
+func flagTokenIsKnown(cmd *cobra.Command, token string) bool {
+	name, _, _ := strings.Cut(strings.TrimLeft(token, "-"), "=")
+	if name == "" {
+		return true
+	}
+
+	if strings.HasPrefix(token, "--") {
+		return cmd.Flags().Lookup(name) != nil || cmd.InheritedFlags().Lookup(name) != nil
+	}
+
+	short := name[:1]
+	return cmd.Flags().ShorthandLookup(short) != nil || cmd.InheritedFlags().ShorthandLookup(short) != nil
 }
 
 // hasHelpRequest reports whether args request help via --help/-h or the `help`

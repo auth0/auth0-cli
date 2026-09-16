@@ -28,6 +28,7 @@ Agent mode makes the whole output stream machine-readable. It is enabled automat
 - JSON results on stdout always end with a trailing newline, so a piped or newline-delimited reader never drops the final record.
 - Diagnostic messages (info, success, detail, warning, and non-fatal errors) are written to stderr as JSON lines in the form `{"level":"...","message":"..."}` instead of decorated human prose, matching the JSON error envelope above. The decorative heading is suppressed.
 - Help is returned as JSON. A bare `auth0` and a command group invoked without a subcommand (for example `auth0 apps`) return the JSON command tree rather than the human help text, and the root help describes agent mode itself.
+- When `--data` is set on `auth0 api` (or a `--data`-driven create/update), the flag value is used as-is and stdin is not read, so a request that carries its body on the flag never blocks on an open pipe. To read a body from stdin explicitly, pass `--data @-` or `--data -`.
 
 If you parse the human-readable prose that the CLI previously printed to stderr, or you depend on streaming commands emitting a single JSON array, update your automation to read the JSON lines and newline-delimited output described here. Normal (non-JSON, non-agent) mode is unchanged.
 

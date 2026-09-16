@@ -116,11 +116,21 @@ func Execute() {
 		if v := recover(); v != nil {
 			err := fmt.Errorf("panic: %v", v)
 
-			if instrumentation.ReportException(err) {
-				fmt.Print(panicMessage) // If we're in development mode, we should throw the panic for so we have less surprises.
-			} else {
-				panic(v) // For non-developers, we'll swallow the panics.
+			if !instrumentation.ReportException(err) {
+				// Development / no crash-reporting build: re-panic so the developer
+				// sees the full stack trace.
+				panic(v)
 			}
+
+			// Release build: a recovered panic is still a failure. Report it on
+			// stderr (as a JSON envelope in JSON/agent mode) and exit non-zero, so
+			// it never masquerades as success or corrupts JSON written to stdout.
+			if cli.wantsJSONError() {
+				cli.renderer.ErrorJSON(buildErrorEnvelope(err))
+			} else {
+				fmt.Fprint(iostream.Messages, panicMessage)
+			}
+			os.Exit(exitGeneric) // nolint:gocritic
 		}
 	}()
 
@@ -210,6 +220,12 @@ func buildRootCmd(cli *cli) *cobra.Command {
 // validator that rejects any leftover token as an unknown command. The Args check
 // runs before PersistentPreRunE, so a typo like `auth0 actions lst` fails fast
 // without attempting authentication.
+//
+// Unknown flags are NOT whitelisted: an unrecognized flag on a namespace (for
+// example `auth0 actions --bogus`) fails at flag parsing with a usage error (exit
+// code 2) via the root's flag-error func, rather than being swallowed into a help
+// screen that exits 0. A bare namespace with only known flags (such as `--debug`)
+// still prints help.
 func enforceUnknownSubcommand(cmd *cobra.Command) {
 	for _, sub := range cmd.Commands() {
 		enforceUnknownSubcommand(sub)
@@ -220,13 +236,6 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 	if !cmd.HasSubCommands() || cmd.Runnable() {
 		return
 	}
-
-	// A namespace defines no flags of its own, so an unknown flag on it almost
-	// always accompanies a mistyped subcommand such as `auth0 users lst --json`.
-	// Tolerating unknown flags here lets parsing reach the Args validator below,
-	// which reports the far more useful "unknown command" instead of "unknown
-	// flag". Known persistent flags such as --help and --debug still parse normally.
-	cmd.FParseErrWhitelist.UnknownFlags = true
 
 	cmd.Args = func(c *cobra.Command, args []string) error {
 		if len(args) == 0 {

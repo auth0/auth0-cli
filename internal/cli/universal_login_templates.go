@@ -163,7 +163,10 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 				templateData.Body = templateOptions.getValue(templateData.Body)
 			}
 
-			pipedTemplateHTML := iostream.PipedInput()
+			pipedTemplateHTML, err := iostream.PipedInput()
+			if err != nil {
+				return err
+			}
 			if len(pipedTemplateHTML) > 0 {
 				templateData.Body = string(pipedTemplateHTML)
 			}

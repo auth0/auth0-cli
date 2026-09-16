@@ -917,7 +917,10 @@ The file size limit for a bulk import is 500KB. You will need to start multiple 
 				)
 			}
 
-			pipedUsersBody := iostream.PipedInput()
+			pipedUsersBody, err := iostream.PipedInput()
+			if err != nil {
+				return err
+			}
 			if len(pipedUsersBody) > 0 && inputs.UsersBody == "" {
 				inputs.UsersBody = string(pipedUsersBody)
 			}

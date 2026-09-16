@@ -24,6 +24,12 @@ func findSubcommand(nodes []commandNode, name string) (commandNode, bool) {
 
 func newTestCommandTree() *cobra.Command {
 	root := &cobra.Command{Use: "auth0"}
+	// Mirror the real root's persistent flags so tests can tell a known global
+	// flag (which still counts as implicit namespace help) apart from an unknown one.
+	root.PersistentFlags().String("tenant", "", "Specific tenant to use.")
+	root.PersistentFlags().Bool("debug", false, "Enable debug mode.")
+	root.PersistentFlags().Bool("no-input", false, "Disable interactivity.")
+	root.PersistentFlags().Bool("no-color", false, "Disable colors.")
 	root.PersistentFlags().Bool("agent-mode", false, "Output JSON, disable prompts and colors.")
 
 	apps := &cobra.Command{
@@ -263,13 +269,50 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.Equal(t, "auth0", nodes[0].Path)
 	})
 
-	t.Run("flags-only invocation in agent mode renders root JSON help", func(t *testing.T) {
+	t.Run("known-flag-only invocation in agent mode renders root JSON help", func(t *testing.T) {
+		// A recognized global flag with no command (for example `auth0 --debug`)
+		// is still an implicit help request.
 		var fired bool
 		out := captureOutput(t, func() {
 			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--debug"})
 		})
 		assert.True(t, fired)
 		assert.Contains(t, out, "\"auth0\"")
+	})
+
+	t.Run("unknown flag on the root in agent mode is not implicit help", func(t *testing.T) {
+		// `auth0 --bogus` must run so cobra reports the unknown flag as a usage
+		// error, rather than being answered with help.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--bogus"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("unknown flag on a namespace in agent mode is not implicit help", func(t *testing.T) {
+		// `auth0 apps --bogus` must run so cobra reports the unknown flag as a
+		// usage error, rather than being swallowed into that namespace's help.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--bogus"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("known flag on a namespace in agent mode renders that namespace's JSON help", func(t *testing.T) {
+		// `auth0 apps --debug` has no unknown token, so it stays implicit help.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--debug"})
+		})
+		assert.True(t, fired)
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Equal(t, "auth0 apps", nodes[0].Path)
 	})
 
 	t.Run("bare invocation without agent mode does not fire", func(t *testing.T) {
@@ -367,6 +410,34 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.True(t, ok)
 		assert.Empty(t, apps.Flags, "subcommands in the overview should not be detailed")
 	})
+}
+
+func TestFlagTokenIsKnown(t *testing.T) {
+	root := newTestCommandTree()
+	apps, _, err := root.Find([]string{"apps"})
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name  string
+		cmd   *cobra.Command
+		token string
+		want  bool
+	}{
+		{"known persistent flag on root", root, "--debug", true},
+		{"known persistent flag inherited by namespace", apps, "--debug", true},
+		{"known persistent flag with value", apps, "--tenant=example", true},
+		{"unknown long flag on root", root, "--bogus", false},
+		{"unknown long flag on namespace", apps, "--bogus", false},
+		{"unknown shorthand", apps, "-x", false},
+		{"bare double dash is not unknown", apps, "--", true},
+		{"bare single dash is not unknown", apps, "-", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, flagTokenIsKnown(tt.cmd, tt.token))
+		})
+	}
 }
 
 // findFlag returns the flag with the given name from a slice of flags.

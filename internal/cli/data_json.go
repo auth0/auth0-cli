@@ -66,6 +66,19 @@ func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
 		return nil, fmt.Errorf("no input provided")
 	}
 
+	// "@-" and "-" read the payload from stdin, the common agent/script idiom for
+	// piping a body while still passing the flag explicitly.
+	if input == "@-" || input == "-" {
+		data, err := iostream.PipedInput()
+		if err != nil {
+			return nil, err
+		}
+		if len(data) == 0 {
+			return nil, fmt.Errorf("no data received on stdin")
+		}
+		return data, nil
+	}
+
 	if input[0] == '@' { // @file.
 		return os.ReadFile(input[1:])
 	}
@@ -99,7 +112,10 @@ func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) 
 		return flagValue, true, nil
 	}
 
-	pipedPayload := iostream.PipedInput()
+	pipedPayload, err := iostream.PipedInput()
+	if err != nil {
+		return "", false, err
+	}
 	if len(pipedPayload) == 0 {
 		return "", false, nil
 	}
