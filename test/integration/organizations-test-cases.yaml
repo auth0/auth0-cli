@@ -78,7 +78,7 @@ tests:
 
   010 - show organization with invalid organization ID:
     command: auth0 orgs show "this-org-id-does-not-exist"
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - "Failed to read organization with ID \"this-org-id-does-not-exist\""
@@ -199,7 +199,7 @@ tests:
 
   026 - list organization invitations without org id and no-input flag:
     command: auth0 orgs invitations list --no-input
-    exit-code: 1
+    exit-code: 5
     stderr:
       contains:
         - "Failed to list invitations of organization with ID \"\""
@@ -270,28 +270,28 @@ tests:
 
   034 - show organization invitation with invalid invitation ID:
     command: auth0 orgs invs show --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id "uinv_invalid123"
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - Failed to read organization invitation
 
   035 - show organization invitation with invalid organization ID:
     command: auth0 orgs invs show --org-id "org_invalid123" --invitation-id "uinv_something"
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - Failed to read organization invitation
 
   036 - show organization invitation without org id and no-input flag:
     command: auth0 orgs invitations show --no-input
-    exit-code: 1
+    exit-code: 5
     stderr:
       contains:
         - "Failed to read organization invitation \"\""
 
   037 - show organization invitation without invitation id and no-input flag:
     command: auth0 orgs invitations show --org-id $(./test/integration/scripts/get-org-id.sh) --no-input
-    exit-code: 1
+    exit-code: 5
     stderr:
       contains:
         - "Failed to read organization invitation \"\""
@@ -304,7 +304,7 @@ tests:
 
   039 - delete organization invitation with invalid invitation ID:
     command: auth0 orgs invs delete --org-id $(./test/integration/scripts/get-org-id.sh) --invitation-id "uinv_invalid123" --force --no-input
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - Failed to delete invitation

@@ -45,16 +45,16 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (json.RawMessage, error) {
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read JSON input: %w", err)
+		return nil, validationError{fmt.Errorf("failed to read JSON input: %w", err)}
 	}
 
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
 	if err != nil {
-		return nil, fmt.Errorf("schema validation error: %w", err)
+		return nil, validationError{fmt.Errorf("schema validation error: %w", err)}
 	}
 
 	if !result.Valid {
-		return nil, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
+		return nil, validationError{fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))}
 	}
 
 	return jsonData, nil

@@ -32,7 +32,10 @@ func (sm *SchemaManager) EnhanceError(err error, method, path string) error {
 	}
 
 	schemaInfo := formatSchemaInfo(requestSchema.Value, operation)
-	return fmt.Errorf("%s\n\n%s", err.Error(), schemaInfo)
+	// Wrap with %w (not %s) so the underlying management.Error stays in the
+	// chain and errors.As can still classify it as a validation failure (exit 4)
+	// for the JSON error envelope and exit-code contract.
+	return fmt.Errorf("%w\n\n%s", err, schemaInfo)
 }
 
 // formatSchemaInfo renders the expected request schema, reusing the shared

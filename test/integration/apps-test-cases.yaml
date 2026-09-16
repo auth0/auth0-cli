@@ -73,7 +73,7 @@ tests:
 
   009 - it fails to creates a m2m app with auth method set to none:
     command: auth0 apps create --name integration-test-app-m2mapp2 --type m2m --description M2mApp2 --auth-method None
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - "Failed to create application"
@@ -129,7 +129,7 @@ tests:
 
   017 - it fails to create a m2m app with device code grant:
     command: auth0 apps create --name integration-test-app-m2mapp4 --type m2m --description M2mApp4 --grants credentials,device-code
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - "Failed to create application"
@@ -368,7 +368,7 @@ tests:
 
   049 - it fails to update resource-server-identifier (immutable property):
     command: auth0 apps update $(./test/integration/scripts/get-resource-server-app-id.sh) --resource-server-identifier http://new-api.localhost --json
-    exit-code: 1
+    exit-code: 2
     stderr:
       contains:
         - "Unknown flag: --resource-server-identifier"

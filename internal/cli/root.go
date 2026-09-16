@@ -11,8 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/auth0/go-auth0/management"
-	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -82,6 +80,11 @@ func Execute() {
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
+	// Wrap flag-parse errors so they map to the usage exit code (2).
+	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
+		return usageError{err}
+	})
+
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
 
@@ -120,11 +123,25 @@ func Execute() {
 	cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run.
 
 	if err != nil {
-		renderErrorMessage(cli.renderer, err.Error())
+		if cli.wantsJSONError() {
+			cli.renderer.ErrorJSON(buildErrorEnvelope(err))
+		} else {
+			renderErrorMessage(cli.renderer, err.Error())
+		}
 
 		instrumentation.ReportException(err)
-		os.Exit(1) // nolint:gocritic
+		os.Exit(exitCodeForError(err)) // nolint:gocritic
 	}
+}
+
+// wantsJSONError reports whether a failing command should emit the machine-readable
+// JSON error envelope instead of a human message. It honors agent mode and the
+// JSON output flags, and also covers usage/parse errors that fail before the
+// renderer's format is configured.
+func (c *cli) wantsJSONError() bool {
+	return c.agentMode || c.json || c.jsonCompact ||
+		c.renderer.Format == display.OutputFormatJSON ||
+		c.renderer.Format == display.OutputFormatJSONCompact
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -324,7 +341,7 @@ func contextWithCancel() context.Context {
 	go func() {
 		<-ch
 		defer cancel()
-		os.Exit(0)
+		os.Exit(exitInterrupted)
 	}()
 
 	return ctx
@@ -350,6 +367,12 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 	display.Heading(ansi.Red("error"))
 
 	rawErrorMessage := []rune(errorMessage)
+	if len(rawErrorMessage) == 0 {
+		display.Errorf("An unknown error occurred.")
+		display.Newline()
+		return
+	}
+
 	humanReadableErrorMessage := string(
 		append(
 			[]rune{unicode.ToUpper(rawErrorMessage[0])},
@@ -473,59 +496,8 @@ func resolveInstallIDForTracking(cli *cli) string {
 }
 
 func classifyCommandFailure(err error) map[string]string {
-	properties := map[string]string{
+	return map[string]string{
 		"success":     "false",
-		"error_class": "unknown",
-	}
-
-	if errors.Is(err, config.ErrInvalidToken) || errors.Is(err, config.ErrMalformedToken) {
-		properties["error_class"] = "auth"
-		return properties
-	}
-
-	var missingScopesErr config.ErrTokenMissingRequiredScopes
-	if errors.As(err, &missingScopesErr) {
-		properties["error_class"] = "auth"
-		return properties
-	}
-
-	if status, ok := managementHTTPStatus(err); ok {
-		properties["error_class"] = errorClassForHTTPStatus(status)
-	}
-
-	return properties
-}
-
-// managementHTTPStatus extracts the HTTP status from a go-auth0 management API
-// error anywhere in the error chain, supporting both the v1 (management.Error)
-// and v3 (*core.APIError) SDK error types.
-func managementHTTPStatus(err error) (int, bool) {
-	var v1 management.Error
-	if errors.As(err, &v1) {
-		return v1.Status(), true
-	}
-
-	var v3 *core.APIError
-	if errors.As(err, &v3) {
-		return v3.StatusCode, true
-	}
-
-	return 0, false
-}
-
-func errorClassForHTTPStatus(status int) string {
-	switch {
-	case status == 401 || status == 403:
-		return "auth"
-	case status == 400 || status == 422:
-		return "validation"
-	case status == 404:
-		return "not_found"
-	case status == 429:
-		return "rate_limit"
-	case status >= 500:
-		return "api"
-	default:
-		return "unknown"
+		"error_class": errorClass(err),
 	}
 }

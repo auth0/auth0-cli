@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Emit a machine-readable JSON error envelope (`{"error":{"code","message","status","details"}}`) on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text
+
+### Changed
+- Return granular process exit codes per failure class instead of a blanket `1`: `2` usage/parse, `3` auth, `4` validation, `5` not-found, `6` rate-limit, `7` api (`0` success and generic `1` are unchanged). See the [migration guide](MIGRATION_GUIDE.md#exit-codes-and-error-output)
+- Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
+
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)

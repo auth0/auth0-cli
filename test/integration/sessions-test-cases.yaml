@@ -25,7 +25,7 @@ tests:
 
   004 - sessions show not found:
     command: auth0 sessions show does-not-exist
-    exit-code: 1
+    exit-code: 5
     stderr:
       contains:
         - Failed to read session with ID "does-not-exist"

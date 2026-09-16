@@ -1,5 +1,31 @@
 # Migration Guide
 
+## Exit codes and error output
+
+The CLI now returns granular process exit codes so scripts and agents can branch on the class of a failure instead of parsing output. Previously any failure exited with `1`.
+
+| Exit code | Meaning |
+| --------- | ------- |
+| `0` | Success |
+| `1` | Generic / unclassified error |
+| `2` | Usage or flag-parse error |
+| `3` | Authentication or authorization error |
+| `4` | Validation error (local input or server `400`/`422`) |
+| `5` | Not found (`404`) |
+| `6` | Rate limited (`429`) |
+| `7` | API or server error (`5xx`) |
+| `130` | Interrupted with `Ctrl-C` (previously `0`) |
+
+If your automation checks for a specific non-zero code (for example `if [ $? -eq 1 ]`) to detect any failure, update it to treat any non-zero exit as a failure, or match the specific codes above. Checks that only distinguish success (`0`) from failure (non-zero) are unaffected.
+
+In addition, when running with `--json` or in agent mode, errors are now written to stderr as a single-line JSON envelope so they can be parsed programmatically:
+
+```json
+{"error":{"code":"not_found","message":"...","status":404}}
+```
+
+The `details` field carries field-level validation errors when the API returns them. Human-readable error output is unchanged in normal (non-JSON, non-agent) mode.
+
 ## Upgrading from v0.x → v1.0
 
 As is to be expected with a major release, there are breaking changes in this update. Please ensure you read this guide
