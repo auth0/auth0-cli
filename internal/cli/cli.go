@@ -202,7 +202,8 @@ func noLocalFlagSet(cmd *cobra.Command) bool {
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
-	if canPrompt(cmd) || !iostream.IsInputTerminal() {
+	// A bypass flag carries the payload itself, so skip per-flag required validation.
+	if canPrompt(cmd) || !iostream.IsInputTerminal() || hasRequiredBypassFlag(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})
