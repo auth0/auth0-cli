@@ -2,10 +2,14 @@ package cli
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 func TestAPICmdInputs_FromArgs(t *testing.T) {
@@ -130,6 +134,179 @@ func TestAPICmdInputs_ValidateAndSetData(t *testing.T) {
 		err := inputs.validateAndSetData()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid JSON data provided")
+	})
+
+	// --data @file reads the payload from a file, the common way to send a large
+	// body without embedding it on the command line.
+	t.Run("--data @file reads from a file", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "body.json")
+		require.NoError(t, os.WriteFile(file, []byte(`{"name":"from-file"}`), 0600))
+
+		inputs := &apiCmdInputs{Method: http.MethodPost, RawData: "@" + file}
+		require.NoError(t, inputs.validateAndSetData())
+		assert.Equal(t, map[string]any{"name": "from-file"}, inputs.Data)
+	})
+
+	t.Run("--data @file surfaces a read error for a missing file", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodPost, RawData: "@/does/not/exist.json"}
+		err := inputs.validateAndSetData()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to read data file")
+	})
+
+	// --data @- (and -) reads from stdin, letting a script pipe a body while still
+	// passing the flag explicitly.
+	t.Run("--data @- reads from piped stdin", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodPost, RawData: "@-"}
+		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
+			require.NoError(t, inputs.validateAndSetData())
+		})
+		assert.Equal(t, map[string]any{"name": "from-pipe"}, inputs.Data)
+	})
+
+	t.Run("--data @- errors when stdin is empty", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodPost, RawData: "@-"}
+		withPipedStdin(t, "", func() {
+			err := inputs.validateAndSetData()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "no data received on stdin")
+		})
+	})
+}
+
+func TestAPICmdInputs_FromArgs_InfersPostFromPipedStdin(t *testing.T) {
+	const testDomain = "example.auth0.com"
+
+	t.Run("a single-argument request with a piped body infers POST", func(t *testing.T) {
+		inputs := &apiCmdInputs{}
+		withPipedStdin(t, `{"name":"piped"}`, func() {
+			require.NoError(t, inputs.fromArgs([]string{"clients"}, testDomain))
+		})
+
+		assert.Equal(t, http.MethodPost, inputs.Method)
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients", inputs.URL.String())
+		assert.Equal(t, map[string]any{"name": "piped"}, inputs.Data)
+	})
+
+	t.Run("a single-argument request with no body stays GET", func(t *testing.T) {
+		inputs := &apiCmdInputs{}
+		withPipedStdin(t, "", func() {
+			require.NoError(t, inputs.fromArgs([]string{"clients"}, testDomain))
+		})
+
+		assert.Equal(t, http.MethodGet, inputs.Method)
+		assert.Nil(t, inputs.Data)
+	})
+}
+
+func TestAPICmdInputs_QueryParams(t *testing.T) {
+	const testDomain = "example.auth0.com"
+
+	t.Run("a repeated query param sends every value", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=a", "fields=b"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=a&fields=b", inputs.URL.String())
+	})
+
+	t.Run("distinct query params are all sent", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"from=20221101", "to=20221118"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "stats/daily"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/stats/daily?from=20221101&to=20221118", inputs.URL.String())
+	})
+
+	t.Run("a value may itself contain an equals sign", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"q=name=foo"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?q=name%3Dfoo", inputs.URL.String())
+	})
+
+	// A comma-separated value (the common `fields=a,b` idiom) must be preserved as
+	// a single value, not split into separate params. This guards the flag-type
+	// change from stringToString to a string array against a regression.
+	t.Run("a comma-separated value is kept as one value", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=name,email"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=name%2Cemail", inputs.URL.String())
+	})
+
+	// The registered flag must deliver a comma-separated value whole (StringArray),
+	// not CSV-split it (as StringSlice/stringToString would), or the parser above
+	// would wrongly reject the second segment.
+	t.Run("the -q flag delivers a comma-separated value unsplit", func(t *testing.T) {
+		cmd := apiCmd(&cli{renderer: &display.Renderer{}})
+		require.NoError(t, cmd.Flags().Parse([]string{"-q", "fields=name,email"}))
+		got, err := cmd.Flags().GetStringArray("query")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"fields=name,email"}, got)
+	})
+
+	t.Run("the -q flag accumulates repeated values", func(t *testing.T) {
+		cmd := apiCmd(&cli{renderer: &display.Renderer{}})
+		require.NoError(t, cmd.Flags().Parse([]string{"-q", "fields=name", "-q", "fields=email"}))
+		got, err := cmd.Flags().GetStringArray("query")
+		require.NoError(t, err)
+		assert.Equal(t, []string{"fields=name", "fields=email"}, got)
+	})
+
+	t.Run("a query param without an equals sign is rejected", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields"}}
+		err := inputs.fromArgs([]string{"get", "clients"}, testDomain)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `invalid query parameter "fields": expected key=value`)
+	})
+}
+
+func TestFormatAPIResponse(t *testing.T) {
+	raw := []byte(`{"name":"x","nested":{"a":1}}`)
+
+	t.Run("compact mode emits a single dense line", func(t *testing.T) {
+		out, err := formatAPIResponse(display.OutputFormatJSONCompact, raw)
+		require.NoError(t, err)
+		assert.Equal(t, `{"name":"x","nested":{"a":1}}`, out)
+	})
+
+	t.Run("default mode pretty-prints with a 2-space indent", func(t *testing.T) {
+		out, err := formatAPIResponse(display.OutputFormatJSON, raw)
+		require.NoError(t, err)
+		assert.Equal(t, "{\n  \"name\": \"x\",\n  \"nested\": {\n    \"a\": 1\n  }\n}", out)
+	})
+
+	t.Run("invalid JSON surfaces a formatting error", func(t *testing.T) {
+		_, err := formatAPIResponse(display.OutputFormatJSONCompact, []byte("{"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to prepare json output")
+	})
+}
+
+func TestAPICmd_RegistersJSONOutputFlags(t *testing.T) {
+	// The api command must accept --json/--json-compact so formatAPIResponse can
+	// switch between pretty and single-line output. --json-compact sets cli.jsonCompact,
+	// which configureRenderer maps to OutputFormatJSONCompact.
+	t.Run("--json-compact is accepted and bound to the shared field", func(t *testing.T) {
+		c := &cli{renderer: &display.Renderer{}}
+		cmd := apiCmd(c)
+		require.NoError(t, cmd.Flags().Parse([]string{"--json-compact"}))
+		assert.True(t, c.jsonCompact)
+		assert.False(t, c.json)
+	})
+
+	t.Run("--json is accepted and bound to the shared field", func(t *testing.T) {
+		c := &cli{renderer: &display.Renderer{}}
+		cmd := apiCmd(c)
+		require.NoError(t, cmd.Flags().Parse([]string{"--json"}))
+		assert.True(t, c.json)
+		assert.False(t, c.jsonCompact)
+	})
+
+	t.Run("--json and --json-compact are mutually exclusive", func(t *testing.T) {
+		c := &cli{renderer: &display.Renderer{}}
+		cmd := apiCmd(c)
+		cmd.SetArgs([]string{"get", "tenants/settings", "--json", "--json-compact"})
+		cmd.SilenceUsage = true
+		cmd.SilenceErrors = true
+		err := cmd.Execute()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "json")
 	})
 }
 

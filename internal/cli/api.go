@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 
@@ -26,7 +27,7 @@ var apiFlags = apiCmdFlags{
 		Name:         "RawData",
 		LongForm:     "data",
 		ShortForm:    "d",
-		Help:         "JSON data payload to send with the request. Data can be piped in as well instead of using this flag.",
+		Help:         "JSON data payload to send with the request. Pass inline JSON, @file to read from a file, or @- to read from stdin. Data can also be piped in instead of using this flag.",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	},
@@ -34,7 +35,7 @@ var apiFlags = apiCmdFlags{
 		Name:         "QueryParams",
 		LongForm:     "query",
 		ShortForm:    "q",
-		Help:         "Query params to send with the request.",
+		Help:         "Query params to send with the request. Repeat the flag to send a param more than once, for example -q \"fields=a\" -q \"fields=b\".",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	},
@@ -60,10 +61,16 @@ type (
 		RawMethod      string
 		RawURI         string
 		RawData        string
-		RawQueryParams map[string]string
+		RawQueryParams []string
 		Method         string
 		URL            *url.URL
 		Data           interface{}
+
+		// The pipedBody field memoizes the stdin read so the body can be consulted
+		// both for method inference (parseRaw) and for the payload
+		// (validateAndSetData) without draining stdin twice.
+		pipedBody     []byte
+		pipedBodyRead bool
 	}
 )
 
@@ -94,10 +101,38 @@ Additional scopes may need to be requested during authentication step via the %s
 
 	cmd.SetUsageTemplate(apiUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation when using the delete method.")
+	// The response is always JSON. --json keeps the pretty, colorized default and
+	// --json-compact emits a single dense line so an NDJSON reader gets one record
+	// per line. There is no --csv, since an arbitrary API response is not tabular.
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 	apiFlags.Data.RegisterString(cmd, &inputs.RawData, "")
-	apiFlags.QueryParams.RegisterStringMap(cmd, &inputs.RawQueryParams, nil)
+	apiFlags.QueryParams.RegisterStringArray(cmd, &inputs.RawQueryParams, nil)
 
 	return cmd
+}
+
+// formatAPIResponse renders a raw JSON response body for stdout. Under
+// --json-compact it emits a single dense line with no color so an NDJSON reader
+// gets one record per line; otherwise it returns a 2-space-indented, colorized
+// document for a human. The trailing newline is added by renderer.Output.
+func formatAPIResponse(format display.OutputFormat, rawBodyJSON []byte) (string, error) {
+	if format == display.OutputFormatJSONCompact {
+		var compactJSON bytes.Buffer
+		if err := json.Compact(&compactJSON, rawBodyJSON); err != nil {
+			return "", fmt.Errorf("failed to prepare json output: %w", err)
+		}
+
+		return compactJSON.String(), nil
+	}
+
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, rawBodyJSON, "", "  "); err != nil {
+		return "", fmt.Errorf("failed to prepare json output: %w", err)
+	}
+
+	return ansi.ColorizeJSON(prettyJSON.String()), nil
 }
 
 func apiUsageTemplate() string {
@@ -190,19 +225,21 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return nil
 		}
 
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, rawBodyJSON, "", "  "); err != nil {
-			return fmt.Errorf("failed to prepare json output: %w", err)
+		output, err := formatAPIResponse(cli.renderer.Format, rawBodyJSON)
+		if err != nil {
+			return err
 		}
 
-		cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
+		cli.renderer.Output(output)
 
 		return nil
 	}
 }
 
 func (i *apiCmdInputs) fromArgs(args []string, domain string) error {
-	i.parseRaw(args)
+	if err := i.parseRaw(args); err != nil {
+		return err
+	}
 
 	if err := i.validateAndSetMethod(); err != nil {
 		return err
@@ -235,21 +272,9 @@ func (i *apiCmdInputs) validateAndSetData() error {
 		return nil
 	}
 
-	var data []byte
-
-	// Check the --data flag before touching stdin: when it is set we use it as-is
-	// and never read stdin, so a request with --data never blocks on an open,
-	// EOF-less pipe (the common agent/CI case).
-	if i.RawData != "" {
-		data = []byte(i.RawData)
-	} else {
-		pipedData, err := iostream.PipedInput()
-		if err != nil {
-			return err
-		}
-		if len(pipedData) > 0 {
-			data = pipedData
-		}
+	data, err := i.resolveData()
+	if err != nil {
+		return err
 	}
 
 	if len(data) > 0 {
@@ -261,6 +286,56 @@ func (i *apiCmdInputs) validateAndSetData() error {
 	return nil
 }
 
+// resolveData returns the request body bytes. The --data flag takes precedence
+// and accepts inline JSON, @file to read from a file, or @- (or -) to read from
+// stdin. When --data is unset the body is read from a stdin pipe. A --data value
+// used as-is never blocks on an open, EOF-less pipe (the common agent/CI case),
+// because stdin is only touched for the explicit @-/- form.
+func (i *apiCmdInputs) resolveData() ([]byte, error) {
+	if i.RawData != "" {
+		switch {
+		case i.RawData == "@-" || i.RawData == "-":
+			data, err := i.readPipedBody()
+			if err != nil {
+				return nil, err
+			}
+			if len(data) == 0 {
+				return nil, fmt.Errorf("no data received on stdin")
+			}
+			return data, nil
+		case strings.HasPrefix(i.RawData, "@"):
+			path := i.RawData[1:]
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read data file %q: %w", path, err)
+			}
+			return data, nil
+		default:
+			return []byte(i.RawData), nil
+		}
+	}
+
+	return i.readPipedBody()
+}
+
+// readPipedBody reads stdin once and memoizes the result so the same pipe can be
+// consulted for both method inference and the request body.
+func (i *apiCmdInputs) readPipedBody() ([]byte, error) {
+	if i.pipedBodyRead {
+		return i.pipedBody, nil
+	}
+
+	data, err := iostream.PipedInput()
+	if err != nil {
+		return nil, err
+	}
+
+	i.pipedBody = data
+	i.pipedBodyRead = true
+
+	return data, nil
+}
+
 func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	endpoint, err := url.Parse(fmt.Sprintf("https://%s/api/v2/%s", domain, strings.Trim(i.RawURI, "/")))
 	if err != nil {
@@ -268,8 +343,14 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	}
 
 	params := endpoint.Query()
-	for key, value := range i.RawQueryParams {
-		params.Set(key, value)
+	for _, raw := range i.RawQueryParams {
+		key, value, found := strings.Cut(raw, "=")
+		if !found {
+			return fmt.Errorf("invalid query parameter %q: expected key=value", raw)
+		}
+		// Add (not Set) so a repeated flag (-q "fields=a" -q "fields=b") sends
+		// both values instead of the last one overwriting the rest.
+		params.Add(key, value)
 	}
 	endpoint.RawQuery = params.Encode()
 
@@ -278,11 +359,23 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	return nil
 }
 
-func (i *apiCmdInputs) parseRaw(args []string) {
+func (i *apiCmdInputs) parseRaw(args []string) error {
 	lenArgs := len(args)
 	if lenArgs == 1 {
 		i.RawMethod = http.MethodGet
-		if i.RawData != "" {
+
+		hasBody := i.RawData != ""
+		if !hasBody {
+			// A single-argument request with a piped body is a create/update, so
+			// infer POST. Peek stdin now; the read is memoized for the body step.
+			body, err := i.readPipedBody()
+			if err != nil {
+				return err
+			}
+			hasBody = len(body) > 0
+		}
+
+		if hasBody {
 			i.RawMethod = http.MethodPost
 		}
 	} else {
@@ -290,6 +383,8 @@ func (i *apiCmdInputs) parseRaw(args []string) {
 	}
 
 	i.RawURI = args[lenArgs-1]
+
+	return nil
 }
 
 // newAPIResponseError turns non-2xx `auth0 api` responses into SDK management errors.
