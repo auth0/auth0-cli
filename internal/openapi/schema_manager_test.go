@@ -221,6 +221,28 @@ func TestValidateRequest(t *testing.T) {
 	}
 }
 
+func TestValidateRequestReportsValidated(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	// An operation with a request schema: the payload is actually checked.
+	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{
+		"name": "my-action",
+		"supported_triggers": [{"id": "post-login", "version": "v3"}],
+		"code": "module.exports = () => {}"
+	}`))
+	require.NoError(t, err)
+	assert.True(t, result.Valid)
+	assert.True(t, result.Validated, "an operation with a request schema should report Validated")
+
+	// An operation that resolves but defines no request body schema: reported
+	// valid (nothing to fail against) but not validated.
+	result, err = manager.ValidateRequest("DELETE", "/actions/actions/{id}", []byte(`{}`))
+	require.NoError(t, err)
+	assert.True(t, result.Valid)
+	assert.False(t, result.Validated, "an operation without a request schema should not report Validated")
+}
+
 func TestValidateRequestActionUpdatePath(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)

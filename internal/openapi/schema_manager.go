@@ -131,8 +131,9 @@ func (op *OperationSchema) FormatAsText() string {
 // ValidateRequest validates a request using openapi3filter.
 func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*ValidationResult, error) {
 	result := &ValidationResult{
-		Valid:  true,
-		Errors: []string{},
+		Valid:     true,
+		Validated: true,
+		Errors:    []string{},
 	}
 
 	operation, err := FindOperation(sm.doc, method, path)
@@ -142,7 +143,11 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 
 	requestSchema := GetRequestSchema(operation)
 	if requestSchema == nil || requestSchema.Value == nil {
-		// No schema to validate against.
+		// The operation exists but defines no request schema, so there is nothing
+		// to check the payload against. Report success but flag that validation
+		// was skipped, so the caller can tell the difference between "payload
+		// passed" and "payload was never checked".
+		result.Validated = false
 		return result, nil
 	}
 
@@ -167,8 +172,14 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 
 // ValidationResult contains the result of schema validation.
 type ValidationResult struct {
-	Valid  bool
-	Errors []string
+	// Valid is true when the payload satisfied the schema (or when there was no
+	// schema to check it against).
+	Valid bool
+	// Validated is true only when a request schema existed and the payload was
+	// actually checked against it. It is false when the operation defines no
+	// request schema, so a true Valid does not imply the payload was verified.
+	Validated bool
+	Errors    []string
 }
 
 // formatValidationError turns a kin-openapi validation error into concise messages,

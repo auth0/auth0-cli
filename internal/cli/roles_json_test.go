@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -82,6 +83,57 @@ func TestRolesCreateCmdData(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "schema validation")
 		assert.Empty(t, client.gotMethod, "must not reach the API when validation fails")
+	})
+}
+
+func TestRunJSONWriteUnvalidatedSignal(t *testing.T) {
+	newCLI := func(client *roleWriteClient, messages *bytes.Buffer) *cli {
+		return &cli{
+			api: &auth0.API{HTTPClient: client},
+			renderer: &display.Renderer{
+				MessageWriter: messages,
+				ResultWriter:  &bytes.Buffer{},
+			},
+		}
+	}
+
+	t.Run("warns when the operation has no request schema to validate against", func(t *testing.T) {
+		var messages bytes.Buffer
+		client := &roleWriteClient{}
+		cmd := &cobra.Command{}
+		cmd.SetContext(context.Background())
+
+		// DELETE resolves as an operation but defines no request body schema, so
+		// the payload is sent without local validation.
+		_, err := runJSONWrite[map[string]interface{}](newCLI(client, &messages), cmd, jsonWriteSpec{
+			Method:     http.MethodDelete,
+			SchemaPath: "/actions/actions/{id}",
+			URI:        "https://example.com/api/v2/actions/actions/act_1",
+			Data:       `{}`,
+			SchemaCmd:  "auth0 actions delete",
+		})
+
+		require.NoError(t, err)
+		assert.Contains(t, messages.String(), "without local validation")
+		assert.NotEmpty(t, client.gotMethod, "payload should still be sent")
+	})
+
+	t.Run("stays silent when the payload was validated against a schema", func(t *testing.T) {
+		var messages bytes.Buffer
+		client := &roleWriteClient{}
+		cmd := &cobra.Command{}
+		cmd.SetContext(context.Background())
+
+		_, err := runJSONWrite[map[string]interface{}](newCLI(client, &messages), cmd, jsonWriteSpec{
+			Method:     http.MethodPost,
+			SchemaPath: "/roles",
+			URI:        "https://example.com/api/v2/roles",
+			Data:       `{"name":"json-role","description":"created via data"}`,
+			SchemaCmd:  "auth0 roles create",
+		})
+
+		require.NoError(t, err)
+		assert.NotContains(t, messages.String(), "without local validation")
 	})
 }
 
