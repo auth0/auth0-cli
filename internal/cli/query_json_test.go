@@ -217,6 +217,108 @@ func TestRunJSONQuery_NestedObjectIsError(t *testing.T) {
 	assert.ErrorContains(t, err, "filter")
 }
 
+func TestRunJSONQuery_CompactOutput(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"actions":[{"id":"a"}],"total":1}`))
+	}))
+	defer server.Close()
+
+	var resultBuf strings.Builder
+	cli := &cli{
+		jsonCompact: true,
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  &resultBuf,
+		},
+		api: &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "actions/actions",
+		SchemaCmd: "auth0 actions list",
+	}, `{}`)
+
+	require.NoError(t, err)
+	out := strings.TrimSpace(resultBuf.String())
+	// Compact output is a single dense line with no indentation newlines.
+	assert.Equal(t, `{"actions":[{"id":"a"}],"total":1}`, out)
+	assert.NotContains(t, out, "\n")
+}
+
+func TestPaginationHint(t *testing.T) {
+	t.Run("offset with totals, more results signals a hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":100,"start":0,"limit":50}`))
+		assert.Contains(t, hint, "Showing 2 of 100")
+	})
+
+	t.Run("offset without start/limit, only total, signals a hint", func(t *testing.T) {
+		// Actions-style envelope: reports "total" but no "start"/"limit".
+		hint := paginationHint([]byte(`{"actions":[{"id":"a"},{"id":"b"}],"total":10}`))
+		assert.Contains(t, hint, "Showing 2 of 10")
+	})
+
+	t.Run("checkpoint pagination signals a hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"logs":[{"id":"a"}],"next":"tok_abc"}`))
+		assert.Contains(t, hint, "checkpoint")
+		assert.Contains(t, hint, "next")
+	})
+
+	t.Run("complete result set has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":2,"start":0,"limit":50}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("last page has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"}],"total":100,"start":99}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("empty checkpoint token has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"logs":[{"id":"a"}],"next":""}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("no total and no next has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"actions":[{"id":"a"}]}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("bare array has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`[{"id":"a"}]`))
+		assert.Empty(t, hint)
+	})
+}
+
+func TestRunJSONQuery_TruncationWarning(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":100,"start":0,"limit":50}`))
+	}))
+	defer server.Close()
+
+	var msgBuf strings.Builder
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: &msgBuf,
+			ResultWriter:  io.Discard,
+		},
+		api: &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "clients",
+		SchemaCmd: "auth0 apps list",
+	}, `{}`)
+
+	require.NoError(t, err)
+	assert.Contains(t, msgBuf.String(), "More results exist")
+}
+
 func TestRunJSONQuery_BuildsURLWithQueryParams(t *testing.T) {
 	var capturedURL string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

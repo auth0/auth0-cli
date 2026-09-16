@@ -131,10 +131,106 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 		return newAPIResponseError(response.StatusCode, response.Header, rawJSON)
 	}
 
+	// A single --query call fetches one page. If the envelope reports more
+	// records than were returned, tell the caller so they don't mistake a page
+	// for the whole result set; the output itself is left untouched.
+	if hint := paginationHint(rawJSON); hint != "" {
+		cli.renderer.Warnf("%s", hint)
+	}
+
+	// Honor --json-compact by emitting a single dense line; otherwise pretty-print.
+	// --csv is intentionally not supported here: the response is raw API JSON with
+	// no fixed column shape to flatten.
+	if cli.jsonCompact {
+		var compactJSON bytes.Buffer
+		if err := json.Compact(&compactJSON, rawJSON); err != nil {
+			return fmt.Errorf("failed to format response: %w", err)
+		}
+		cli.renderer.Output(compactJSON.String())
+		return nil
+	}
+
 	var prettyJSON bytes.Buffer
 	if err := json.Indent(&prettyJSON, rawJSON, "", "  "); err != nil {
 		return fmt.Errorf("failed to format response: %w", err)
 	}
 	cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
 	return nil
+}
+
+// paginationHint returns a diagnostic when the response shows that more records
+// exist than were returned on this page, or "" when the response is complete (or
+// carries no pagination metadata to reason about). It covers all of the
+// Management API's pagination models rather than a single envelope shape:
+//
+//   - Checkpoint pagination returns a "next" token (and no "total"); a non-empty
+//     token means there are further pages, fetched by passing it as "from".
+//   - Offset pagination returns a numeric "total"; when the number of records
+//     actually returned (plus the page's "start" offset, if present) is short of
+//     "total", further pages exist. This handles both the "include_totals"
+//     envelope (start/limit/total) and endpoints that report only "total".
+//
+// A bare array or any body without "next"/"total" yields no hint, because there
+// is then no reliable signal that the result set was truncated.
+func paginationHint(rawJSON []byte) string {
+	decoder := json.NewDecoder(bytes.NewReader(rawJSON))
+	decoder.UseNumber()
+
+	var envelope map[string]interface{}
+	if err := decoder.Decode(&envelope); err != nil {
+		// A bare array or any non-object body carries no pagination metadata.
+		return ""
+	}
+
+	// Checkpoint pagination: a non-empty "next" token means more pages exist.
+	if next, ok := envelope["next"].(string); ok && next != "" {
+		return "This is one page of a larger result set (checkpoint pagination). " +
+			"More results exist; pass \"from\" set to the response's \"next\" token " +
+			"(and optionally \"take\") in --query to fetch the next page."
+	}
+
+	// Offset pagination: compare records returned against the reported total.
+	total, hasTotal := jsonNumberInt(envelope["total"])
+	if !hasTotal {
+		return ""
+	}
+	start, _ := jsonNumberInt(envelope["start"]) // Absent "start" means offset 0.
+	returned := longestArrayLen(envelope)
+	if start+returned >= total {
+		return ""
+	}
+
+	return fmt.Sprintf(
+		"Showing %d of %d results (page starts at %d). More results exist; "+
+			"pass a higher \"page\" or \"per_page\" in --query to fetch the rest.",
+		returned, total, start,
+	)
+}
+
+// longestArrayLen returns the length of the longest array-valued field in the
+// envelope. That field is the resource collection, since pagination metadata
+// ("total", "start", "limit", "next", …) is always scalar.
+func longestArrayLen(envelope map[string]interface{}) int {
+	longest := 0
+	for _, v := range envelope {
+		if arr, ok := v.([]interface{}); ok && len(arr) > longest {
+			longest = len(arr)
+		}
+	}
+	return longest
+}
+
+// jsonNumberInt reports the integer value of a decoded JSON field when it is a
+// json.Number holding an integer, and false when the field is absent or not an
+// integer number.
+func jsonNumberInt(val interface{}) (int, bool) {
+	n, ok := val.(json.Number)
+	if !ok {
+		return 0, false
+	}
+	v, err := n.Int64()
+	if err != nil {
+		return 0, false
+	}
+	return int(v), true
 }

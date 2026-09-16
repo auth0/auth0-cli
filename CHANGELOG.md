@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `--query` list output now honors `--json-compact`, emitting a single dense
+  JSON line when that flag is set (the default stays pretty-printed).
+- `--query` list commands now print a diagnostic to stderr when the response is
+  a page of a larger result set, so the returned records aren't mistaken for the
+  full set. The output itself is unchanged.
+
 ### Fixed
 
 - Encode `--query` filters with real JSON-to-query semantics. An array value now
