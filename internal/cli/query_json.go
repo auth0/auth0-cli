@@ -14,6 +14,13 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
+var listQueryFlag = Flag{
+	Name:      "Query",
+	LongForm:  "query",
+	ShortForm: "q",
+	Help:      "Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters.",
+}
+
 // jsonQuerySpec describes a list operation driven by a --query JSON payload.
 type jsonQuerySpec struct {
 	Path      string // API path segments (e.g. "actions/actions").
