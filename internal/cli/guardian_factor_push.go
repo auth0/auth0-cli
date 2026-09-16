@@ -113,18 +113,9 @@ func setGuardianPushProviderCmd(cli *cli) *cobra.Command {
 
 func guardianApnsRows(sandbox bool, bundleID string) [][]string {
 	return [][]string{
-		{"BUNDLE ID", orDashCLI(bundleID)},
+		{"BUNDLE ID", display.OrDash(bundleID)},
 		{"SANDBOX", fmt.Sprintf("%t", sandbox)},
 	}
-}
-
-// orDashCLI mirrors the display package's dash placeholder for empty strings so
-// the command layer can compose rows without leaking an empty cell.
-func orDashCLI(value string) string {
-	if value == "" {
-		return "-"
-	}
-	return value
 }
 
 func showGuardianPushApnsCmd(cli *cli) *cobra.Command {
@@ -168,6 +159,12 @@ func setGuardianPushApnsCmd(cli *cli) *cobra.Command {
 		Long:    "Replace the Apple Push Notification service (APNs) configuration.",
 		Example: `  auth0 guardian factors push set-apns --bundle-id com.example.app --sandbox --p12 <base64-cert>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Prompt (masked) for the .p12 when it is absent and we can prompt, so
+			// the certificate need not be passed on the command line.
+			if err := guardianApnsP12.AskPassword(cmd, &inputs.P12); err != nil {
+				return err
+			}
+
 			if inputs.BundleID == "" && inputs.P12 == "" && !cmd.Flags().Changed("sandbox") {
 				return fmt.Errorf(
 					"set replaces the entire APNs configuration, so pass at least one of --bundle-id, " +
@@ -303,6 +300,12 @@ func setGuardianPushFcmCmd(cli *cli) *cobra.Command {
 			if err := guardianFcmServerKey.AskPassword(cmd, &serverKey); err != nil {
 				return err
 			}
+			if serverKey == "" {
+				return fmt.Errorf(
+					"set replaces the entire FCM configuration, so --server-key is required. " +
+						"To change the key without replacing the rest, use 'auth0 guardian factors push update-fcm'",
+				)
+			}
 
 			body := &managementv3.SetGuardianFactorsProviderPushNotificationFcmRequestContent{}
 			if serverKey != "" {
@@ -385,6 +388,12 @@ func setGuardianPushFcmv1Cmd(cli *cli) *cobra.Command {
 			if err := guardianFcmServerCredentials.AskPassword(cmd, &serverCredentials); err != nil {
 				return err
 			}
+			if serverCredentials == "" {
+				return fmt.Errorf(
+					"set replaces the entire FCM v1 configuration, so --server-credentials is required. " +
+						"To change the credentials without replacing the rest, use 'auth0 guardian factors push update-fcmv1'",
+				)
+			}
 
 			body := &managementv3.SetGuardianFactorsProviderPushNotificationFcmv1RequestContent{}
 			if serverCredentials != "" {
@@ -456,11 +465,11 @@ func updateGuardianPushFcmv1Cmd(cli *cli) *cobra.Command {
 
 func guardianSnsRows(accessKeyID, secretAccessKey, region, apnsArn, gcmArn string) [][]string {
 	return [][]string{
-		{"AWS ACCESS KEY ID", orDashCLI(accessKeyID)},
+		{"AWS ACCESS KEY ID", display.OrDash(accessKeyID)},
 		{"AWS SECRET ACCESS KEY", display.MaskSecret(secretAccessKey)},
-		{"AWS REGION", orDashCLI(region)},
-		{"APNS PLATFORM APPLICATION ARN", orDashCLI(apnsArn)},
-		{"GCM PLATFORM APPLICATION ARN", orDashCLI(gcmArn)},
+		{"AWS REGION", display.OrDash(region)},
+		{"APNS PLATFORM APPLICATION ARN", display.OrDash(apnsArn)},
+		{"GCM PLATFORM APPLICATION ARN", display.OrDash(gcmArn)},
 	}
 }
 
@@ -515,6 +524,12 @@ func setGuardianPushSnsCmd(cli *cli) *cobra.Command {
     --aws-access-key-id <id> --aws-secret-access-key <secret> --aws-region us-east-1 \
     --apns-platform-arn <arn> --gcm-platform-arn <arn>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Prompt (masked) for the secret when it is absent and we can prompt, so
+			// it need not be passed on the command line.
+			if err := guardianSnsSecretAccessKey.AskPassword(cmd, &inputs.SecretAccessKey); err != nil {
+				return err
+			}
+
 			if inputs.AccessKeyID == "" && inputs.SecretAccessKey == "" && inputs.Region == "" &&
 				inputs.ApnsArn == "" && inputs.GcmArn == "" {
 				return fmt.Errorf(

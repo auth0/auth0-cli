@@ -174,6 +174,13 @@ tests:
       contains:
         - create guardian enrollment ticket for user
 
+  023a - guardian enrollments create-ticket requires a user id:
+    command: auth0 guardian enrollments create-ticket
+    exit-code: 1
+    stderr:
+      contains:
+        - user-id is required when running non-interactively
+
   # ----------------------------------------------------------------------------
   # Phone factor: message-types are tenant-agnostic and covered here. The legacy
   # provider/templates/twilio endpoints have tenant-dependent behaviour (403 on
@@ -346,6 +353,20 @@ tests:
       contains:
         - set FCM v1 configuration
 
+  048a - guardian factors push set-fcm rejects an empty replace:
+    command: auth0 guardian factors push set-fcm
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the entire FCM configuration
+
+  048b - guardian factors push set-fcmv1 rejects an empty replace:
+    command: auth0 guardian factors push set-fcmv1
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the entire FCM v1 configuration
+
   # ----------------------------------------------------------------------------
   # Duo factor settings: show, replace and partial update.
   # ----------------------------------------------------------------------------
@@ -430,6 +451,58 @@ tests:
     stderr:
       contains:
         - '--enabled is required'
+
+  # The legacy phone/sms guards below fire before the API call, so they are
+  # deterministic regardless of whether the tenant is on the unified phone
+  # experience (see the note above the phone message-type tests).
+  058a - guardian factors phone set-provider requires a provider:
+    command: auth0 guardian factors phone set-provider
+    exit-code: 1
+    stderr:
+      contains:
+        - '--provider is required'
+
+  058b - guardian factors sms set-provider requires a provider:
+    command: auth0 guardian factors sms set-provider
+    exit-code: 1
+    stderr:
+      contains:
+        - '--provider is required'
+
+  058c - guardian factors phone set-message-types requires a message type:
+    command: auth0 guardian factors phone set-message-types
+    exit-code: 1
+    stderr:
+      contains:
+        - message-type is required when running non-interactively
+
+  058d - guardian factors phone set-templates rejects an empty replace:
+    command: auth0 guardian factors phone set-templates
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the phone templates
+
+  058e - guardian factors sms set-templates rejects an empty replace:
+    command: auth0 guardian factors sms set-templates
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the SMS templates
+
+  058f - guardian factors phone set-twilio rejects an empty replace:
+    command: auth0 guardian factors phone set-twilio
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the entire Twilio configuration
+
+  058g - guardian factors sms set-twilio rejects an empty replace:
+    command: auth0 guardian factors sms set-twilio
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces the entire Twilio configuration
 
   # ----------------------------------------------------------------------------
   # Partial update preserves the fields it does not touch and renders the full

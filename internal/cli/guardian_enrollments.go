@@ -16,11 +16,10 @@ var (
 		Help: "Id of the enrollment.",
 	}
 	guardianEnrollmentUserID = Flag{
-		Name:       "User ID",
-		LongForm:   "user-id",
-		ShortForm:  "u",
-		Help:       "User ID to create the enrollment ticket for.",
-		IsRequired: true,
+		Name:      "User ID",
+		LongForm:  "user-id",
+		ShortForm: "u",
+		Help:      "User ID to create the enrollment ticket for.",
 	}
 	guardianEnrollmentFactor = Flag{
 		Name:      "Factor",
@@ -86,8 +85,13 @@ func createGuardianEnrollmentTicketCmd(cli *cli) *cobra.Command {
   auth0 guardian enrollments create-ticket --user-id "auth0|123" --send-email --email me@example.com
   auth0 guardian enrollments create-ticket --user-id "auth0|123" --allow-multiple --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := guardianEnrollmentUserID.Ask(cmd, &inputs.UserID, nil); err != nil {
-				return err
+			if !guardianEnrollmentUserID.IsSet(cmd) {
+				if !canPrompt(cmd) {
+					return fmt.Errorf("--user-id is required when running non-interactively")
+				}
+				if err := guardianEnrollmentUserID.Ask(cmd, &inputs.UserID, nil); err != nil {
+					return err
+				}
 			}
 
 			body := &managementv3.CreateGuardianEnrollmentTicketRequestContent{

@@ -20,8 +20,8 @@ func TestMaskSecret(t *testing.T) {
 }
 
 func TestOrDash(t *testing.T) {
-	assert.Equal(t, "-", orDash(""))
-	assert.Equal(t, "value", orDash("value"))
+	assert.Equal(t, "-", OrDash(""))
+	assert.Equal(t, "value", OrDash("value"))
 }
 
 func TestEnabledStatus(t *testing.T) {

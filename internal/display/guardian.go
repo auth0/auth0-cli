@@ -136,11 +136,11 @@ func (r *Renderer) GuardianEnrollmentShow(enrollment *managementv3.GetGuardianEn
 	r.Result(&guardianEnrollmentView{
 		ID:         enrollment.GetID(),
 		Status:     string(enrollment.GetStatus()),
-		Name:       orDash(enrollment.GetName()),
-		Identifier: orDash(enrollment.GetIdentifier()),
-		Phone:      orDash(enrollment.GetPhoneNumber()),
-		EnrolledAt: orDash(enrollment.GetEnrolledAt()),
-		LastAuth:   orDash(enrollment.GetLastAuth()),
+		Name:       OrDash(enrollment.GetName()),
+		Identifier: OrDash(enrollment.GetIdentifier()),
+		Phone:      OrDash(enrollment.GetPhoneNumber()),
+		EnrolledAt: OrDash(enrollment.GetEnrolledAt()),
+		LastAuth:   OrDash(enrollment.GetLastAuth()),
 		raw:        enrollment,
 	})
 }
@@ -206,7 +206,7 @@ func (r *Renderer) GuardianDetail(heading string, rows [][]string, raw interface
 	r.Result(&guardianDetailView{rows: rows, raw: raw})
 }
 
-func orDash(value string) string {
+func OrDash(value string) string {
 	if value == "" {
 		return "-"
 	}

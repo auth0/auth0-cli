@@ -78,6 +78,10 @@ func setGuardianSmsProviderCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			if provider == "" {
+				return fmt.Errorf("--provider is required: valid values are auth0, twilio, phone-message-hook")
+			}
+
 			value, err := managementv3.NewGuardianFactorsProviderSmsProviderEnumFromString(provider)
 			if err != nil {
 				return fmt.Errorf("invalid provider %q: valid values are auth0, twilio, phone-message-hook", provider)
@@ -160,6 +164,13 @@ func setGuardianSmsTemplatesCmd(cli *cli) *cobra.Command {
     --enrollment-message "Your verification code is {{code}}" \
     --verification-message "Your verification code is {{code}}"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if !guardianEnrollmentMessage.IsSet(cmd) && !guardianVerificationMessage.IsSet(cmd) && !canPrompt(cmd) {
+				return fmt.Errorf(
+					"set replaces the SMS templates, so pass --enrollment-message and/or " +
+						"--verification-message when running non-interactively",
+				)
+			}
+
 			if err := guardianEnrollmentMessage.Ask(cmd, &inputs.EnrollmentMessage, nil); err != nil {
 				return err
 			}
@@ -248,6 +259,19 @@ func setGuardianSmsTwilioCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 guardian factors sms set-twilio --sid AC... --auth-token <token> --from "+14155550100"
   auth0 guardian factors sms set-twilio --sid AC... --auth-token <token> --messaging-service-sid MG...`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Prompt (masked) for the auth token when it is absent and we can
+			// prompt, so it need not be passed on the command line.
+			if err := guardianTwilioAuthToken.AskPassword(cmd, &inputs.AuthToken); err != nil {
+				return err
+			}
+
+			if inputs.From == "" && inputs.MessagingServiceSid == "" && inputs.Sid == "" && inputs.AuthToken == "" {
+				return fmt.Errorf(
+					"set replaces the entire Twilio configuration, so pass at least one of --sid, " +
+						"--auth-token, --from or --messaging-service-sid",
+				)
+			}
+
 			body := &managementv3.SetGuardianFactorsProviderSmsTwilioRequestContent{}
 			if inputs.From != "" {
 				body.From = &inputs.From

@@ -8,6 +8,7 @@ import (
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/auth0/go-auth0/v3/management/option"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -229,6 +230,202 @@ func TestSetGuardianFactorCmd(t *testing.T) {
 		cmd.SetArgs([]string{"not-a-factor", "--enabled"})
 
 		assert.ErrorContains(t, cmd.Execute(), `invalid factor "not-a-factor"`)
+	})
+}
+
+func TestCreateGuardianEnrollmentTicketCmd(t *testing.T) {
+	t.Run("requires --user-id when it cannot prompt", func(t *testing.T) {
+		// --user-id is no longer a cobra-required flag (that made the interactive
+		// prompt dead code), so the non-interactive guard must reject an empty
+		// invocation before hitting the API.
+		enrollment := mock.NewMockGuardianEnrollmentAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianEnrollment: enrollment},
+			renderer: testRenderer(),
+		}
+
+		cmd := createGuardianEnrollmentTicketCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.EqualError(t, cmd.Execute(), "--user-id is required when running non-interactively")
+	})
+
+	t.Run("creates the ticket with the supplied user id", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		enrollment := mock.NewMockGuardianEnrollmentAPIV3(ctrl)
+		enrollment.EXPECT().
+			CreateTicket(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, req *managementv3.CreateGuardianEnrollmentTicketRequestContent, _ ...option.RequestOption) (*managementv3.CreateGuardianEnrollmentTicketResponseContent, error) {
+				assert.Equal(t, "auth0|123", req.UserID)
+				return &managementv3.CreateGuardianEnrollmentTicketResponseContent{}, nil
+			})
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianEnrollment: enrollment},
+			renderer: testRenderer(),
+		}
+
+		cmd := createGuardianEnrollmentTicketCmd(cli)
+		cmd.SetArgs([]string{"--user-id", "auth0|123"})
+
+		assert.NoError(t, cmd.Execute())
+	})
+}
+
+func TestSetGuardianPushEmptyInvocationGuards(t *testing.T) {
+	// Each of these full-replace commands must reject an empty non-interactive
+	// invocation instead of silently wiping the stored configuration.
+	tests := []struct {
+		name    string
+		newCmd  func(*cli) *cobra.Command
+		wantErr string
+	}{
+		{
+			name:    "set-apns",
+			newCmd:  setGuardianPushApnsCmd,
+			wantErr: "set replaces the entire APNs configuration",
+		},
+		{
+			name:    "set-sns",
+			newCmd:  setGuardianPushSnsCmd,
+			wantErr: "set replaces the entire SNS configuration",
+		},
+		{
+			name:    "set-fcm",
+			newCmd:  setGuardianPushFcmCmd,
+			wantErr: "set replaces the entire FCM configuration, so --server-key is required",
+		},
+		{
+			name:    "set-fcmv1",
+			newCmd:  setGuardianPushFcmv1Cmd,
+			wantErr: "set replaces the entire FCM v1 configuration, so --server-credentials is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// A bare mock with no expectations fails the test if the API is called.
+			push := mock.NewMockGuardianFactorPushAPIV3(gomock.NewController(t))
+
+			cli := &cli{
+				apiv3:    &auth0.APIV3{GuardianFactorPush: push},
+				renderer: testRenderer(),
+			}
+
+			cmd := tt.newCmd(cli)
+			cmd.SetArgs([]string{})
+
+			assert.ErrorContains(t, cmd.Execute(), tt.wantErr)
+		})
+	}
+}
+
+func TestSetGuardianTwilioEmptyInvocationGuards(t *testing.T) {
+	t.Run("phone set-twilio", func(t *testing.T) {
+		phone := mock.NewMockGuardianFactorPhoneAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorPhone: phone},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianPhoneTwilioCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.ErrorContains(t, cmd.Execute(), "set replaces the entire Twilio configuration")
+	})
+
+	t.Run("sms set-twilio", func(t *testing.T) {
+		sms := mock.NewMockGuardianFactorSmsAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorSms: sms},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianSmsTwilioCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.ErrorContains(t, cmd.Execute(), "set replaces the entire Twilio configuration")
+	})
+}
+
+func TestSetGuardianPhoneMessageTypesCmd(t *testing.T) {
+	t.Run("requires --message-type when it cannot prompt", func(t *testing.T) {
+		phone := mock.NewMockGuardianFactorPhoneAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorPhone: phone},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianPhoneMessageTypesCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.ErrorContains(t, cmd.Execute(), "--message-type is required when running non-interactively")
+	})
+}
+
+func TestSetGuardianTemplatesGuards(t *testing.T) {
+	t.Run("phone set-templates requires a message flag when it cannot prompt", func(t *testing.T) {
+		phone := mock.NewMockGuardianFactorPhoneAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorPhone: phone},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianPhoneTemplatesCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.ErrorContains(t, cmd.Execute(), "set replaces the phone templates")
+	})
+
+	t.Run("sms set-templates requires a message flag when it cannot prompt", func(t *testing.T) {
+		sms := mock.NewMockGuardianFactorSmsAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorSms: sms},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianSmsTemplatesCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.ErrorContains(t, cmd.Execute(), "set replaces the SMS templates")
+	})
+}
+
+func TestSetGuardianProviderRequiresValue(t *testing.T) {
+	t.Run("phone set-provider requires --provider when it cannot prompt", func(t *testing.T) {
+		phone := mock.NewMockGuardianFactorPhoneAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorPhone: phone},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianPhoneProviderCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.EqualError(t, cmd.Execute(), "--provider is required: valid values are auth0, twilio, phone-message-hook")
+	})
+
+	t.Run("sms set-provider requires --provider when it cannot prompt", func(t *testing.T) {
+		sms := mock.NewMockGuardianFactorSmsAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorSms: sms},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianSmsProviderCmd(cli)
+		cmd.SetArgs([]string{})
+
+		assert.EqualError(t, cmd.Execute(), "--provider is required: valid values are auth0, twilio, phone-message-hook")
 	})
 }
 
