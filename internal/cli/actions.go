@@ -755,7 +755,8 @@ func diffActionCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Long:  "Show code difference between two versions of an Actions",
 		Example: `auth0 actions diff
-  auth0 actions diff <action-id>`,
+  auth0 actions diff <action-id>
+  auth0 actions diff <action-id> --version1 2 --version2 3`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if len(args) == 0 {
@@ -790,10 +791,18 @@ func diffActionCmd(cli *cli) *cobra.Command {
 				page++
 			}
 
-			var err error
-			inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
-			if err != nil {
-				return err
+			versionsProvided := cmd.Flags().Changed("version1") && cmd.Flags().Changed("version2")
+			switch {
+			case versionsProvided:
+				// Use the versions supplied via flags as-is.
+			case canPrompt(cmd):
+				var err error
+				inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("missing required flags in non-interactive mode: --version1 and --version2")
 			}
 
 			var code1, code2 string
@@ -821,6 +830,10 @@ func diffActionCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().IntVar(&inputs.version1, "version1", 0, "First version number (baseline) to compare.")
+	cmd.Flags().IntVar(&inputs.version2, "version2", 0, "Second version number to compare against.")
+
 	return cmd
 }
 

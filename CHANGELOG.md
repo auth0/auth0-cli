@@ -11,8 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Emit a machine-readable JSON error envelope (`{"error":{"code","message","status","details"}}`) on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text
 - Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
+- Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
 
 ### Fixed
+- Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
 - Read piped stdin without panicking when the read fails; a broken or unreadable pipe now surfaces as a normal error instead of crashing the CLI
 - Do not read stdin on `auth0 api` (or any `--data`-driven command) when `--data` is set, so a request that supplies its body via the flag no longer blocks forever on an open, EOF-less pipe (the common agent and CI case)
 - Preserve the real error body of a `403` response from `auth0 api` that is not an insufficient-scope error, instead of losing it and falling back to a bare `Forbidden`

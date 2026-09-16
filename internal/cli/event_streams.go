@@ -891,6 +891,10 @@ func (c *cli) eventStreamPickerOptions(ctx context.Context) (pickerOptions, erro
 }
 
 func promptForDeliveryIDs(cmd *cobra.Command, cli *cli, streamID string) ([]string, error) {
+	if !canPrompt(cmd) {
+		return nil, fmt.Errorf("missing delivery IDs in non-interactive mode: pass them as the second argument, for example `evt_abc123,evt_def456`")
+	}
+
 	deliveries, err := fetchRecentDeliveries(cmd, cli, streamID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch deliveries: %w", err)
