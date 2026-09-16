@@ -45,6 +45,9 @@ func TestRequiredScopes(t *testing.T) {
 			"read:attack_protection", "update:attack_protection",
 			"read:sessions", "update:sessions", "delete:sessions",
 			"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
+			"read:guardian_factors", "update:guardian_factors",
+			"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
+			"read:mfa_policies", "update:mfa_policies",
 		}
 
 		for _, v := range list {
