@@ -370,7 +370,11 @@ func TestSetGuardianPhoneMessageTypesCmd(t *testing.T) {
 }
 
 func TestSetGuardianTemplatesGuards(t *testing.T) {
-	t.Run("phone set-templates requires a message flag when it cannot prompt", func(t *testing.T) {
+	// This is a full replace, so non-interactively both message flags are
+	// required: a bare invocation and a partial invocation (only one flag) must
+	// both be rejected before the API call, otherwise the omitted sibling
+	// template would be blanked to "".
+	t.Run("phone set-templates requires both message flags when it cannot prompt", func(t *testing.T) {
 		phone := mock.NewMockGuardianFactorPhoneAPIV3(gomock.NewController(t))
 
 		cli := &cli{
@@ -381,10 +385,24 @@ func TestSetGuardianTemplatesGuards(t *testing.T) {
 		cmd := setGuardianPhoneTemplatesCmd(cli)
 		cmd.SetArgs([]string{})
 
-		assert.ErrorContains(t, cmd.Execute(), "set replaces the phone templates")
+		assert.ErrorContains(t, cmd.Execute(), "set replaces both phone templates")
 	})
 
-	t.Run("sms set-templates requires a message flag when it cannot prompt", func(t *testing.T) {
+	t.Run("phone set-templates rejects a partial invocation when it cannot prompt", func(t *testing.T) {
+		phone := mock.NewMockGuardianFactorPhoneAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorPhone: phone},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianPhoneTemplatesCmd(cli)
+		cmd.SetArgs([]string{"--enrollment-message", "Your code is {{code}}"})
+
+		assert.ErrorContains(t, cmd.Execute(), "set replaces both phone templates")
+	})
+
+	t.Run("sms set-templates requires both message flags when it cannot prompt", func(t *testing.T) {
 		sms := mock.NewMockGuardianFactorSmsAPIV3(gomock.NewController(t))
 
 		cli := &cli{
@@ -395,7 +413,21 @@ func TestSetGuardianTemplatesGuards(t *testing.T) {
 		cmd := setGuardianSmsTemplatesCmd(cli)
 		cmd.SetArgs([]string{})
 
-		assert.ErrorContains(t, cmd.Execute(), "set replaces the SMS templates")
+		assert.ErrorContains(t, cmd.Execute(), "set replaces both SMS templates")
+	})
+
+	t.Run("sms set-templates rejects a partial invocation when it cannot prompt", func(t *testing.T) {
+		sms := mock.NewMockGuardianFactorSmsAPIV3(gomock.NewController(t))
+
+		cli := &cli{
+			apiv3:    &auth0.APIV3{GuardianFactorSms: sms},
+			renderer: testRenderer(),
+		}
+
+		cmd := setGuardianSmsTemplatesCmd(cli)
+		cmd.SetArgs([]string{"--verification-message", "Your code is {{code}}"})
+
+		assert.ErrorContains(t, cmd.Execute(), "set replaces both SMS templates")
 	})
 }
 

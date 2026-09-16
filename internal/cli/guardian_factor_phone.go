@@ -253,9 +253,13 @@ func setGuardianPhoneTemplatesCmd(cli *cli) *cobra.Command {
     --enrollment-message "Your verification code is {{code}}" \
     --verification-message "Your verification code is {{code}}"`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !guardianEnrollmentMessage.IsSet(cmd) && !guardianVerificationMessage.IsSet(cmd) && !canPrompt(cmd) {
+			// This is a full replace: the API requires both templates, so a partial
+			// invocation would blank the omitted sibling. Non-interactively, require
+			// both flags; interactively, the Ask calls below prompt for whichever is
+			// missing.
+			if !canPrompt(cmd) && (!guardianEnrollmentMessage.IsSet(cmd) || !guardianVerificationMessage.IsSet(cmd)) {
 				return fmt.Errorf(
-					"set replaces the phone templates, so pass --enrollment-message and/or " +
+					"set replaces both phone templates, so pass both --enrollment-message and " +
 						"--verification-message when running non-interactively",
 				)
 			}

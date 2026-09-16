@@ -481,14 +481,28 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - replaces the phone templates
+        - replaces both phone templates
+
+  058d1 - guardian factors phone set-templates rejects a partial replace:
+    command: auth0 guardian factors phone set-templates --enrollment-message "Your code is {{code}}"
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces both phone templates
 
   058e - guardian factors sms set-templates rejects an empty replace:
     command: auth0 guardian factors sms set-templates
     exit-code: 1
     stderr:
       contains:
-        - replaces the SMS templates
+        - replaces both SMS templates
+
+  058e1 - guardian factors sms set-templates rejects a partial replace:
+    command: auth0 guardian factors sms set-templates --verification-message "Your code is {{code}}"
+    exit-code: 1
+    stderr:
+      contains:
+        - replaces both SMS templates
 
   058f - guardian factors phone set-twilio rejects an empty replace:
     command: auth0 guardian factors phone set-twilio
