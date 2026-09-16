@@ -41,12 +41,19 @@ func (e authError) Unwrap() error { return e.err }
 
 // validationError wraps a client-side input failure (unreadable/malformed JSON,
 // local schema validation) so it maps to the validation exit code before any API
-// call is made, matching the class a server-side 400/422 would produce.
-type validationError struct{ err error }
+// call is made, matching the class a server-side 400/422 would produce. When
+// details is set it carries the field-level failures into the JSON error
+// envelope's "details" field via the errorDetailer interface.
+type validationError struct {
+	err     error
+	details json.RawMessage
+}
 
 func (e validationError) Error() string { return e.err.Error() }
 
 func (e validationError) Unwrap() error { return e.err }
+
+func (e validationError) ErrorDetails() json.RawMessage { return e.details }
 
 // errorClass returns a stable, machine-readable classification for an error. It
 // is the single source of truth shared by exit-code mapping, the JSON error

@@ -282,6 +282,51 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 	}
 }
 
+func TestValidateRequestPopulatesStructuredFieldErrors(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	t.Run("a schema violation carries a JSONPath field and a reason", func(t *testing.T) {
+		result, err := manager.ValidateRequest(
+			"POST", "/actions/actions",
+			[]byte(`{"name": "x", "supported_triggers": [{"id": "not-a-trigger", "version": "v3"}]}`),
+		)
+		require.NoError(t, err)
+		require.False(t, result.Valid)
+		require.NotEmpty(t, result.FieldErrors)
+
+		// FieldErrors and the human-readable Errors describe the same failures.
+		require.Len(t, result.Errors, len(result.FieldErrors))
+		for i, fe := range result.FieldErrors {
+			assert.Equal(t, fe.String(), result.Errors[i])
+		}
+
+		var found bool
+		for _, fe := range result.FieldErrors {
+			if fe.Field == "supported_triggers[0].id" {
+				found = true
+				assert.NotEmpty(t, fe.Reason)
+				assert.NotContains(t, fe.Reason, "$ref")
+			}
+		}
+		assert.True(t, found, "expected a field error located at supported_triggers[0].id")
+	})
+
+	t.Run("malformed JSON yields a field error with no location", func(t *testing.T) {
+		result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{`))
+		require.NoError(t, err)
+		require.False(t, result.Valid)
+		require.Len(t, result.FieldErrors, 1)
+		assert.Empty(t, result.FieldErrors[0].Field)
+		assert.Contains(t, result.FieldErrors[0].Reason, "Invalid JSON")
+	})
+}
+
+func TestFieldErrorString(t *testing.T) {
+	assert.Equal(t, "name: is required", FieldError{Field: "name", Reason: "is required"}.String())
+	assert.Equal(t, "Invalid JSON: x", FieldError{Reason: "Invalid JSON: x"}.String())
+}
+
 func TestJSONPath(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Emit a machine-readable JSON error envelope (`{"error":{"code","message","status","details"}}`) on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text
+- Populate the JSON error envelope's `details` with field-level schema errors (`[{"field","reason"}]`) when a `--data` payload fails local validation, so an agent can pinpoint the offending field instead of parsing a prose list
 - Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
 - Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
 
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reject an unrecognized flag on a command group (for example `auth0 actions --bogus`) with a usage error and exit code `1` instead of silently printing help and exiting `0`, in both normal and agent mode; a bare group with only known global flags (such as `--debug`) still prints help
 - Stream results as a sequence of newline-separated JSON objects instead of a JSON array when a streaming command such as `auth0 logs tail` runs in JSON or agent mode, so a reader can consume records incrementally without waiting for an array that never closes while tailing. Agent mode and `--json-compact` emit compact newline-delimited JSON (one object per line); `--json` indents each object for a human watching the live stream
 - Always terminate JSON output on stdout with a trailing newline so a piped or NDJSON reader never drops the final record
+- Stop appending the multi-line "Expected Request Schema" dump to a failed `--data` request in JSON or agent mode, keeping the error envelope's `message` to the API's actual error (the schema stays discoverable via `--schema`); human output is unchanged
 - Emit diagnostic messages (info, success, detail, warning, non-fatal error) on stderr as JSON lines (`{"level","message"}`) in agent mode instead of decorated human prose, and suppress the decorative heading, so an agent that reads stderr gets fully machine-parseable output that matches the JSON error envelope
 - Render help as JSON in agent mode for a bare `auth0` and for a command group invoked without a subcommand (for example `auth0 apps`), instead of the human help text, and describe agent mode (its output contract and how to disable it) in the root help so it does not need to be re-announced on every command
 

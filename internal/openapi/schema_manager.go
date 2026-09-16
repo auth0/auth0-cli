@@ -150,7 +150,7 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	var data interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		result.Valid = false
-		result.Errors = append(result.Errors, fmt.Sprintf("Invalid JSON: %v", err))
+		result.addFieldErrors([]FieldError{{Reason: fmt.Sprintf("Invalid JSON: %v", err)}})
 		return result, nil
 	}
 
@@ -158,30 +158,60 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	// instead of stopping at the first, so the caller sees all issues at once.
 	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors()); err != nil {
 		result.Valid = false
-		result.Errors = append(result.Errors, formatValidationError(err)...)
+		result.addFieldErrors(fieldValidationErrors(err))
 		return result, nil
 	}
 
 	return result, nil
 }
 
-// ValidationResult contains the result of schema validation.
-type ValidationResult struct {
-	Valid  bool
-	Errors []string
+// FieldError is a single structured validation failure. Field is a JSONPath-style
+// location within the payload ("payload" for a whole-body error, empty when the
+// failure is not tied to a location, e.g. malformed JSON); Reason is the message.
+type FieldError struct {
+	Field  string `json:"field,omitempty"`
+	Reason string `json:"reason"`
 }
 
-// formatValidationError turns a kin-openapi validation error into concise messages,
-// reading SchemaError's structured fields so raw "$ref" entries never leak.
-func formatValidationError(err error) []string {
-	var messages []string
+// String renders a FieldError as "field: reason", or just the reason when the
+// error is not tied to a field.
+func (e FieldError) String() string {
+	if e.Field == "" {
+		return e.Reason
+	}
+	return e.Field + ": " + e.Reason
+}
+
+// ValidationResult contains the result of schema validation. Errors holds the
+// human-readable strings; FieldErrors holds the same failures in structured form
+// for the JSON error envelope's "details" field.
+type ValidationResult struct {
+	Valid       bool
+	Errors      []string
+	FieldErrors []FieldError
+}
+
+// addFieldErrors appends structured failures and keeps the human-readable Errors
+// slice in sync, so both views describe the same set of failures.
+func (r *ValidationResult) addFieldErrors(fes []FieldError) {
+	for _, fe := range fes {
+		r.FieldErrors = append(r.FieldErrors, fe)
+		r.Errors = append(r.Errors, fe.String())
+	}
+}
+
+// fieldValidationErrors turns a kin-openapi validation error into concise,
+// structured field errors, reading SchemaError's fields so raw "$ref" entries
+// never leak.
+func fieldValidationErrors(err error) []FieldError {
+	var out []FieldError
 
 	var multiErr openapi3.MultiError
 	if errors.As(err, &multiErr) {
 		for _, e := range multiErr {
-			messages = append(messages, formatValidationError(e)...)
+			out = append(out, fieldValidationErrors(e)...)
 		}
-		return messages
+		return out
 	}
 
 	var schemaErr *openapi3.SchemaError
@@ -191,10 +221,10 @@ func formatValidationError(err error) []string {
 		if reason == "" {
 			reason = fmt.Sprintf("does not match schema constraint %q", schemaErr.SchemaField)
 		}
-		return []string{fmt.Sprintf("%s: %s", location, reason)}
+		return []FieldError{{Field: location, Reason: reason}}
 	}
 
-	return []string{err.Error()}
+	return []FieldError{{Reason: err.Error()}}
 }
 
 // jsonPath renders JSON Pointer segments as a JSONPath-style query, e.g.
