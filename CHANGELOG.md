@@ -12,9 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Emit a machine-readable JSON error envelope (`{"error":{"code","message","status","details"}}`) on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text
 
 ### Changed
-- Return granular process exit codes per failure class instead of a blanket `1`: `2` usage/parse, `3` auth, `4` validation, `5` not-found, `6` rate-limit, `7` api (`0` success and generic `1` are unchanged). See the [migration guide](MIGRATION_GUIDE.md#exit-codes-and-error-output)
+- Carry a machine-readable failure class (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`) in the JSON error envelope's `code` field, so agents and scripts can branch on the failure class without parsing human text. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure. See the [migration guide](MIGRATION_GUIDE.md#exit-codes-and-error-output)
 - Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
-- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `2` instead of silently printing help and exiting `0`; unknown top-level commands now also exit `2`
+- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands are also rejected
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 

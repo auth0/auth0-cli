@@ -176,7 +176,7 @@ tests:
 
   020 - apis create with invalid subject type authorization should fail:
     command: auth0 apis create --name integration-test-api-subjauth-fail --identifier http://integration-test-api-subjauth-fail --scopes read:todos --subject-type-authorization '{"user":{"policy":"invalid_policy"}}' --json
-    exit-code: 4
+    exit-code: 1
     stderr:
       contains:
         - "invalid_policy"

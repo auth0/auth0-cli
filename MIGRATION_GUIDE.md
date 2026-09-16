@@ -2,29 +2,23 @@
 
 ## Exit codes and error output
 
-The CLI now returns granular process exit codes so scripts and agents can branch on the class of a failure instead of parsing output. Previously any failure exited with `1`.
+Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure, matching the CLI's long-standing behavior. The one addition is `130`, which is now returned when a command is interrupted with `Ctrl-C` (previously `0`), so an interrupted run reports failure.
 
 | Exit code | Meaning |
 | --------- | ------- |
 | `0` | Success |
-| `1` | Generic / unclassified error |
-| `2` | Usage or flag-parse error |
-| `3` | Authentication or authorization error |
-| `4` | Validation error (local input or server `400`/`422`) |
-| `5` | Not found (`404`) |
-| `6` | Rate limited (`429`) |
-| `7` | API or server error (`5xx`) |
+| `1` | Any failure |
 | `130` | Interrupted with `Ctrl-C` (previously `0`) |
 
-If your automation checks for a specific non-zero code (for example `if [ $? -eq 1 ]`) to detect any failure, update it to treat any non-zero exit as a failure, or match the specific codes above. Checks that only distinguish success (`0`) from failure (non-zero) are unaffected.
-
-In addition, when running with `--json` or in agent mode, errors are now written to stderr as a single-line JSON envelope so they can be parsed programmatically:
+The granular failure class is not carried by the exit code. Instead, when running with `--json` or in agent mode, errors are written to stderr as a single-line JSON envelope so they can be parsed programmatically:
 
 ```json
 {"error":{"code":"not_found","message":"...","status":404}}
 ```
 
-The `details` field carries field-level validation errors when the API returns them. Human-readable error output is unchanged in normal (non-JSON, non-agent) mode.
+The `code` field classifies the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`), so agents and scripts can branch on the class without parsing human text or relying on a specific exit code. The `status` field carries the HTTP status when the error came from the Auth0 Management API, and the `details` field carries field-level validation errors when the API returns them. Human-readable error output is unchanged in normal (non-JSON, non-agent) mode.
+
+Automation that only distinguishes success (`0`) from failure (non-zero) is unaffected.
 
 ## Upgrading from v0.x → v1.0
 

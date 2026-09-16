@@ -75,8 +75,10 @@ func TestEnforceUnknownSubcommand(t *testing.T) {
 
 		var usageErr usageError
 		assert.True(t, errors.As(err, &usageErr))
+		// The class is still "usage" for the JSON envelope, but every failure
+		// collapses to the generic exit code for backwards compatibility.
 		assert.Equal(t, "usage", errorClass(err))
-		assert.Equal(t, exitUsage, exitCodeForError(err))
+		assert.Equal(t, exitGeneric, exitCodeForError(err))
 	})
 
 	t.Run("namespace accepts no args and prints help", func(t *testing.T) {
@@ -89,7 +91,7 @@ func TestEnforceUnknownSubcommand(t *testing.T) {
 	t.Run("root rejects an unknown top-level command as a usage error", func(t *testing.T) {
 		root := newTree()
 		assert.Error(t, root.Args(root, []string{"bogus"}))
-		assert.Equal(t, exitUsage, exitCodeForError(root.Args(root, []string{"bogus"})))
+		assert.Equal(t, exitGeneric, exitCodeForError(root.Args(root, []string{"bogus"})))
 	})
 
 	t.Run("does not override a runnable leaf command", func(t *testing.T) {

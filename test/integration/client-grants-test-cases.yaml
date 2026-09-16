@@ -73,7 +73,7 @@ tests:
 
   009 - show client grant with invalid id:
     command: auth0 client-grants show this-client-grant-id-does-not-exist --no-input
-    exit-code: 4
+    exit-code: 1
     stderr:
       contains:
         - "Failed to read client grant with ID \"this-client-grant-id-does-not-exist\""
@@ -154,7 +154,7 @@ tests:
 
   018 - delete client grant with invalid id:
     command: auth0 client-grants delete this-client-grant-id-does-not-exist --force --no-input
-    exit-code: 4
+    exit-code: 1
     stderr:
       contains:
         - "Failed to delete client grant with ID \"this-client-grant-id-does-not-exist\""

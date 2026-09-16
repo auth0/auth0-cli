@@ -59,19 +59,22 @@ func TestErrorClass(t *testing.T) {
 }
 
 func TestExitCodeForError(t *testing.T) {
+	// Exit codes are intentionally coarse: success is 0 and every failure class
+	// collapses to the generic code, so scripts that only distinguish success from
+	// failure keep working. The granular class lives in the JSON error envelope.
 	tests := []struct {
 		name     string
 		err      error
 		expected int
 	}{
 		{name: "nil error", err: nil, expected: exitOK},
-		{name: "usage error", err: usageError{errors.New("bad flag")}, expected: exitUsage},
-		{name: "auth error", err: config.ErrInvalidToken, expected: exitAuth},
-		{name: "server validation error", err: fakeManagementError{status: 400}, expected: exitValidation},
-		{name: "local validation error", err: validationError{errors.New("bad payload")}, expected: exitValidation},
-		{name: "not found error", err: fakeManagementError{status: 404}, expected: exitNotFound},
-		{name: "rate limit error", err: fakeManagementError{status: 429}, expected: exitRateLimit},
-		{name: "api error", err: fakeManagementError{status: 500}, expected: exitAPI},
+		{name: "usage error", err: usageError{errors.New("bad flag")}, expected: exitGeneric},
+		{name: "auth error", err: config.ErrInvalidToken, expected: exitGeneric},
+		{name: "server validation error", err: fakeManagementError{status: 400}, expected: exitGeneric},
+		{name: "local validation error", err: validationError{errors.New("bad payload")}, expected: exitGeneric},
+		{name: "not found error", err: fakeManagementError{status: 404}, expected: exitGeneric},
+		{name: "rate limit error", err: fakeManagementError{status: 429}, expected: exitGeneric},
+		{name: "api error", err: fakeManagementError{status: 500}, expected: exitGeneric},
 		{name: "generic error", err: errors.New("boom"), expected: exitGeneric},
 	}
 

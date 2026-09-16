@@ -21,7 +21,7 @@ tests:
 
   005 - it doesn't show the email provider:
     command: auth0 email provider show
-    exit-code: 5
+    exit-code: 1
 
   007 - create email provider:
     command: auth0 email provider create --provider=sendgrid --enabled=false --default-from-address='admin@auth0.invalid' --credentials='{"api_key":"some-api-key"}'

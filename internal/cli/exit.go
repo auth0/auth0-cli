@@ -11,17 +11,12 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 )
 
-// Process exit codes. These form part of the CLI's public contract: agents and
-// scripts branch on the failure class without parsing output.
+// The machine-readable failure class (usage, auth, not_found, ...) Is carried by
+// the JSON error envelope in agent/JSON mode (see buildErrorEnvelope), not by the
+// exit code, so scripts that only check "0 vs non-zero" keep working.
 const (
 	exitOK          = 0
 	exitGeneric     = 1
-	exitUsage       = 2
-	exitAuth        = 3
-	exitValidation  = 4
-	exitNotFound    = 5
-	exitRateLimit   = 6
-	exitAPI         = 7
 	exitInterrupted = 130
 )
 
@@ -95,28 +90,17 @@ func errorClass(err error) string {
 	return "unknown"
 }
 
-// exitCodeForError maps an error onto its process exit code per the granular scheme.
+// exitCodeForError maps an error onto its process exit code. Every failure
+// collapses to the generic code so the CLI stays backwards compatible with
+// scripts that treat any non-zero exit as failure; the granular failure class is
+// still available to agents via the JSON error envelope (see buildErrorEnvelope).
+// Interruption (Ctrl-C) exits 130 and is handled separately in the signal path.
 func exitCodeForError(err error) int {
 	if err == nil {
 		return exitOK
 	}
 
-	switch errorClass(err) {
-	case "usage":
-		return exitUsage
-	case "auth":
-		return exitAuth
-	case "validation":
-		return exitValidation
-	case "not_found":
-		return exitNotFound
-	case "rate_limit":
-		return exitRateLimit
-	case "api":
-		return exitAPI
-	default:
-		return exitGeneric
-	}
+	return exitGeneric
 }
 
 // errorDetailer lets an error contribute structured details (e.g. field-level
