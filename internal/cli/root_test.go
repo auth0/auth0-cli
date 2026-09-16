@@ -55,6 +55,50 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 	}
 }
 
+func TestEnforceUnknownSubcommand(t *testing.T) {
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0"}
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		return root
+	}
+
+	t.Run("namespace rejects an unknown subcommand as a usage error", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+
+		err = group.Args(group, []string{"lst"})
+		assert.Error(t, err)
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, exitUsage, exitCodeForError(err))
+	})
+
+	t.Run("namespace accepts no args and prints help", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		assert.NoError(t, group.Args(group, []string{}))
+		assert.True(t, group.Runnable())
+	})
+
+	t.Run("root rejects an unknown top-level command as a usage error", func(t *testing.T) {
+		root := newTree()
+		assert.Error(t, root.Args(root, []string{"bogus"}))
+		assert.Equal(t, exitUsage, exitCodeForError(root.Args(root, []string{"bogus"})))
+	})
+
+	t.Run("does not override a runnable leaf command", func(t *testing.T) {
+		leaf, _, err := newTree().Find([]string{"actions", "list"})
+		assert.NoError(t, err)
+		assert.Nil(t, leaf.Args)
+	})
+}
+
 func TestClassifyCommandFailure(t *testing.T) {
 	t.Run("classifies 401 and 403 management errors as auth", func(t *testing.T) {
 		for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {

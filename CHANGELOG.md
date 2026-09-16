@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Return granular process exit codes per failure class instead of a blanket `1`: `2` usage/parse, `3` auth, `4` validation, `5` not-found, `6` rate-limit, `7` api (`0` success and generic `1` are unchanged). See the [migration guide](MIGRATION_GUIDE.md#exit-codes-and-error-output)
 - Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
+- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `2` instead of silently printing help and exiting `0`; unknown top-level commands now also exit `2`
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 

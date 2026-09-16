@@ -88,6 +88,8 @@ func Execute() {
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
 
+	enforceUnknownSubcommand(rootCmd)
+
 	overrideHelpAndVersionFlagText(rootCmd)
 
 	defer func() {
@@ -166,7 +168,10 @@ func buildRootCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
 			}
 
-			if !commandRequiresAuthentication(cmd.CommandPath()) {
+			// Namespace commands (e.g. `auth0 actions`) never call the API
+			// themselves; they only print help or reject an unknown
+			// subcommand, so they must not force authentication.
+			if cmd.HasSubCommands() || !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
 
@@ -179,6 +184,44 @@ func buildRootCmd(cli *cli) *cobra.Command {
 	}
 
 	return rootCmd
+}
+
+// enforceUnknownSubcommand makes namespace (parent) commands reject an unknown
+// subcommand with a usage error (exit code 2) instead of silently printing help
+// and exiting 0. Cobra treats a non-runnable parent as a help request before it
+// ever validates positional args, so a plain `Args`/`cobra.NoArgs` on the parent
+// never fires. To close that gap we make each namespace runnable — its RunE just
+// prints help, preserving the bare `auth0 <group>` behavior — and give it an Args
+// validator that rejects any leftover token as an unknown command. The Args check
+// runs before PersistentPreRunE, so a typo like `auth0 actions lst` fails fast
+// without attempting authentication.
+func enforceUnknownSubcommand(cmd *cobra.Command) {
+	for _, sub := range cmd.Commands() {
+		enforceUnknownSubcommand(sub)
+	}
+
+	// Leaf commands and namespaces that already define their own run behavior
+	// are left untouched.
+	if !cmd.HasSubCommands() || cmd.Runnable() {
+		return
+	}
+
+	// A namespace defines no flags of its own, so an unknown flag on it almost
+	// always accompanies a mistyped subcommand such as `auth0 users lst --json`.
+	// Tolerating unknown flags here lets parsing reach the Args validator below,
+	// which reports the far more useful "unknown command" instead of "unknown
+	// flag". Known persistent flags such as --help and --debug still parse normally.
+	cmd.FParseErrWhitelist.UnknownFlags = true
+
+	cmd.Args = func(c *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return nil
+		}
+		return usageError{fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())}
+	}
+	cmd.RunE = func(c *cobra.Command, _ []string) error {
+		return c.Help()
+	}
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {

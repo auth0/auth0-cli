@@ -46,7 +46,7 @@ tests:
 
   006 - attempt to create organization with a name that already exists:
     command: auth0 orgs create --name integration-test-org-new2
-    exit-code: 1
+    exit-code: 4
     stderr:
       contains:
         - Failed to create organization with name "integration-test-org-new2"

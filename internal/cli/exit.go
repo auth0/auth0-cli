@@ -12,8 +12,7 @@ import (
 )
 
 // Process exit codes. These form part of the CLI's public contract: agents and
-// scripts branch on the failure class without parsing output. See
-// AGENT_COMPATIBILITY_PLAN.md §7.
+// scripts branch on the failure class without parsing output.
 const (
 	exitOK          = 0
 	exitGeneric     = 1
