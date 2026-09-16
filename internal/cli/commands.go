@@ -302,7 +302,7 @@ func extractArguments(cmd *cobra.Command) []string {
 // flag of their own. A specific command is described in detail; the root is a
 // compact overview.
 func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) bool {
-	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !cli.agentMode) {
+	if !hasJSONRequest(args) && !cli.agentMode {
 		return false
 	}
 
@@ -316,9 +316,18 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 		findArgs = append(findArgs, arg)
 	}
 
-	target, _, err := root.Find(findArgs)
+	target, remaining, err := root.Find(findArgs)
 	if err != nil || target == nil {
 		target = root
+		remaining = findArgs
+	}
+
+	// Render JSON help when help is explicitly requested, or when the invocation
+	// lands on a namespace without choosing a subcommand (a bare `auth0` or
+	// `auth0 apps`), which cobra would otherwise answer with human help. This is
+	// only reached in JSON/agent mode, so it stays out of the human path.
+	if !hasHelpRequest(args) && !isImplicitNamespaceHelp(target, remaining, args) {
+		return false
 	}
 
 	detailed := target != root
@@ -326,9 +335,46 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 	nodes := []commandNode{buildNode(target, 1, 0, detailed)}
 	if detailed {
 		nodes = annotateWithRawAPINote(nodes)
+	} else {
+		// Root help: give an agent the static, agent-relevant prose (the automation
+		// guidance plus the agent-mode output contract) and the global flags up
+		// front, since agent mode no longer prints a per-command notice and this is
+		// the one place an agent looks to learn how the CLI behaves. The dynamic
+		// login-status blob appended to the command's Long is deliberately excluded,
+		// as it is human prose and noise for a JSON consumer.
+		nodes[0].Description = rootLong + "\n\n" + agentModeHelp
+		nodes[0].Flags = collectFlags(target)
 	}
 
 	_ = renderCommandTreeJSON(nodes)
+	return true
+}
+
+// isImplicitNamespaceHelp reports whether an invocation lands on a namespace (a
+// command with subcommands, including the root) without choosing one, so cobra
+// would fall back to printing that namespace's help. A bare `auth0` or
+// `auth0 apps` qualifies. It does not qualify when `--version`/`-v` is present
+// (which prints the version), or when a leftover positional token remains, which
+// means a command was named (possibly mistyped) and must run so it can succeed
+// or report "unknown command" itself. The remaining slice is the leftover after
+// cobra matched the command path, so it holds flags and any un-matched positional.
+func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bool {
+	for _, arg := range args {
+		if arg == "-v" || arg == "--version" {
+			return false
+		}
+	}
+
+	if !target.HasSubCommands() {
+		return false
+	}
+
+	for _, arg := range remaining {
+		if !strings.HasPrefix(arg, "-") {
+			return false
+		}
+	}
+
 	return true
 }
 

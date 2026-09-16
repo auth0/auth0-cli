@@ -89,13 +89,13 @@ func TestRenderer_Results(t *testing.T) {
 				},
 			},
 			givenFormat:     string(OutputFormatJSON),
-			expectedResults: "[\n    {\n        \"ID\": \"123\",\n        \"Name\": \"John\",\n        \"Email\": \"john@example.com\"\n    }\n]",
+			expectedResults: "[\n    {\n        \"ID\": \"123\",\n        \"Name\": \"John\",\n        \"Email\": \"john@example.com\"\n    }\n]\n",
 		},
 		{
 			name:            "it can correctly output an empty json array when no data",
 			givenData:       []View{},
 			givenFormat:     string(OutputFormatJSON),
-			expectedResults: "[]",
+			expectedResults: "[]\n",
 		},
 		{
 			name: "it can correctly output members as csv",
@@ -120,4 +120,92 @@ func TestRenderer_Results(t *testing.T) {
 			stdout.Reset()
 		})
 	}
+}
+
+func TestRenderer_Stream_JSON(t *testing.T) {
+	newView := func(id, name string) View {
+		return &membersView{
+			ID:  id,
+			raw: struct{ ID, Name string }{ID: id, Name: name},
+		}
+	}
+
+	t.Run("emits one compact JSON object per line (NDJSON), no header", func(t *testing.T) {
+		var stdout bytes.Buffer
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSON}
+
+		r.Stream([]View{newView("1", "a"), newView("2", "b")}, nil)
+
+		assert.Equal(t,
+			"{\"ID\":\"1\",\"Name\":\"a\"}\n{\"ID\":\"2\",\"Name\":\"b\"}\n",
+			stdout.String(),
+		)
+	})
+
+	t.Run("streams channel records incrementally after the initial batch", func(t *testing.T) {
+		var stdout bytes.Buffer
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSONCompact}
+
+		ch := make(chan View, 1)
+		ch <- newView("2", "b")
+		close(ch)
+
+		r.Stream([]View{newView("1", "a")}, ch)
+
+		assert.Equal(t,
+			"{\"ID\":\"1\",\"Name\":\"a\"}\n{\"ID\":\"2\",\"Name\":\"b\"}\n",
+			stdout.String(),
+		)
+	})
+
+	t.Run("default (table) format is unaffected", func(t *testing.T) {
+		var stdout bytes.Buffer
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout}
+
+		r.Stream([]View{newView("1", "a")}, nil)
+
+		// Table streaming prints a header row, so the output is not JSON.
+		assert.Contains(t, stdout.String(), "TYPE")
+	})
+}
+
+func TestRenderer_StructuredMessages(t *testing.T) {
+	t.Run("diagnostics are emitted as JSON lines on stderr", func(t *testing.T) {
+		var stderr bytes.Buffer
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, StructuredMessages: true}
+
+		r.Infof("hello %s", "world")
+		r.Warnf("careful")
+		r.Errorf("boom")
+		r.Successf("done")
+		r.Detailf("more")
+
+		assert.Equal(t,
+			"{\"level\":\"info\",\"message\":\"hello world\"}\n"+
+				"{\"level\":\"warning\",\"message\":\"careful\"}\n"+
+				"{\"level\":\"error\",\"message\":\"boom\"}\n"+
+				"{\"level\":\"success\",\"message\":\"done\"}\n"+
+				"{\"level\":\"detail\",\"message\":\"more\"}\n",
+			stderr.String(),
+		)
+	})
+
+	t.Run("heading is suppressed in structured mode", func(t *testing.T) {
+		var stderr bytes.Buffer
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, StructuredMessages: true, Tenant: "example"}
+
+		r.Heading("logs")
+
+		assert.Empty(t, stderr.String())
+	})
+
+	t.Run("human mode is unaffected", func(t *testing.T) {
+		var stderr bytes.Buffer
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard}
+
+		r.Infof("hello")
+
+		assert.Contains(t, stderr.String(), "hello")
+		assert.NotContains(t, stderr.String(), "\"level\"")
+	})
 }

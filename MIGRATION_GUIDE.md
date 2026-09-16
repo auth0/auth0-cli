@@ -20,6 +20,17 @@ The `code` field classifies the failure (`usage`, `auth`, `validation`, `not_fou
 
 Automation that only distinguishes success (`0`) from failure (non-zero) is unaffected.
 
+## Agent mode output
+
+Agent mode makes the whole output stream machine-readable. It is enabled automatically when the CLI detects an AI agent, and you can force it with `--agent-mode` (or `AUTH0_AGENT_MODE=true`) or turn it off with `--agent-mode=false` (or `AUTH0_AGENT_MODE=false`). The behavior below applies in agent mode, and the streaming and JSON-newline behavior also applies whenever `--json` is used.
+
+- Streaming commands emit newline-delimited JSON (one JSON object per line) instead of a JSON array. For example `auth0 logs tail --json` previously rendered a table and now prints one log event per line, so a reader can consume events incrementally without waiting for an array that never closes while tailing.
+- JSON results on stdout always end with a trailing newline, so a piped or newline-delimited reader never drops the final record.
+- Diagnostic messages (info, success, detail, warning, and non-fatal errors) are written to stderr as JSON lines in the form `{"level":"...","message":"..."}` instead of decorated human prose, matching the JSON error envelope above. The decorative heading is suppressed.
+- Help is returned as JSON. A bare `auth0` and a command group invoked without a subcommand (for example `auth0 apps`) return the JSON command tree rather than the human help text, and the root help describes agent mode itself.
+
+If you parse the human-readable prose that the CLI previously printed to stderr, or you depend on streaming commands emitting a single JSON array, update your automation to read the JSON lines and newline-delimited output described here. Normal (non-JSON, non-agent) mode is unchanged.
+
 ## Upgrading from v0.x → v1.0
 
 As is to be expected with a major release, there are breaking changes in this update. Please ensure you read this guide

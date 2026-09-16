@@ -34,6 +34,12 @@ type Renderer struct {
 
 	// Format indicates how the results are rendered. Default (empty) will write as table.
 	Format OutputFormat
+
+	// StructuredMessages, when true, writes diagnostic messages (info, warning,
+	// success and non-fatal errors) to MessageWriter as one JSON object per line
+	// instead of decorated human prose. It is enabled in agent mode so that an
+	// agent which reads or merges stderr gets fully machine-parseable output.
+	StructuredMessages bool
 }
 
 type View interface {
@@ -51,6 +57,15 @@ func NewRenderer() *Renderer {
 
 func (r *Renderer) Output(message string) {
 	fmt.Fprint(r.ResultWriter, message)
+
+	// In JSON modes always terminate stdout with a newline so a piped reader (or
+	// an NDJSON parser) never drops the final record. A bare pipe otherwise gets
+	// no trailing newline, since the terminal check below is false.
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+		fmt.Fprintln(r.ResultWriter)
+		return
+	}
+
 	if iostream.IsOutputTerminal() {
 		r.Newline()
 	}
@@ -88,13 +103,52 @@ func (r *Renderer) ErrorJSON(envelope ErrorEnvelope) {
 	fmt.Fprintln(r.MessageWriter, string(b))
 }
 
+// messageLine is the structured form of a diagnostic message written to stderr
+// in agent mode. Every non-error diagnostic becomes one such JSON object per
+// line, so an agent can parse stderr the same way it parses the error envelope.
+type messageLine struct {
+	Level   string `json:"level"`
+	Message string `json:"message"`
+}
+
+// structuredMessage writes a diagnostic message as a single JSON line to
+// MessageWriter and reports whether it did. It returns false when structured
+// messages are disabled (human mode) so callers fall back to decorated prose.
+func (r *Renderer) structuredMessage(level, format string, a ...interface{}) bool {
+	if !r.StructuredMessages {
+		return false
+	}
+
+	// The format string is concatenated (rather than forwarded verbatim) so vet
+	// does not classify these Renderer methods as printf wrappers, which would
+	// flag every existing non-constant-format caller across the codebase.
+	line := messageLine{
+		Level:   level,
+		Message: strings.TrimRight(fmt.Sprintf(format+"\n", a...), "\n"),
+	}
+
+	b, err := json.Marshal(line)
+	if err != nil {
+		return false
+	}
+
+	fmt.Fprintln(r.MessageWriter, string(b))
+	return true
+}
+
 func (r *Renderer) Infof(format string, a ...interface{}) {
+	if r.structuredMessage("info", format, a...) {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.Green(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 // Successf writes a success line with a green check-mark prefix.
 func (r *Renderer) Successf(format string, a ...interface{}) {
+	if r.structuredMessage("success", format, a...) {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.Green("✓ "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
@@ -104,20 +158,35 @@ const detailIndent = "  "
 // Detailf writes an indented detail line with no prefix symbol, used for
 // supplementary information displayed beneath a success or info message.
 func (r *Renderer) Detailf(format string, a ...interface{}) {
+	if r.structuredMessage("detail", format, a...) {
+		return
+	}
 	fmt.Fprintf(r.MessageWriter, detailIndent+format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
+	if r.structuredMessage("warning", format, a...) {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
+	if r.structuredMessage("error", format, a...) {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.BrightRed(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Heading(text ...string) {
+	// The heading is purely decorative, so it is suppressed in agent mode to
+	// keep stderr free of non-JSON output.
+	if r.StructuredMessages {
+		return
+	}
+
 	heading := fmt.Sprintf("%s %s\n", ansi.Bold(r.Tenant), strings.Join(text, " "))
 	if r.Format != OutputFormatJSONCompact {
 		fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
@@ -213,6 +282,14 @@ func (r *Renderer) Result(data View) {
 }
 
 func (r *Renderer) Stream(data []View, ch <-chan View) {
+	// In JSON modes a stream must be NDJSON (one object per line), never a JSON
+	// array, because an array never closes while tailing. Agent mode forces JSON,
+	// so this is also the path a tailing agent takes.
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+		r.streamJSON(data, ch)
+		return
+	}
+
 	w := r.ResultWriter
 
 	displayRow := func(row []string) {
@@ -253,6 +330,33 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 
 	for v := range ch {
 		displayView(v)
+	}
+}
+
+// streamJSON writes each streamed record as one compact JSON object per line
+// (NDJSON) to stdout, with no header. NDJSON is line-buffered, so an agent
+// tailing the stream reads records incrementally instead of waiting for a JSON
+// array that never closes.
+func (r *Renderer) streamJSON(data []View, ch <-chan View) {
+	emit := func(v View) {
+		b, err := json.Marshal(v.Object())
+		if err != nil {
+			r.Errorf("couldn't marshal stream record as JSON: %v", err)
+			return
+		}
+		fmt.Fprintln(r.ResultWriter, string(b))
+	}
+
+	for _, v := range data {
+		emit(v)
+	}
+
+	if ch == nil {
+		return
+	}
+
+	for v := range ch {
+		emit(v)
 	}
 }
 

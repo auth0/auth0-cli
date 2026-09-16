@@ -43,6 +43,26 @@ The Auth0 CLI now includes features for AI agents and automation:
 See 'auth0 <resource> --help' for details on specific resources.
 For agent integration guide, visit: https://github.com/auth0/auth0-cli`
 
+// agentModeHelp describes agent mode in one place. It is shown in the root help,
+// both the human text and the JSON help an agent reads, so the CLI never has to
+// re-announce the mode on every command it runs.
+const agentModeHelp = `## Agent Mode
+
+Agent mode makes every command's output machine-readable. The CLI enables it
+automatically when it detects an AI agent. Force it with '--agent-mode' (or
+AUTH0_AGENT_MODE=true) and turn it off with '--agent-mode=false' (or
+AUTH0_AGENT_MODE=false).
+
+In agent mode the CLI:
+
+  • Prints results to stdout as JSON, and streams (for example 'auth0 logs tail')
+    as newline-delimited JSON, one object per line.
+  • Prints diagnostics to stderr as JSON lines ({"level","message"}) and errors as
+    a JSON envelope ({"error":{"code","message","status","details"}}).
+  • Disables interactive prompts and colors.
+  • Exits with a code per failure class: 0 success, 1 generic, 2 usage, 3 auth,
+    4 validation, 5 not-found, 6 rate-limit, 7 api, 130 interrupted.`
+
 const panicMessage = `
 !!     Uh oh. Something went wrong.
 !!     If this problem keeps happening feel free to report an issue at
@@ -152,7 +172,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         rootShort,
-		Long:          rootLong + "\n\n" + getLogin(cli),
+		Long:          rootLong + "\n\n" + agentModeHelp + "\n\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
@@ -162,11 +182,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
-
-			// Emitted after ansi.Initialize so the notice respects the color setting.
-			if cli.agentMode {
-				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
-			}
 
 			// Namespace commands (e.g. `auth0 actions`) never call the API
 			// themselves; they only print help or reject an unknown

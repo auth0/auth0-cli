@@ -156,6 +156,10 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 func (c *cli) configureRenderer() {
 	c.renderer.Tenant = c.tenant
 
+	// In agent mode stderr is fully machine-readable: diagnostics are emitted as
+	// JSON lines rather than decorated prose, matching the JSON error envelope.
+	c.renderer.StructuredMessages = c.agentMode
+
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
 	}

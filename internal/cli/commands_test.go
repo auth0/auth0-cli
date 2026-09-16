@@ -24,6 +24,7 @@ func findSubcommand(nodes []commandNode, name string) (commandNode, bool) {
 
 func newTestCommandTree() *cobra.Command {
 	root := &cobra.Command{Use: "auth0"}
+	root.PersistentFlags().Bool("agent-mode", false, "Output JSON, disable prompts and colors.")
 
 	apps := &cobra.Command{
 		Use:   "apps",
@@ -250,7 +251,92 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.Equal(t, "auth0 apps create", nodes[0].Path)
 	})
 
-	t.Run("root help is a compact overview without the note", func(t *testing.T) {
+	t.Run("bare invocation in agent mode renders root JSON help", func(t *testing.T) {
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{})
+		})
+		assert.True(t, fired)
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Equal(t, "auth0", nodes[0].Path)
+	})
+
+	t.Run("flags-only invocation in agent mode renders root JSON help", func(t *testing.T) {
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--debug"})
+		})
+		assert.True(t, fired)
+		assert.Contains(t, out, "\"auth0\"")
+	})
+
+	t.Run("bare invocation without agent mode does not fire", func(t *testing.T) {
+		t.Setenv(agentModeEnvVar, "")
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("version flag in agent mode does not render help", func(t *testing.T) {
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--version"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("a command token in agent mode is not implicit help", func(t *testing.T) {
+		// A (possibly mistyped) command must run so it can succeed or report an
+		// unknown-command error itself, rather than being swallowed by help.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"badcmd"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("bare namespace in agent mode renders that namespace's JSON help", func(t *testing.T) {
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps"})
+		})
+		assert.True(t, fired)
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Len(t, nodes, 1)
+		assert.Equal(t, "auth0 apps", nodes[0].Path)
+		assert.Equal(t, rawAPIFallbackNote, nodes[0].Note, "a namespace's help is detailed")
+	})
+
+	t.Run("unknown subcommand under a namespace is not implicit help", func(t *testing.T) {
+		// `auth0 apps lst` must run so the namespace reports "unknown command".
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "lst"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("a runnable leaf in agent mode is not implicit help", func(t *testing.T) {
+		// `auth0 apps show` must execute, not print help.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "show"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("root help describes agent mode and lists the global flags", func(t *testing.T) {
 		t.Setenv(agentModeEnvVar, "")
 		var fired bool
 		out := captureOutput(t, func() {
@@ -262,9 +348,35 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
 		assert.Len(t, nodes, 1)
 		assert.Equal(t, "auth0", nodes[0].Path)
-		assert.Empty(t, nodes[0].Flags, "the root overview should not be detailed")
+
+		// The root help is the one place an agent learns the mode's output
+		// contract, since it is no longer announced on every command. It carries
+		// the agent-mode contract alongside the existing automation guidance.
+		assert.Contains(t, nodes[0].Description, agentModeHelp)
+		assert.Contains(t, nodes[0].Description, "For Agents and Automation")
+
+		_, hasAgentModeFlag := findFlag(nodes[0].Flags, "agent-mode")
+		assert.True(t, hasAgentModeFlag, "the root help should list the global agent-mode flag")
+
+		// The raw-API fallback note is for a specific command, not the overview.
 		assert.Empty(t, nodes[0].Note, "the root overview should not carry the note")
+
+		// The child tree stays compact (no per-command flags dumped).
+		assert.NotEmpty(t, nodes[0].Subcommands)
+		apps, ok := findSubcommand(nodes[0].Subcommands, "apps")
+		assert.True(t, ok)
+		assert.Empty(t, apps.Flags, "subcommands in the overview should not be detailed")
 	})
+}
+
+// findFlag returns the flag with the given name from a slice of flags.
+func findFlag(flags []commandFlag, name string) (commandFlag, bool) {
+	for _, f := range flags {
+		if f.Name == name {
+			return f, true
+		}
+	}
+	return commandFlag{}, false
 }
 
 func TestRenderCommandTreeTextDetailed(t *testing.T) {
