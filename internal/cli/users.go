@@ -1075,6 +1075,8 @@ func createUserFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
+	// RequireUsername only toggles the USERNAME row in table output; the JSON path.
+	// Skips the extra connection lookup that derives it, so pass false.
 	cli.renderer.UserCreate(user, false)
 	return nil
 }
@@ -1090,6 +1092,8 @@ func updateUserFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error 
 	if err != nil {
 		return fmt.Errorf("failed to update user with ID %q: %w", id, err)
 	}
+	// RequireUsername only toggles the USERNAME row in table output; the JSON path
+	// skips the extra connection lookup that derives it, so pass false.
 	cli.renderer.UserUpdate(user, false)
 	return nil
 }
