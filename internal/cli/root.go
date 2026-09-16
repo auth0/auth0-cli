@@ -58,10 +58,12 @@ In agent mode the CLI:
   • Prints results to stdout as JSON, and streams (for example 'auth0 logs tail')
     as newline-delimited JSON, one object per line.
   • Prints diagnostics to stderr as JSON lines ({"level","message"}) and errors as
-    a JSON envelope ({"error":{"code","message","status","details"}}).
+    a JSON envelope ({"error":{"code","message","status","details"}}). The failure
+    class is the envelope's "code" (usage, auth, validation, not_found, rate_limit,
+    api, unknown); read that rather than the exit code to branch on the kind of failure.
   • Disables interactive prompts and colors.
-  • Exits with a code per failure class: 0 success, 1 generic, 2 usage, 3 auth,
-    4 validation, 5 not-found, 6 rate-limit, 7 api, 130 interrupted.`
+  • Exits 0 on success, 130 when interrupted, and 1 for any other failure. The exit
+    code is intentionally coarse; the granular class lives in the error envelope's "code".`
 
 const panicMessage = `
 !!     Uh oh. Something went wrong.
