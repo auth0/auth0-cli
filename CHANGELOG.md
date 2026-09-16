@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Encode `--query` filters with real JSON-to-query semantics. An array value now
+  sends repeated parameters (`?fields=a&fields=b`) instead of the literal
+  `[a b]`, numbers keep their original literal (no more `1e+06` for `1000000`),
+  and a nested object is rejected with a clear error rather than silently
+  building a wrong request.
+
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
