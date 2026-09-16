@@ -41,11 +41,11 @@ var (
 	}
 
 	actionCode = Flag{
-		Name:       "Code",
-		LongForm:   "code",
-		ShortForm:  "c",
-		Help:       "Code content for the action.",
-		IsRequired: true,
+		Name:         "Code",
+		LongForm:     "code",
+		ShortForm:    "c",
+		Help:         "Code content for the action.",
+		AlwaysPrompt: true,
 	}
 
 	actionDependency = Flag{
