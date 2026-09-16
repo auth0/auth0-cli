@@ -198,9 +198,7 @@ func noLocalFlagSet(cmd *cobra.Command) bool {
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
-	// --data, --query and --schema supersede the granular required flags, so
-	// per-flag required validation must be skipped when any of them is set —
-	// even from a real terminal in agent mode, where the guards below are false.
+	// A bypass flag carries the payload itself, so skip per-flag required validation.
 	if canPrompt(cmd) || !iostream.IsInputTerminal() || hasRequiredBypassFlag(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})

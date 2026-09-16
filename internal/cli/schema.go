@@ -63,14 +63,11 @@ func printOperationSchema(cli *cli, method, path string) error {
 	return nil
 }
 
-// requiredBypassFlags name the flags that make per-flag "required" validation
-// irrelevant: --data and --query supply the whole request/query payload, and
-// --schema prints the schema and exits before RunE. When any is set, Cobra's
-// ValidateRequiredFlags must be skipped (see prepareInteractivity).
+// requiredBypassFlags supersede the granular required flags: --data and --query
+// carry the whole payload, --schema prints the schema and exits before RunE.
 var requiredBypassFlags = []string{"data", "query", "schema"}
 
-// hasRequiredBypassFlag reports whether the user set a flag that supersedes the
-// granular required flags for this command.
+// hasRequiredBypassFlag reports whether the user set one of requiredBypassFlags.
 func hasRequiredBypassFlag(cmd *cobra.Command) bool {
 	for _, name := range requiredBypassFlags {
 		if f := cmd.Flags().Lookup(name); f != nil && f.Changed {
