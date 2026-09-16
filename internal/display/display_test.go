@@ -130,9 +130,9 @@ func TestRenderer_Stream_JSON(t *testing.T) {
 		}
 	}
 
-	t.Run("emits one compact JSON object per line (NDJSON), no header", func(t *testing.T) {
+	t.Run("json-compact emits one compact JSON object per line (NDJSON), no header", func(t *testing.T) {
 		var stdout bytes.Buffer
-		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSON}
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSONCompact}
 
 		r.Stream([]View{newView("1", "a"), newView("2", "b")}, nil)
 
@@ -140,6 +140,27 @@ func TestRenderer_Stream_JSON(t *testing.T) {
 			"{\"ID\":\"1\",\"Name\":\"a\"}\n{\"ID\":\"2\",\"Name\":\"b\"}\n",
 			stdout.String(),
 		)
+	})
+
+	t.Run("json emits each record as an indented object", func(t *testing.T) {
+		var stdout bytes.Buffer
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSON}
+
+		r.Stream([]View{newView("1", "a"), newView("2", "b")}, nil)
+
+		assert.Equal(t,
+			"{\n  \"ID\": \"1\",\n  \"Name\": \"a\"\n}\n{\n  \"ID\": \"2\",\n  \"Name\": \"b\"\n}\n",
+			stdout.String(),
+		)
+	})
+
+	t.Run("agent mode keeps the compact NDJSON contract even with json", func(t *testing.T) {
+		var stdout bytes.Buffer
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSON, StructuredMessages: true}
+
+		r.Stream([]View{newView("1", "a")}, nil)
+
+		assert.Equal(t, "{\"ID\":\"1\",\"Name\":\"a\"}\n", stdout.String())
 	})
 
 	t.Run("streams channel records incrementally after the initial batch", func(t *testing.T) {

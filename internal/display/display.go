@@ -333,13 +333,25 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 	}
 }
 
-// streamJSON writes each streamed record as one compact JSON object per line
-// (NDJSON) to stdout, with no header. NDJSON is line-buffered, so an agent
-// tailing the stream reads records incrementally instead of waiting for a JSON
-// array that never closes.
+// streamJSON writes each streamed record as its own JSON object to stdout, one
+// after another separated by newlines, never a JSON array (an array never closes
+// while tailing). With --json-compact each object is a single line (NDJSON); with
+// --json each object is indented for a human watching the live stream, which
+// streaming parsers such as jq still accept. Agent mode always uses the compact
+// form, since its machine-readable contract promises one object per line.
 func (r *Renderer) streamJSON(data []View, ch <-chan View) {
+	compact := r.Format == OutputFormatJSONCompact || r.StructuredMessages
+
 	emit := func(v View) {
-		b, err := json.Marshal(v.Object())
+		var (
+			b   []byte
+			err error
+		)
+		if compact {
+			b, err = json.Marshal(v.Object())
+		} else {
+			b, err = json.MarshalIndent(v.Object(), "", "  ")
+		}
 		if err != nil {
 			r.Errorf("couldn't marshal stream record as JSON: %v", err)
 			return
