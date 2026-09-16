@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -61,6 +62,8 @@ func rolesCmd(cli *cli) *cobra.Command {
 func listRolesCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -68,14 +71,32 @@ func listRolesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your roles",
-		Long:    "List your existing roles. To create one, run: `auth0 roles create`.",
+		Long: `List your existing roles. To create one, run: ` + "`auth0 roles create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 roles list
   auth0 roles ls
   auth0 roles ls --number 100
   auth0 roles ls -n 100 --json
   auth0 roles ls -n 100 --json-compact
-  auth0 roles ls --csv`,
+  auth0 roles ls --csv
+  auth0 roles list --schema
+  auth0 roles list --schema --json
+  auth0 roles list --query '{"name_filter":"admin"}'
+  auth0 roles list --query '{"name_filter":"admin"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/roles")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "roles",
+					SchemaCmd: "auth0 roles list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
 			}
@@ -119,6 +140,8 @@ func listRolesCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	roleNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -171,20 +194,48 @@ func createRoleCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Name        string
 		Description string
+		Data        string
+		Schema      bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new role",
-		Long: "Create a new role.\n\n" +
-			"To create interactively, use `auth0 roles create` with no arguments.\n\n" +
-			"To create non-interactively, supply the role name and description through the flags.",
+		Long: `Create a new role.
+
+To create interactively, use ` + "`auth0 roles create`" + ` with no arguments.
+
+To create non-interactively, supply the role name and description through the flags.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 roles create
   auth0 roles create --name myrole --description "awesome role"
   auth0 roles create -n myrole -d "awesome role" --json-compact
-  auth0 roles create -n myrole -d "awesome role" --json`,
+  auth0 roles create -n myrole -d "awesome role" --json
+
+  # Discover the payload schema
+  auth0 roles create --schema
+  auth0 roles create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 roles create --data '{"name":"myrole","description":"awesome role"}'
+  auth0 roles create --data @role.json
+  cat role.json | auth0 roles create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/roles")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createRoleFromJSON(cli, cmd, payload)
+			}
+
 			if err := roleName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -214,6 +265,9 @@ func createRoleCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	roleName.RegisterString(cmd, &inputs.Name, "")
 	roleDescription.RegisterString(cmd, &inputs.Description, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -223,27 +277,55 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 		ID          string
 		Name        string
 		Description string
+		Data        string
+		Schema      bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update a role",
-		Long: "Update a role.\n\n" +
-			"To update interactively, use `auth0 roles update` with no arguments.\n\n" +
-			"To update non-interactively, supply the role id, name and description through the flags.",
+		Long: `Update a role.
+
+To update interactively, use ` + "`auth0 roles update`" + ` with no arguments.
+
+To update non-interactively, supply the role id, name and description through the flags.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 roles update
   auth0 roles update <role-id> --name myrole
   auth0 roles update <role-id> --name myrole --description "awesome role"
   auth0 roles update <role-id> -n myrole -d "awesome role" --json
-  auth0 roles update <role-id> -n myrole -d "awesome role" --json-compact`,
+  auth0 roles update <role-id> -n myrole -d "awesome role" --json-compact
+
+  # Discover the payload schema
+  auth0 roles update --schema
+  auth0 roles update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 roles update <role-id> --data '{"name":"myrole","description":"awesome role"}'
+  auth0 roles update <role-id> --data @role.json
+  cat role.json | auth0 roles update <role-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/roles/{id}")
+			}
+
 			if len(args) == 0 {
 				if err := roleID.Pick(cmd, &inputs.ID, cli.rolePickerOptions); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateRoleFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			var currentRole *management.Role
@@ -287,6 +369,9 @@ func updateRoleCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	roleName.RegisterStringU(cmd, &inputs.Name, "")
 	roleDescription.RegisterStringU(cmd, &inputs.Description, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -343,6 +428,36 @@ func deleteRoleCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
+}
+
+func createRoleFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	role, err := runJSONWrite[management.Role](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/roles",
+		URI:        cli.api.HTTPClient.URI("roles"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 roles create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create role: %w", err)
+	}
+	cli.renderer.RoleCreate(role)
+	return nil
+}
+
+func updateRoleFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	role, err := runJSONWrite[management.Role](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/roles/{id}",
+		URI:        cli.api.HTTPClient.URI("roles", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 roles update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update role with ID %q: %w", id, err)
+	}
+	cli.renderer.RoleUpdate(role)
+	return nil
 }
 
 func (c *cli) rolePickerOptions(ctx context.Context) (pickerOptions, error) {
