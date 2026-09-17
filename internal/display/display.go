@@ -183,16 +183,14 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 }
 
 func (r *Renderer) Heading(text ...string) {
-	// The heading is purely decorative, so it is suppressed in agent mode to
-	// keep stderr free of non-JSON output.
-	if r.StructuredMessages {
+	// The heading is purely decorative, so it is suppressed in agent mode and
+	// in any JSON output mode to keep stderr free of non-JSON output.
+	if r.StructuredMessages || r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		return
 	}
 
 	heading := fmt.Sprintf("%s %s\n", ansi.Bold(r.Tenant), strings.Join(text, " "))
-	if r.Format != OutputFormatJSONCompact {
-		fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
-	}
+	fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
 }
 
 func (r *Renderer) EmptyState(resource string, hint string) {
