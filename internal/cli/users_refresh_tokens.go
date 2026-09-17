@@ -59,7 +59,7 @@ func listUserRefreshTokensCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			tokens, err := collectV3Pages(cmd.Context(), inputs.Number,

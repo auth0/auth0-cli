@@ -212,7 +212,7 @@ func searchUsersCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.number < 1 || inputs.number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			list, err := getWithPagination(
