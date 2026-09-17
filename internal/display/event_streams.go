@@ -241,7 +241,7 @@ func (r *Renderer) EventDeliveryPrompt(deliveries []*management.EventDelivery, c
 /*----------------------------------------------- Show Delivery ------------------------------------------------.*/
 
 func (r *Renderer) ShowDelivery(delivery *management.EventDelivery) {
-	if r.Format == OutputFormatJSON {
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		r.JSONResult(delivery)
 		return
 	}
@@ -451,7 +451,7 @@ func (v *eventStreamStatsRowView) Object() interface{} {
 }
 
 func (r *Renderer) RenderEventStreamStats(stats *management.EventStreamStats) {
-	if r.Format == OutputFormatJSON {
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		r.JSONResult(stats)
 		return
 	}

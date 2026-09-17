@@ -57,8 +57,10 @@ In agent mode the CLI:
 
   • Prints results to stdout as JSON, and streams (for example 'auth0 logs tail')
     as newline-delimited JSON, one object per line.
-  • Prints diagnostics to stderr as JSON lines ({"level","message"}) and errors as
-    a JSON envelope ({"error":{"code","message","status","details"}}).
+  • Keeps stderr clean: human hints and progress messages are suppressed, so on
+    success stderr is empty and on failure it carries only a JSON error envelope
+    ({"error":{"code","message","status","details"}}). Because that envelope is
+    the only thing on stderr, even a merged stdout+stderr stream stays parseable.
   • Disables interactive prompts and colors.
   • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
     scripts that treat any non-zero exit as failure keep working. The specific
