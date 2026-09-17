@@ -130,11 +130,7 @@ func (op *OperationSchema) FormatAsText() string {
 
 // ValidateRequest validates a request using openapi3filter.
 func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*ValidationResult, error) {
-	result := &ValidationResult{
-		Valid:     true,
-		Validated: true,
-		Errors:    []string{},
-	}
+	result := &ValidationResult{Status: StatusValid, Errors: []string{}}
 
 	operation, err := FindOperation(sm.doc, method, path)
 	if err != nil {
@@ -143,18 +139,14 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 
 	requestSchema := GetRequestSchema(operation)
 	if requestSchema == nil || requestSchema.Value == nil {
-		// The operation exists but defines no request schema, so there is nothing
-		// to check the payload against. Report success but flag that validation
-		// was skipped, so the caller can tell the difference between "payload
-		// passed" and "payload was never checked".
-		result.Validated = false
+		result.Status = StatusNoSchema
 		return result, nil
 	}
 
 	// Parse the JSON body.
 	var data interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
-		result.Valid = false
+		result.Status = StatusInvalid
 		result.Errors = append(result.Errors, fmt.Sprintf("Invalid JSON: %v", err))
 		return result, nil
 	}
@@ -162,7 +154,7 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	// Validate against schema. MultiErrors collects every validation failure
 	// instead of stopping at the first, so the caller sees all issues at once.
 	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors()); err != nil {
-		result.Valid = false
+		result.Status = StatusInvalid
 		result.Errors = append(result.Errors, formatValidationError(err)...)
 		return result, nil
 	}
@@ -170,16 +162,24 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	return result, nil
 }
 
+// ValidationStatus describes what happened when a payload was checked against
+// the operation's OpenAPI request schema.
+type ValidationStatus int
+
+const (
+	// StatusValid means a request schema existed and the payload satisfied it.
+	StatusValid ValidationStatus = iota
+	// StatusInvalid means a request schema existed and the payload failed it (see Errors).
+	StatusInvalid
+	// StatusNoSchema means the operation defines no request schema, so the payload
+	// was not checked and is sent as-is.
+	StatusNoSchema
+)
+
 // ValidationResult contains the result of schema validation.
 type ValidationResult struct {
-	// Valid is true when the payload satisfied the schema (or when there was no
-	// schema to check it against).
-	Valid bool
-	// Validated is true only when a request schema existed and the payload was
-	// actually checked against it. It is false when the operation defines no
-	// request schema, so a true Valid does not imply the payload was verified.
-	Validated bool
-	Errors    []string
+	Status ValidationStatus
+	Errors []string
 }
 
 // formatValidationError turns a kin-openapi validation error into concise messages,

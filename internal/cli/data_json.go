@@ -56,11 +56,11 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data j
 		return nil, false, fmt.Errorf("schema validation error: %w", err)
 	}
 
-	if !result.Valid {
+	if result.Status == openapi.StatusInvalid {
 		return nil, false, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
 	}
 
-	return jsonData, result.Validated, nil
+	return jsonData, result.Status == openapi.StatusValid, nil
 }
 
 // readJSONInput reads JSON from various input sources.

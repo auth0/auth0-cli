@@ -103,14 +103,15 @@ func TestRunJSONWriteUnvalidatedSignal(t *testing.T) {
 		cmd := &cobra.Command{}
 		cmd.SetContext(context.Background())
 
-		// DELETE resolves as an operation but defines no request body schema, so
-		// the payload is sent without local validation.
+		// A POST that resolves as an operation but defines no request body schema
+		// (a schemaless action, like deploying an action): the payload is sent
+		// without local validation, exactly the case a real write command hits.
 		_, err := runJSONWrite[map[string]interface{}](newCLI(client, &messages), cmd, jsonWriteSpec{
-			Method:     http.MethodDelete,
-			SchemaPath: "/actions/actions/{id}",
-			URI:        "https://example.com/api/v2/actions/actions/act_1",
+			Method:     http.MethodPost,
+			SchemaPath: "/actions/actions/{id}/deploy",
+			URI:        "https://example.com/api/v2/actions/actions/act_1/deploy",
 			Data:       `{}`,
-			SchemaCmd:  "auth0 actions delete",
+			SchemaCmd:  "auth0 actions deploy",
 		})
 
 		require.NoError(t, err)
