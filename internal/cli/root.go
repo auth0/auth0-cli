@@ -80,10 +80,9 @@ func Execute() {
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
-	// Wrap flag-parse errors so they map to the usage exit code (2).
-	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
-		return usageError{err}
-	})
+	// Wrap flag-parse errors so they classify as usage failures in the JSON
+	// error envelope (the process exit code stays the generic 1).
+	rootCmd.SetFlagErrorFunc(wrapFlagError)
 
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
@@ -186,15 +185,31 @@ func buildRootCmd(cli *cli) *cobra.Command {
 	return rootCmd
 }
 
+// wrapFlagError classifies a flag-parse failure as a usage error for the JSON
+// error envelope. On a command group an unknown flag usually rides along with a
+// mistyped subcommand (for example `auth0 actions lst --json`); pflag records the
+// leftover positional before it fails on the flag, so we surface both problems at
+// once: the unknown command (the likely root cause) and the unknown flag.
+func wrapFlagError(cmd *cobra.Command, err error) error {
+	if cmd.HasSubCommands() {
+		if positionals := cmd.Flags().Args(); len(positionals) > 0 {
+			return usageError{fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
+		}
+	}
+
+	return usageError{err}
+}
+
 // enforceUnknownSubcommand makes namespace (parent) commands reject an unknown
-// subcommand with a usage error (exit code 2) instead of silently printing help
-// and exiting 0. Cobra treats a non-runnable parent as a help request before it
-// ever validates positional args, so a plain `Args`/`cobra.NoArgs` on the parent
-// never fires. To close that gap we make each namespace runnable — its RunE just
-// prints help, preserving the bare `auth0 <group>` behavior — and give it an Args
-// validator that rejects any leftover token as an unknown command. The Args check
-// runs before PersistentPreRunE, so a typo like `auth0 actions lst` fails fast
-// without attempting authentication.
+// subcommand with a usage error (classified as "usage" in the JSON envelope, exit
+// code 1) instead of silently printing help and exiting 0. Cobra treats a
+// non-runnable parent as a help request before it ever validates positional args,
+// so a plain `Args`/`cobra.NoArgs` on the parent never fires. To close that gap we
+// make each namespace runnable — its RunE just prints help, preserving the bare
+// `auth0 <group>` behavior — and give it an Args validator that rejects any
+// leftover token as an unknown command. The Args check runs before
+// PersistentPreRunE, so a typo like `auth0 actions lst` fails fast without
+// attempting authentication.
 func enforceUnknownSubcommand(cmd *cobra.Command) {
 	for _, sub := range cmd.Commands() {
 		enforceUnknownSubcommand(sub)
@@ -205,13 +220,6 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 	if !cmd.HasSubCommands() || cmd.Runnable() {
 		return
 	}
-
-	// A namespace defines no flags of its own, so an unknown flag on it almost
-	// always accompanies a mistyped subcommand such as `auth0 users lst --json`.
-	// Tolerating unknown flags here lets parsing reach the Args validator below,
-	// which reports the far more useful "unknown command" instead of "unknown
-	// flag". Known persistent flags such as --help and --debug still parse normally.
-	cmd.FParseErrWhitelist.UnknownFlags = true
 
 	cmd.Args = func(c *cobra.Command, args []string) error {
 		if len(args) == 0 {

@@ -1,25 +1,5 @@
 # Migration Guide
 
-## Exit codes and error output
-
-Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure, matching the CLI's long-standing behavior. The one addition is `130`, which is now returned when a command is interrupted with `Ctrl-C` (previously `0`), so an interrupted run reports failure.
-
-| Exit code | Meaning |
-| --------- | ------- |
-| `0` | Success |
-| `1` | Any failure |
-| `130` | Interrupted with `Ctrl-C` (previously `0`) |
-
-The granular failure class is not carried by the exit code. Instead, when running with `--json` or in agent mode, errors are written to stderr as a single-line JSON envelope so they can be parsed programmatically:
-
-```json
-{"error":{"code":"not_found","message":"...","status":404}}
-```
-
-The `code` field classifies the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`), so agents and scripts can branch on the class without parsing human text or relying on a specific exit code. The `status` field carries the HTTP status when the error came from the Auth0 Management API, and the `details` field carries field-level validation errors when the API returns them. Human-readable error output is unchanged in normal (non-JSON, non-agent) mode.
-
-Automation that only distinguishes success (`0`) from failure (non-zero) is unaffected.
-
 ## Upgrading from v0.x → v1.0
 
 As is to be expected with a major release, there are breaking changes in this update. Please ensure you read this guide

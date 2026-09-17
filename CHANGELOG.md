@@ -9,12 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Emit a machine-readable JSON error envelope (`{"error":{"code","message","status","details"}}`) on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text
+- Emit a machine-readable JSON error envelope on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text. The envelope carries a `code` classifying the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`) and a `status` with the HTTP status when the error came from the Auth0 Management API, for example `{"error":{"code":"not_found","message":"...","status":404}}`. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure
 
 ### Changed
-- Carry a machine-readable failure class (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`) in the JSON error envelope's `code` field, so agents and scripts can branch on the failure class without parsing human text. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure. See the [migration guide](MIGRATION_GUIDE.md#exit-codes-and-error-output)
 - Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
-- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands are also rejected
+- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands and unknown flags on a command group are also rejected
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
