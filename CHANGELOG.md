@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `--data` create/update commands now print a diagnostic when the operation has
+  no local schema to validate against, so a successful run isn't mistaken for
+  "payload validated". The payload is still sent; only the missing local check
+  is signaled.
+
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
