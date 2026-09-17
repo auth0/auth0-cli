@@ -2,6 +2,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/auth0/go-auth0/v3/management/core"
@@ -27,6 +28,24 @@ type usageError struct{ err error }
 func (e usageError) Error() string { return e.err.Error() }
 
 func (e usageError) Unwrap() error { return e.err }
+
+// unknownCommandError is the usage failure for a mistyped command or subcommand
+// (for example `auth0 appps` or `auth0 apps shoe`). Its Error() stays a single
+// line so the JSON error envelope keeps a clean, machine-parseable message, while
+// the "did you mean" suggestions are carried separately so the human renderer can
+// show a hint block without polluting the agent-facing message. It unwraps to a
+// usageError so it classifies as "usage" for the envelope, exit code and analytics.
+type unknownCommandError struct {
+	token       string
+	parent      string
+	suggestions []string
+}
+
+func (e unknownCommandError) Error() string {
+	return fmt.Sprintf("unknown command %q for %q", e.token, e.parent)
+}
+
+func (e unknownCommandError) Unwrap() error { return usageError{errors.New(e.Error())} }
 
 // authError wraps an authentication/authorization setup failure (expired token
 // in --no-input mode, corrupted token, failed credential refresh) so it
@@ -115,13 +134,21 @@ func errorHTTPStatus(err error) int {
 // buildErrorEnvelope assembles the machine-readable error emitted on stderr in
 // JSON/agent mode.
 func buildErrorEnvelope(err error) display.ErrorEnvelope {
-	return display.ErrorEnvelope{
-		Error: display.ErrorBody{
-			Code:    errorClass(err),
-			Message: err.Error(),
-			Status:  errorHTTPStatus(err),
-		},
+	body := display.ErrorBody{
+		Code:    errorClass(err),
+		Message: err.Error(),
+		Status:  errorHTTPStatus(err),
 	}
+
+	// For a mistyped command, carry the "did you mean" candidates as structured
+	// details so an agent gets the same hint the human renderer prints, without
+	// having to parse it out of the message.
+	var unknownCmd unknownCommandError
+	if errors.As(err, &unknownCmd) && len(unknownCmd.suggestions) > 0 {
+		body.Details = map[string]interface{}{"suggestions": unknownCmd.suggestions}
+	}
+
+	return display.ErrorEnvelope{Error: body}
 }
 
 // managementHTTPStatus extracts the HTTP status from a go-auth0 management API

@@ -178,7 +178,7 @@ func Execute() {
 		if cli.wantsJSONError() {
 			cli.renderer.ErrorJSON(buildErrorEnvelope(err))
 		} else {
-			renderErrorMessage(cli.renderer, err.Error())
+			renderErrorMessage(cli.renderer, err)
 		}
 
 		instrumentation.ReportException(err)
@@ -285,11 +285,29 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 		if len(args) == 0 {
 			return nil
 		}
-		return usageError{fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())}
+		return unknownCommandError{
+			token:       args[0],
+			parent:      c.CommandPath(),
+			suggestions: commandSuggestions(c, args[0]),
+		}
 	}
 	cmd.RunE = func(c *cobra.Command, _ []string) error {
 		return c.Help()
 	}
+}
+
+// commandSuggestions returns Cobra's "did you mean" candidates for a mistyped
+// token. Rejecting an unknown (sub)command as an error means Cobra's own
+// suggestion output never runs, so we ask for the same candidates it would, using
+// the minimum edit distance of 2 that Cobra applies by default.
+func commandSuggestions(cmd *cobra.Command, token string) []string {
+	if cmd.DisableSuggestions {
+		return nil
+	}
+	if cmd.SuggestionsMinimumDistance <= 0 {
+		cmd.SuggestionsMinimumDistance = 2
+	}
+	return cmd.SuggestionsFor(token)
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
@@ -475,10 +493,10 @@ func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
 	}
 }
 
-func renderErrorMessage(display *display.Renderer, errorMessage string) {
+func renderErrorMessage(display *display.Renderer, err error) {
 	display.Heading(ansi.Red("error"))
 
-	rawErrorMessage := []rune(errorMessage)
+	rawErrorMessage := []rune(err.Error())
 	if len(rawErrorMessage) == 0 {
 		display.Errorf("An unknown error occurred.")
 		display.Newline()
@@ -493,6 +511,19 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 	) + "."
 
 	display.Errorf(humanReadableErrorMessage)
+
+	// For a mistyped command, mirror Cobra's "did you mean" hint so a typo is
+	// still guided to the right command even though we now reject it as an error
+	// instead of printing help.
+	var unknownCmd unknownCommandError
+	if errors.As(err, &unknownCmd) && len(unknownCmd.suggestions) > 0 {
+		display.Newline()
+		display.Infof("Did you mean this?")
+		for _, suggestion := range unknownCmd.suggestions {
+			display.Detailf(suggestion)
+		}
+	}
+
 	display.Newline()
 }
 
