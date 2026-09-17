@@ -242,6 +242,32 @@ func TestValidateRequestReportsStatus(t *testing.T) {
 	assert.Equal(t, StatusNoSchema, result.Status, "an operation without a request schema is StatusNoSchema")
 }
 
+// TestValidateRequestChecksJSONWithoutSchema pins the fix for the case where a
+// schema-less operation skipped the JSON syntax check: malformed --data must fail
+// locally as StatusInvalid rather than being shipped to the API as opaque bytes.
+func TestValidateRequestChecksJSONWithoutSchema(t *testing.T) {
+	const doc = `{
+		"openapi": "3.0.0",
+		"info": {"title": "fixture", "version": "1.0.0"},
+		"paths": {"/deploy": {"post": {"operationId": "post_deploy"}}}
+	}`
+	parsed, err := LoadDocFromData([]byte(doc))
+	require.NoError(t, err)
+	manager := NewSchemaManagerFromDoc(parsed)
+
+	// Well-formed JSON against a schema-less op: nothing to check, sent as-is.
+	result, err := manager.ValidateRequest("POST", "/deploy", []byte(`{"anything": true}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoSchema, result.Status)
+
+	// Malformed JSON against the same schema-less op: caught locally.
+	result, err = manager.ValidateRequest("POST", "/deploy", []byte(`{"broken":`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusInvalid, result.Status, "malformed JSON must fail even without a schema")
+	require.NotEmpty(t, result.Errors)
+	assert.Contains(t, result.Errors[0], "Invalid JSON")
+}
+
 func TestValidateRequestActionUpdatePath(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)

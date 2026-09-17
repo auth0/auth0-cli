@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "payload validated". The payload is still sent; only the missing local check
   is signaled.
 
+### Fixed
+
+- `--data` input is now checked for well-formed JSON even when the operation has
+  no local schema, so malformed payloads fail locally with a clear message
+  instead of being sent to the API as-is.
+
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
