@@ -157,8 +157,8 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 apis ls --csv
   auth0 apis list --schema
   auth0 apis list --schema --json
-  auth0 apis list --query '{"name":"My API"}'
-  auth0 apis list --query '{"name":"My API"}' --json`,
+  auth0 apis list --query '{"identifiers":["https://my-api"]}'
+  auth0 apis list --query '{"identifiers":["https://my-api"]}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
 				return printOperationSchema(cli, "GET", "/resource-servers")

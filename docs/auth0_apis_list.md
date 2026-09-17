@@ -26,8 +26,8 @@ auth0 apis list [flags]
   auth0 apis ls --csv
   auth0 apis list --schema
   auth0 apis list --schema --json
-  auth0 apis list --query '{"name":"My API"}'
-  auth0 apis list --query '{"name":"My API"}' --json
+  auth0 apis list --query '{"identifiers":["https://my-api"]}'
+  auth0 apis list --query '{"identifiers":["https://my-api"]}' --json
 ```
 
 
