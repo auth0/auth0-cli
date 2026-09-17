@@ -146,7 +146,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 		if err := json.Compact(&compactJSON, rawJSON); err != nil {
 			return fmt.Errorf("failed to format response: %w", err)
 		}
-		cli.renderer.Output(compactJSON.String())
+		cli.renderer.Output(ansi.ColorizeJSON(compactJSON.String()))
 		return nil
 	}
 
@@ -160,18 +160,23 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 
 // paginationHint returns a diagnostic when the response shows that more records
 // exist than were returned on this page, or "" when the response is complete (or
-// carries no pagination metadata to reason about). It covers all of the
-// Management API's pagination models rather than a single envelope shape:
+// carries no pagination metadata to reason about).
 //
-//   - Checkpoint pagination returns a "next" token (and no "total"); a non-empty
-//     token means there are further pages, fetched by passing it as "from".
-//   - Offset pagination returns a numeric "total"; when the number of records
-//     actually returned (plus the page's "start" offset, if present) is short of
-//     "total", further pages exist. This handles both the "include_totals"
-//     envelope (start/limit/total) and endpoints that report only "total".
+// It reads the Management API's standard list envelope, whose fields go-auth0
+// models as management.List (start/limit/length/total/next), and mirrors that
+// type's own HasNext() contract so the hint agrees with how the SDK defines
+// "more pages":
 //
-// A bare array or any body without "next"/"total" yields no hint, because there
-// is then no reliable signal that the result set was truncated.
+//   - Checkpoint pagination: a non-empty "next" token means further pages exist,
+//     fetched by passing it as "from". The hint is suppressed on an empty page
+//     ("length" == 0) so it never claims "more results" for a page that returned
+//     nothing.
+//   - Offset pagination: more pages exist when "total" > "start" + "limit". Both
+//     "start" and "limit" come from the standard include_totals envelope; without
+//     "limit" and "total" there is no reliable offset signal, so no hint is given.
+//
+// A bare array or any body without these fields yields no hint, because there is
+// then no reliable signal that the result set was truncated.
 func paginationHint(rawJSON []byte) string {
 	decoder := json.NewDecoder(bytes.NewReader(rawJSON))
 	decoder.UseNumber()
@@ -182,22 +187,36 @@ func paginationHint(rawJSON []byte) string {
 		return ""
 	}
 
-	// Checkpoint pagination: a non-empty "next" token means more pages exist.
+	length, hasLength := jsonNumberInt(envelope["length"])
+
+	// Checkpoint pagination: a non-empty "next" token means more pages exist, but
+	// never signal "more results" for a page that came back empty.
 	if next, ok := envelope["next"].(string); ok && next != "" {
+		if hasLength && length == 0 {
+			return ""
+		}
 		return "This is one page of a larger result set (checkpoint pagination). " +
 			"More results exist; pass \"from\" set to the response's \"next\" token " +
 			"(and optionally \"take\") in --query to fetch the next page."
 	}
 
-	// Offset pagination: compare records returned against the reported total.
+	// Offset pagination: mirror management.List.HasNext() — more pages exist when
+	// total > start + limit.
 	total, hasTotal := jsonNumberInt(envelope["total"])
-	if !hasTotal {
+	limit, hasLimit := jsonNumberInt(envelope["limit"])
+	if !hasTotal || !hasLimit {
 		return ""
 	}
 	start, _ := jsonNumberInt(envelope["start"]) // Absent "start" means offset 0.
-	returned := longestArrayLen(envelope)
-	if start+returned >= total {
+	if start+limit >= total {
 		return ""
+	}
+
+	// "length" is the count actually returned on this page; fall back to the page
+	// window ("limit") when the field is absent.
+	returned := length
+	if !hasLength {
+		returned = limit
 	}
 
 	return fmt.Sprintf(
@@ -205,19 +224,6 @@ func paginationHint(rawJSON []byte) string {
 			"pass a higher \"page\" or \"per_page\" in --query to fetch the rest.",
 		returned, total, start,
 	)
-}
-
-// longestArrayLen returns the length of the longest array-valued field in the
-// envelope. That field is the resource collection, since pagination metadata
-// ("total", "start", "limit", "next", …) is always scalar.
-func longestArrayLen(envelope map[string]interface{}) int {
-	longest := 0
-	for _, v := range envelope {
-		if arr, ok := v.([]interface{}); ok && len(arr) > longest {
-			longest = len(arr)
-		}
-	}
-	return longest
 }
 
 // jsonNumberInt reports the integer value of a decoded JSON field when it is a

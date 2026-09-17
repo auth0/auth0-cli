@@ -250,14 +250,23 @@ func TestRunJSONQuery_CompactOutput(t *testing.T) {
 
 func TestPaginationHint(t *testing.T) {
 	t.Run("offset with totals, more results signals a hint", func(t *testing.T) {
-		hint := paginationHint([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":100,"start":0,"limit":50}`))
-		assert.Contains(t, hint, "Showing 2 of 100")
+		// Standard include_totals envelope: first of two pages.
+		hint := paginationHint([]byte(`{"clients":[],"total":100,"start":0,"limit":50,"length":50}`))
+		assert.Contains(t, hint, "Showing 50 of 100")
+		assert.Contains(t, hint, "More results exist")
 	})
 
-	t.Run("offset without start/limit, only total, signals a hint", func(t *testing.T) {
-		// Actions-style envelope: reports "total" but no "start"/"limit".
+	t.Run("offset uses length for the returned count", func(t *testing.T) {
+		// "length" is the number actually returned; the hint reports it, not "limit".
+		hint := paginationHint([]byte(`{"clients":[],"total":100,"start":0,"limit":50,"length":42}`))
+		assert.Contains(t, hint, "Showing 42 of 100")
+	})
+
+	t.Run("offset without limit yields no hint (spurious total is ignored)", func(t *testing.T) {
+		// A "total" without the rest of the include_totals envelope is not a
+		// reliable pagination signal, so no hint is emitted.
 		hint := paginationHint([]byte(`{"actions":[{"id":"a"},{"id":"b"}],"total":10}`))
-		assert.Contains(t, hint, "Showing 2 of 10")
+		assert.Empty(t, hint)
 	})
 
 	t.Run("checkpoint pagination signals a hint", func(t *testing.T) {
@@ -266,13 +275,19 @@ func TestPaginationHint(t *testing.T) {
 		assert.Contains(t, hint, "next")
 	})
 
+	t.Run("checkpoint with an empty page has no hint", func(t *testing.T) {
+		// A "next" token on a page that returned nothing must not claim more results.
+		hint := paginationHint([]byte(`{"users":[],"next":"tok_abc","length":0}`))
+		assert.Empty(t, hint)
+	})
+
 	t.Run("complete result set has no hint", func(t *testing.T) {
-		hint := paginationHint([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":2,"start":0,"limit":50}`))
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":2,"start":0,"limit":50,"length":2}`))
 		assert.Empty(t, hint)
 	})
 
 	t.Run("last page has no hint", func(t *testing.T) {
-		hint := paginationHint([]byte(`{"clients":[{"id":"a"}],"total":100,"start":99}`))
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"}],"total":100,"start":99,"limit":50,"length":1}`))
 		assert.Empty(t, hint)
 	})
 
