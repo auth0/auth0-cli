@@ -7,6 +7,8 @@ has_toc: false
 
 Search for users. To create one, run: `auth0 users create`.
 
+Use '--schema' to see available query parameters.
+
 ## Usage
 ```
 auth0 users search [flags]
@@ -22,6 +24,8 @@ auth0 users search [flags]
   auth0 users search -q name:"Bob" -s "name:1" --number 200
   auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv
+  auth0 users search --schema
+  auth0 users search --schema --json
 ```
 
 
@@ -38,6 +42,7 @@ auth0 users search [flags]
                                                                                 For example: email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob")
                                                                                 
                                                                                  For more info: https://auth0.com/docs/users/user-search/user-search-query-syntax.
+      --schema                                                                  Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --sort string                                                             Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.
 ```
 

@@ -81,13 +81,12 @@ type ErrorEnvelope struct {
 	Error ErrorBody `json:"error"`
 }
 
-// ErrorBody carries the classified error. Status and Details are omitted when
-// unavailable. Details holds structured (e.g. field-level validation) errors.
+// ErrorBody carries the classified error. Status is omitted when the failure did
+// not come from the Auth0 Management API.
 type ErrorBody struct {
-	Code    string          `json:"code"`
-	Message string          `json:"message"`
-	Status  int             `json:"status,omitempty"`
-	Details json.RawMessage `json:"details,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Status  int    `json:"status,omitempty"`
 }
 
 // ErrorJSON writes the error envelope as a single compact JSON line to stderr,

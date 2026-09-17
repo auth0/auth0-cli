@@ -105,7 +105,6 @@ func TestBuildErrorEnvelope(t *testing.T) {
 		assert.Equal(t, "not_found", envelope.Error.Code)
 		assert.Equal(t, "404 Not Found: connection not found", envelope.Error.Message)
 		assert.Equal(t, 404, envelope.Error.Status)
-		assert.Nil(t, envelope.Error.Details)
 	})
 
 	t.Run("omits status for non-API errors", func(t *testing.T) {
@@ -128,20 +127,4 @@ func TestBuildErrorEnvelope(t *testing.T) {
 		assert.Equal(t, "429 Too Many Requests", decoded["error"]["message"])
 		assert.Equal(t, float64(429), decoded["error"]["status"])
 	})
-}
-
-// detailedError carries structured details for the envelope's "details" field.
-type detailedError struct {
-	details json.RawMessage
-}
-
-func (e detailedError) Error() string                 { return "validation failed" }
-func (e detailedError) ErrorDetails() json.RawMessage { return e.details }
-
-func TestBuildErrorEnvelopeDetails(t *testing.T) {
-	details := json.RawMessage(`{"field":"name","reason":"required"}`)
-	envelope := buildErrorEnvelope(detailedError{details: details})
-
-	assert.Equal(t, "unknown", envelope.Error.Code)
-	assert.JSONEq(t, string(details), string(envelope.Error.Details))
 }

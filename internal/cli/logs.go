@@ -82,7 +82,7 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs ls --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Num < 1 || inputs.Num > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 			logs, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
@@ -153,7 +153,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
   auth0 logs tail --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Num < 1 || inputs.Num > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
