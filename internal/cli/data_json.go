@@ -53,7 +53,10 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data j
 
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
 	if err != nil {
-		return nil, false, validationError{fmt.Errorf("schema validation error: %w", err)}
+		// This path fires only when the operation can't be found in the embedded
+		// OpenAPI spec (an internal schema-lookup failure), not because the user's
+		// payload is bad, so it stays unclassified rather than "validation".
+		return nil, false, fmt.Errorf("schema validation error: %w", err)
 	}
 
 	if result.Status == openapi.StatusInvalid {
