@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"net"
+	"net/url"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/auth0/go-auth0/v3/management/core"
@@ -22,8 +25,13 @@ const (
 
 // usageError wraps a command-usage failure (bad flag, unknown flag) so it
 // classifies as "usage" in the JSON error envelope. Flag parse errors are wrapped
-// via cobra's FlagErrorFunc; see buildRootCmd.
-type usageError struct{ err error }
+// via cobra's FlagErrorFunc; see buildRootCmd. The optional reason carries a
+// finer sub-classification (see errorReason) that is surfaced in analytics and
+// the envelope's "reason" field; an empty reason falls back to a class default.
+type usageError struct {
+	err    error
+	reason string
+}
 
 func (e usageError) Error() string { return e.err.Error() }
 
@@ -32,8 +40,12 @@ func (e usageError) Unwrap() error { return e.err }
 // authError wraps an authentication/authorization setup failure (expired token
 // in --no-input mode, corrupted token, failed credential refresh) so it
 // classifies as "auth" in the JSON error envelope, letting agents detect "must
-// re-authenticate" from the code alone instead of scraping the message.
-type authError struct{ err error }
+// re-authenticate" from the code alone instead of scraping the message. The
+// optional reason carries a finer sub-classification (see errorReason).
+type authError struct {
+	err    error
+	reason string
+}
 
 func (e authError) Error() string { return e.err.Error() }
 
@@ -44,10 +56,12 @@ func (e authError) Unwrap() error { return e.err }
 // in the JSON error envelope before any API call is made, matching the class a
 // server-side 400/422 would produce. When details is set it carries the
 // field-level failures into the JSON error envelope's "details" field via the
-// errorDetailer interface.
+// errorDetailer interface. The optional reason carries a finer sub-classification
+// (see errorReason).
 type validationError struct {
 	err     error
 	details json.RawMessage
+	reason  string
 }
 
 func (e validationError) Error() string { return e.err.Error() }
@@ -95,7 +109,95 @@ func errorClass(err error) string {
 		return errorClassForHTTPStatus(status)
 	}
 
+	if isNetworkError(err) {
+		return "network"
+	}
+
 	return "unknown"
+}
+
+// errorReason returns a finer sub-classification that lives alongside the coarse,
+// stable errorClass. Where errorClass answers "what kind of failure", errorReason
+// answers "why", walking the same ladder in the same order so the two never
+// disagree. It is additive metadata (analytics error_reason, envelope "reason")
+// and, unlike errorClass, is free to grow new values over time.
+func errorReason(err error) string {
+	if err == nil {
+		return "none"
+	}
+
+	var usageErr usageError
+	if errors.As(err, &usageErr) {
+		if usageErr.reason != "" {
+			return usageErr.reason
+		}
+		return "flag_parse"
+	}
+
+	// A tagged authError with an explicit reason always wins over the sentinel
+	// defaults below, since the call site knows the specific cause.
+	var authErr authError
+	if errors.As(err, &authErr) && authErr.reason != "" {
+		return authErr.reason
+	}
+
+	// Auth sentinels also classify as "auth" in errorClass; keep the same order.
+	switch {
+	case errors.Is(err, config.ErrNoAuthenticatedTenants):
+		return "not_logged_in"
+	case errors.Is(err, config.ErrConfigFileMissing):
+		return "no_config"
+	case errors.Is(err, config.ErrInvalidToken):
+		return "session_expired"
+	case errors.Is(err, config.ErrMalformedToken):
+		return "token_malformed"
+	}
+
+	var missingScopesErr config.ErrTokenMissingRequiredScopes
+	if errors.As(err, &missingScopesErr) {
+		return "missing_scopes"
+	}
+
+	// A tagged authError with no explicit reason still classifies as auth.
+	if errors.As(err, &authErr) {
+		return "auth_failed"
+	}
+
+	var validationErr validationError
+	if errors.As(err, &validationErr) {
+		if validationErr.reason != "" {
+			return validationErr.reason
+		}
+		return "local_validation"
+	}
+
+	if status, ok := managementHTTPStatus(err); ok {
+		return reasonForHTTPStatus(status)
+	}
+
+	if isNetworkError(err) {
+		return "transport"
+	}
+
+	return "unclassified"
+}
+
+// isNetworkError reports whether an error is a transport-level failure (DNS,
+// dial, TLS, read/write) or a request timeout, so it classifies as "network"
+// rather than the "unknown" fallthrough. A context cancellation (Ctrl-C) is
+// deliberately excluded: that is user interruption, handled by the signal path.
+func isNetworkError(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	var urlErr *url.Error
+	return errors.As(err, &urlErr)
 }
 
 // exitCodeForError maps an error onto its process exit code. Every failure
@@ -143,6 +245,7 @@ func buildErrorEnvelope(err error) display.ErrorEnvelope {
 	return display.ErrorEnvelope{
 		Error: display.ErrorBody{
 			Code:    errorClass(err),
+			Reason:  errorReason(err),
 			Message: err.Error(),
 			Status:  errorHTTPStatus(err),
 			Details: errorDetails(err),
@@ -182,5 +285,26 @@ func errorClassForHTTPStatus(status int) string {
 		return "api"
 	default:
 		return "unknown"
+	}
+}
+
+// reasonForHTTPStatus maps an HTTP status onto the finer errorReason value that
+// accompanies the coarse class from errorClassForHTTPStatus.
+func reasonForHTTPStatus(status int) string {
+	switch status {
+	case 401:
+		return "unauthorized"
+	case 403:
+		return "forbidden"
+	case 400, 422:
+		return "invalid_request"
+	case 404:
+		return "not_found"
+	case 429:
+		return "rate_limited"
+	default:
+		// Any 5xx, and any other unexpected status carried by an API error, is a
+		// server-side failure from the caller's point of view.
+		return "server_error"
 	}
 }

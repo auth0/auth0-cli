@@ -81,11 +81,15 @@ type ErrorEnvelope struct {
 	Error ErrorBody `json:"error"`
 }
 
-// ErrorBody carries the classified error. Status and Details are omitted when
-// unavailable. Status is omitted when the failure did not come from the Auth0
-// Management API. Details holds structured (e.g. field-level validation) errors.
+// ErrorBody carries the classified error. Code is the coarse, stable failure
+// class; Reason is a finer sub-classification that lives alongside it. Status and
+// Details are omitted when unavailable. Status is omitted when the failure did
+// not come from the Auth0 Management API. Details holds structured (e.g.
+// field-level validation) errors. Reason is omitted when no finer classification
+// is available.
 type ErrorBody struct {
 	Code    string          `json:"code"`
+	Reason  string          `json:"reason,omitempty"`
 	Message string          `json:"message"`
 	Status  int             `json:"status,omitempty"`
 	Details json.RawMessage `json:"details,omitempty"`
