@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
 - Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
 
+### Changed
+- Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
+- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands and unknown flags on a command group (for example `auth0 actions --bogus`) are also rejected, in both normal and agent mode, while a bare group with only known global flags (such as `--debug`) still prints help
+- Stream results as a sequence of newline-separated JSON objects instead of a JSON array when a streaming command such as `auth0 logs tail` runs in JSON or agent mode, so a reader can consume records incrementally without waiting for an array that never closes while tailing. Agent mode and `--json-compact` emit compact newline-delimited JSON (one object per line); `--json` indents each object for a human watching the live stream
+- Always terminate JSON output on stdout with a trailing newline so a piped or NDJSON reader never drops the final record
+- Keep stderr machine-clean in agent mode by suppressing human diagnostics (info, success, detail, warning, non-fatal error), progress hints and the decorative heading and blank lines. On success stderr is empty and on failure it carries only the JSON error envelope, so a merged stdout+stderr stream stays parseable, discriminated by the reserved `error` key rather than a fragile per-message field
+- Render help as JSON in agent mode for a bare `auth0` and for a command group invoked without a subcommand (for example `auth0 apps`), instead of the human help text, and describe agent mode (its output contract and how to disable it) in the root help so it does not need to be re-announced on every command
+- `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
+
 ### Fixed
 - Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
 - Read piped stdin without panicking when the read fails; a broken or unreadable pipe now surfaces as a normal error instead of crashing the CLI
@@ -20,15 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve the real error body of a `403` response from `auth0 api` that is not an insufficient-scope error, instead of losing it and falling back to a bare `Forbidden`
 - Quit the `auth0 logs tail` follow loop and decline confirmation prompts cleanly when no interactive terminal is available (an agent or piped run), instead of panicking
 - Report a recovered panic on stderr (as a JSON error envelope in JSON or agent mode) and exit non-zero, so a crash never masquerades as success or corrupts JSON written to stdout
-
-### Changed
-- Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
-- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands and unknown flags on a command group (for example `auth0 actions --bogus`) are also rejected, in both normal and agent mode, while a bare group with only known global flags (such as `--debug`) still prints help
-- Stream results as a sequence of newline-separated JSON objects instead of a JSON array when a streaming command such as `auth0 logs tail` runs in JSON or agent mode, so a reader can consume records incrementally without waiting for an array that never closes while tailing. Agent mode and `--json-compact` emit compact newline-delimited JSON (one object per line); `--json` indents each object for a human watching the live stream
-- Always terminate JSON output on stdout with a trailing newline so a piped or NDJSON reader never drops the final record
-- Emit diagnostic messages (info, success, detail, warning, non-fatal error) on stderr as JSON lines (`{"level","message"}`) in agent mode instead of decorated human prose, and suppress the decorative heading, so an agent that reads stderr gets fully machine-parseable output that matches the JSON error envelope
-- Render help as JSON in agent mode for a bare `auth0` and for a command group invoked without a subcommand (for example `auth0 apps`), instead of the human help text, and describe agent mode (its output contract and how to disable it) in the root help so it does not need to be re-announced on every command
-- `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
+- `--data` input is now checked for well-formed JSON even when the operation has no local schema, so malformed payloads fail locally with a clear message instead of being sent to the API as-is.
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 

@@ -35,11 +35,12 @@ type Renderer struct {
 	// Format indicates how the results are rendered. Default (empty) will write as table.
 	Format OutputFormat
 
-	// StructuredMessages, when true, writes diagnostic messages (info, warning,
-	// success and non-fatal errors) to MessageWriter as one JSON object per line
-	// instead of decorated human prose. It is enabled in agent mode so that an
-	// agent which reads or merges stderr gets fully machine-parseable output.
-	StructuredMessages bool
+	// AgentMode, when true, keeps stderr machine-clean: human diagnostics (info,
+	// success, detail, warning and non-fatal errors) and decorative output are
+	// suppressed, so the only thing an agent sees on stderr is the JSON error
+	// envelope on failure. It also selects the compact one-object-per-line form
+	// for streamed results. Enabled in agent mode.
+	AgentMode bool
 }
 
 type View interface {
@@ -81,7 +82,18 @@ func (r *Renderer) OutputPreformattedJSON(message string) {
 }
 
 func (r *Renderer) Newline() {
+	// A bare newline is decorative spacing; suppress it in agent mode and any
+	// JSON output mode so a caller parsing stderr never sees a stray blank line.
+	if r.suppressDecorations() {
+		return
+	}
 	fmt.Fprintln(r.MessageWriter)
+}
+
+// suppressDecorations reports whether purely decorative stderr output (headings
+// and blank lines) should be dropped: in agent mode and in any JSON output mode.
+func (r *Renderer) suppressDecorations() bool {
+	return r.AgentMode || r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact
 }
 
 // ErrorEnvelope is the machine-readable error emitted on stderr in JSON/agent
@@ -111,44 +123,15 @@ func (r *Renderer) ErrorJSON(envelope ErrorEnvelope) {
 	fmt.Fprintln(r.MessageWriter, string(b))
 }
 
-// messageLine is the structured form of a diagnostic message written to stderr
-// in agent mode. Every non-error diagnostic becomes one such JSON object per
-// line, so an agent can parse stderr the same way it parses the error envelope.
-type messageLine struct {
-	Level   string `json:"level"`
-	Message string `json:"message"`
-}
-
-// structuredMessage writes a diagnostic message as a single JSON line to
-// MessageWriter and reports whether it did. It returns false when structured
-// messages are disabled (human mode) so callers fall back to decorated prose.
-func (r *Renderer) structuredMessage(level, format string, a ...interface{}) bool {
-	if !r.StructuredMessages {
-		return false
-	}
-
-	// The format string is concatenated (rather than forwarded verbatim) so vet
-	// does not classify these Renderer methods as printf wrappers, which would
-	// flag every existing non-constant-format caller across the codebase.
-	line := messageLine{
-		Level: level,
-		// TrimSuffix drops only the single newline appended above (the concatenation
-		// keeps vet from classifying this as a printf wrapper), preserving any
-		// trailing newline that was already part of the message content.
-		Message: strings.TrimSuffix(fmt.Sprintf(format+"\n", a...), "\n"),
-	}
-
-	b, err := json.Marshal(line)
-	if err != nil {
-		return false
-	}
-
-	fmt.Fprintln(r.MessageWriter, string(b))
-	return true
-}
+// Diagnostic messages (info, success, detail, warning and non-fatal errors) are
+// human advice written to stderr. In agent mode they are suppressed entirely so
+// stderr carries nothing but the JSON error envelope on failure; that keeps a
+// merged stdout+stderr stream parseable, discriminated by the reserved "error"
+// key rather than a fragile per-message field. An agent gets everything it needs
+// from the result object on stdout.
 
 func (r *Renderer) Infof(format string, a ...interface{}) {
-	if r.structuredMessage("info", format, a...) {
+	if r.AgentMode {
 		return
 	}
 	fmt.Fprint(r.MessageWriter, ansi.Green(" ▸    "))
@@ -157,7 +140,7 @@ func (r *Renderer) Infof(format string, a ...interface{}) {
 
 // Successf writes a success line with a green check-mark prefix.
 func (r *Renderer) Successf(format string, a ...interface{}) {
-	if r.structuredMessage("success", format, a...) {
+	if r.AgentMode {
 		return
 	}
 	fmt.Fprint(r.MessageWriter, ansi.Green("✓ "))
@@ -169,14 +152,14 @@ const detailIndent = "  "
 // Detailf writes an indented detail line with no prefix symbol, used for
 // supplementary information displayed beneath a success or info message.
 func (r *Renderer) Detailf(format string, a ...interface{}) {
-	if r.structuredMessage("detail", format, a...) {
+	if r.AgentMode {
 		return
 	}
 	fmt.Fprintf(r.MessageWriter, detailIndent+format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
-	if r.structuredMessage("warning", format, a...) {
+	if r.AgentMode {
 		return
 	}
 	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
@@ -184,7 +167,7 @@ func (r *Renderer) Warnf(format string, a ...interface{}) {
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
-	if r.structuredMessage("error", format, a...) {
+	if r.AgentMode {
 		return
 	}
 	fmt.Fprint(r.MessageWriter, ansi.BrightRed(" ▸    "))
@@ -194,7 +177,7 @@ func (r *Renderer) Errorf(format string, a ...interface{}) {
 func (r *Renderer) Heading(text ...string) {
 	// The heading is purely decorative, so it is suppressed in agent mode and
 	// in any JSON output mode to keep stderr free of non-JSON output.
-	if r.StructuredMessages || r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+	if r.suppressDecorations() {
 		return
 	}
 
@@ -349,7 +332,7 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 // streaming parsers such as jq still accept. Agent mode always uses the compact
 // form, since its machine-readable contract promises one object per line.
 func (r *Renderer) streamJSON(data []View, ch <-chan View) {
-	compact := r.Format == OutputFormatJSONCompact || r.StructuredMessages
+	compact := r.Format == OutputFormatJSONCompact || r.AgentMode
 
 	emit := func(v View) {
 		var (
