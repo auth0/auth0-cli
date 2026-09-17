@@ -21,9 +21,11 @@ type typedCommandHint struct {
 }
 
 // typedCommandHints maps common Management API operations to their dedicated
-// typed commands. It is intentionally NOT exhaustive: endpoints that have no
-// typed command (for example /connections) are omitted so that no hint is
-// printed for them and the raw request is used as intended.
+// typed commands. It is intentionally limited to resources whose typed command
+// already offers schema discovery and input validation (--schema, --data,
+// --query); the remaining resources are added here as that support lands for
+// each one. Any endpoint not listed (for example /connections) prints no hint
+// and runs the raw request as intended.
 var typedCommandHints = []typedCommandHint{
 	// Applications (clients).
 	{http.MethodGet, "clients", "auth0 apps list"},
@@ -62,74 +64,6 @@ var typedCommandHints = []typedCommandHint{
 	{http.MethodGet, "roles/{id}/permissions", "auth0 roles permissions list"},
 	{http.MethodPost, "roles/{id}/permissions", "auth0 roles permissions add"},
 	{http.MethodDelete, "roles/{id}/permissions", "auth0 roles permissions remove"},
-
-	// Organizations.
-	{http.MethodGet, "organizations", "auth0 orgs list"},
-	{http.MethodPost, "organizations", "auth0 orgs create"},
-	{http.MethodGet, "organizations/{id}", "auth0 orgs show"},
-	{http.MethodPatch, "organizations/{id}", "auth0 orgs update"},
-	{http.MethodDelete, "organizations/{id}", "auth0 orgs delete"},
-	{http.MethodGet, "organizations/{id}/members", "auth0 orgs members list"},
-	{http.MethodGet, "organizations/{id}/invitations", "auth0 orgs invitations list"},
-	{http.MethodPost, "organizations/{id}/invitations", "auth0 orgs invitations create"},
-
-	// Client grants.
-	{http.MethodGet, "client-grants", "auth0 client-grants list"},
-	{http.MethodPost, "client-grants", "auth0 client-grants create"},
-	{http.MethodPatch, "client-grants/{id}", "auth0 client-grants update"},
-	{http.MethodDelete, "client-grants/{id}", "auth0 client-grants delete"},
-
-	// Custom domains.
-	{http.MethodGet, "custom-domains", "auth0 domains list"},
-	{http.MethodPost, "custom-domains", "auth0 domains create"},
-	{http.MethodGet, "custom-domains/{id}", "auth0 domains show"},
-	{http.MethodDelete, "custom-domains/{id}", "auth0 domains delete"},
-
-	// Log streams.
-	{http.MethodGet, "log-streams", "auth0 logs streams list"},
-	{http.MethodPost, "log-streams", "auth0 logs streams create"},
-	{http.MethodGet, "log-streams/{id}", "auth0 logs streams show"},
-	{http.MethodPatch, "log-streams/{id}", "auth0 logs streams update"},
-	{http.MethodDelete, "log-streams/{id}", "auth0 logs streams delete"},
-
-	// Rules.
-	{http.MethodGet, "rules", "auth0 rules list"},
-	{http.MethodPost, "rules", "auth0 rules create"},
-	{http.MethodGet, "rules/{id}", "auth0 rules show"},
-	{http.MethodPatch, "rules/{id}", "auth0 rules update"},
-	{http.MethodDelete, "rules/{id}", "auth0 rules delete"},
-
-	// Network ACLs.
-	{http.MethodGet, "network-acls", "auth0 network-acl list"},
-	{http.MethodPost, "network-acls", "auth0 network-acl create"},
-	{http.MethodGet, "network-acls/{id}", "auth0 network-acl show"},
-	{http.MethodPatch, "network-acls/{id}", "auth0 network-acl update"},
-	{http.MethodDelete, "network-acls/{id}", "auth0 network-acl delete"},
-
-	// Event streams.
-	{http.MethodGet, "event-streams", "auth0 event-streams list"},
-	{http.MethodPost, "event-streams", "auth0 event-streams create"},
-	{http.MethodGet, "event-streams/{id}", "auth0 event-streams show"},
-	{http.MethodPatch, "event-streams/{id}", "auth0 event-streams update"},
-	{http.MethodDelete, "event-streams/{id}", "auth0 event-streams delete"},
-
-	// Tenant settings.
-	{http.MethodGet, "tenants/settings", "auth0 tenant-settings show"},
-	{http.MethodPatch, "tenants/settings", "auth0 tenant-settings update"},
-
-	// Attack protection.
-	{http.MethodGet, "attack-protection/brute-force-protection", "auth0 protection brute-force-protection show"},
-	{http.MethodPatch, "attack-protection/brute-force-protection", "auth0 protection brute-force-protection update"},
-	{http.MethodGet, "attack-protection/breached-password-detection", "auth0 protection breached-password-detection show"},
-	{http.MethodPatch, "attack-protection/breached-password-detection", "auth0 protection breached-password-detection update"},
-	{http.MethodGet, "attack-protection/suspicious-ip-throttling", "auth0 protection suspicious-ip-throttling show"},
-	{http.MethodPatch, "attack-protection/suspicious-ip-throttling", "auth0 protection suspicious-ip-throttling update"},
-
-	// Email provider.
-	{http.MethodGet, "emails/provider", "auth0 email provider show"},
-	{http.MethodPost, "emails/provider", "auth0 email provider create"},
-	{http.MethodPatch, "emails/provider", "auth0 email provider update"},
-	{http.MethodDelete, "emails/provider", "auth0 email provider delete"},
 }
 
 // suggestTypedCommand returns the recommended typed command for the given raw

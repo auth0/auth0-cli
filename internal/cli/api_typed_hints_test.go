@@ -98,12 +98,6 @@ func TestSuggestTypedCommand(t *testing.T) {
 			rawURI:   "",
 			expected: "",
 		},
-		{
-			name:     "tenant settings singleton path",
-			method:   http.MethodPatch,
-			rawURI:   "tenants/settings",
-			expected: "auth0 tenant-settings update",
-		},
 	}
 
 	for _, test := range tests {
