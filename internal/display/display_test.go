@@ -190,6 +190,22 @@ func TestRenderer_Stream_JSON(t *testing.T) {
 	})
 }
 
+func TestRenderer_OutputPreformattedJSON(t *testing.T) {
+	// `auth0 api` output is JSON in every format, so it must always end with a
+	// trailing newline on stdout so a piped reader never drops the final line.
+	for _, format := range []OutputFormat{"", OutputFormatJSON, OutputFormatJSONCompact} {
+		t.Run("terminates with a newline in format "+string(format), func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			r := &Renderer{MessageWriter: &stderr, ResultWriter: &stdout, Format: format}
+
+			r.OutputPreformattedJSON("[]")
+
+			assert.Equal(t, "[]\n", stdout.String())
+			assert.Empty(t, stderr.String(), "the result must not leak onto stderr")
+		})
+	}
+}
+
 func TestRenderer_StructuredMessages(t *testing.T) {
 	t.Run("diagnostics are emitted as JSON lines on stderr", func(t *testing.T) {
 		var stderr bytes.Buffer
