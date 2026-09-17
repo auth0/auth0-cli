@@ -784,10 +784,16 @@ func diffActionCmd(cli *cli) *cobra.Command {
 				page++
 			}
 
-			versionsProvided := cmd.Flags().Changed("version1") && cmd.Flags().Changed("version2")
+			version1Set := cmd.Flags().Changed("version1")
+			version2Set := cmd.Flags().Changed("version2")
 			switch {
-			case versionsProvided:
+			case version1Set && version2Set:
 				// Use the versions supplied via flags as-is.
+			case version1Set != version2Set:
+				// Exactly one version was supplied. Require both or neither so an
+				// explicitly pinned version is never silently discarded (in
+				// interactive mode the picker would otherwise overwrite it).
+				return fmt.Errorf("provide both --version1 and --version2, or neither")
 			case canPrompt(cmd):
 				var err error
 				inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
