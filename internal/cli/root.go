@@ -11,8 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/auth0/go-auth0/management"
-	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -44,6 +42,30 @@ The Auth0 CLI now includes features for AI agents and automation:
 
 See 'auth0 <resource> --help' for details on specific resources.
 For agent integration guide, visit: https://github.com/auth0/auth0-cli`
+
+// agentModeHelp describes agent mode in one place. It is shown in the root help,
+// both the human text and the JSON help an agent reads, so the CLI never has to
+// re-announce the mode on every command it runs.
+const agentModeHelp = `## Agent Mode
+
+Agent mode makes every command's output machine-readable. The CLI enables it
+automatically when it detects an AI agent. Force it with '--agent-mode' (or
+AUTH0_AGENT_MODE=true) and turn it off with '--agent-mode=false' (or
+AUTH0_AGENT_MODE=false).
+
+In agent mode the CLI:
+
+  • Prints results to stdout as JSON, and streams (for example 'auth0 logs tail')
+    as newline-delimited JSON, one object per line.
+  • Keeps stderr clean: human hints and progress messages are suppressed, so on
+    success stderr is empty and on failure it carries only a JSON error envelope
+    ({"error":{"code","message","status","details"}}). Because that envelope is
+    the only thing on stderr, even a merged stdout+stderr stream stays parseable.
+  • Disables interactive prompts and colors.
+  • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
+    scripts that treat any non-zero exit as failure keep working. The specific
+    failure class (usage, auth, validation, not_found, rate_limit, api) is carried
+    by the JSON error envelope's "code" field, not by the exit code.`
 
 const panicMessage = `
 !!     Uh oh. Something went wrong.
@@ -82,8 +104,14 @@ func Execute() {
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
+	// Wrap flag-parse errors so they classify as usage failures in the JSON
+	// error envelope (the process exit code stays the generic 1).
+	rootCmd.SetFlagErrorFunc(wrapFlagError)
+
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
+
+	enforceUnknownSubcommand(rootCmd)
 
 	overrideHelpAndVersionFlagText(rootCmd)
 
@@ -91,18 +119,45 @@ func Execute() {
 		if v := recover(); v != nil {
 			err := fmt.Errorf("panic: %v", v)
 
-			if instrumentation.ReportException(err) {
-				fmt.Print(panicMessage) // If we're in development mode, we should throw the panic for so we have less surprises.
-			} else {
-				panic(v) // For non-developers, we'll swallow the panics.
+			if !instrumentation.ReportException(err) {
+				// Development / no crash-reporting build: re-panic so the developer
+				// sees the full stack trace.
+				panic(v)
 			}
+
+			// Release build: a recovered panic is still a failure. Report it on
+			// stderr (as a JSON envelope in JSON/agent mode) and exit non-zero, so
+			// it never masquerades as success or corrupts JSON written to stdout.
+			if cli.wantsJSONError() {
+				cli.renderer.ErrorJSON(buildErrorEnvelope(err))
+			} else {
+				fmt.Fprint(iostream.Messages, panicMessage)
+			}
+			os.Exit(exitGeneric) // nolint:gocritic
 		}
 	}()
 
-	// Resolve agent mode for the pre-parse `--help` path; real commands re-apply the parsed flag in applyAgentModeDefaults.
+	// Resolve agent mode up front so it is known on every path, including a bare
+	// `--help` (which skips PersistentPreRunE) and a flag-parse error (which fails
+	// before it). Real commands re-read the parsed flag in applyAgentModeDefaults.
 	cli.agentMode = resolveAgentMode(cli.agentClientName(), os.Args[1:])
 
-	if renderJSONHelpIfRequested(cli, rootCmd, os.Args[1:]) {
+	// Render command help as JSON in agent/JSON mode by routing through Cobra's help
+	// func, which fires for `--help`, the `help` subcommand, and a bare namespace
+	// (its RunE calls Help()), always with the target command already resolved and its
+	// flags parsed. The human help func is preserved for everyone else.
+	defaultHelpFunc := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if !cli.wantsJSONHelp() {
+			defaultHelpFunc(cmd, args)
+			return
+		}
+		renderCommandHelpJSON(cmd, cli.jsonCompact)
+	})
+
+	// The one help case the help func cannot reach is an explicit --json on a
+	// namespace, which has no such flag, so Cobra would reject it before help runs.
+	if renderNamespaceJSONHelp(rootCmd, os.Args[1:]) {
 		return
 	}
 
@@ -120,11 +175,34 @@ func Execute() {
 	cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run.
 
 	if err != nil {
-		renderErrorMessage(cli.renderer, err.Error())
+		if cli.wantsJSONError() {
+			cli.renderer.ErrorJSON(buildErrorEnvelope(err))
+		} else {
+			renderErrorMessage(cli.renderer, err)
+		}
 
 		instrumentation.ReportException(err)
-		os.Exit(1) // nolint:gocritic
+		os.Exit(exitCodeForError(err)) // nolint:gocritic
 	}
+}
+
+// wantsJSONError reports whether a failing command should emit the machine-readable
+// JSON error envelope instead of a human message. It honors agent mode and the
+// JSON output flags, and also covers usage/parse errors that fail before the
+// renderer's format is configured.
+func (c *cli) wantsJSONError() bool {
+	return c.agentMode || c.json || c.jsonCompact ||
+		c.renderer.Format == display.OutputFormatJSON ||
+		c.renderer.Format == display.OutputFormatJSONCompact
+}
+
+// wantsJSONHelp reports whether command help should be emitted as the machine-readable
+// JSON tree instead of Cobra's human help. It mirrors wantsJSONError: agent mode (from
+// the flag, env, or detection, resolved before Cobra runs) or an explicit JSON output
+// flag. Because agent mode is resolved up front in Execute, this is valid even on the
+// `--help` path, which skips PersistentPreRunE.
+func (c *cli) wantsJSONHelp() bool {
+	return c.agentMode || c.json || c.jsonCompact
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -133,7 +211,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         rootShort,
-		Long:          rootLong + "\n\n" + getLogin(cli),
+		Long:          rootLong + "\n\n" + agentModeHelp + "\n\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
@@ -144,12 +222,10 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
 
-			// Emitted after ansi.Initialize so the notice respects the color setting.
-			if cli.agentMode {
-				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
-			}
-
-			if !commandRequiresAuthentication(cmd.CommandPath()) {
+			// Namespace commands (e.g. `auth0 actions`) never call the API
+			// themselves; they only print help or reject an unknown
+			// subcommand, so they must not force authentication.
+			if cmd.HasSubCommands() || !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
 
@@ -162,6 +238,76 @@ func buildRootCmd(cli *cli) *cobra.Command {
 	}
 
 	return rootCmd
+}
+
+// wrapFlagError classifies a flag-parse failure as a usage error for the JSON
+// error envelope. On a command group an unknown flag usually rides along with a
+// mistyped subcommand (for example `auth0 actions lst --json`); pflag records the
+// leftover positional before it fails on the flag, so we surface both problems at
+// once: the unknown command (the likely root cause) and the unknown flag.
+func wrapFlagError(cmd *cobra.Command, err error) error {
+	if cmd.HasSubCommands() {
+		if positionals := cmd.Flags().Args(); len(positionals) > 0 {
+			return usageError{fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
+		}
+	}
+
+	return usageError{err}
+}
+
+// enforceUnknownSubcommand makes namespace (parent) commands reject an unknown
+// subcommand with a usage error (classified as "usage" in the JSON envelope, exit
+// code 1) instead of silently printing help and exiting 0. Cobra treats a
+// non-runnable parent as a help request before it ever validates positional args,
+// so a plain `Args`/`cobra.NoArgs` on the parent never fires. To close that gap we
+// make each namespace runnable — its RunE just prints help, preserving the bare
+// `auth0 <group>` behavior — and give it an Args validator that rejects any
+// leftover token as an unknown command. The Args check runs before
+// PersistentPreRunE, so a typo like `auth0 actions lst` fails fast without
+// attempting authentication.
+//
+// Unknown flags are not whitelisted either: an unrecognized flag on a namespace
+// (for example `auth0 actions --bogus`) fails at flag parsing as a usage error
+// (exit code 1) rather than being swallowed into a help screen that exits 0. A
+// bare namespace with only known flags (such as `--debug`) still prints help.
+func enforceUnknownSubcommand(cmd *cobra.Command) {
+	for _, sub := range cmd.Commands() {
+		enforceUnknownSubcommand(sub)
+	}
+
+	// Leaf commands and namespaces that already define their own run behavior
+	// are left untouched.
+	if !cmd.HasSubCommands() || cmd.Runnable() {
+		return
+	}
+
+	cmd.Args = func(c *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return nil
+		}
+		return unknownCommandError{
+			token:       args[0],
+			parent:      c.CommandPath(),
+			suggestions: commandSuggestions(c, args[0]),
+		}
+	}
+	cmd.RunE = func(c *cobra.Command, _ []string) error {
+		return c.Help()
+	}
+}
+
+// commandSuggestions returns Cobra's "did you mean" candidates for a mistyped
+// token. Rejecting an unknown (sub)command as an error means Cobra's own
+// suggestion output never runs, so we ask for the same candidates it would, using
+// the minimum edit distance of 2 that Cobra applies by default.
+func commandSuggestions(cmd *cobra.Command, token string) []string {
+	if cmd.DisableSuggestions {
+		return nil
+	}
+	if cmd.SuggestionsMinimumDistance <= 0 {
+		cmd.SuggestionsMinimumDistance = 2
+	}
+	return cmd.SuggestionsFor(token)
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
@@ -325,7 +471,7 @@ func contextWithCancel() context.Context {
 	go func() {
 		<-ch
 		defer cancel()
-		os.Exit(0)
+		os.Exit(exitInterrupted)
 	}()
 
 	return ctx
@@ -347,10 +493,16 @@ func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
 	}
 }
 
-func renderErrorMessage(display *display.Renderer, errorMessage string) {
+func renderErrorMessage(display *display.Renderer, err error) {
 	display.Heading(ansi.Red("error"))
 
-	rawErrorMessage := []rune(errorMessage)
+	rawErrorMessage := []rune(err.Error())
+	if len(rawErrorMessage) == 0 {
+		display.Errorf("An unknown error occurred.")
+		display.Newline()
+		return
+	}
+
 	humanReadableErrorMessage := string(
 		append(
 			[]rune{unicode.ToUpper(rawErrorMessage[0])},
@@ -359,6 +511,19 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 	) + "."
 
 	display.Errorf(humanReadableErrorMessage)
+
+	// For a mistyped command, mirror Cobra's "did you mean" hint so a typo is
+	// still guided to the right command even though we now reject it as an error
+	// instead of printing help.
+	var unknownCmd unknownCommandError
+	if errors.As(err, &unknownCmd) && len(unknownCmd.suggestions) > 0 {
+		display.Newline()
+		display.Infof("Did you mean this?")
+		for _, suggestion := range unknownCmd.suggestions {
+			display.Detailf(suggestion)
+		}
+	}
+
 	display.Newline()
 }
 
@@ -474,59 +639,8 @@ func resolveInstallIDForTracking(cli *cli) string {
 }
 
 func classifyCommandFailure(err error) map[string]string {
-	properties := map[string]string{
+	return map[string]string{
 		"success":     "false",
-		"error_class": "unknown",
-	}
-
-	if errors.Is(err, config.ErrInvalidToken) || errors.Is(err, config.ErrMalformedToken) {
-		properties["error_class"] = "auth"
-		return properties
-	}
-
-	var missingScopesErr config.ErrTokenMissingRequiredScopes
-	if errors.As(err, &missingScopesErr) {
-		properties["error_class"] = "auth"
-		return properties
-	}
-
-	if status, ok := managementHTTPStatus(err); ok {
-		properties["error_class"] = errorClassForHTTPStatus(status)
-	}
-
-	return properties
-}
-
-// managementHTTPStatus extracts the HTTP status from a go-auth0 management API
-// error anywhere in the error chain, supporting both the v1 (management.Error)
-// and v3 (*core.APIError) SDK error types.
-func managementHTTPStatus(err error) (int, bool) {
-	var v1 management.Error
-	if errors.As(err, &v1) {
-		return v1.Status(), true
-	}
-
-	var v3 *core.APIError
-	if errors.As(err, &v3) {
-		return v3.StatusCode, true
-	}
-
-	return 0, false
-}
-
-func errorClassForHTTPStatus(status int) string {
-	switch {
-	case status == 401 || status == 403:
-		return "auth"
-	case status == 400 || status == 422:
-		return "validation"
-	case status == 404:
-		return "not_found"
-	case status == 429:
-		return "rate_limit"
-	case status >= 500:
-		return "api"
-	default:
-		return "unknown"
+		"error_class": errorClass(err),
 	}
 }

@@ -167,12 +167,15 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			_ = response.Body.Close()
 		}()
 
-		if err := isInsufficientScopeError(response); err != nil {
+		rawBodyJSON, err := io.ReadAll(response.Body)
+		if err != nil {
 			return err
 		}
 
-		rawBodyJSON, err := io.ReadAll(response.Body)
-		if err != nil {
+		// Read the body once above, then classify from the bytes. Decoding the
+		// stream here would drain it, so a 403 that is not insufficient-scope would
+		// otherwise lose its real error body and fall back to bare "Forbidden".
+		if err := isInsufficientScopeError(response.StatusCode, rawBodyJSON); err != nil {
 			return err
 		}
 
@@ -192,7 +195,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return fmt.Errorf("failed to prepare json output: %w", err)
 		}
 
-		cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
+		cli.renderer.OutputPreformattedJSON(ansi.ColorizeJSON(prettyJSON.String()))
 
 		return nil
 	}
@@ -234,18 +237,19 @@ func (i *apiCmdInputs) validateAndSetData() error {
 
 	var data []byte
 
-	pipedData := iostream.PipedInput()
-
+	// Check the --data flag before touching stdin: when it is set we use it as-is
+	// and never read stdin, so a request with --data never blocks on an open,
+	// EOF-less pipe (the common agent/CI case).
 	if i.RawData != "" {
 		data = []byte(i.RawData)
-		if len(pipedData) > 0 {
-			i.renderer.Warnf(
-				"JSON data was provided via both the flag and piped input. " +
-					"The Auth0 CLI will use the data from the flag.",
-			)
+	} else {
+		pipedData, err := iostream.PipedInput()
+		if err != nil {
+			return err
 		}
-	} else if len(pipedData) > 0 {
-		data = pipedData
+		if len(pipedData) > 0 {
+			data = pipedData
+		}
 	}
 
 	if len(data) > 0 {
@@ -299,8 +303,8 @@ func newAPIResponseError(statusCode int, header http.Header, body []byte) error 
 	return core.NewAPIError(statusCode, header, fmt.Errorf("API request failed: %s", message))
 }
 
-func isInsufficientScopeError(r *http.Response) error {
-	if r.StatusCode != 403 {
+func isInsufficientScopeError(statusCode int, rawBody []byte) error {
+	if statusCode != 403 {
 		return nil
 	}
 
@@ -310,7 +314,7 @@ func isInsufficientScopeError(r *http.Response) error {
 	}
 
 	var body ErrorBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.Unmarshal(rawBody, &body); err != nil {
 		return nil
 	}
 

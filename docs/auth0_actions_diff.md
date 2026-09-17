@@ -17,9 +17,16 @@ auth0 actions diff [action-id] [flags]
 ```
 auth0 actions diff
   auth0 actions diff <action-id>
+  auth0 actions diff <action-id> --version1 2 --version2 3
 ```
 
 
+## Flags
+
+```
+      --version1 int   First version number (baseline) to compare.
+      --version2 int   Second version number to compare against.
+```
 
 
 ## Inherited Flags

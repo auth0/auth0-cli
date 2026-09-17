@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"go.uber.org/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,16 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 )
+
+func TestPromptForDeliveryIDsNoInputGuard(t *testing.T) {
+	c := &cli{}
+	c.noInput = true // Non-interactive mode.
+
+	ids, err := promptForDeliveryIDs(&cobra.Command{}, c, "est_some-stream-id")
+
+	assert.Nil(t, ids)
+	assert.EqualError(t, err, "missing delivery IDs in non-interactive mode: pass them as the second argument, for example `evt_abc123,evt_def456`")
+}
 
 func TestEventStreamPickerOptions(t *testing.T) {
 	tests := []struct {

@@ -212,13 +212,60 @@ func TestValidateRequest(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, result)
 
-			assert.Equal(t, tt.expectValid, result.Valid)
-
-			if !tt.expectValid {
+			if tt.expectValid {
+				assert.Equal(t, StatusValid, result.Status)
+			} else {
+				assert.Equal(t, StatusInvalid, result.Status)
 				assert.NotEmpty(t, result.Errors)
 			}
 		})
 	}
+}
+
+func TestValidateRequestReportsStatus(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	// An operation with a request schema: the payload is actually checked.
+	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{
+		"name": "my-action",
+		"supported_triggers": [{"id": "post-login", "version": "v3"}],
+		"code": "module.exports = () => {}"
+	}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusValid, result.Status, "an operation with a request schema whose payload passes is StatusValid")
+
+	// An operation that resolves but defines no request body schema: reported
+	// as StatusNoSchema (nothing to check against, sent as-is).
+	result, err = manager.ValidateRequest("DELETE", "/actions/actions/{id}", []byte(`{}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoSchema, result.Status, "an operation without a request schema is StatusNoSchema")
+}
+
+// TestValidateRequestChecksJSONWithoutSchema pins the fix for the case where a
+// schema-less operation skipped the JSON syntax check: malformed --data must fail
+// locally as StatusInvalid rather than being shipped to the API as opaque bytes.
+func TestValidateRequestChecksJSONWithoutSchema(t *testing.T) {
+	const doc = `{
+		"openapi": "3.0.0",
+		"info": {"title": "fixture", "version": "1.0.0"},
+		"paths": {"/deploy": {"post": {"operationId": "post_deploy"}}}
+	}`
+	parsed, err := LoadDocFromData([]byte(doc))
+	require.NoError(t, err)
+	manager := NewSchemaManagerFromDoc(parsed)
+
+	// Well-formed JSON against a schema-less op: nothing to check, sent as-is.
+	result, err := manager.ValidateRequest("POST", "/deploy", []byte(`{"anything": true}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoSchema, result.Status)
+
+	// Malformed JSON against the same schema-less op: caught locally.
+	result, err = manager.ValidateRequest("POST", "/deploy", []byte(`{"broken":`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusInvalid, result.Status, "malformed JSON must fail even without a schema")
+	require.NotEmpty(t, result.Errors)
+	assert.Contains(t, result.Errors[0], "Invalid JSON")
 }
 
 func TestValidateRequestActionUpdatePath(t *testing.T) {
@@ -231,7 +278,7 @@ func TestValidateRequestActionUpdatePath(t *testing.T) {
 	result, err := manager.ValidateRequest("PATCH", "/actions/actions/{id}", body)
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.True(t, result.Valid, "templated path should validate; errors: %v", result.Errors)
+	assert.Equal(t, StatusValid, result.Status, "templated path should validate; errors: %v", result.Errors)
 
 	// Concrete-ID path: the operation cannot be found, so ValidateRequest errors.
 	// This is exactly the trap that broke `auth0 actions update --data`.
@@ -269,7 +316,7 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(tt.body))
 			require.NoError(t, err)
-			require.False(t, result.Valid)
+			require.Equal(t, StatusInvalid, result.Status)
 			require.NotEmpty(t, result.Errors)
 
 			joined := strings.Join(result.Errors, "\n")
@@ -311,7 +358,7 @@ func TestValidateRequestReportsAllErrors(t *testing.T) {
 	// all of them, not stop at the first.
 	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{}`))
 	require.NoError(t, err)
-	require.False(t, result.Valid)
+	require.Equal(t, StatusInvalid, result.Status)
 
 	assert.GreaterOrEqual(t, len(result.Errors), 2)
 	joined := strings.Join(result.Errors, "\n")
