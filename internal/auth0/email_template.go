@@ -1,4 +1,4 @@
-//go:generate mockgen -source=email_template.go -destination=mock/email_template_mock.go -package=mock
+//go:generate go tool mockgen -source=email_template.go -destination=mock/email_template_mock.go -package=mock
 
 package auth0
 

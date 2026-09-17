@@ -155,11 +155,13 @@ func createRuleCmd(cli *cli) *cobra.Command {
   echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rule := &management.Rule{}
-			pipedInput := iostream.PipedInput()
+			pipedInput, err := iostream.PipedInput()
+			if err != nil {
+				return err
+			}
 
 			if len(pipedInput) > 0 {
-				err := json.Unmarshal(pipedInput, rule)
-				if err != nil {
+				if err := json.Unmarshal(pipedInput, rule); err != nil {
 					return fmt.Errorf("failed to unmarshal JSON input: %w", err)
 				}
 			} else {
@@ -338,7 +340,10 @@ func updateRuleCmd(cli *cli) *cobra.Command {
   echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			updatedRule := &management.Rule{}
-			pipedInput := iostream.PipedInput()
+			pipedInput, err := iostream.PipedInput()
+			if err != nil {
+				return err
+			}
 			if len(pipedInput) > 0 {
 				if err := json.Unmarshal(pipedInput, updatedRule); err != nil {
 					return fmt.Errorf("invalid JSON input: %w", err)
@@ -402,7 +407,7 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			err := ansi.Waiting(func() error {
+			err = ansi.Waiting(func() error {
 				return cli.api.Rule.Update(cmd.Context(), inputs.ID, updatedRule)
 			})
 			if err != nil {

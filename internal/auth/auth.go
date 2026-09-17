@@ -1,4 +1,4 @@
-//go:generate mockgen -source auth.go -destination mock/auth.go -package mock
+//go:generate go tool mockgen -source auth.go -destination mock/auth.go -package mock
 package auth
 
 import (
@@ -133,7 +133,10 @@ var RequiredScopes = []string{
 	"read:phone_templates",
 	"create:email_templates", "read:email_templates", "update:email_templates",
 	"create:email_provider", "read:email_provider", "update:email_provider", "delete:email_provider",
-	"read:flows", "read:forms", "read:flows_vault_connections",
+	"read:flows", "create:flows", "update:flows", "delete:flows",
+	"read:flows_executions",
+	"read:forms", "create:forms", "update:forms", "delete:forms",
+	"read:flows_vault_connections", "create:flows_vault_connections", "update:flows_vault_connections", "delete:flows_vault_connections",
 	"read:connections", "update:connections", "read:connections_options", "update:connections_options",
 	"read:client_keys", "read:logs", "read:tenant_settings", "update:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
@@ -150,6 +153,9 @@ var RequiredScopes = []string{
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
 	"read:sessions", "update:sessions", "delete:sessions",
 	"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
+	"read:guardian_factors", "update:guardian_factors",
+	"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
+	"read:mfa_policies", "update:mfa_policies",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting

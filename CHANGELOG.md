@@ -8,6 +8,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Emit a machine-readable JSON error envelope on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text. The envelope carries a `code` classifying the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`) and a `status` with the HTTP status when the error came from the Auth0 Management API, for example `{"error":{"code":"not_found","message":"...","status":404}}`. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure
+- Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
+- Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
+
+### Changed
+- Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
+- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands and unknown flags on a command group (for example `auth0 actions --bogus`) are also rejected, in both normal and agent mode, while a bare group with only known global flags (such as `--debug`) still prints help
+- Stream results as a sequence of newline-separated JSON objects instead of a JSON array when a streaming command such as `auth0 logs tail` runs in JSON or agent mode, so a reader can consume records incrementally without waiting for an array that never closes while tailing. Agent mode and `--json-compact` emit compact newline-delimited JSON (one object per line); `--json` indents each object for a human watching the live stream
+- Always terminate JSON output on stdout with a trailing newline so a piped or NDJSON reader never drops the final record
+- Keep stderr machine-clean in agent mode by suppressing human diagnostics (info, success, detail, warning, non-fatal error), progress hints and the decorative heading and blank lines. On success stderr is empty and on failure it carries only the JSON error envelope, so a merged stdout+stderr stream stays parseable, discriminated by the reserved `error` key rather than a fragile per-message field
+- Render help as JSON in agent mode for a bare `auth0` and for a command group invoked without a subcommand (for example `auth0 apps`), instead of the human help text, and describe agent mode (its output contract and how to disable it) in the root help so it does not need to be re-announced on every command
+- `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
+
+### Fixed
+- Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
+- Read piped stdin without panicking when the read fails; a broken or unreadable pipe now surfaces as a normal error instead of crashing the CLI
+- Do not read stdin on `auth0 api` (or any `--data`-driven command) when `--data` is set, so a request that supplies its body via the flag no longer blocks forever on an open, EOF-less pipe (the common agent and CI case)
+- Preserve the real error body of a `403` response from `auth0 api` that is not an insufficient-scope error, instead of losing it and falling back to a bare `Forbidden`
+- Quit the `auth0 logs tail` follow loop and decline confirmation prompts cleanly when no interactive terminal is available (an agent or piped run), instead of panicking
+- Report a recovered panic on stderr (as a JSON error envelope in JSON or agent mode) and exit non-zero, so a crash never masquerades as success or corrupts JSON written to stdout
+- `--data` input is now checked for well-formed JSON even when the operation has no local schema, so malformed payloads fail locally with a clear message instead of being sent to the API as-is.
+
+# [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
+
+### Added
+- Add support for managing forms via `auth0 forms` commands [#1626]
+- Add `confirmation` screen support to `auth0 universal-login customize` [#1648]
+- Add `match_all` rule support to `auth0 network-acl create` and `update` [#1652]
+- Add `http_message_signature` signal to `auth0 network-acl` rules (EA only) [#1653]
+
+### Deprecated
+- Deprecate redundant rule flags from `auth0 network-acl create` and `update` in favor of `--rule` [#1647]
+
+# [v1.34.0](https://github.com/auth0/auth0-cli/tree/v1.34.0) (September 2, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.33.0...v1.34.0)
+
+### Added
+- Add support for managing flows via `auth0 flows` commands [#1628]
+- Add support for managing flows executions via `auth0 flows executions` commands [#1628]
+- Add support for managing flows vault connections via `auth0 flows vault connections` commands [#1628]
+- Add `--data` flag for JSON payload input in `auth0 actions create` and `auth0 actions update` [#1630]
+- Add `--schema` and `--query` flags to `auth0 actions list` command [#1631]
+- Add terraform export support for `auth0_token_exchange_profile` resource in `auth0 tf generate` [#1627]
+
+### Fixed
+- Fix shell completion command to not require authentication [#1638]
+
 # [v1.33.0](https://github.com/auth0/auth0-cli/tree/v1.33.0) (August 19, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.32.0...v1.33.0)
@@ -778,7 +829,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.33.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.35.0...HEAD
+[#1653]: https://github.com/auth0/auth0-cli/pull/1653
+[#1652]: https://github.com/auth0/auth0-cli/pull/1652
+[#1648]: https://github.com/auth0/auth0-cli/pull/1648
+[#1647]: https://github.com/auth0/auth0-cli/pull/1647
+[#1626]: https://github.com/auth0/auth0-cli/pull/1626
+[#1639]: https://github.com/auth0/auth0-cli/pull/1639
+[#1638]: https://github.com/auth0/auth0-cli/pull/1638
+[#1632]: https://github.com/auth0/auth0-cli/pull/1632
+[#1631]: https://github.com/auth0/auth0-cli/pull/1631
+[#1630]: https://github.com/auth0/auth0-cli/pull/1630
+[#1628]: https://github.com/auth0/auth0-cli/pull/1628
+[#1627]: https://github.com/auth0/auth0-cli/pull/1627
 [#1617]: https://github.com/auth0/auth0-cli/pull/1617
 [#1616]: https://github.com/auth0/auth0-cli/pull/1616
 [#1612]: https://github.com/auth0/auth0-cli/pull/1612

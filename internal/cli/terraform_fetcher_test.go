@@ -10,8 +10,8 @@ import (
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/auth0/go-auth0/v3/management/core"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
@@ -1076,29 +1076,27 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI := mock.NewMockFormAPIV3(ctrl)
 		formAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).Return(
-			&management.FormList{
-				List: management.List{
-					Start: 0,
-					Limit: 1,
-					Total: 2,
+			&auth0.FormSummaryPage{
+				Results: []*managementv3.FormSummary{
+					{
+						ID:   "form_id1",
+						Name: "Form 1",
+					},
+					{
+						ID:   "form_id2",
+						Name: "Form 2",
+					},
 				},
-				Forms: []*management.Form{
-					{
-						ID:   auth0.String("form_id1"),
-						Name: auth0.String("Form 1"),
-					},
-					{
-						ID:   auth0.String("form_id2"),
-						Name: auth0.String("Form 2"),
-					},
+				NextPageFunc: func(_ context.Context) (*auth0.FormSummaryPage, error) {
+					return nil, core.ErrNoPages
 				},
 			}, nil)
 
 		fetcher := formResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				Form: formAPI,
 			},
 		}
@@ -1123,20 +1121,18 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI := mock.NewMockFormAPIV3(ctrl)
 		formAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).Return(
-			&management.FormList{
-				List: management.List{
-					Start: 0,
-					Limit: 0,
-					Total: 0,
+			&auth0.FormSummaryPage{
+				Results: []*managementv3.FormSummary{},
+				NextPageFunc: func(_ context.Context) (*auth0.FormSummaryPage, error) {
+					return nil, core.ErrNoPages
 				},
-				Forms: []*management.Form{},
 			}, nil)
 
 		fetcher := formResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				Form: formAPI,
 			},
 		}
@@ -1150,13 +1146,13 @@ func TestFormResourceFetcher_FetchData(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		formAPI := mock.NewMockFormAPI(ctrl)
+		formAPI := mock.NewMockFormAPIV3(ctrl)
 		formAPI.EXPECT().
 			List(gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("failed to read form"))
 
 		fetcher := formResourceFetcher{
-			api: &auth0.API{
+			apiv3: &auth0.APIV3{
 				Form: formAPI,
 			},
 		}
@@ -2444,6 +2440,36 @@ func TestUserAttributeProfileResourceFetcher(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, data, 1)
 		assert.Equal(t, data[0].ResourceName, "auth0_user_attribute_profile.user_attribute_profile_1")
+		assert.Greater(t, len(data[0].ImportID), 0)
+	})
+}
+
+func TestTokenExchangeProfileResourceFetcher(t *testing.T) {
+	t.Run("it successfully generates token exchange profile import data", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		tokenExchangeAPI := mock.NewMockTokenExchangeAPI(ctrl)
+
+		tokenExchangeAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			Return(&management.TokenExchangeProfileList{
+				TokenExchangeProfiles: []*management.TokenExchangeProfile{
+					{
+						ID:   auth0.String("tep_123456"),
+						Name: auth0.String("Token Exchange Profile 1"),
+					}}}, nil)
+
+		fetcher := tokenExchangeProfileResourceFetcher{
+			api: &auth0.API{
+				TokenExchange: tokenExchangeAPI,
+			},
+		}
+
+		data, err := fetcher.FetchData(context.Background())
+		assert.NoError(t, err)
+		assert.Len(t, data, 1)
+		assert.Equal(t, data[0].ResourceName, "auth0_token_exchange_profile.token_exchange_profile_1")
 		assert.Greater(t, len(data[0].ImportID), 0)
 	})
 }

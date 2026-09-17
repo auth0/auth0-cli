@@ -176,6 +176,7 @@ var (
 		"consent":                                        "consent",
 		"customized-consent":                             "customized-consent",
 		"email-otp-challenge":                            "email-otp-challenge",
+		"confirmation":                                   "confirmation",
 	}
 )
 

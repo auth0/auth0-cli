@@ -98,56 +98,58 @@ func TestDetectAgent_ClaudeCode_AIAgent(t *testing.T) {
 	assert.Equal(t, "claude-code", agent)
 }
 
-func TestDetectAgent_Cursor(t *testing.T) {
+// TestDetectAgent_CursorAgent covers the signals that mean the Cursor agent is driving:
+// the in-IDE agent and the headless cursor-agent CLI.
+func TestDetectAgent_CursorAgent(t *testing.T) {
 	for _, tc := range []struct {
-		envVar string
-		value  string
+		name string
+		env  map[string]string
 	}{
-		{"CURSOR_AGENT", "1"},
-		{"CURSOR_TRACE_ID", "abc123"},
-		{"CURSOR_CONVERSATION_ID", "04bb112f-88b6-47ce-b23c-2fb28b9b98e3"},
+		{name: "CURSOR_AGENT", env: map[string]string{"CURSOR_AGENT": "1"}},
+		{name: "ExtensionHostRoleAgentExec", env: map[string]string{"CURSOR_EXTENSION_HOST_ROLE": "agent-exec"}},
 	} {
-		t.Run(tc.envVar, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			agent := detectAgentFull(func(k string) string {
-				if k == tc.envVar {
-					return tc.value
-				}
-				return ""
+				return tc.env[k]
 			}, noProc, false)
 			assert.Equal(t, "cursor", agent)
 		})
 	}
 }
 
-func TestDetectAgent_CursorTraceIDBeatsWildcard(t *testing.T) {
-	agent := detectAgentWithEnv(func(k string) string {
-		if k == "CURSOR_TRACE_ID" {
-			return "abc123"
-		}
-		return ""
-	}, func() []string {
-		return []string{"CURSOR_TRACE_ID=abc123"}
-	}, dummyPPID, noProcInfo, false)
-	assert.Equal(t, "cursor", agent)
-}
+// TestDetectAgent_CursorHumanNotAgent guards the fix: a human in Cursor's terminal has
+// CURSOR_* vars but no agent marker, so detection must not force agent mode.
+func TestDetectAgent_CursorHumanNotAgent(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		env  map[string]string
+	}{
+		{name: "TraceIDAlone", env: map[string]string{"CURSOR_TRACE_ID": "abc123"}},
+		{name: "ConversationIDAlone", env: map[string]string{"CURSOR_CONVERSATION_ID": "04bb112f-88b6-47ce-b23c-2fb28b9b98e3"}},
+		{name: "SandboxAlone", env: map[string]string{"CURSOR_SANDBOX": "seatbelt"}},
+		{name: "ExtensionHostRoleNotAgentExec", env: map[string]string{"CURSOR_EXTENSION_HOST_ROLE": "workspace"}},
+		// We no longer key on PAGER: even the exact value am-i-vibing keys on must not
+		// force a human in Cursor's terminal into agent mode.
+		{name: "TraceIDWithCursorPager", env: map[string]string{
+			"CURSOR_TRACE_ID": "abc123",
+			"PAGER":           "head -n 10000 | cat",
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			environ := make([]string, 0, len(tc.env))
+			for k, v := range tc.env {
+				environ = append(environ, k+"="+v)
+			}
+			getEnv := func(k string) string { return tc.env[k] }
 
-func TestDetectAgent_CursorConversationIDBeatsWildcard(t *testing.T) {
-	agent := detectAgentWithEnv(func(k string) string {
-		if k == "CURSOR_CONVERSATION_ID" {
-			return "04bb112f-88b6-47ce-b23c-2fb28b9b98e3"
-		}
-		return ""
-	}, func() []string {
-		return []string{"CURSOR_CONVERSATION_ID=04bb112f-88b6-47ce-b23c-2fb28b9b98e3"}
-	}, dummyPPID, noProcInfo, false)
-	assert.Equal(t, "cursor", agent)
-}
-
-func TestDetectAgent_UnlistedCursorInfraIgnoredByWildcard(t *testing.T) {
-	agent := detectAgentWithEnv(noEnv, func() []string {
-		return []string{"CURSOR_SANDBOX=seatbelt"}
-	}, dummyPPID, noProcInfo, false)
-	assert.Equal(t, "unknown", agent)
+			assert.Equal(t, "unknown",
+				detectAgentWithEnv(getEnv, func() []string { return environ }, dummyPPID, noProcInfo, false),
+				"non-interactive human in Cursor must not be detected as an agent")
+			assert.Equal(t, "human",
+				detectAgentWithEnv(getEnv, func() []string { return environ }, dummyPPID, noProcInfo, true),
+				"interactive human in Cursor must resolve to human")
+		})
+	}
 }
 
 func TestDetectAgent_Codex_ThreadID(t *testing.T) {
@@ -218,14 +220,17 @@ func TestDetectAgent_ProcessWalk_MultiLevel(t *testing.T) {
 	assert.Equal(t, "claude-code", agent)
 }
 
-func TestDetectAgent_ProcessWalk_Cursor(t *testing.T) {
-	agent := detectAgentWithEnv(noEnv, noEnviron, dummyPPID, procInfoName(func(pid int) string {
+// TestDetectAgent_ProcessWalk_CursorNotMatched pins that a "cursor" parent process is no
+// longer treated as an agent, since it can't distinguish a human terminal from the agent.
+func TestDetectAgent_ProcessWalk_CursorNotMatched(t *testing.T) {
+	procName := func(pid int) string {
 		if pid == 9999 {
 			return "cursor"
 		}
 		return ""
-	}), false)
-	assert.Equal(t, "cursor", agent)
+	}
+	assert.Equal(t, "unknown", detectAgentFull(noEnv, procName, false))
+	assert.Equal(t, "human", detectAgentFull(noEnv, procName, true))
 }
 
 func TestDetectAgent_ProcessWalk_GitHubCopilot(t *testing.T) {

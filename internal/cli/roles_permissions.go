@@ -73,7 +73,7 @@ func listRolePermissionsCmd(cli *cli) *cobra.Command {
   auth0 roles permissions ls <role-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if len(args) == 0 {
@@ -164,7 +164,7 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions(rs.GetScopes(), &inputs.Permissions)
+				err := cli.pickRolePermissions(cmd, rs.GetScopes(), &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -230,7 +230,7 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions(rs.GetScopes(), &inputs.Permissions)
+				err := cli.pickRolePermissions(cmd, rs.GetScopes(), &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -271,7 +271,11 @@ func (c *cli) apiPickerOptionsWithoutAuth0(ctx context.Context) (pickerOptions, 
 	})
 }
 
-func (c *cli) pickRolePermissions(apiScopes []management.ResourceServerScope, permissions *[]string) error {
+func (c *cli) pickRolePermissions(cmd *cobra.Command, apiScopes []management.ResourceServerScope, permissions *[]string) error {
+	if !canPrompt(cmd) {
+		return fmt.Errorf("missing a required flag in non-interactive mode: --permissions")
+	}
+
 	// NOTE(cyx): We're inlining this for now since we have no generic
 	// usecase for this particular picker type yet.
 	var options []string

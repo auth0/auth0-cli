@@ -1,4 +1,4 @@
-//go:generate mockgen -source=client.go -destination=mock/client_mock.go -package=mock
+//go:generate go tool mockgen -source=client.go -destination=mock/client_mock.go -package=mock
 
 package auth0
 

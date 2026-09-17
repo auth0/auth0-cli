@@ -38,6 +38,7 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 apps list", true},
 		{"auth0 apps create", true},
 		{"auth0 orgs members list", true},
+		{"auth0 __complete", false},
 		{"auth0 completion", false},
 		{"auth0 help", false},
 		{"auth0 login", false},
@@ -50,6 +51,114 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		t.Run(fmt.Sprintf("TestCase #%d Command: %s", index, testCase.givenCommand), func(t *testing.T) {
 			actualAuth := commandRequiresAuthentication(testCase.givenCommand)
 			assert.Equal(t, testCase.expectedToRequireAuthentication, actualAuth)
+		})
+	}
+}
+
+func TestEnforceUnknownSubcommand(t *testing.T) {
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0"}
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		return root
+	}
+
+	t.Run("namespace rejects an unknown subcommand as a usage error", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+
+		err = group.Args(group, []string{"lst"})
+		assert.Error(t, err)
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		// The class is still "usage" for the JSON envelope, but every failure
+		// collapses to the generic exit code for backwards compatibility.
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, exitGeneric, exitCodeForError(err))
+	})
+
+	t.Run("namespace accepts no args and prints help", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		assert.NoError(t, group.Args(group, []string{}))
+		assert.True(t, group.Runnable())
+	})
+
+	t.Run("root rejects an unknown top-level command as a usage error", func(t *testing.T) {
+		root := newTree()
+		assert.Error(t, root.Args(root, []string{"bogus"}))
+		assert.Equal(t, exitGeneric, exitCodeForError(root.Args(root, []string{"bogus"})))
+	})
+
+	t.Run("does not override a runnable leaf command", func(t *testing.T) {
+		leaf, _, err := newTree().Find([]string{"actions", "list"})
+		assert.NoError(t, err)
+		assert.Nil(t, leaf.Args)
+	})
+
+	t.Run("namespace still rejects unknown flags", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		// Whitelisting unknown flags would let `auth0 actions --bogus` (and even
+		// `auth0 actions --bogus list`, which swallows the subcommand) print help
+		// and exit 0. The namespace must keep rejecting unknown flags so they
+		// surface as a usage error with a non-zero exit.
+		assert.False(t, group.FParseErrWhitelist.UnknownFlags)
+	})
+}
+
+func TestWrapFlagError(t *testing.T) {
+	// Drive real command execution so wrapFlagError sees exactly what pflag
+	// leaves behind (the leftover positional, if any) at flag-error time.
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0", SilenceUsage: true, SilenceErrors: true}
+		root.PersistentFlags().Bool("debug", false, "")
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		root.SetFlagErrorFunc(wrapFlagError)
+		return root
+	}
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "mistyped subcommand plus unknown flag reports both",
+			args:    []string{"actions", "lst", "--bogus"},
+			wantErr: `unknown command "lst" for "auth0 actions" (also: unknown flag: --bogus)`,
+		},
+		{
+			name:    "flag before the positional reports only the flag",
+			args:    []string{"actions", "--bogus", "lst"},
+			wantErr: "unknown flag: --bogus",
+		},
+		{
+			name:    "unknown flag with no positional reports only the flag",
+			args:    []string{"actions", "--bogus"},
+			wantErr: "unknown flag: --bogus",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := newTree()
+			root.SetArgs(test.args)
+			err := root.Execute()
+			assert.EqualError(t, err, test.wantErr)
+
+			var usageErr usageError
+			assert.True(t, errors.As(err, &usageErr))
+			assert.Equal(t, "usage", errorClass(err))
+			assert.Equal(t, exitGeneric, exitCodeForError(err))
 		})
 	}
 }
@@ -177,6 +286,20 @@ func TestIsAPICommand(t *testing.T) {
 			assert.Equal(t, test.expected, isAPICommand(test.commandPath))
 		})
 	}
+}
+
+func TestCommandTrackingProperties(t *testing.T) {
+	t.Run("includes tenant domain when authenticated", func(t *testing.T) {
+		c := &cli{tenant: "example.us.auth0.com", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "example.us.auth0.com", props["tenant"])
+	})
+
+	t.Run("includes empty tenant when unauthenticated", func(t *testing.T) {
+		c := &cli{tenant: "", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "", props["tenant"])
+	})
 }
 
 func TestMergeProperties(t *testing.T) {

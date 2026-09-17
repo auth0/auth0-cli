@@ -9,13 +9,90 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/display"
 )
+
+func TestActionsListCmd(t *testing.T) {
+	t.Run("it lists actions using the default SDK path", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			List(context.Background(), gomock.Any()).
+			Return(&management.ActionList{
+				Actions: []*management.Action{
+					{
+						ID:   auth0.String("action-1"),
+						Name: auth0.String("my-action"),
+						SupportedTriggers: []management.ActionTrigger{
+							{ID: auth0.String("post-login")},
+						},
+					},
+				},
+			}, nil)
+
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{Action: actionAPI},
+		}
+
+		cmd := listActionsCmd(cli)
+		err := cmd.Execute()
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("it returns error when API fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			List(context.Background(), gomock.Any()).
+			Return(nil, errors.New("connection failed"))
+
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{Action: actionAPI},
+		}
+
+		cmd := listActionsCmd(cli)
+		err := cmd.Execute()
+
+		assert.EqualError(t, err, "failed to list actions: connection failed")
+	})
+
+	t.Run("it returns error for invalid --query JSON", func(t *testing.T) {
+		stdout := &bytes.Buffer{}
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: io.Discard,
+				ResultWriter:  stdout,
+			},
+			api: &auth0.API{},
+		}
+
+		cmd := listActionsCmd(cli)
+		cmd.SetArgs([]string{"--query", "not-valid-json"})
+		err := cmd.Execute()
+
+		assert.ErrorContains(t, err, "invalid --query value")
+	})
+}
 
 func TestActionsDeployCmd(t *testing.T) {
 	t.Run("it successfully deploys an action", func(t *testing.T) {
@@ -179,6 +256,96 @@ func TestActionsUpdateCmd(t *testing.T) {
 		assert.Equal(t, []management.ActionModules{
 			{ModuleID: auth0.String("mod_123"), ModuleVersionID: auth0.String("ver_456")},
 		}, *captured.Modules)
+	})
+}
+
+func TestActionsDiffCmd(t *testing.T) {
+	t.Run("errors when versions are missing in non-interactive mode", func(t *testing.T) {
+		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Versions(gomock.Any(), actionID, gomock.Any()).
+			Return(&management.ActionVersionList{
+				List: management.List{Total: 1},
+				Versions: []*management.ActionVersion{
+					{Number: 1, Code: auth0.String("function () {}")},
+				},
+			}, nil)
+
+		cli := &cli{
+			renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: io.Discard},
+			api:      &auth0.API{Action: actionAPI},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := diffActionCmd(cli)
+		cmd.SetArgs([]string{actionID})
+		prepareInteractivity(cmd)
+
+		assert.EqualError(t, cmd.Execute(), "missing required flags in non-interactive mode: --version1 and --version2")
+	})
+
+	t.Run("errors when only one version flag is supplied", func(t *testing.T) {
+		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Versions(gomock.Any(), actionID, gomock.Any()).
+			Return(&management.ActionVersionList{
+				List: management.List{Total: 2},
+				Versions: []*management.ActionVersion{
+					{Number: 1, Code: auth0.String("function () { return 1; }")},
+					{Number: 2, Code: auth0.String("function () { return 2; }")},
+				},
+			}, nil)
+
+		cli := &cli{
+			renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: io.Discard},
+			api:      &auth0.API{Action: actionAPI},
+		}
+		// Interactive mode: the partial flag must still be rejected rather than
+		// silently overridden by the version picker.
+		cli.noInput = false
+
+		cmd := diffActionCmd(cli)
+		cmd.SetArgs([]string{actionID, "--version1", "1"})
+		prepareInteractivity(cmd)
+
+		assert.EqualError(t, cmd.Execute(), "provide both --version1 and --version2, or neither")
+	})
+
+	t.Run("diffs the two versions supplied via flags", func(t *testing.T) {
+		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Versions(gomock.Any(), actionID, gomock.Any()).
+			Return(&management.ActionVersionList{
+				List: management.List{Total: 2},
+				Versions: []*management.ActionVersion{
+					{Number: 1, Code: auth0.String("function () { return 1; }")},
+					{Number: 2, Code: auth0.String("function () { return 2; }")},
+				},
+			}, nil)
+
+		cli := &cli{
+			renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: io.Discard},
+			api:      &auth0.API{Action: actionAPI},
+		}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := diffActionCmd(cli)
+		cmd.SetArgs([]string{actionID, "--version1", "1", "--version2", "2"})
+		prepareInteractivity(cmd)
+
+		assert.NoError(t, cmd.Execute())
 	})
 }
 

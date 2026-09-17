@@ -51,7 +51,7 @@ Before using the CLI, you'll need to login:
 }
 
 func namespaceUsageTemplate() string {
-	return fmt.Sprintf(`%s{{if .Runnable}}
+	return fmt.Sprintf(`%s{{if and .Runnable (not .HasAvailableSubCommands)}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} <resource> <operation> [parameters...] [flags]{{end}}{{if gt (len .Aliases) 0}}
 
@@ -87,7 +87,7 @@ Use "auth0 commands" for an overview of every command, and add --json to any --h
 }
 
 func resourceUsageTemplate() string {
-	return fmt.Sprintf(`%s{{if .Runnable}}
+	return fmt.Sprintf(`%s{{if and .Runnable (not .HasAvailableSubCommands)}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} <operation> [parameters...] [flags]{{end}}{{if gt (len .Aliases) 0}}
 

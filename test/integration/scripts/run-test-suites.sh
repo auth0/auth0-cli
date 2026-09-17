@@ -14,21 +14,28 @@ auth0 login \
 
 set +e
 
-# The quickstart integration tests are excluded from the default suite, so run
-# each remaining test-cases file individually (in alphabetical order, matching
-# --dir) instead of the whole directory.
 exit_code=0
-for suite in ./test/integration/*.yaml; do
-   if [[ "$(basename "$suite")" == "quickstarts-test-cases.yaml" ]]; then
-      echo "Skipping $suite"
-      continue
-   fi
-
-   commander test --filter "$FILTER" "$suite"
+if [[ -n "${FILE}" ]]; then
+   commander test --filter "$FILTER" "${FILE}"
    if [[ $? -ne 0 ]]; then
       exit_code=1
    fi
-done
+else
+   # The quickstart integration tests are excluded from the default suite, so run
+   # each remaining test-cases file individually (in alphabetical order, matching
+   # --dir) instead of the whole directory.
+   for suite in ./test/integration/*.yaml; do
+      if [[ "$(basename "$suite")" == "quickstarts-test-cases.yaml" ]]; then
+         echo "Skipping $suite"
+         continue
+      fi
+
+      commander test --filter "$FILTER" "$suite"
+      if [[ $? -ne 0 ]]; then
+         exit_code=1
+      fi
+   done
+fi
 
 bash ./test/integration/scripts/test-cleanup.sh
 

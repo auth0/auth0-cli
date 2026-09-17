@@ -94,9 +94,9 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 			// In --no-input mode, fail immediately instead of hanging on an interactive prompt.
 			if c.noInput {
-				return fmt.Errorf(
+				return authError{fmt.Errorf(
 					"auth token expired and --no-input is set; run 'auth0 login' to re-authenticate",
-				)
+				)}
 			}
 
 			// Determine tenant domain for login.
@@ -121,7 +121,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 				err,
 				ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
 			)
-			return errorMessage
+			return authError{errorMessage}
 		}
 
 		if err := c.Config.AddTenant(tenant); err != nil {
@@ -130,10 +130,10 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 	}
 
 	if errors.Is(err, config.ErrMalformedToken) {
-		return fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
+		return authError{fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
 			ansi.Cyan("auth0 logout && auth0 login"),
 			ansi.Yellow("Note: Token handling was enhanced in v1.18.0+ to prevent malformed tokens."),
-		)
+		)}
 	}
 
 	invokerMetadata := c.invokerMetadataHeaderValue()
@@ -155,6 +155,10 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 func (c *cli) configureRenderer() {
 	c.renderer.Tenant = c.tenant
+
+	// In agent mode stderr is machine-clean: human diagnostics are suppressed so
+	// the only thing an agent sees there is the JSON error envelope on failure.
+	c.renderer.AgentMode = c.agentMode
 
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
@@ -198,7 +202,8 @@ func noLocalFlagSet(cmd *cobra.Command) bool {
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
-	if canPrompt(cmd) || !iostream.IsInputTerminal() {
+	// A bypass flag carries the payload itself, so skip per-flag required validation.
+	if canPrompt(cmd) || !iostream.IsInputTerminal() || hasRequiredBypassFlag(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})

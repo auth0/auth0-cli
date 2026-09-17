@@ -22,7 +22,6 @@ type API struct {
 	EventStream          EventStreamAPI
 	Flow                 FlowAPI
 	FlowVaultConnection  FlowVaultConnectionAPI
-	Form                 FormAPI
 	Log                  LogAPI
 	LogStream            LogStreamAPI
 	Organization         OrganizationAPI
@@ -56,7 +55,6 @@ func NewAPI(m *management.Management) *API {
 		EventStream:          m.EventStream,
 		Flow:                 m.Flow,
 		FlowVaultConnection:  m.Flow.Vault,
-		Form:                 m.Form,
 		Log:                  m.Log,
 		LogStream:            m.LogStream,
 		Organization:         m.Organization,
@@ -80,6 +78,10 @@ type APIV3 struct {
 	ClientGrant                  ClientGrantAPIV3
 	ClientGrantOrganization      ClientGrantOrganizationAPIV3
 	Events                       EventsAPIV3
+	Form                         FormAPIV3
+	Flow                         FlowAPIV3
+	FlowExecution                FlowExecutionAPIV3
+	FlowVaultConnection          FlowVaultConnectionAPIV3
 	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
 	Session                      SessionAPIV3
 	RefreshToken                 RefreshTokenAPIV3
@@ -87,6 +89,14 @@ type APIV3 struct {
 	UserRefreshToken             UserRefreshTokenAPIV3
 	ActionModule                 ActionModuleAPIV3
 	ActionModuleVersion          ActionModuleVersionAPIV3
+	GuardianPolicy               GuardianPolicyAPIV3
+	GuardianEnrollment           GuardianEnrollmentAPIV3
+	GuardianFactor               GuardianFactorAPIV3
+	GuardianFactorPhone          GuardianFactorPhoneAPIV3
+	GuardianFactorSms            GuardianFactorSmsAPIV3
+	GuardianFactorPush           GuardianFactorPushAPIV3
+	GuardianFactorDuo            GuardianFactorDuoAPIV3
+	NetworkACLKey                NetworkACLKeyAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -95,6 +105,10 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		ClientGrant:                  m.ClientGrants,
 		ClientGrantOrganization:      m.ClientGrants.Organizations,
 		Events:                       m.Events,
+		Form:                         m.Forms,
+		Flow:                         m.Flows,
+		FlowExecution:                m.Flows.Executions,
+		FlowVaultConnection:          m.Flows.Vault.Connections,
 		PhoneNotificationTemplate:    m.Branding.Phone.Templates,
 		Session:                      m.Sessions,
 		RefreshToken:                 m.RefreshTokens,
@@ -102,6 +116,14 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		UserRefreshToken:             m.Users.RefreshToken,
 		ActionModule:                 m.Actions.Modules,
 		ActionModuleVersion:          m.Actions.Modules.Versions,
+		GuardianPolicy:               m.Guardian.Policies,
+		GuardianEnrollment:           m.Guardian.Enrollments,
+		GuardianFactor:               m.Guardian.Factors,
+		GuardianFactorPhone:          m.Guardian.Factors.Phone,
+		GuardianFactorSms:            m.Guardian.Factors.Sms,
+		GuardianFactorPush:           m.Guardian.Factors.PushNotification,
+		GuardianFactorDuo:            m.Guardian.Factors.Duo.Settings,
+		NetworkACLKey:                m.Keys.NetworkACLs,
 	}
 }
 
