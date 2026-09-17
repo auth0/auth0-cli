@@ -248,6 +248,27 @@ func TestRunJSONQuery_CompactOutput(t *testing.T) {
 	assert.NotContains(t, out, "\n")
 }
 
+func TestRunJSONQuery_CSVIsRejected(t *testing.T) {
+	cli := &cli{
+		csv: true,
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+		api: &auth0.API{},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "actions/actions",
+		SchemaCmd: "auth0 actions list",
+	}, `{}`)
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "--csv is not supported with --query")
+}
+
 func TestPaginationHint(t *testing.T) {
 	t.Run("offset with totals, more results signals a hint", func(t *testing.T) {
 		// Standard include_totals envelope: first of two pages.
@@ -273,6 +294,17 @@ func TestPaginationHint(t *testing.T) {
 		hint := paginationHint([]byte(`{"logs":[{"id":"a"}],"next":"tok_abc"}`))
 		assert.Contains(t, hint, "checkpoint")
 		assert.Contains(t, hint, "next")
+		// Wording stays tentative: a final page can still carry a "next" token.
+		assert.Contains(t, hint, "There may be")
+		assert.NotContains(t, hint, "More results exist")
+	})
+
+	t.Run("offset without length states the total but no page count", func(t *testing.T) {
+		// No "length" field: the hint must not invent a returned count from "limit".
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"}],"total":100,"start":0,"limit":50}`))
+		assert.Contains(t, hint, "one page of 100 total results")
+		assert.Contains(t, hint, "More results exist")
+		assert.NotContains(t, hint, "Showing")
 	})
 
 	t.Run("checkpoint with an empty page has no hint", func(t *testing.T) {

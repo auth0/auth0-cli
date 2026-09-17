@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--query` list commands now print a diagnostic to stderr when the response is
   a page of a larger result set, so the returned records aren't mistaken for the
   full set. The output itself is unchanged.
+- `--csv` combined with `--query` now returns a clear error instead of being
+  silently ignored, since the raw API JSON has no fixed columns to flatten. Use
+  `--json` or `--json-compact` instead.
 
 ### Fixed
 

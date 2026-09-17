@@ -19,7 +19,7 @@ var listQueryFlag = Flag{
 	Name:      "Query",
 	LongForm:  "query",
 	ShortForm: "q",
-	Help:      "Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters.",
+	Help:      "Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add \"include_totals\":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).",
 }
 
 // jsonQuerySpec describes a list operation driven by a --query JSON payload.
@@ -86,6 +86,12 @@ func queryScalarString(key string, val interface{}) (string, error) {
 
 // runJSONQuery executes a GET request against the Management API with query parameters parsed from queryJSON.
 func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON string) error {
+	// --csv has no meaning here: the response is raw API JSON with no fixed column
+	// shape to flatten. Fail loudly instead of silently ignoring the flag.
+	if cli.csv {
+		return fmt.Errorf("--csv is not supported with --query: the response is raw API JSON with no fixed columns to flatten; use --json or --json-compact instead")
+	}
+
 	// UseNumber keeps numeric filters as their original literal (e.g. "5", not
 	// "5" reformatted through float64, which would turn 1000000 into "1e+06").
 	decoder := json.NewDecoder(strings.NewReader(queryJSON))
@@ -139,8 +145,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	}
 
 	// Honor --json-compact by emitting a single dense line; otherwise pretty-print.
-	// --csv is intentionally not supported here: the response is raw API JSON with
-	// no fixed column shape to flatten.
+	// (--csv is rejected up front.)
 	if cli.jsonCompact {
 		var compactJSON bytes.Buffer
 		if err := json.Compact(&compactJSON, rawJSON); err != nil {
@@ -167,71 +172,79 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 // type's own HasNext() contract so the hint agrees with how the SDK defines
 // "more pages":
 //
-//   - Checkpoint pagination: a non-empty "next" token means further pages exist,
-//     fetched by passing it as "from". The hint is suppressed on an empty page
-//     ("length" == 0) so it never claims "more results" for a page that returned
-//     nothing.
+//   - Checkpoint pagination: a non-empty "next" token means the SDK would attempt
+//     another fetch, so more results may exist. The hint is suppressed on an empty
+//     page ("length" == 0) so it never points onward from a page that returned
+//     nothing. The wording stays tentative ("may be more") because a final page can
+//     still carry a "next" token that yields an empty page when followed.
 //   - Offset pagination: more pages exist when "total" > "start" + "limit". Both
 //     "start" and "limit" come from the standard include_totals envelope; without
 //     "limit" and "total" there is no reliable offset signal, so no hint is given.
 //
 // A bare array or any body without these fields yields no hint, because there is
-// then no reliable signal that the result set was truncated.
+// then no reliable signal that the result set was truncated. Only the scalar
+// pagination fields are decoded (into a narrow struct) so a large result array is
+// never allocated just to read them; json.Number preserves the original literals.
 func paginationHint(rawJSON []byte) string {
-	decoder := json.NewDecoder(bytes.NewReader(rawJSON))
-	decoder.UseNumber()
-
-	var envelope map[string]interface{}
-	if err := decoder.Decode(&envelope); err != nil {
+	var envelope struct {
+		Start  *json.Number `json:"start"`
+		Limit  *json.Number `json:"limit"`
+		Length *json.Number `json:"length"`
+		Total  *json.Number `json:"total"`
+		Next   *string      `json:"next"`
+	}
+	if err := json.Unmarshal(rawJSON, &envelope); err != nil {
 		// A bare array or any non-object body carries no pagination metadata.
 		return ""
 	}
 
-	length, hasLength := jsonNumberInt(envelope["length"])
+	length, hasLength := jsonNumberInt(envelope.Length)
 
-	// Checkpoint pagination: a non-empty "next" token means more pages exist, but
-	// never signal "more results" for a page that came back empty.
-	if next, ok := envelope["next"].(string); ok && next != "" {
+	// Checkpoint pagination: mirror management.List.HasNext() (Next != ""), but
+	// never point onward from a page that came back empty.
+	if envelope.Next != nil && *envelope.Next != "" {
 		if hasLength && length == 0 {
 			return ""
 		}
-		return "This is one page of a larger result set (checkpoint pagination). " +
-			"More results exist; pass \"from\" set to the response's \"next\" token " +
-			"(and optionally \"take\") in --query to fetch the next page."
+		return "This is one page of a checkpoint-paginated result set. There may be " +
+			"more results; pass \"from\" set to the response's \"next\" token (and " +
+			"optionally \"take\") in --query to fetch the next page."
 	}
 
 	// Offset pagination: mirror management.List.HasNext() — more pages exist when
 	// total > start + limit.
-	total, hasTotal := jsonNumberInt(envelope["total"])
-	limit, hasLimit := jsonNumberInt(envelope["limit"])
+	total, hasTotal := jsonNumberInt(envelope.Total)
+	limit, hasLimit := jsonNumberInt(envelope.Limit)
 	if !hasTotal || !hasLimit {
 		return ""
 	}
-	start, _ := jsonNumberInt(envelope["start"]) // Absent "start" means offset 0.
+	start, _ := jsonNumberInt(envelope.Start) // Absent "start" means offset 0.
 	if start+limit >= total {
 		return ""
 	}
 
-	// "length" is the count actually returned on this page; fall back to the page
-	// window ("limit") when the field is absent.
-	returned := length
-	if !hasLength {
-		returned = limit
+	// Report the count actually returned ("length") when the envelope carries it;
+	// otherwise state only the total so the message never overstates the page size.
+	if hasLength {
+		return fmt.Sprintf(
+			"Showing %d of %d results (page starts at %d). More results exist; "+
+				"pass a higher \"page\" or \"per_page\" in --query to fetch the rest.",
+			length, total, start,
+		)
 	}
 
 	return fmt.Sprintf(
-		"Showing %d of %d results (page starts at %d). More results exist; "+
+		"This is one page of %d total results (page starts at %d). More results exist; "+
 			"pass a higher \"page\" or \"per_page\" in --query to fetch the rest.",
-		returned, total, start,
+		total, start,
 	)
 }
 
-// jsonNumberInt reports the integer value of a decoded JSON field when it is a
-// json.Number holding an integer, and false when the field is absent or not an
+// jsonNumberInt reports the integer value of a json.Number field when it is
+// present and holds an integer, and false when the field is absent (nil) or not an
 // integer number.
-func jsonNumberInt(val interface{}) (int, bool) {
-	n, ok := val.(json.Number)
-	if !ok {
+func jsonNumberInt(n *json.Number) (int, bool) {
+	if n == nil {
 		return 0, false
 	}
 	v, err := n.Int64()
