@@ -1,12 +1,11 @@
 package cli
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAPICmdInputs_FromArgs(t *testing.T) {
@@ -101,6 +100,39 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 	}
 }
 
+func TestAPICmdInputs_ValidateAndSetData(t *testing.T) {
+	t.Run("GET ignores data entirely", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodGet, RawData: `{"name":"x"}`}
+		require.NoError(t, inputs.validateAndSetData())
+		assert.Nil(t, inputs.Data)
+	})
+
+	// With --data set we use it as-is and never read stdin, so a request with
+	// --data never blocks on an open, EOF-less pipe.
+	t.Run("--data flag is used as-is over piped stdin", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodPost, RawData: `{"name":"from-flag"}`}
+		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
+			require.NoError(t, inputs.validateAndSetData())
+		})
+		assert.Equal(t, map[string]any{"name": "from-flag"}, inputs.Data)
+	})
+
+	t.Run("piped stdin is used when --data is absent", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodPost}
+		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
+			require.NoError(t, inputs.validateAndSetData())
+		})
+		assert.Equal(t, map[string]any{"name": "from-pipe"}, inputs.Data)
+	})
+
+	t.Run("invalid JSON is rejected", func(t *testing.T) {
+		inputs := &apiCmdInputs{Method: http.MethodPost, RawData: "{"}
+		err := inputs.validateAndSetData()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid JSON data provided")
+	})
+}
+
 func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 	var testCases = []struct {
 		name              string
@@ -132,6 +164,16 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 			expectedError: "",
 		},
 		{
+			name:            "it does not detect a 403 that is not an insufficient scope error",
+			inputStatusCode: 403,
+			inputResponseBody: `{
+				"statusCode": 403,
+				"error": "Forbidden",
+				"message": "Operation not allowed"
+			}`,
+			expectedError: "",
+		},
+		{
 			name:            "it correctly detects an insufficient scope error",
 			inputStatusCode: 403,
 			inputResponseBody: `{
@@ -157,12 +199,7 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			input := http.Response{
-				Body:       io.NopCloser(bytes.NewReader([]byte(testCase.inputResponseBody))),
-				StatusCode: testCase.inputStatusCode,
-			}
-
-			err := isInsufficientScopeError(&input)
+			err := isInsufficientScopeError(testCase.inputStatusCode, []byte(testCase.inputResponseBody))
 			if testCase.expectedError == "" {
 				assert.NoError(t, err)
 			} else {

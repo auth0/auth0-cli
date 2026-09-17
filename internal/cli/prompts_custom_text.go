@@ -155,7 +155,11 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 		} else {
 			inputs.Prompt = args[0]
 		}
-		inputs.Body = string(iostream.PipedInput())
+		piped, err := iostream.PipedInput()
+		if err != nil {
+			return err
+		}
+		inputs.Body = string(piped)
 
 		brandingTextToEdit, err := fetchBrandingTextContentToEdit(cmd.Context(), cli, inputs)
 		if err != nil {

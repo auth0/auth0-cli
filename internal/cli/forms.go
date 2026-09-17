@@ -837,7 +837,11 @@ func readFormData(cmd *cobra.Command) ([]byte, error) {
 		}
 		return []byte(value), nil
 	}
-	if piped := iostream.PipedInput(); len(piped) > 0 {
+	piped, err := iostream.PipedInput()
+	if err != nil {
+		return nil, err
+	}
+	if len(piped) > 0 {
 		return piped, nil
 	}
 	return nil, nil

@@ -115,6 +115,25 @@ func TestBuildErrorEnvelope(t *testing.T) {
 		assert.Zero(t, envelope.Error.Status)
 	})
 
+	t.Run("carries did-you-mean suggestions as structured details", func(t *testing.T) {
+		envelope := buildErrorEnvelope(unknownCommandError{
+			token:       "appps",
+			parent:      "auth0",
+			suggestions: []string{"apps", "apis"},
+		})
+
+		assert.Equal(t, "usage", envelope.Error.Code)
+		assert.Equal(t, `unknown command "appps" for "auth0"`, envelope.Error.Message)
+		assert.Equal(t, map[string]interface{}{"suggestions": []string{"apps", "apis"}}, envelope.Error.Details)
+	})
+
+	t.Run("omits details when the unknown command has no suggestions", func(t *testing.T) {
+		envelope := buildErrorEnvelope(unknownCommandError{token: "zzz", parent: "auth0"})
+
+		assert.Equal(t, "usage", envelope.Error.Code)
+		assert.Nil(t, envelope.Error.Details)
+	})
+
 	t.Run("marshals to the documented envelope shape", func(t *testing.T) {
 		envelope := buildErrorEnvelope(fakeManagementError{status: 429, message: "429 Too Many Requests"})
 

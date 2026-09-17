@@ -72,6 +72,15 @@ func (r *Renderer) Output(message string) {
 	}
 }
 
+// OutputPreformattedJSON writes an already-formatted JSON result to stdout,
+// always terminating with a trailing newline regardless of the output format.
+// It is for commands like `auth0 api` whose output is JSON even in the default
+// (human) format: plain Output only appends the newline in the JSON output
+// formats, so a piped human-mode result would otherwise lose its final line.
+func (r *Renderer) OutputPreformattedJSON(message string) {
+	fmt.Fprintln(r.ResultWriter, message)
+}
+
 func (r *Renderer) Newline() {
 	// A bare newline is decorative spacing; suppress it in agent mode and any
 	// JSON output mode so a caller parsing stderr never sees a stray blank line.
@@ -94,11 +103,14 @@ type ErrorEnvelope struct {
 }
 
 // ErrorBody carries the classified error. Status is omitted when the failure did
-// not come from the Auth0 Management API.
+// not come from the Auth0 Management API. Details is an optional, structured bag
+// of extra context an agent can act on (for example the "did you mean" candidates
+// for a mistyped command, under the "suggestions" key); it is omitted when empty.
 type ErrorBody struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Status  int    `json:"status,omitempty"`
+	Code    string                 `json:"code"`
+	Message string                 `json:"message"`
+	Status  int                    `json:"status,omitempty"`
+	Details map[string]interface{} `json:"details,omitempty"`
 }
 
 // ErrorJSON writes the error envelope as a single compact JSON line to stderr,

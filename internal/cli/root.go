@@ -119,18 +119,45 @@ func Execute() {
 		if v := recover(); v != nil {
 			err := fmt.Errorf("panic: %v", v)
 
-			if instrumentation.ReportException(err) {
-				fmt.Print(panicMessage) // If we're in development mode, we should throw the panic for so we have less surprises.
-			} else {
-				panic(v) // For non-developers, we'll swallow the panics.
+			if !instrumentation.ReportException(err) {
+				// Development / no crash-reporting build: re-panic so the developer
+				// sees the full stack trace.
+				panic(v)
 			}
+
+			// Release build: a recovered panic is still a failure. Report it on
+			// stderr (as a JSON envelope in JSON/agent mode) and exit non-zero, so
+			// it never masquerades as success or corrupts JSON written to stdout.
+			if cli.wantsJSONError() {
+				cli.renderer.ErrorJSON(buildErrorEnvelope(err))
+			} else {
+				fmt.Fprint(iostream.Messages, panicMessage)
+			}
+			os.Exit(exitGeneric) // nolint:gocritic
 		}
 	}()
 
-	// Resolve agent mode for the pre-parse `--help` path; real commands re-apply the parsed flag in applyAgentModeDefaults.
+	// Resolve agent mode up front so it is known on every path, including a bare
+	// `--help` (which skips PersistentPreRunE) and a flag-parse error (which fails
+	// before it). Real commands re-read the parsed flag in applyAgentModeDefaults.
 	cli.agentMode = resolveAgentMode(cli.agentClientName(), os.Args[1:])
 
-	if renderJSONHelpIfRequested(cli, rootCmd, os.Args[1:]) {
+	// Render command help as JSON in agent/JSON mode by routing through Cobra's help
+	// func, which fires for `--help`, the `help` subcommand, and a bare namespace
+	// (its RunE calls Help()), always with the target command already resolved and its
+	// flags parsed. The human help func is preserved for everyone else.
+	defaultHelpFunc := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if !cli.wantsJSONHelp() {
+			defaultHelpFunc(cmd, args)
+			return
+		}
+		renderCommandHelpJSON(cmd, cli.jsonCompact)
+	})
+
+	// The one help case the help func cannot reach is an explicit --json on a
+	// namespace, which has no such flag, so Cobra would reject it before help runs.
+	if renderNamespaceJSONHelp(rootCmd, os.Args[1:]) {
 		return
 	}
 
@@ -151,7 +178,7 @@ func Execute() {
 		if cli.wantsJSONError() {
 			cli.renderer.ErrorJSON(buildErrorEnvelope(err))
 		} else {
-			renderErrorMessage(cli.renderer, err.Error())
+			renderErrorMessage(cli.renderer, err)
 		}
 
 		instrumentation.ReportException(err)
@@ -167,6 +194,15 @@ func (c *cli) wantsJSONError() bool {
 	return c.agentMode || c.json || c.jsonCompact ||
 		c.renderer.Format == display.OutputFormatJSON ||
 		c.renderer.Format == display.OutputFormatJSONCompact
+}
+
+// wantsJSONHelp reports whether command help should be emitted as the machine-readable
+// JSON tree instead of Cobra's human help. It mirrors wantsJSONError: agent mode (from
+// the flag, env, or detection, resolved before Cobra runs) or an explicit JSON output
+// flag. Because agent mode is resolved up front in Execute, this is valid even on the
+// `--help` path, which skips PersistentPreRunE.
+func (c *cli) wantsJSONHelp() bool {
+	return c.agentMode || c.json || c.jsonCompact
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -229,6 +265,11 @@ func wrapFlagError(cmd *cobra.Command, err error) error {
 // leftover token as an unknown command. The Args check runs before
 // PersistentPreRunE, so a typo like `auth0 actions lst` fails fast without
 // attempting authentication.
+//
+// Unknown flags are not whitelisted either: an unrecognized flag on a namespace
+// (for example `auth0 actions --bogus`) fails at flag parsing as a usage error
+// (exit code 1) rather than being swallowed into a help screen that exits 0. A
+// bare namespace with only known flags (such as `--debug`) still prints help.
 func enforceUnknownSubcommand(cmd *cobra.Command) {
 	for _, sub := range cmd.Commands() {
 		enforceUnknownSubcommand(sub)
@@ -244,11 +285,29 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 		if len(args) == 0 {
 			return nil
 		}
-		return usageError{fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())}
+		return unknownCommandError{
+			token:       args[0],
+			parent:      c.CommandPath(),
+			suggestions: commandSuggestions(c, args[0]),
+		}
 	}
 	cmd.RunE = func(c *cobra.Command, _ []string) error {
 		return c.Help()
 	}
+}
+
+// commandSuggestions returns Cobra's "did you mean" candidates for a mistyped
+// token. Rejecting an unknown (sub)command as an error means Cobra's own
+// suggestion output never runs, so we ask for the same candidates it would, using
+// the minimum edit distance of 2 that Cobra applies by default.
+func commandSuggestions(cmd *cobra.Command, token string) []string {
+	if cmd.DisableSuggestions {
+		return nil
+	}
+	if cmd.SuggestionsMinimumDistance <= 0 {
+		cmd.SuggestionsMinimumDistance = 2
+	}
+	return cmd.SuggestionsFor(token)
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
@@ -434,10 +493,10 @@ func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
 	}
 }
 
-func renderErrorMessage(display *display.Renderer, errorMessage string) {
+func renderErrorMessage(display *display.Renderer, err error) {
 	display.Heading(ansi.Red("error"))
 
-	rawErrorMessage := []rune(errorMessage)
+	rawErrorMessage := []rune(err.Error())
 	if len(rawErrorMessage) == 0 {
 		display.Errorf("An unknown error occurred.")
 		display.Newline()
@@ -452,6 +511,19 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 	) + "."
 
 	display.Errorf(humanReadableErrorMessage)
+
+	// For a mistyped command, mirror Cobra's "did you mean" hint so a typo is
+	// still guided to the right command even though we now reject it as an error
+	// instead of printing help.
+	var unknownCmd unknownCommandError
+	if errors.As(err, &unknownCmd) && len(unknownCmd.suggestions) > 0 {
+		display.Newline()
+		display.Infof("Did you mean this?")
+		for _, suggestion := range unknownCmd.suggestions {
+			display.Detailf(suggestion)
+		}
+	}
+
 	display.Newline()
 }
 

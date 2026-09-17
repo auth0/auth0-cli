@@ -151,6 +151,9 @@ func addUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
+				if !canPrompt(cmd) {
+					return fmt.Errorf("missing a required flag in non-interactive mode: --roles")
+				}
 				if err := cli.getUserRoles(cmd.Context(), &inputs, userRolesToAddPickerOptions, pickUserRoles); err != nil {
 					return err
 				}
@@ -213,6 +216,9 @@ func removeUserRolesCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Roles) == 0 {
+				if !canPrompt(cmd) {
+					return fmt.Errorf("missing a required flag in non-interactive mode: --roles")
+				}
 				if err := cli.getUserRoles(cmd.Context(), &inputs, userRolesToRemovePickerOptions, pickUserRoles); err != nil {
 					return err
 				}
