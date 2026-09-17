@@ -135,10 +135,27 @@ func Execute() {
 		}
 	}()
 
-	// Resolve agent mode for the pre-parse `--help` path; real commands re-apply the parsed flag in applyAgentModeDefaults.
+	// Resolve agent mode up front so it is known on every path, including a bare
+	// `--help` (which skips PersistentPreRunE) and a flag-parse error (which fails
+	// before it). Real commands re-read the parsed flag in applyAgentModeDefaults.
 	cli.agentMode = resolveAgentMode(cli.agentClientName(), os.Args[1:])
 
-	if renderJSONHelpIfRequested(cli, rootCmd, os.Args[1:]) {
+	// Render command help as JSON in agent/JSON mode by routing through Cobra's help
+	// func, which fires for `--help`, the `help` subcommand, and a bare namespace
+	// (its RunE calls Help()), always with the target command already resolved and its
+	// flags parsed. The human help func is preserved for everyone else.
+	defaultHelpFunc := rootCmd.HelpFunc()
+	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if !cli.wantsJSONHelp() {
+			defaultHelpFunc(cmd, args)
+			return
+		}
+		renderCommandHelpJSON(cmd, cli.jsonCompact)
+	})
+
+	// The one help case the help func cannot reach is an explicit --json on a
+	// namespace, which has no such flag, so Cobra would reject it before help runs.
+	if renderNamespaceJSONHelp(rootCmd, os.Args[1:]) {
 		return
 	}
 
@@ -175,6 +192,15 @@ func (c *cli) wantsJSONError() bool {
 	return c.agentMode || c.json || c.jsonCompact ||
 		c.renderer.Format == display.OutputFormatJSON ||
 		c.renderer.Format == display.OutputFormatJSONCompact
+}
+
+// wantsJSONHelp reports whether command help should be emitted as the machine-readable
+// JSON tree instead of Cobra's human help. It mirrors wantsJSONError: agent mode (from
+// the flag, env, or detection, resolved before Cobra runs) or an explicit JSON output
+// flag. Because agent mode is resolved up front in Execute, this is valid even on the
+// `--help` path, which skips PersistentPreRunE.
+func (c *cli) wantsJSONHelp() bool {
+	return c.agentMode || c.json || c.jsonCompact
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
