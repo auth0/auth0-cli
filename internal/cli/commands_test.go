@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -203,6 +204,13 @@ func TestRenderNamespaceJSONHelp(t *testing.T) {
 		{"space-separated global flag value is skipped", []string{"apps", "--tenant", "x.auth0.com", "--json"}, "auth0 apps", true},
 		{"equals form global flag value is skipped", []string{"apps", "--tenant=x.auth0.com", "--json"}, "auth0 apps", true},
 		{"known global flag with json", []string{"apps", "--debug", "--json"}, "auth0 apps", true},
+		// The `help` subcommand carrying a JSON flag: Cobra's built-in help command
+		// rejects the unknown flag, so the guard must resolve the target and render its
+		// JSON help for a namespace, a leaf, or the root alike.
+		{"help subcommand on a namespace", []string{"help", "apps", "--json"}, "auth0 apps", true},
+		{"help subcommand with json-compact", []string{"help", "apps", "--json-compact"}, "auth0 apps", true},
+		{"help subcommand on a leaf", []string{"help", "apps", "create", "--json"}, "auth0 apps create", true},
+		{"help subcommand on the root", []string{"help", "--json"}, "auth0", false},
 	}
 
 	for _, test := range fireTests {
@@ -224,6 +232,20 @@ func TestRenderNamespaceJSONHelp(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("json-compact renders the tree as a single line", func(t *testing.T) {
+		out := captureOutput(t, func() {
+			assert.True(t, renderNamespaceJSONHelp(newTestCommandTree(), []string{"apps", "--json-compact"}))
+		})
+
+		// Compact output is a single line (one trailing newline from the encoder) and
+		// must not carry the indentation --json uses.
+		assert.Equal(t, 1, strings.Count(out, "\n"), "compact JSON should be one line")
+		assert.NotContains(t, out, "\n  ", "compact JSON should not be indented")
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes), "compact output is still valid JSON")
+	})
 
 	skipTests := []struct {
 		name string
@@ -254,7 +276,7 @@ func TestRenderCommandHelpJSON(t *testing.T) {
 	root := newTestCommandTree()
 
 	t.Run("root renders a compact overview with agent-mode prose and global flags", func(t *testing.T) {
-		out := captureOutput(t, func() { renderCommandHelpJSON(root) })
+		out := captureOutput(t, func() { renderCommandHelpJSON(root, false) })
 
 		var nodes []commandNode
 		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
@@ -282,7 +304,7 @@ func TestRenderCommandHelpJSON(t *testing.T) {
 		create, _, err := root.Find([]string{"apps", "create"})
 		assert.NoError(t, err)
 
-		out := captureOutput(t, func() { renderCommandHelpJSON(create) })
+		out := captureOutput(t, func() { renderCommandHelpJSON(create, false) })
 
 		var nodes []commandNode
 		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
@@ -314,7 +336,7 @@ func runWiredHelp(t *testing.T, c *cli, args []string) (string, error) {
 			defaultHelpFunc(cmd, a)
 			return
 		}
-		renderCommandHelpJSON(cmd)
+		renderCommandHelpJSON(cmd, c.jsonCompact)
 	})
 
 	var execErr error
@@ -348,6 +370,11 @@ func TestJSONHelpFunc(t *testing.T) {
 		{"agent-mode bare namespace via RunE", agent, []string{"apps"}, "auth0 apps"},
 		{"agent-mode bare root via RunE", agent, []string{}, "auth0"},
 		{"agent-mode help subcommand", agent, []string{"help", "apps"}, "auth0 apps"},
+		// Explicit --json on the help subcommand as a non-agent user: the built-in help
+		// command cannot parse --json, so the namespace-json guard must render it end to
+		// end instead of letting Cobra reject the flag.
+		{"explicit --json help subcommand", human, []string{"help", "apps", "--json"}, "auth0 apps"},
+		{"explicit --json help subcommand on a leaf", human, []string{"help", "apps", "create", "--json"}, "auth0 apps create"},
 	}
 
 	for _, test := range jsonPathTests {

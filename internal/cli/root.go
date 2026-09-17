@@ -150,7 +150,7 @@ func Execute() {
 			defaultHelpFunc(cmd, args)
 			return
 		}
-		renderCommandHelpJSON(cmd)
+		renderCommandHelpJSON(cmd, cli.jsonCompact)
 	})
 
 	// The one help case the help func cannot reach is an explicit --json on a
