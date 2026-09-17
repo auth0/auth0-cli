@@ -71,6 +71,6 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	if err := json.Indent(&prettyJSON, rawJSON, "", "  "); err != nil {
 		return fmt.Errorf("failed to format response: %w", err)
 	}
-	cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
+	cli.renderer.OutputPreformattedJSON(ansi.ColorizeJSON(prettyJSON.String()))
 	return nil
 }

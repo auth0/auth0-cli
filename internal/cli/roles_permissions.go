@@ -164,7 +164,7 @@ func addRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions(rs.GetScopes(), &inputs.Permissions)
+				err := cli.pickRolePermissions(cmd, rs.GetScopes(), &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -230,7 +230,7 @@ func removeRolePermissionsCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Permissions) == 0 {
-				err := cli.pickRolePermissions(rs.GetScopes(), &inputs.Permissions)
+				err := cli.pickRolePermissions(cmd, rs.GetScopes(), &inputs.Permissions)
 				if err != nil {
 					return err
 				}
@@ -271,7 +271,11 @@ func (c *cli) apiPickerOptionsWithoutAuth0(ctx context.Context) (pickerOptions, 
 	})
 }
 
-func (c *cli) pickRolePermissions(apiScopes []management.ResourceServerScope, permissions *[]string) error {
+func (c *cli) pickRolePermissions(cmd *cobra.Command, apiScopes []management.ResourceServerScope, permissions *[]string) error {
+	if !canPrompt(cmd) {
+		return fmt.Errorf("missing a required flag in non-interactive mode: --permissions")
+	}
+
 	// NOTE(cyx): We're inlining this for now since we have no generic
 	// usecase for this particular picker type yet.
 	var options []string

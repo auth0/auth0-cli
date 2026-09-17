@@ -2,8 +2,10 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -149,28 +151,6 @@ func TestExtractArgumentsIgnoresFlagValues(t *testing.T) {
 	assert.Empty(t, create.Arguments)
 }
 
-func TestHasHelpRequest(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-		want bool
-	}{
-		{"long help flag", []string{"apps", "create", "--help"}, true},
-		{"short help flag", []string{"apps", "-h"}, true},
-		{"help subcommand in command position", []string{"help", "apps"}, true},
-		{"no help request", []string{"apps", "create", "--name", "x"}, false},
-		{"help as a flag value is not a request", []string{"apps", "create", "--name", "help"}, false},
-		{"help not in command position is not the subcommand", []string{"apps", "help"}, false},
-		{"empty args", nil, false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, hasHelpRequest(tt.args))
-		})
-	}
-}
-
 func TestHasJSONRequest(t *testing.T) {
 	assert.True(t, hasJSONRequest([]string{"apps", "list", "--json"}))
 	assert.True(t, hasJSONRequest([]string{"apps", "list", "--json-compact"}))
@@ -207,257 +187,103 @@ func captureOutput(t *testing.T, fn func()) string {
 	return string(out)
 }
 
-func TestRenderJSONHelpIfRequested(t *testing.T) {
+func TestRenderNamespaceJSONHelp(t *testing.T) {
+	// RenderNamespaceJSONHelp only handles the case Cobra's help func cannot reach:
+	// an explicit --json/--json-compact on a namespace, which defines no such flag.
+	// It resolves the target with Cobra's own parser rather than re-implementing pflag.
+	fireTests := []struct {
+		name     string
+		args     []string
+		wantPath string
+		wantNote bool
+	}{
+		{"json on the root namespace", []string{"--json"}, "auth0", false},
+		{"json on a group namespace", []string{"apps", "--json"}, "auth0 apps", true},
+		{"json-compact on a group namespace", []string{"apps", "--json-compact"}, "auth0 apps", true},
+		{"help and json together on a namespace", []string{"apps", "--help", "--json"}, "auth0 apps", true},
+		{"space-separated global flag value is skipped", []string{"apps", "--tenant", "x.auth0.com", "--json"}, "auth0 apps", true},
+		{"equals form global flag value is skipped", []string{"apps", "--tenant=x.auth0.com", "--json"}, "auth0 apps", true},
+		{"known global flag with json", []string{"apps", "--debug", "--json"}, "auth0 apps", true},
+		// The `help` subcommand carrying a JSON flag: Cobra's built-in help command
+		// rejects the unknown flag, so the guard must resolve the target and render its
+		// JSON help for a namespace, a leaf, or the root alike.
+		{"help subcommand on a namespace", []string{"help", "apps", "--json"}, "auth0 apps", true},
+		{"help subcommand with json-compact", []string{"help", "apps", "--json-compact"}, "auth0 apps", true},
+		{"help subcommand on a leaf", []string{"help", "apps", "create", "--json"}, "auth0 apps create", true},
+		{"help subcommand on the root", []string{"help", "--json"}, "auth0", false},
+	}
+
+	for _, test := range fireTests {
+		t.Run("fires: "+test.name, func(t *testing.T) {
+			var fired bool
+			out := captureOutput(t, func() {
+				fired = renderNamespaceJSONHelp(newTestCommandTree(), test.args)
+			})
+			assert.True(t, fired)
+
+			var nodes []commandNode
+			assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+			assert.Len(t, nodes, 1)
+			assert.Equal(t, test.wantPath, nodes[0].Path)
+			if test.wantNote {
+				assert.Equal(t, rawAPIFallbackNote, nodes[0].Note, "a namespace's help is detailed")
+			} else {
+				assert.Empty(t, nodes[0].Note, "the root overview does not carry the note")
+			}
+		})
+	}
+
+	t.Run("json-compact renders the tree as a single line", func(t *testing.T) {
+		out := captureOutput(t, func() {
+			assert.True(t, renderNamespaceJSONHelp(newTestCommandTree(), []string{"apps", "--json-compact"}))
+		})
+
+		// Compact output is a single line (one trailing newline from the encoder) and
+		// must not carry the indentation --json uses.
+		assert.Equal(t, 1, strings.Count(out, "\n"), "compact JSON should be one line")
+		assert.NotContains(t, out, "\n  ", "compact JSON should not be indented")
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes), "compact output is still valid JSON")
+	})
+
+	skipTests := []struct {
+		name string
+		args []string
+	}{
+		{"no json flag at all", []string{"apps"}},
+		{"json on a leaf command falls through to Cobra", []string{"apps", "create", "--json"}},
+		{"help and json on a leaf falls through to Cobra", []string{"apps", "create", "--help", "--json"}},
+		{"mistyped subcommand leaves a positional", []string{"apps", "lst", "--json"}},
+		{"positional after a space-separated flag value", []string{"apps", "--tenant", "foo", "lst", "--json"}},
+		{"unknown flag on the namespace errors in parsing", []string{"apps", "--bogus", "--json"}},
+		{"version wins over json", []string{"--version", "--json"}},
+	}
+
+	for _, test := range skipTests {
+		t.Run("skips: "+test.name, func(t *testing.T) {
+			var fired bool
+			out := captureOutput(t, func() {
+				fired = renderNamespaceJSONHelp(newTestCommandTree(), test.args)
+			})
+			assert.False(t, fired)
+			assert.Empty(t, out)
+		})
+	}
+}
+
+func TestRenderCommandHelpJSON(t *testing.T) {
 	root := newTestCommandTree()
 
-	t.Run("does not fire without a help request", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("does not fire for help without json or env", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create", "--help"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("explicit --help --json on a leaf is detailed and carries the note", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create", "--help", "--json"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Len(t, nodes, 1)
-		assert.Equal(t, "auth0 apps create", nodes[0].Path)
-		assert.NotEmpty(t, nodes[0].Flags, "a specific command's help should be detailed")
-		assert.Equal(t, rawAPIFallbackNote, nodes[0].Note)
-	})
-
-	t.Run("agent mode help needs no --json flag", func(t *testing.T) {
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "create", "--help"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Equal(t, "auth0 apps create", nodes[0].Path)
-	})
-
-	t.Run("bare invocation in agent mode renders root JSON help", func(t *testing.T) {
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Equal(t, "auth0", nodes[0].Path)
-	})
-
-	t.Run("known-flag-only invocation in agent mode renders root JSON help", func(t *testing.T) {
-		// A recognized global flag with no command (for example `auth0 --debug`)
-		// is still an implicit help request.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--debug"})
-		})
-		assert.True(t, fired)
-		assert.Contains(t, out, "\"auth0\"")
-	})
-
-	t.Run("unknown flag on the root in agent mode is not implicit help", func(t *testing.T) {
-		// `auth0 --bogus` must run so cobra reports the unknown flag as a usage
-		// error, rather than being answered with help.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--bogus"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("unknown flag on a namespace in agent mode is not implicit help", func(t *testing.T) {
-		// `auth0 apps --bogus` must run so cobra reports the unknown flag as a
-		// usage error, rather than being swallowed into that namespace's help.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--bogus"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("known flag on a namespace in agent mode renders that namespace's JSON help", func(t *testing.T) {
-		// `auth0 apps --debug` has no unknown token, so it stays implicit help.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--debug"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Equal(t, "auth0 apps", nodes[0].Path)
-	})
-
-	t.Run("bare invocation without agent mode does not fire", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("version flag in agent mode does not render help", func(t *testing.T) {
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"--version"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("a command token in agent mode is not implicit help", func(t *testing.T) {
-		// A (possibly mistyped) command must run so it can succeed or report an
-		// unknown-command error itself, rather than being swallowed by help.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"badcmd"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("bare namespace in agent mode renders that namespace's JSON help", func(t *testing.T) {
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Len(t, nodes, 1)
-		assert.Equal(t, "auth0 apps", nodes[0].Path)
-		assert.Equal(t, rawAPIFallbackNote, nodes[0].Note, "a namespace's help is detailed")
-	})
-
-	t.Run("bare namespace with a space-separated global flag value renders JSON help", func(t *testing.T) {
-		// Here root.Find leaves "my.auth0.com" as a leftover token; it must be read
-		// as --tenant's value, not a named subcommand, so the JSON tree still fires.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--tenant", "my.auth0.com"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Len(t, nodes, 1)
-		assert.Equal(t, "auth0 apps", nodes[0].Path)
-	})
-
-	t.Run("the equals form of a global flag value also renders namespace JSON help", func(t *testing.T) {
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--tenant=my.auth0.com"})
-		})
-		assert.True(t, fired)
-		assert.Contains(t, out, "\"auth0 apps\"")
-	})
-
-	t.Run("--json-compact triggers namespace JSON help outside agent mode", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "--json-compact"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Len(t, nodes, 1)
-		assert.Equal(t, "auth0 apps", nodes[0].Path)
-	})
-
-	t.Run("--json-compact renders detailed leaf help outside agent mode", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create", "--help", "--json-compact"})
-		})
-		assert.True(t, fired)
-
-		var nodes []commandNode
-		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
-		assert.Equal(t, "auth0 apps create", nodes[0].Path)
-	})
-
-	t.Run("unknown subcommand under a namespace is not implicit help", func(t *testing.T) {
-		// `auth0 apps lst` must run so the namespace reports "unknown command".
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "lst"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("a positional after a space-separated flag value is not implicit help", func(t *testing.T) {
-		// After skipping --tenant's value, "lst" remains a positional, so the
-		// namespace must run and report "unknown command" rather than print help.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--tenant", "foo", "lst"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("a runnable leaf in agent mode is not implicit help", func(t *testing.T) {
-		// `auth0 apps show` must execute, not print help.
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "show"})
-		})
-		assert.False(t, fired)
-		assert.Empty(t, out)
-	})
-
-	t.Run("root help describes agent mode and lists the global flags", func(t *testing.T) {
-		t.Setenv(agentModeEnvVar, "")
-		var fired bool
-		out := captureOutput(t, func() {
-			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"--help", "--json"})
-		})
-		assert.True(t, fired)
+	t.Run("root renders a compact overview with agent-mode prose and global flags", func(t *testing.T) {
+		out := captureOutput(t, func() { renderCommandHelpJSON(root, false) })
 
 		var nodes []commandNode
 		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
 		assert.Len(t, nodes, 1)
 		assert.Equal(t, "auth0", nodes[0].Path)
 
-		// The root help is the one place an agent learns the mode's output
-		// contract, since it is no longer announced on every command. It carries
-		// the agent-mode contract alongside the existing automation guidance.
+		// The root help is the one place an agent learns the mode's output contract.
 		assert.Contains(t, nodes[0].Description, agentModeHelp)
 		assert.Contains(t, nodes[0].Description, "For Agents and Automation")
 
@@ -473,32 +299,124 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.True(t, ok)
 		assert.Empty(t, apps.Flags, "subcommands in the overview should not be detailed")
 	})
+
+	t.Run("a specific command renders detailed help carrying the note", func(t *testing.T) {
+		create, _, err := root.Find([]string{"apps", "create"})
+		assert.NoError(t, err)
+
+		out := captureOutput(t, func() { renderCommandHelpJSON(create, false) })
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Len(t, nodes, 1)
+		assert.Equal(t, "auth0 apps create", nodes[0].Path)
+		assert.NotEmpty(t, nodes[0].Flags, "a specific command's help should be detailed")
+		assert.Equal(t, rawAPIFallbackNote, nodes[0].Note)
+	})
 }
 
-func TestFlagTokenIsKnown(t *testing.T) {
-	root := newTestCommandTree()
-	apps, _, err := root.Find([]string{"apps"})
-	assert.NoError(t, err)
+// runWiredHelp mirrors Execute's help wiring over a test tree: it resolves agent mode,
+// installs the JSON-aware help func, runs the namespace-json guard, then executes the
+// command. It returns whatever was written to iostream.Output and the execution error,
+// so tests can drive the real --help/bare-namespace paths end to end.
+func runWiredHelp(t *testing.T, c *cli, args []string) (string, error) {
+	t.Helper()
 
-	tests := []struct {
-		name  string
-		cmd   *cobra.Command
-		token string
-		want  bool
+	root := newTestCommandTree()
+	root.SilenceUsage = true
+	root.SilenceErrors = true
+	enforceUnknownSubcommand(root)
+	root.SetFlagErrorFunc(wrapFlagError)
+
+	c.agentMode = resolveAgentMode(c.agentClientName(), args)
+
+	defaultHelpFunc := root.HelpFunc()
+	root.SetHelpFunc(func(cmd *cobra.Command, a []string) {
+		if !c.wantsJSONHelp() {
+			defaultHelpFunc(cmd, a)
+			return
+		}
+		renderCommandHelpJSON(cmd, c.jsonCompact)
+	})
+
+	var execErr error
+	out := captureOutput(t, func() {
+		// Route Cobra's own (human) help to the captured stream too, so tests can
+		// assert on it; the JSON path already writes to iostream.Output.
+		root.SetOut(iostream.Output)
+		root.SetErr(iostream.Output)
+		if renderNamespaceJSONHelp(root, args) {
+			return
+		}
+		root.SetArgs(args)
+		execErr = root.Execute()
+	})
+	return out, execErr
+}
+
+func TestJSONHelpFunc(t *testing.T) {
+	agent := func() *cli { return &cli{detectedAgent: "claude-code"} }
+	human := func() *cli { return &cli{detectedAgent: "human"} }
+
+	jsonPathTests := []struct {
+		name     string
+		cli      func() *cli
+		args     []string
+		wantPath string
 	}{
-		{"known persistent flag on root", root, "--debug", true},
-		{"known persistent flag inherited by namespace", apps, "--debug", true},
-		{"known persistent flag with value", apps, "--tenant=example", true},
-		{"unknown long flag on root", root, "--bogus", false},
-		{"unknown long flag on namespace", apps, "--bogus", false},
-		{"unknown shorthand", apps, "-x", false},
-		{"bare double dash is not unknown", apps, "--", true},
-		{"bare single dash is not unknown", apps, "-", true},
+		{"agent-mode --help on the root", agent, []string{"--help"}, "auth0"},
+		{"agent-mode --help on a namespace", agent, []string{"apps", "--help"}, "auth0 apps"},
+		{"agent-mode --help on a leaf", agent, []string{"apps", "create", "--help"}, "auth0 apps create"},
+		{"agent-mode bare namespace via RunE", agent, []string{"apps"}, "auth0 apps"},
+		{"agent-mode bare root via RunE", agent, []string{}, "auth0"},
+		{"agent-mode help subcommand", agent, []string{"help", "apps"}, "auth0 apps"},
+		// Explicit --json on the help subcommand as a non-agent user: the built-in help
+		// command cannot parse --json, so the namespace-json guard must render it end to
+		// end instead of letting Cobra reject the flag.
+		{"explicit --json help subcommand", human, []string{"help", "apps", "--json"}, "auth0 apps"},
+		{"explicit --json help subcommand on a leaf", human, []string{"help", "apps", "create", "--json"}, "auth0 apps create"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, flagTokenIsKnown(tt.cmd, tt.token))
+	for _, test := range jsonPathTests {
+		t.Run("json help: "+test.name, func(t *testing.T) {
+			t.Setenv(agentModeEnvVar, "")
+			out, err := runWiredHelp(t, test.cli(), test.args)
+			assert.NoError(t, err)
+
+			var nodes []commandNode
+			assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+			assert.Len(t, nodes, 1)
+			assert.Equal(t, test.wantPath, nodes[0].Path)
+		})
+	}
+
+	t.Run("human --help falls through to Cobra's help, not JSON", func(t *testing.T) {
+		t.Setenv(agentModeEnvVar, "")
+		out, err := runWiredHelp(t, human(), []string{"apps", "--help"})
+		assert.NoError(t, err)
+
+		var nodes []commandNode
+		assert.Error(t, json.Unmarshal([]byte(out), &nodes), "human help is not JSON")
+		assert.Contains(t, out, "Manage resources for applications")
+	})
+
+	usageErrTests := []struct {
+		name string
+		args []string
+	}{
+		{"unknown flag on a namespace", []string{"apps", "--bogus"}},
+		{"mistyped subcommand", []string{"apps", "lst"}},
+	}
+
+	for _, test := range usageErrTests {
+		t.Run("usage error: "+test.name, func(t *testing.T) {
+			t.Setenv(agentModeEnvVar, "")
+			_, err := runWiredHelp(t, agent(), test.args)
+			assert.Error(t, err)
+
+			var usageErr usageError
+			assert.True(t, errors.As(err, &usageErr))
+			assert.Equal(t, "usage", errorClass(err))
 		})
 	}
 }

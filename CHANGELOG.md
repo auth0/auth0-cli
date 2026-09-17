@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Emit a machine-readable JSON error envelope on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text. The envelope carries a `code` classifying the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`) and a `status` with the HTTP status when the error came from the Auth0 Management API, for example `{"error":{"code":"not_found","message":"...","status":404}}`. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure
 - Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
+- Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
 
 ### Changed
 - Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
 
 ### Fixed
+- Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
 - Read piped stdin without panicking when the read fails; a broken or unreadable pipe now surfaces as a normal error instead of crashing the CLI
 - Do not read stdin on `auth0 api` (or any `--data`-driven command) when `--data` is set, so a request that supplies its body via the flag no longer blocks forever on an open, EOF-less pipe (the common agent and CI case)
 - Preserve the real error body of a `403` response from `auth0 api` that is not an insufficient-scope error, instead of losing it and falling back to a bare `Forbidden`
