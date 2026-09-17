@@ -288,6 +288,37 @@ func TestActionsDiffCmd(t *testing.T) {
 		assert.EqualError(t, cmd.Execute(), "missing required flags in non-interactive mode: --version1 and --version2")
 	})
 
+	t.Run("errors when only one version flag is supplied", func(t *testing.T) {
+		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		actionAPI := mock.NewMockActionAPI(ctrl)
+		actionAPI.EXPECT().
+			Versions(gomock.Any(), actionID, gomock.Any()).
+			Return(&management.ActionVersionList{
+				List: management.List{Total: 2},
+				Versions: []*management.ActionVersion{
+					{Number: 1, Code: auth0.String("function () { return 1; }")},
+					{Number: 2, Code: auth0.String("function () { return 2; }")},
+				},
+			}, nil)
+
+		cli := &cli{
+			renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: io.Discard},
+			api:      &auth0.API{Action: actionAPI},
+		}
+		// Interactive mode: the partial flag must still be rejected rather than
+		// silently overridden by the version picker.
+		cli.noInput = false
+
+		cmd := diffActionCmd(cli)
+		cmd.SetArgs([]string{actionID, "--version1", "1"})
+		prepareInteractivity(cmd)
+
+		assert.EqualError(t, cmd.Execute(), "provide both --version1 and --version2, or neither")
+	})
+
 	t.Run("diffs the two versions supplied via flags", func(t *testing.T) {
 		actionID := "1221c74c-cfd6-40db-af13-7bc9bb1c38db"
 		ctrl := gomock.NewController(t)

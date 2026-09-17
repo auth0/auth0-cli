@@ -27,9 +27,14 @@ type DataJSONHandler struct {
 	manager *openapi.SchemaManager
 }
 
+// newSchemaManager builds the schema manager backing --data validation. It is a
+// package var so tests can inject a fixture-backed manager and keep the unit
+// suite off the network.
+var newSchemaManager = openapi.NewSchemaManager
+
 // NewDataJSONHandler creates a new data JSON handler.
 func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
-	manager, err := openapi.NewSchemaManager()
+	manager, err := newSchemaManager()
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +69,14 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data j
 			err:     fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors)),
 			details: marshalFieldErrors(result.FieldErrors),
 		}
+	}
+
+	// Fail closed on an unrecorded outcome. ValidateRequest never returns
+	// StatusUnknown today, so this only guards against a future path that forgets
+	// to set a status; without it a zero-value result would slip through as an
+	// unvalidated send instead of surfacing the bug.
+	if result.Status == openapi.StatusUnknown {
+		return nil, false, fmt.Errorf("schema validation returned no result for %s %s", method, path)
 	}
 
 	return jsonData, result.Status == openapi.StatusValid, nil

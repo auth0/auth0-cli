@@ -241,7 +241,7 @@ func (r *Renderer) EventDeliveryPrompt(deliveries []*management.EventDelivery, c
 /*----------------------------------------------- Show Delivery ------------------------------------------------.*/
 
 func (r *Renderer) ShowDelivery(delivery *management.EventDelivery) {
-	if r.Format == OutputFormatJSON {
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		r.JSONResult(delivery)
 		return
 	}
@@ -451,7 +451,7 @@ func (v *eventStreamStatsRowView) Object() interface{} {
 }
 
 func (r *Renderer) RenderEventStreamStats(stats *management.EventStreamStats) {
-	if r.Format == OutputFormatJSON {
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
 		r.JSONResult(stats)
 		return
 	}
@@ -542,11 +542,15 @@ func safeMetric(values []int, i int) int {
 /*----------------------------------------------- Utils ------------------------------------------------.*/
 
 func (r *Renderer) ConfirmPrompt(prompt string) bool {
-	fmt.Printf("\n%s [y/N]: ", prompt)
+	// The prompt, the echoed keystroke and the error lines are interactive
+	// chrome, not command output, so write them to the message stream (stderr).
+	// Sending them to stdout would corrupt a piped result, in particular the JSON
+	// an agent reads, and the prompt would land in the middle of that payload.
+	fmt.Fprintf(r.MessageWriter, "\n%s [y/N]: ", prompt)
 
 	ContTty, err := tty.Open()
 	if err != nil {
-		fmt.Println("Error: Unable to open TTY for user input.")
+		fmt.Fprintln(r.MessageWriter, "Error: Unable to open TTY for user input.")
 		return false
 	}
 	defer func(ContTty *tty.TTY) {
@@ -556,10 +560,10 @@ func (r *Renderer) ConfirmPrompt(prompt string) bool {
 	rn, err := ContTty.ReadRune()
 	if err != nil {
 		// No readable TTY (an agent or piped run): do not confirm the action.
-		fmt.Println("Error: Unable to read user input.")
+		fmt.Fprintln(r.MessageWriter, "Error: Unable to read user input.")
 		return false
 	}
-	fmt.Printf("%c\n", rn)
+	fmt.Fprintf(r.MessageWriter, "%c\n", rn)
 
 	return rn == 'y' || rn == 'Y'
 }

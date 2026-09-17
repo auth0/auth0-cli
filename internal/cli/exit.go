@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 
@@ -36,6 +37,24 @@ type usageError struct {
 func (e usageError) Error() string { return e.err.Error() }
 
 func (e usageError) Unwrap() error { return e.err }
+
+// unknownCommandError is the usage failure for a mistyped command or subcommand
+// (for example `auth0 appps` or `auth0 apps shoe`). Its Error() stays a single
+// line so the JSON error envelope keeps a clean, machine-parseable message, while
+// the "did you mean" suggestions are carried separately so the human renderer can
+// show a hint block without polluting the agent-facing message. It unwraps to a
+// usageError so it classifies as "usage" for the envelope, exit code and analytics.
+type unknownCommandError struct {
+	token       string
+	parent      string
+	suggestions []string
+}
+
+func (e unknownCommandError) Error() string {
+	return fmt.Sprintf("unknown command %q for %q", e.token, e.parent)
+}
+
+func (e unknownCommandError) Unwrap() error { return usageError{err: errors.New(e.Error())} }
 
 // authError wraps an authentication/authorization setup failure (expired token
 // in --no-input mode, corrupted token, failed credential refresh) so it
@@ -242,15 +261,28 @@ func errorHTTPStatus(err error) int {
 // buildErrorEnvelope assembles the machine-readable error emitted on stderr in
 // JSON/agent mode.
 func buildErrorEnvelope(err error) display.ErrorEnvelope {
-	return display.ErrorEnvelope{
-		Error: display.ErrorBody{
-			Code:    errorClass(err),
-			Reason:  errorReason(err),
-			Message: err.Error(),
-			Status:  errorHTTPStatus(err),
-			Details: errorDetails(err),
-		},
+	body := display.ErrorBody{
+		Code:    errorClass(err),
+		Reason:  errorReason(err),
+		Message: err.Error(),
+		Status:  errorHTTPStatus(err),
+		Details: errorDetails(err),
 	}
+
+	// For a mistyped command, carry the "did you mean" candidates as structured
+	// details so an agent gets the same hint the human renderer prints, without
+	// having to parse it out of the message. Only fill this in when no error in
+	// the chain already contributed richer details via errorDetailer.
+	if body.Details == nil {
+		var unknownCmd unknownCommandError
+		if errors.As(err, &unknownCmd) && len(unknownCmd.suggestions) > 0 {
+			if raw, marshalErr := json.Marshal(map[string]interface{}{"suggestions": unknownCmd.suggestions}); marshalErr == nil {
+				body.Details = raw
+			}
+		}
+	}
+
+	return display.ErrorEnvelope{Error: body}
 }
 
 // managementHTTPStatus extracts the HTTP status from a go-auth0 management API

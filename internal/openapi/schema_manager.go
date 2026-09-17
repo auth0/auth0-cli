@@ -36,6 +36,13 @@ func NewSchemaManager() (*SchemaManager, error) {
 	return &SchemaManager{doc: doc}, nil
 }
 
+// NewSchemaManagerFromDoc creates a schema manager backed by an already-loaded
+// document instead of fetching one. Tests use it with a fixture document so the
+// unit suite validates locally and never reaches the network.
+func NewSchemaManagerFromDoc(doc *openapi3.T) *SchemaManager {
+	return &SchemaManager{doc: doc}
+}
+
 // GetOperationSchema returns the schema information for an operation.
 func (sm *SchemaManager) GetOperationSchema(method, path string) (*OperationSchema, error) {
 	operation, err := FindOperation(sm.doc, method, path)
@@ -128,7 +135,10 @@ func (op *OperationSchema) FormatAsText() string {
 	return sb.String()
 }
 
-// ValidateRequest validates a request using openapi3filter.
+// ValidateRequest checks a --data payload against the operation's OpenAPI
+// request schema by visiting the parsed JSON with kin-openapi (VisitJSON).
+// JSON syntax is always checked first, so malformed input is reported as
+// StatusInvalid even when the operation defines no schema to validate against.
 func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*ValidationResult, error) {
 	result := &ValidationResult{Status: StatusValid, Errors: []string{}}
 
@@ -137,17 +147,19 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 		return nil, fmt.Errorf("operation not found: %w", err)
 	}
 
-	requestSchema := GetRequestSchema(operation)
-	if requestSchema == nil || requestSchema.Value == nil {
-		result.Status = StatusNoSchema
-		return result, nil
-	}
-
-	// Parse the JSON body.
+	// Parse the JSON body first. Well-formedness is independent of having a
+	// schema, so malformed input fails locally even on schema-less operations
+	// instead of being shipped to the API as opaque bytes.
 	var data interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		result.Status = StatusInvalid
 		result.addFieldErrors([]FieldError{{Reason: fmt.Sprintf("Invalid JSON: %v", err)}})
+		return result, nil
+	}
+
+	requestSchema := GetRequestSchema(operation)
+	if requestSchema == nil || requestSchema.Value == nil {
+		result.Status = StatusNoSchema
 		return result, nil
 	}
 
@@ -175,8 +187,12 @@ type FieldError struct {
 type ValidationStatus int
 
 const (
+	// StatusUnknown is the zero value and means no outcome was recorded. It exists
+	// so a ValidationResult{} left unset fails closed (never reads as StatusValid)
+	// rather than silently passing a payload through as validated.
+	StatusUnknown ValidationStatus = iota
 	// StatusValid means a request schema existed and the payload satisfied it.
-	StatusValid ValidationStatus = iota
+	StatusValid
 	// StatusInvalid means a request schema existed and the payload failed it (see Errors).
 	StatusInvalid
 	// StatusNoSchema means the operation defines no request schema, so the payload

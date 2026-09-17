@@ -51,78 +51,6 @@ var (
 		Help:       "Network ACL rule configuration in JSON format (required for non-interactive mode).",
 		IsRequired: true,
 	}
-
-	networkACLRuleAction = Flag{
-		Name:     "Action",
-		LongForm: "action",
-		Help:     "Action for the rule (block, allow, log, redirect)",
-	}
-
-	networkACLRedirectURI = Flag{
-		Name:     "RedirectURI",
-		LongForm: "redirect-uri",
-		Help:     "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
-	}
-
-	networkACLScope = Flag{
-		Name:     "Scope",
-		LongForm: "scope",
-		Help:     "Scope of the rule (management, authentication, tenant)",
-	}
-
-	networkACLASNs = Flag{
-		Name:     "ASNs",
-		LongForm: "asns",
-		Help:     "Comma-separated list of ASNs to match (Eg. 64496,64497,64498)",
-	}
-
-	networkACLCountryCodes = Flag{
-		Name:     "CountryCodes",
-		LongForm: "country-codes",
-		Help:     "Comma-separated list of country codes to match (Eg. US,CA,MX)",
-	}
-
-	networkACLSubdivisionCodes = Flag{
-		Name:     "SubdivisionCodes",
-		LongForm: "subdivision-codes",
-		Help:     "Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)",
-	}
-
-	networkACLIPv4CIDRs = Flag{
-		Name:     "IPv4CIDRs",
-		LongForm: "ipv4-cidrs",
-		Help:     "Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)",
-	}
-
-	networkACLIPv6CIDRs = Flag{
-		Name:     "IPv6CIDRs",
-		LongForm: "ipv6-cidrs",
-		Help:     "Comma-separated list of IPv6 CIDR ranges (Eg. 2001:db8::/32,2001:db8:1234::/48)",
-	}
-
-	networkACLJA3Fingerprints = Flag{
-		Name:     "JA3Fingerprints",
-		LongForm: "ja3-fingerprints",
-		Help:     "Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)",
-	}
-
-	networkACLJA4Fingerprints = Flag{
-		Name:     "JA4Fingerprints",
-		LongForm: "ja4-fingerprints",
-		Help:     "Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)",
-	}
-
-	networkACLUserAgents = Flag{
-		Name:     "UserAgents",
-		LongForm: "user-agents",
-		Help:     "Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)",
-	}
-
-	networkACLAuth0Managed = Flag{
-		Name:     "Auth0Managed",
-		LongForm: "auth0-managed",
-		Help:     "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
-	}
 )
 
 // networkACLBasicInputs holds the flag-driven fields shared by create and update.
@@ -887,7 +815,6 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	networkACLActive.RegisterString(cmd, &inputs.ActiveStr, "")
 	networkACLPriority.RegisterInt(cmd, &inputs.Priority, 0)
 	networkACLRule.RegisterString(cmd, &inputs.RuleJSON, "")
-	registerDeprecatedRuleFlags(cmd)
 
 	return cmd
 }
@@ -999,7 +926,6 @@ To update non-interactively, supply the description, active, priority, and rule 
 	networkACLActive.RegisterStringU(cmd, &inputs.ActiveStr, "")
 	networkACLPriority.RegisterIntU(cmd, &inputs.Priority, 1)
 	networkACLRule.RegisterStringU(cmd, &inputs.RuleJSON, "")
-	registerDeprecatedRuleFlags(cmd)
 
 	return cmd
 }
@@ -1118,53 +1044,4 @@ func (c *cli) networkACLPickerOptions(ctx context.Context) (pickerOptions, error
 	}
 
 	return opts, nil
-}
-
-const deprecatedRuleFlagMessage = "use `--rule` flag to set the configuration as JSON."
-
-func registerDeprecatedRuleFlags(cmd *cobra.Command) {
-	var (
-		action       string
-		redirectURI  string
-		scope        string
-		asns         []int
-		countryCodes []string
-		subdivCodes  []string
-		ipv4CIDRs    []string
-		ipv6CIDRs    []string
-		ja3          []string
-		ja4          []string
-		userAgents   []string
-		auth0Managed []string
-	)
-
-	networkACLRuleAction.RegisterString(cmd, &action, "")
-	networkACLRedirectURI.RegisterString(cmd, &redirectURI, "")
-	networkACLScope.RegisterString(cmd, &scope, "")
-	networkACLASNs.RegisterIntSlice(cmd, &asns, nil)
-	networkACLCountryCodes.RegisterStringSlice(cmd, &countryCodes, nil)
-	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &subdivCodes, nil)
-	networkACLIPv4CIDRs.RegisterStringSlice(cmd, &ipv4CIDRs, nil)
-	networkACLIPv6CIDRs.RegisterStringSlice(cmd, &ipv6CIDRs, nil)
-	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &ja3, nil)
-	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &ja4, nil)
-	networkACLUserAgents.RegisterStringSlice(cmd, &userAgents, nil)
-	networkACLAuth0Managed.RegisterStringSlice(cmd, &auth0Managed, nil)
-
-	for _, f := range []*Flag{
-		&networkACLRuleAction,
-		&networkACLRedirectURI,
-		&networkACLScope,
-		&networkACLASNs,
-		&networkACLCountryCodes,
-		&networkACLSubdivisionCodes,
-		&networkACLIPv4CIDRs,
-		&networkACLIPv6CIDRs,
-		&networkACLJA3Fingerprints,
-		&networkACLJA4Fingerprints,
-		&networkACLUserAgents,
-		&networkACLAuth0Managed,
-	} {
-		f.Deprecate(cmd, deprecatedRuleFlagMessage)
-	}
 }
