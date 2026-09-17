@@ -212,13 +212,34 @@ func TestValidateRequest(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, result)
 
-			assert.Equal(t, tt.expectValid, result.Valid)
-
-			if !tt.expectValid {
+			if tt.expectValid {
+				assert.Equal(t, StatusValid, result.Status)
+			} else {
+				assert.Equal(t, StatusInvalid, result.Status)
 				assert.NotEmpty(t, result.Errors)
 			}
 		})
 	}
+}
+
+func TestValidateRequestReportsStatus(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	// An operation with a request schema: the payload is actually checked.
+	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{
+		"name": "my-action",
+		"supported_triggers": [{"id": "post-login", "version": "v3"}],
+		"code": "module.exports = () => {}"
+	}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusValid, result.Status, "an operation with a request schema whose payload passes is StatusValid")
+
+	// An operation that resolves but defines no request body schema: reported
+	// as StatusNoSchema (nothing to check against, sent as-is).
+	result, err = manager.ValidateRequest("DELETE", "/actions/actions/{id}", []byte(`{}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoSchema, result.Status, "an operation without a request schema is StatusNoSchema")
 }
 
 func TestValidateRequestActionUpdatePath(t *testing.T) {
@@ -231,7 +252,7 @@ func TestValidateRequestActionUpdatePath(t *testing.T) {
 	result, err := manager.ValidateRequest("PATCH", "/actions/actions/{id}", body)
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.True(t, result.Valid, "templated path should validate; errors: %v", result.Errors)
+	assert.Equal(t, StatusValid, result.Status, "templated path should validate; errors: %v", result.Errors)
 
 	// Concrete-ID path: the operation cannot be found, so ValidateRequest errors.
 	// This is exactly the trap that broke `auth0 actions update --data`.
@@ -269,7 +290,7 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(tt.body))
 			require.NoError(t, err)
-			require.False(t, result.Valid)
+			require.Equal(t, StatusInvalid, result.Status)
 			require.NotEmpty(t, result.Errors)
 
 			joined := strings.Join(result.Errors, "\n")
@@ -311,7 +332,7 @@ func TestValidateRequestReportsAllErrors(t *testing.T) {
 	// all of them, not stop at the first.
 	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{}`))
 	require.NoError(t, err)
-	require.False(t, result.Valid)
+	require.Equal(t, StatusInvalid, result.Status)
 
 	assert.GreaterOrEqual(t, len(result.Errors), 2)
 	joined := strings.Join(result.Errors, "\n")

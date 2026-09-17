@@ -15,10 +15,11 @@ import (
 // outputFlags control output or behavior, not input, so they may be combined
 // with --data. Every other input flag conflicts with a whole-payload --data.
 var outputFlags = map[string]bool{
-	"json":         true,
-	"json-compact": true,
-	"csv":          true,
-	"force":        true,
+	"json":           true,
+	"json-compact":   true,
+	"csv":            true,
+	"force":          true,
+	"reveal-secrets": true, // Display-only toggle.
 }
 
 var schemaFlag = Flag{

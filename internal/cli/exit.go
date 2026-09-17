@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/auth0/go-auth0/management"
@@ -20,9 +19,9 @@ const (
 	exitInterrupted = 130
 )
 
-// usageError wraps a command-usage failure (bad flag, unknown flag) so it maps
-// to the dedicated usage exit code. Flag parse errors are wrapped via cobra's
-// FlagErrorFunc; see buildRootCmd.
+// usageError wraps a command-usage failure (bad flag, unknown flag) so it
+// classifies as "usage" in the JSON error envelope. Flag parse errors are wrapped
+// via cobra's FlagErrorFunc; see buildRootCmd.
 type usageError struct{ err error }
 
 func (e usageError) Error() string { return e.err.Error() }
@@ -30,9 +29,9 @@ func (e usageError) Error() string { return e.err.Error() }
 func (e usageError) Unwrap() error { return e.err }
 
 // authError wraps an authentication/authorization setup failure (expired token
-// in --no-input mode, corrupted token, failed credential refresh) so it maps to
-// the auth exit code, letting agents detect "must re-authenticate" from the code
-// alone instead of scraping the message.
+// in --no-input mode, corrupted token, failed credential refresh) so it
+// classifies as "auth" in the JSON error envelope, letting agents detect "must
+// re-authenticate" from the code alone instead of scraping the message.
 type authError struct{ err error }
 
 func (e authError) Error() string { return e.err.Error() }
@@ -40,8 +39,9 @@ func (e authError) Error() string { return e.err.Error() }
 func (e authError) Unwrap() error { return e.err }
 
 // validationError wraps a client-side input failure (unreadable/malformed JSON,
-// local schema validation) so it maps to the validation exit code before any API
-// call is made, matching the class a server-side 400/422 would produce.
+// local schema validation, invalid flag values) so it classifies as "validation"
+// in the JSON error envelope before any API call is made, matching the class a
+// server-side 400/422 would produce.
 type validationError struct{ err error }
 
 func (e validationError) Error() string { return e.err.Error() }
@@ -103,23 +103,6 @@ func exitCodeForError(err error) int {
 	return exitGeneric
 }
 
-// errorDetailer lets an error contribute structured details (e.g. field-level
-// validation errors) to the JSON error envelope's "details" field.
-type errorDetailer interface {
-	ErrorDetails() json.RawMessage
-}
-
-// errorDetails extracts structured details from an error chain, if any error in
-// it implements errorDetailer.
-func errorDetails(err error) json.RawMessage {
-	var detailer errorDetailer
-	if errors.As(err, &detailer) {
-		return detailer.ErrorDetails()
-	}
-
-	return nil
-}
-
 // errorHTTPStatus returns the HTTP status carried by an error, if any.
 func errorHTTPStatus(err error) int {
 	if status, ok := managementHTTPStatus(err); ok {
@@ -137,7 +120,6 @@ func buildErrorEnvelope(err error) display.ErrorEnvelope {
 			Code:    errorClass(err),
 			Message: err.Error(),
 			Status:  errorHTTPStatus(err),
-			Details: errorDetails(err),
 		},
 	}
 }

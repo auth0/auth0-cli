@@ -130,10 +130,7 @@ func (op *OperationSchema) FormatAsText() string {
 
 // ValidateRequest validates a request using openapi3filter.
 func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*ValidationResult, error) {
-	result := &ValidationResult{
-		Valid:  true,
-		Errors: []string{},
-	}
+	result := &ValidationResult{Status: StatusValid, Errors: []string{}}
 
 	operation, err := FindOperation(sm.doc, method, path)
 	if err != nil {
@@ -142,14 +139,14 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 
 	requestSchema := GetRequestSchema(operation)
 	if requestSchema == nil || requestSchema.Value == nil {
-		// No schema to validate against.
+		result.Status = StatusNoSchema
 		return result, nil
 	}
 
 	// Parse the JSON body.
 	var data interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
-		result.Valid = false
+		result.Status = StatusInvalid
 		result.Errors = append(result.Errors, fmt.Sprintf("Invalid JSON: %v", err))
 		return result, nil
 	}
@@ -157,7 +154,7 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	// Validate against schema. MultiErrors collects every validation failure
 	// instead of stopping at the first, so the caller sees all issues at once.
 	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors()); err != nil {
-		result.Valid = false
+		result.Status = StatusInvalid
 		result.Errors = append(result.Errors, formatValidationError(err)...)
 		return result, nil
 	}
@@ -165,9 +162,23 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	return result, nil
 }
 
+// ValidationStatus describes what happened when a payload was checked against
+// the operation's OpenAPI request schema.
+type ValidationStatus int
+
+const (
+	// StatusValid means a request schema existed and the payload satisfied it.
+	StatusValid ValidationStatus = iota
+	// StatusInvalid means a request schema existed and the payload failed it (see Errors).
+	StatusInvalid
+	// StatusNoSchema means the operation defines no request schema, so the payload
+	// was not checked and is sent as-is.
+	StatusNoSchema
+)
+
 // ValidationResult contains the result of schema validation.
 type ValidationResult struct {
-	Valid  bool
+	Status ValidationStatus
 	Errors []string
 }
 
