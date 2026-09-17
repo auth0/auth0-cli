@@ -5,11 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 func TestAPICmdInputs_FromArgs(t *testing.T) {
@@ -174,28 +176,48 @@ func TestAPICmdInputs_ValidateAndSetData(t *testing.T) {
 	})
 }
 
-func TestAPICmdInputs_FromArgs_InfersPostFromPipedStdin(t *testing.T) {
+func TestAPICmdInputs_FromArgs_SingleArgumentMethod(t *testing.T) {
 	const testDomain = "example.auth0.com"
 
-	t.Run("a single-argument request with a piped body infers POST", func(t *testing.T) {
+	// A bare single-argument call must default to GET and never touch stdin, so an
+	// agent or CI run with an inherited, open, EOF-less stdin pipe cannot block. To
+	// send a piped body, a method (or --data @-) is given explicitly.
+	t.Run("a single-argument request does not block on an open, EOF-less stdin pipe", func(t *testing.T) {
+		r, w, err := os.Pipe()
+		require.NoError(t, err)
+		defer func() {
+			_ = w.Close()
+			_ = r.Close()
+		}()
+
+		original := iostream.Input
+		iostream.Input = r
+		defer func() { iostream.Input = original }()
+
+		// The write end is intentionally left open, so stdin never reaches EOF.
+		// If parseRaw read stdin to infer the method, this would hang forever.
 		inputs := &apiCmdInputs{}
-		withPipedStdin(t, `{"name":"piped"}`, func() {
-			require.NoError(t, inputs.fromArgs([]string{"clients"}, testDomain))
-		})
+		done := make(chan error, 1)
+		go func() { done <- inputs.fromArgs([]string{"clients"}, testDomain) }()
+
+		select {
+		case err := <-done:
+			require.NoError(t, err)
+			assert.Equal(t, http.MethodGet, inputs.Method)
+			assert.Equal(t, "https://"+testDomain+"/api/v2/clients", inputs.URL.String())
+			assert.Nil(t, inputs.Data)
+		case <-time.After(3 * time.Second):
+			t.Fatal("fromArgs blocked reading an open, EOF-less stdin pipe")
+		}
+	})
+
+	t.Run("a single-argument request with --data infers POST", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawData: `{"name":"x"}`}
+		require.NoError(t, inputs.fromArgs([]string{"clients"}, testDomain))
 
 		assert.Equal(t, http.MethodPost, inputs.Method)
 		assert.Equal(t, "https://"+testDomain+"/api/v2/clients", inputs.URL.String())
-		assert.Equal(t, map[string]any{"name": "piped"}, inputs.Data)
-	})
-
-	t.Run("a single-argument request with no body stays GET", func(t *testing.T) {
-		inputs := &apiCmdInputs{}
-		withPipedStdin(t, "", func() {
-			require.NoError(t, inputs.fromArgs([]string{"clients"}, testDomain))
-		})
-
-		assert.Equal(t, http.MethodGet, inputs.Method)
-		assert.Nil(t, inputs.Data)
+		assert.Equal(t, map[string]any{"name": "x"}, inputs.Data)
 	})
 }
 
@@ -220,24 +242,22 @@ func TestAPICmdInputs_QueryParams(t *testing.T) {
 		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?q=name%3Dfoo", inputs.URL.String())
 	})
 
-	// A comma-separated value (the common `fields=a,b` idiom) must be preserved as
-	// a single value, not split into separate params. This guards the flag-type
-	// change from stringToString to a string array against a regression.
-	t.Run("a comma-separated value is kept as one value", func(t *testing.T) {
-		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=name,email"}}
-		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
-		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=name%2Cemail", inputs.URL.String())
+	// The historical comma-separated multi-pair form must still expand to separate
+	// params, so a script relying on the old stringToString behavior keeps working.
+	t.Run("a comma-separated value expands to multiple params", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"from=20221101,to=20221118"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "stats/daily"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/stats/daily?from=20221101&to=20221118", inputs.URL.String())
 	})
 
-	// The registered flag must deliver a comma-separated value whole (StringArray),
-	// not CSV-split it (as StringSlice/stringToString would), or the parser above
-	// would wrongly reject the second segment.
+	// The registered flag delivers a comma-separated value whole (StringArray);
+	// the comma split into pairs happens later, in validateAndSetEndpoint.
 	t.Run("the -q flag delivers a comma-separated value unsplit", func(t *testing.T) {
 		cmd := apiCmd(&cli{renderer: &display.Renderer{}})
-		require.NoError(t, cmd.Flags().Parse([]string{"-q", "fields=name,email"}))
+		require.NoError(t, cmd.Flags().Parse([]string{"-q", "from=1,to=2"}))
 		got, err := cmd.Flags().GetStringArray("query")
 		require.NoError(t, err)
-		assert.Equal(t, []string{"fields=name,email"}, got)
+		assert.Equal(t, []string{"from=1,to=2"}, got)
 	})
 
 	t.Run("the -q flag accumulates repeated values", func(t *testing.T) {

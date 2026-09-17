@@ -19,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
 - Read piped stdin without panicking when the read fails; a broken or unreadable pipe now surfaces as a normal error instead of crashing the CLI
 - Do not read stdin on `auth0 api` (or any `--data`-driven command) when `--data` is set, so a request that supplies its body via the flag no longer blocks forever on an open, EOF-less pipe (the common agent and CI case)
-- Infer `POST` on `auth0 api` when a body is piped in with no method given (for example `cat data.json | auth0 api clients`), instead of defaulting to `GET` and silently dropping the piped body
 - Send every value of a repeated `-q`/`--query` param on `auth0 api` (for example `-q "fields=a" -q "fields=b"`), instead of keeping only the last one
 - Preserve the real error body of a `403` response from `auth0 api` that is not an insufficient-scope error, instead of losing it and falling back to a bare `Forbidden`
 - Quit the `auth0 logs tail` follow loop and decline confirmation prompts cleanly when no interactive terminal is available (an agent or piped run), instead of panicking

@@ -65,12 +65,6 @@ type (
 		Method         string
 		URL            *url.URL
 		Data           interface{}
-
-		// The pipedBody field memoizes the stdin read so the body can be consulted
-		// both for method inference (parseRaw) and for the payload
-		// (validateAndSetData) without draining stdin twice.
-		pipedBody     []byte
-		pipedBodyRead bool
 	}
 )
 
@@ -237,9 +231,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 }
 
 func (i *apiCmdInputs) fromArgs(args []string, domain string) error {
-	if err := i.parseRaw(args); err != nil {
-		return err
-	}
+	i.parseRaw(args)
 
 	if err := i.validateAndSetMethod(); err != nil {
 		return err
@@ -295,7 +287,7 @@ func (i *apiCmdInputs) resolveData() ([]byte, error) {
 	if i.RawData != "" {
 		switch {
 		case i.RawData == "@-" || i.RawData == "-":
-			data, err := i.readPipedBody()
+			data, err := iostream.PipedInput()
 			if err != nil {
 				return nil, err
 			}
@@ -315,25 +307,7 @@ func (i *apiCmdInputs) resolveData() ([]byte, error) {
 		}
 	}
 
-	return i.readPipedBody()
-}
-
-// readPipedBody reads stdin once and memoizes the result so the same pipe can be
-// consulted for both method inference and the request body.
-func (i *apiCmdInputs) readPipedBody() ([]byte, error) {
-	if i.pipedBodyRead {
-		return i.pipedBody, nil
-	}
-
-	data, err := iostream.PipedInput()
-	if err != nil {
-		return nil, err
-	}
-
-	i.pipedBody = data
-	i.pipedBodyRead = true
-
-	return data, nil
+	return iostream.PipedInput()
 }
 
 func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
@@ -344,13 +318,18 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 
 	params := endpoint.Query()
 	for _, raw := range i.RawQueryParams {
-		key, value, found := strings.Cut(raw, "=")
-		if !found {
-			return fmt.Errorf("invalid query parameter %q: expected key=value", raw)
+		// Split each value on commas so the historical comma-separated multi-pair
+		// form (-q "from=1,to=2") still expands to multiple params. A repeated flag
+		// (-q "fields=a" -q "fields=b") works too, since every occurrence is kept.
+		for _, pair := range strings.Split(raw, ",") {
+			key, value, found := strings.Cut(pair, "=")
+			if !found {
+				return fmt.Errorf("invalid query parameter %q: expected key=value", pair)
+			}
+			// Add (not Set) so a repeated key sends every value instead of the last
+			// one overwriting the rest.
+			params.Add(key, value)
 		}
-		// Add (not Set) so a repeated flag (-q "fields=a" -q "fields=b") sends
-		// both values instead of the last one overwriting the rest.
-		params.Add(key, value)
 	}
 	endpoint.RawQuery = params.Encode()
 
@@ -359,23 +338,15 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	return nil
 }
 
-func (i *apiCmdInputs) parseRaw(args []string) error {
+func (i *apiCmdInputs) parseRaw(args []string) {
 	lenArgs := len(args)
 	if lenArgs == 1 {
+		// A bare single-argument call defaults to GET and never reads stdin, so an
+		// agent or CI run with an inherited, open, EOF-less stdin pipe cannot block.
+		// POST is inferred only from an explicit --data value; to send a piped body
+		// give a method (cat data.json | auth0 api post clients) or use --data @-.
 		i.RawMethod = http.MethodGet
-
-		hasBody := i.RawData != ""
-		if !hasBody {
-			// A single-argument request with a piped body is a create/update, so
-			// infer POST. Peek stdin now; the read is memoized for the body step.
-			body, err := i.readPipedBody()
-			if err != nil {
-				return err
-			}
-			hasBody = len(body) > 0
-		}
-
-		if hasBody {
+		if i.RawData != "" {
 			i.RawMethod = http.MethodPost
 		}
 	} else {
@@ -383,8 +354,6 @@ func (i *apiCmdInputs) parseRaw(args []string) error {
 	}
 
 	i.RawURI = args[lenArgs-1]
-
-	return nil
 }
 
 // newAPIResponseError turns non-2xx `auth0 api` responses into SDK management errors.
