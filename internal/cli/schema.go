@@ -19,7 +19,7 @@ var outputFlags = map[string]bool{
 	"json-compact":   true,
 	"csv":            true,
 	"force":          true,
-	"reveal-secrets": true, // Display-only toggle
+	"reveal-secrets": true, // Display-only toggle.
 }
 
 var schemaFlag = Flag{
