@@ -65,6 +65,14 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data j
 		return nil, false, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
 	}
 
+	// Fail closed on an unrecorded outcome. ValidateRequest never returns
+	// StatusUnknown today, so this only guards against a future path that forgets
+	// to set a status; without it a zero-value result would slip through as an
+	// unvalidated send instead of surfacing the bug.
+	if result.Status == openapi.StatusUnknown {
+		return nil, false, fmt.Errorf("schema validation returned no result for %s %s", method, path)
+	}
+
 	return jsonData, result.Status == openapi.StatusValid, nil
 }
 

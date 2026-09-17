@@ -69,7 +69,9 @@ const fixtureSchemaDoc = `{
 }`
 
 // useFixtureSchema points --data validation at fixtureSchemaDoc for the duration
-// of the test, restoring the real fetching constructor afterward.
+// of the test, restoring the real fetching constructor afterward. It swaps the
+// package-level newSchemaManager, so tests that call it must not use t.Parallel():
+// the shared global would race across parallel cases.
 func useFixtureSchema(t *testing.T) {
 	t.Helper()
 	doc, err := openapi.LoadDocFromData([]byte(fixtureSchemaDoc))
