@@ -325,7 +325,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 			}
 
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			list, err := getWithPagination(

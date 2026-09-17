@@ -53,16 +53,19 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data json.RawMessage, validated bool, err error) {
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to read JSON input: %w", err)
+		return nil, false, validationError{fmt.Errorf("failed to read JSON input: %w", err)}
 	}
 
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
 	if err != nil {
+		// This path fires only when the operation can't be found in the embedded
+		// OpenAPI spec (an internal schema-lookup failure), not because the user's
+		// payload is bad, so it stays unclassified rather than "validation".
 		return nil, false, fmt.Errorf("schema validation error: %w", err)
 	}
 
 	if result.Status == openapi.StatusInvalid {
-		return nil, false, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
+		return nil, false, validationError{fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))}
 	}
 
 	// Fail closed on an unrecorded outcome. ValidateRequest never returns

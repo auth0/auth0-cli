@@ -283,7 +283,7 @@ func subscribeEventStreamCmd(cli *cli) *cobra.Command {
 				})
 			}
 
-			// The root command installs a SIGINT handler that calls os.Exit(0)
+			// The root command installs a SIGINT handler that calls os.Exit
 			// from a goroutine, which would skip our deferred summary. Reset
 			// it first so only our handler runs: it cancels the stream context
 			// so the resume loop unwinds cleanly, prints the summary, and exits.

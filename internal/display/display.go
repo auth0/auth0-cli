@@ -60,6 +60,33 @@ func (r *Renderer) Newline() {
 	fmt.Fprintln(r.MessageWriter)
 }
 
+// ErrorEnvelope is the machine-readable error emitted on stderr in JSON/agent
+// mode, so agents can parse failures instead of scraping a human sentence.
+type ErrorEnvelope struct {
+	Error ErrorBody `json:"error"`
+}
+
+// ErrorBody carries the classified error. Status is omitted when the failure did
+// not come from the Auth0 Management API.
+type ErrorBody struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Status  int    `json:"status,omitempty"`
+}
+
+// ErrorJSON writes the error envelope as a single compact JSON line to stderr,
+// keeping stdout clean for any partial result and giving agents one parseable line.
+func (r *Renderer) ErrorJSON(envelope ErrorEnvelope) {
+	b, err := json.Marshal(envelope)
+	if err != nil {
+		// Fall back to a human line rather than emitting nothing.
+		r.Errorf("%s", envelope.Error.Message)
+		return
+	}
+
+	fmt.Fprintln(r.MessageWriter, string(b))
+}
+
 func (r *Renderer) Infof(format string, a ...interface{}) {
 	fmt.Fprint(r.MessageWriter, ansi.Green(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)

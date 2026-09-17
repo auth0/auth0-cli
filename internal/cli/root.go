@@ -11,8 +11,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/auth0/go-auth0/management"
-	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/analytics"
@@ -82,8 +80,14 @@ func Execute() {
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
+	// Wrap flag-parse errors so they classify as usage failures in the JSON
+	// error envelope (the process exit code stays the generic 1).
+	rootCmd.SetFlagErrorFunc(wrapFlagError)
+
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
+
+	enforceUnknownSubcommand(rootCmd)
 
 	overrideHelpAndVersionFlagText(rootCmd)
 
@@ -120,11 +124,25 @@ func Execute() {
 	cli.tracker.Wait(timeoutCtx) // No event should be tracked after this has run.
 
 	if err != nil {
-		renderErrorMessage(cli.renderer, err.Error())
+		if cli.wantsJSONError() {
+			cli.renderer.ErrorJSON(buildErrorEnvelope(err))
+		} else {
+			renderErrorMessage(cli.renderer, err.Error())
+		}
 
 		instrumentation.ReportException(err)
-		os.Exit(1) // nolint:gocritic
+		os.Exit(exitCodeForError(err)) // nolint:gocritic
 	}
+}
+
+// wantsJSONError reports whether a failing command should emit the machine-readable
+// JSON error envelope instead of a human message. It honors agent mode and the
+// JSON output flags, and also covers usage/parse errors that fail before the
+// renderer's format is configured.
+func (c *cli) wantsJSONError() bool {
+	return c.agentMode || c.json || c.jsonCompact ||
+		c.renderer.Format == display.OutputFormatJSON ||
+		c.renderer.Format == display.OutputFormatJSONCompact
 }
 
 func buildRootCmd(cli *cli) *cobra.Command {
@@ -149,7 +167,10 @@ func buildRootCmd(cli *cli) *cobra.Command {
 				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
 			}
 
-			if !commandRequiresAuthentication(cmd.CommandPath()) {
+			// Namespace commands (e.g. `auth0 actions`) never call the API
+			// themselves; they only print help or reject an unknown
+			// subcommand, so they must not force authentication.
+			if cmd.HasSubCommands() || !commandRequiresAuthentication(cmd.CommandPath()) {
 				return nil
 			}
 
@@ -162,6 +183,53 @@ func buildRootCmd(cli *cli) *cobra.Command {
 	}
 
 	return rootCmd
+}
+
+// wrapFlagError classifies a flag-parse failure as a usage error for the JSON
+// error envelope. On a command group an unknown flag usually rides along with a
+// mistyped subcommand (for example `auth0 actions lst --json`); pflag records the
+// leftover positional before it fails on the flag, so we surface both problems at
+// once: the unknown command (the likely root cause) and the unknown flag.
+func wrapFlagError(cmd *cobra.Command, err error) error {
+	if cmd.HasSubCommands() {
+		if positionals := cmd.Flags().Args(); len(positionals) > 0 {
+			return usageError{fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
+		}
+	}
+
+	return usageError{err}
+}
+
+// enforceUnknownSubcommand makes namespace (parent) commands reject an unknown
+// subcommand with a usage error (classified as "usage" in the JSON envelope, exit
+// code 1) instead of silently printing help and exiting 0. Cobra treats a
+// non-runnable parent as a help request before it ever validates positional args,
+// so a plain `Args`/`cobra.NoArgs` on the parent never fires. To close that gap we
+// make each namespace runnable — its RunE just prints help, preserving the bare
+// `auth0 <group>` behavior — and give it an Args validator that rejects any
+// leftover token as an unknown command. The Args check runs before
+// PersistentPreRunE, so a typo like `auth0 actions lst` fails fast without
+// attempting authentication.
+func enforceUnknownSubcommand(cmd *cobra.Command) {
+	for _, sub := range cmd.Commands() {
+		enforceUnknownSubcommand(sub)
+	}
+
+	// Leaf commands and namespaces that already define their own run behavior
+	// are left untouched.
+	if !cmd.HasSubCommands() || cmd.Runnable() {
+		return
+	}
+
+	cmd.Args = func(c *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return nil
+		}
+		return usageError{fmt.Errorf("unknown command %q for %q", args[0], c.CommandPath())}
+	}
+	cmd.RunE = func(c *cobra.Command, _ []string) error {
+		return c.Help()
+	}
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
@@ -325,7 +393,7 @@ func contextWithCancel() context.Context {
 	go func() {
 		<-ch
 		defer cancel()
-		os.Exit(0)
+		os.Exit(exitInterrupted)
 	}()
 
 	return ctx
@@ -351,6 +419,12 @@ func renderErrorMessage(display *display.Renderer, errorMessage string) {
 	display.Heading(ansi.Red("error"))
 
 	rawErrorMessage := []rune(errorMessage)
+	if len(rawErrorMessage) == 0 {
+		display.Errorf("An unknown error occurred.")
+		display.Newline()
+		return
+	}
+
 	humanReadableErrorMessage := string(
 		append(
 			[]rune{unicode.ToUpper(rawErrorMessage[0])},
@@ -474,59 +548,8 @@ func resolveInstallIDForTracking(cli *cli) string {
 }
 
 func classifyCommandFailure(err error) map[string]string {
-	properties := map[string]string{
+	return map[string]string{
 		"success":     "false",
-		"error_class": "unknown",
-	}
-
-	if errors.Is(err, config.ErrInvalidToken) || errors.Is(err, config.ErrMalformedToken) {
-		properties["error_class"] = "auth"
-		return properties
-	}
-
-	var missingScopesErr config.ErrTokenMissingRequiredScopes
-	if errors.As(err, &missingScopesErr) {
-		properties["error_class"] = "auth"
-		return properties
-	}
-
-	if status, ok := managementHTTPStatus(err); ok {
-		properties["error_class"] = errorClassForHTTPStatus(status)
-	}
-
-	return properties
-}
-
-// managementHTTPStatus extracts the HTTP status from a go-auth0 management API
-// error anywhere in the error chain, supporting both the v1 (management.Error)
-// and v3 (*core.APIError) SDK error types.
-func managementHTTPStatus(err error) (int, bool) {
-	var v1 management.Error
-	if errors.As(err, &v1) {
-		return v1.Status(), true
-	}
-
-	var v3 *core.APIError
-	if errors.As(err, &v3) {
-		return v3.StatusCode, true
-	}
-
-	return 0, false
-}
-
-func errorClassForHTTPStatus(status int) string {
-	switch {
-	case status == 401 || status == 403:
-		return "auth"
-	case status == 400 || status == 422:
-		return "validation"
-	case status == 404:
-		return "not_found"
-	case status == 429:
-		return "rate_limit"
-	case status >= 500:
-		return "api"
-	default:
-		return "unknown"
+		"error_class": errorClass(err),
 	}
 }

@@ -1,8 +1,10 @@
 package openapi
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -43,6 +45,25 @@ func TestEnhanceError_400Error(t *testing.T) {
 	assert.Contains(t, enhancedMsg, "Required fields")
 	assert.Contains(t, enhancedMsg, "name")
 	assert.Contains(t, enhancedMsg, "supported_triggers")
+}
+
+// TestEnhanceError_400PreservesChain guards the regression where the enhanced
+// 400 error flattened the underlying management.Error with %s, breaking
+// errors.As and downgrading the failure class from validation to unknown. The
+// wrapped error must still be reachable so the exit-code/JSON-envelope contract
+// classifies it correctly.
+func TestEnhanceError_400PreservesChain(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	mockErr := &mockError{statusCode: 400, message: "Bad Request: Invalid action data"}
+
+	enhanced := manager.EnhanceError(mockErr, "POST", "/actions/actions")
+	require.NotNil(t, enhanced)
+
+	var mgmtErr management.Error
+	require.True(t, errors.As(enhanced, &mgmtErr), "management.Error must remain in the chain")
+	assert.Equal(t, 400, mgmtErr.Status())
 }
 
 // TestEnhanceError_ActionUpdatePath strictly guards the regression where the

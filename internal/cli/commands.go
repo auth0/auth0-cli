@@ -144,6 +144,15 @@ func buildCommandTree(cmd *cobra.Command, maxDepth int, detailed bool) []command
 	return collectChildren(cmd, 1, maxDepth, detailed)
 }
 
+// isRunnableLeaf reports whether cmd actually performs work when invoked, as
+// opposed to a namespace whose only job is to group subcommands. Namespaces are
+// made technically Runnable by enforceUnknownSubcommand (see root.go) so they can
+// reject unknown subcommands, so Runnable() alone no longer separates leaves from
+// groups; the absence of subcommands does.
+func isRunnableLeaf(cmd *cobra.Command) bool {
+	return cmd.Runnable() && !cmd.HasSubCommands()
+}
+
 func collectChildren(cmd *cobra.Command, level, maxDepth int, detailed bool) []commandNode {
 	var nodes []commandNode
 
@@ -160,7 +169,7 @@ func buildNode(cmd *cobra.Command, level, maxDepth int, detailed bool) commandNo
 		Path:         cmd.CommandPath(),
 		Name:         cmd.Name(),
 		Short:        cmd.Short,
-		Runnable:     cmd.Runnable(),
+		Runnable:     isRunnableLeaf(cmd),
 		RequiresAuth: commandRequiresAuthentication(cmd.CommandPath()),
 	}
 
@@ -189,7 +198,7 @@ func buildNode(cmd *cobra.Command, level, maxDepth int, detailed bool) commandNo
 func flattenCommands(start *cobra.Command, scoped, detailed bool) []commandNode {
 	var nodes []commandNode
 
-	if scoped && start.Runnable() {
+	if scoped && isRunnableLeaf(start) {
 		node := buildNode(start, 1, 1, detailed)
 		node.Subcommands = nil
 		nodes = append(nodes, node)
@@ -198,7 +207,7 @@ func flattenCommands(start *cobra.Command, scoped, detailed bool) []commandNode 
 	var walk func(cmd *cobra.Command)
 	walk = func(cmd *cobra.Command) {
 		for _, child := range availableChildren(cmd) {
-			if child.Runnable() {
+			if isRunnableLeaf(child) {
 				node := buildNode(child, 1, 1, detailed)
 				node.Subcommands = nil
 				nodes = append(nodes, node)
@@ -373,7 +382,7 @@ func printChildren(cmd *cobra.Command, prefix string, level, maxDepth int, detai
 		}
 		fmt.Fprintln(iostream.Output, line)
 
-		if detailed && child.Runnable() {
+		if detailed && isRunnableLeaf(child) {
 			node := buildNode(child, 1, 1, true)
 			printNodeDetail(childPrefix, node)
 		}
