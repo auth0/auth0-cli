@@ -14,7 +14,73 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/openapi"
 )
+
+// fixtureSchemaDoc is a minimal OpenAPI document covering the operations the
+// --data tests drive. Injecting it keeps the suite deterministic and offline:
+// validation no longer depends on fetching the live schema or on the remote
+// spec keeping a particular operation schema-less.
+const fixtureSchemaDoc = `{
+  "openapi": "3.0.0",
+  "info": {"title": "fixture", "version": "1.0.0"},
+  "paths": {
+    "/roles": {
+      "post": {
+        "operationId": "post_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "description": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{id}": {
+      "patch": {
+        "operationId": "patch_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "description": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actions/actions/{id}/deploy": {
+      "post": {"operationId": "post_action_deploy"}
+    }
+  }
+}`
+
+// useFixtureSchema points --data validation at fixtureSchemaDoc for the duration
+// of the test, restoring the real fetching constructor afterward.
+func useFixtureSchema(t *testing.T) {
+	t.Helper()
+	doc, err := openapi.LoadDocFromData([]byte(fixtureSchemaDoc))
+	require.NoError(t, err)
+
+	prev := newSchemaManager
+	newSchemaManager = func() (*openapi.SchemaManager, error) {
+		return openapi.NewSchemaManagerFromDoc(doc), nil
+	}
+	t.Cleanup(func() { newSchemaManager = prev })
+}
 
 // roleWriteClient captures the method and URI runJSONWrite sends, so a --data
 // test can assert the command built the right resource path. Request returns nil
@@ -60,6 +126,8 @@ func TestRolesListCmdInvalidQuery(t *testing.T) {
 }
 
 func TestRolesCreateCmdData(t *testing.T) {
+	useFixtureSchema(t)
+
 	t.Run("sends the validated payload to POST /roles", func(t *testing.T) {
 		client := &roleWriteClient{}
 		cmd := createRoleCmd(newRoleWriteCLI(client, &bytes.Buffer{}))
@@ -87,6 +155,8 @@ func TestRolesCreateCmdData(t *testing.T) {
 }
 
 func TestRunJSONWriteUnvalidatedSignal(t *testing.T) {
+	useFixtureSchema(t)
+
 	newCLI := func(client *roleWriteClient, messages *bytes.Buffer) *cli {
 		return &cli{
 			api: &auth0.API{HTTPClient: client},
@@ -105,7 +175,9 @@ func TestRunJSONWriteUnvalidatedSignal(t *testing.T) {
 
 		// A POST that resolves as an operation but defines no request body schema
 		// (a schemaless action, like deploying an action): the payload is sent
-		// without local validation, exactly the case a real write command hits.
+		// without local validation. This is a forward-looking guard; no wired
+		// --data command targets a schemaless operation today, so it exercises
+		// the branch that a future schemaless write command would hit.
 		_, err := runJSONWrite[map[string]interface{}](newCLI(client, &messages), cmd, jsonWriteSpec{
 			Method:     http.MethodPost,
 			SchemaPath: "/actions/actions/{id}/deploy",
@@ -139,6 +211,8 @@ func TestRunJSONWriteUnvalidatedSignal(t *testing.T) {
 }
 
 func TestRolesUpdateCmdData(t *testing.T) {
+	useFixtureSchema(t)
+
 	client := &roleWriteClient{}
 	cmd := updateRoleCmd(newRoleWriteCLI(client, &bytes.Buffer{}))
 	prepareInteractivity(cmd)
