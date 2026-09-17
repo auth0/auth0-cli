@@ -296,43 +296,14 @@ func extractArguments(cmd *cobra.Command) []string {
 	return args
 }
 
-// renderJSONHelpIfRequested emits a command's help as JSON and returns true when
-// help is requested with --json (or in agent mode). It runs before Cobra parses
-// flags, so it also works for the root and namespace commands that have no --json
-// flag of their own. A specific command is described in detail; the root is a
-// compact overview.
-func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) bool {
-	if !hasJSONRequest(args) && !cli.agentMode {
-		return false
-	}
+// global flags. Cmd is the command Cobra already resolved, so this does no argument
+// parsing of its own; the caller (the root help func, or renderNamespaceJSONHelp)
+// has already decided that JSON help is wanted.
+func renderCommandHelpJSON(cmd *cobra.Command) {
+	root := cmd.Root()
+	detailed := cmd != root
 
-	// Drop the help/json tokens and let Cobra find the target from the rest.
-	var findArgs []string
-	for _, arg := range args {
-		switch arg {
-		case "help", "--help", "-h", "--json", "--json-compact":
-			continue
-		}
-		findArgs = append(findArgs, arg)
-	}
-
-	target, remaining, err := root.Find(findArgs)
-	if err != nil || target == nil {
-		target = root
-		remaining = findArgs
-	}
-
-	// Render JSON help when help is explicitly requested, or when the invocation
-	// lands on a namespace without choosing a subcommand (a bare `auth0` or
-	// `auth0 apps`), which cobra would otherwise answer with human help. This is
-	// only reached in JSON/agent mode, so it stays out of the human path.
-	if !hasHelpRequest(args) && !isImplicitNamespaceHelp(target, remaining, args) {
-		return false
-	}
-
-	detailed := target != root
-
-	nodes := []commandNode{buildNode(target, 1, 0, detailed)}
+	nodes := []commandNode{buildNode(cmd, 1, 0, detailed)}
 	if detailed {
 		nodes = annotateWithRawAPINote(nodes)
 	} else {
@@ -343,108 +314,68 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 		// login-status blob appended to the command's Long is deliberately excluded,
 		// as it is human prose and noise for a JSON consumer.
 		nodes[0].Description = rootLong + "\n\n" + agentModeHelp
-		nodes[0].Flags = collectFlags(target)
+		nodes[0].Flags = collectFlags(cmd)
 	}
 
 	_ = renderCommandTreeJSON(nodes)
-	return true
 }
 
-// isImplicitNamespaceHelp reports whether an invocation lands on a namespace (a
-// command with subcommands, including the root) without choosing one, so cobra
-// would fall back to printing that namespace's help. A bare `auth0` or
-// `auth0 apps` qualifies. It does not qualify when `--version`/`-v` is present
-// (which prints the version), when a leftover positional token remains (a command
-// was named, possibly mistyped, and must run so it can report "unknown command"),
-// or when an unrecognized flag is present (for example `auth0 apps --bogus`), which
-// must fail as a usage error rather than be answered with help. The remaining slice
-// is the leftover after cobra matched the command path, so it holds flags and any
-// un-matched positional.
-func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bool {
+// renderNamespaceJSONHelp handles the one JSON-help case Cobra's help func cannot
+// reach: an explicit --json/--json-compact on a namespace (the root or a command
+// group). A namespace defines no such flag of its own, so Cobra would reject it as an
+// unknown flag before the help func ever runs. This renders that namespace's JSON help
+// and reports true. Every other help path (--help, the help subcommand, and a bare
+// namespace in agent mode, whose RunE calls Help()) is left to Cobra and the root help
+// func.
+//
+// It fires only when the invocation truly lands on a namespace with no chosen
+// subcommand. A leaf target (which defines --json itself), a mistyped subcommand, or an
+// unknown flag all fall through to Cobra so they run or error exactly as they otherwise
+// would. Cobra's own parser is used to tell a value-taking flag's value (for example
+// `--tenant foo`) from a leftover positional, so this does not re-implement pflag.
+func renderNamespaceJSONHelp(root *cobra.Command, args []string) bool {
+	if !hasJSONRequest(args) {
+		return false
+	}
+
+	// --version prints the version, never help, even alongside --json.
 	for _, arg := range args {
 		if arg == "-v" || arg == "--version" {
 			return false
 		}
 	}
 
-	if !target.HasSubCommands() {
+	// Namespaces do not define --json/--json-compact; drop them so Cobra can match the
+	// command path and parse the remaining (known) flags without erroring on them.
+	var rest []string
+	for _, arg := range args {
+		if arg == "--json" || arg == "--json-compact" {
+			continue
+		}
+		rest = append(rest, arg)
+	}
+
+	target, remaining, err := root.Find(rest)
+	if err != nil || target == nil || !target.HasSubCommands() {
 		return false
 	}
 
-	// Merge parent persistent flags (e.g. the global --tenant) into target.Flags()
-	// so a value-taking flag can be told apart from a positional below. This is
-	// exactly what cobra does before it parses, so calling it early is harmless.
-	target.InheritedFlags()
-	flags := target.Flags()
+	// Cobra adds the --help/-h flag lazily during execution; add it now so a
+	// `--help --json` combination parses instead of tripping on "unknown flag: --help".
+	target.InitDefaultHelpFlag()
 
-	// Because root.Find does not consume flag values, the space form "--tenant foo"
-	// leaves "foo" in remaining. Skip a value-taking flag's value token before
-	// deciding whether any leftover positional named a command.
-	for i := 0; i < len(remaining); i++ {
-		arg := remaining[i]
-		if !strings.HasPrefix(arg, "-") {
-			return false
-		}
-		// An unrecognized flag on a namespace (for example `auth0 apps --bogus`)
-		// must fail as a usage error, not be answered with help, so it is not an
-		// implicit help request.
-		if !flagTokenIsKnown(target, arg) {
-			return false
-		}
-		if strings.Contains(arg, "=") {
-			continue // "--name=value"/"-x=value" carry their value inline.
-		}
-		if f := lookupFlagToken(flags, arg); f != nil && f.NoOptDefVal == "" && i+1 < len(remaining) {
-			i++ // Consume the following value token.
-		}
+	// Let Cobra parse the leftover flags. An unknown flag (for example `apps --bogus
+	// --json`) errors here, and a named or mistyped subcommand stays in Args(); either
+	// way the invocation must go to Cobra, not to help.
+	if err := target.ParseFlags(remaining); err != nil {
+		return false
+	}
+	if len(target.Flags().Args()) > 0 {
+		return false
 	}
 
+	renderCommandHelpJSON(target)
 	return true
-}
-
-// flagTokenIsKnown reports whether a "-"-prefixed token names a flag defined on
-// cmd or inherited from a parent. A bare "-" or "--" is treated as known (it is not
-// an unknown flag). It is used to tell an accidental unknown flag on a namespace
-// apart from a legitimate global flag such as --debug.
-func flagTokenIsKnown(cmd *cobra.Command, token string) bool {
-	name, _, _ := strings.Cut(strings.TrimLeft(token, "-"), "=")
-	if name == "" {
-		return true
-	}
-
-	if strings.HasPrefix(token, "--") {
-		return cmd.Flags().Lookup(name) != nil || cmd.InheritedFlags().Lookup(name) != nil
-	}
-
-	short := name[:1]
-	return cmd.Flags().ShorthandLookup(short) != nil || cmd.InheritedFlags().ShorthandLookup(short) != nil
-}
-
-// lookupFlagToken resolves a "--name" or "-x" token to its flag definition in
-// the given set, returning nil when the token is malformed or unknown. It is
-// used to tell value-taking flags (which consume the next token in the space
-// form) from boolean flags (which do not).
-func lookupFlagToken(flags *pflag.FlagSet, arg string) *pflag.Flag {
-	switch {
-	case strings.HasPrefix(arg, "--"):
-		return flags.Lookup(strings.TrimPrefix(arg, "--"))
-	case strings.HasPrefix(arg, "-") && len(arg) > 1:
-		return flags.ShorthandLookup(arg[1:2])
-	default:
-		return nil
-	}
-}
-
-// hasHelpRequest reports whether args request help via --help/-h or the `help`
-// subcommand. A bare "help" only counts in first position, not as a flag value.
-func hasHelpRequest(args []string) bool {
-	for _, arg := range args {
-		if arg == "--help" || arg == "-h" {
-			return true
-		}
-	}
-
-	return len(args) > 0 && args[0] == "help"
 }
 
 // hasJSONRequest reports whether the args contain a JSON-output flag (`--json`
