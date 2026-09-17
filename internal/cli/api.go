@@ -110,7 +110,8 @@ Additional scopes may need to be requested during authentication step via the %s
 // formatAPIResponse renders a raw JSON response body for stdout. Under
 // --json-compact it emits a single dense line with no color so an NDJSON reader
 // gets one record per line; otherwise it returns a 2-space-indented, colorized
-// document for a human. The trailing newline is added by renderer.Output.
+// document for a human. The trailing newline is added by
+// renderer.OutputPreformattedJSON.
 func formatAPIResponse(format display.OutputFormat, rawBodyJSON []byte) (string, error) {
 	if format == display.OutputFormatJSONCompact {
 		var compactJSON bytes.Buffer
@@ -224,7 +225,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return err
 		}
 
-		cli.renderer.Output(output)
+		cli.renderer.OutputPreformattedJSON(output)
 
 		return nil
 	}

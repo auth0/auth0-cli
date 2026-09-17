@@ -156,7 +156,7 @@ func TestRenderer_Stream_JSON(t *testing.T) {
 
 	t.Run("agent mode keeps the compact NDJSON contract even with json", func(t *testing.T) {
 		var stdout bytes.Buffer
-		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSON, StructuredMessages: true}
+		r := &Renderer{MessageWriter: io.Discard, ResultWriter: &stdout, Format: OutputFormatJSON, AgentMode: true}
 
 		r.Stream([]View{newView("1", "a")}, nil)
 
@@ -190,10 +190,26 @@ func TestRenderer_Stream_JSON(t *testing.T) {
 	})
 }
 
-func TestRenderer_StructuredMessages(t *testing.T) {
-	t.Run("diagnostics are emitted as JSON lines on stderr", func(t *testing.T) {
+func TestRenderer_OutputPreformattedJSON(t *testing.T) {
+	// `auth0 api` output is JSON in every format, so it must always end with a
+	// trailing newline on stdout so a piped reader never drops the final line.
+	for _, format := range []OutputFormat{"", OutputFormatJSON, OutputFormatJSONCompact} {
+		t.Run("terminates with a newline in format "+string(format), func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			r := &Renderer{MessageWriter: &stderr, ResultWriter: &stdout, Format: format}
+
+			r.OutputPreformattedJSON("[]")
+
+			assert.Equal(t, "[]\n", stdout.String())
+			assert.Empty(t, stderr.String(), "the result must not leak onto stderr")
+		})
+	}
+}
+
+func TestRenderer_AgentMode(t *testing.T) {
+	t.Run("human diagnostics are suppressed on stderr", func(t *testing.T) {
 		var stderr bytes.Buffer
-		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, StructuredMessages: true}
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, AgentMode: true}
 
 		r.Infof("hello %s", "world")
 		r.Warnf("careful")
@@ -201,23 +217,64 @@ func TestRenderer_StructuredMessages(t *testing.T) {
 		r.Successf("done")
 		r.Detailf("more")
 
-		assert.Equal(t,
-			"{\"level\":\"info\",\"message\":\"hello world\"}\n"+
-				"{\"level\":\"warning\",\"message\":\"careful\"}\n"+
-				"{\"level\":\"error\",\"message\":\"boom\"}\n"+
-				"{\"level\":\"success\",\"message\":\"done\"}\n"+
-				"{\"level\":\"detail\",\"message\":\"more\"}\n",
-			stderr.String(),
-		)
+		// Agent mode keeps stderr clean: the only thing that ever lands there is
+		// the JSON error envelope on failure, so a merged stream is parseable.
+		assert.Empty(t, stderr.String())
 	})
 
-	t.Run("heading is suppressed in structured mode", func(t *testing.T) {
+	t.Run("heading is suppressed in agent mode", func(t *testing.T) {
 		var stderr bytes.Buffer
-		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, StructuredMessages: true, Tenant: "example"}
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, AgentMode: true, Tenant: "example"}
 
 		r.Heading("logs")
 
 		assert.Empty(t, stderr.String())
+	})
+
+	t.Run("blank line is suppressed in agent mode and JSON modes", func(t *testing.T) {
+		for _, r := range []*Renderer{
+			{AgentMode: true},
+			{Format: OutputFormatJSON},
+			{Format: OutputFormatJSONCompact},
+		} {
+			var stderr bytes.Buffer
+			r.MessageWriter = &stderr
+			r.ResultWriter = io.Discard
+
+			r.Newline()
+
+			assert.Empty(t, stderr.String())
+		}
+	})
+
+	t.Run("blank line is written in the default text mode", func(t *testing.T) {
+		var stderr bytes.Buffer
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard}
+
+		r.Newline()
+
+		assert.Equal(t, "\n", stderr.String())
+	})
+
+	t.Run("heading is suppressed in JSON output modes", func(t *testing.T) {
+		for _, format := range []OutputFormat{OutputFormatJSON, OutputFormatJSONCompact} {
+			var stderr bytes.Buffer
+			r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, Format: format, Tenant: "example"}
+
+			r.Heading("logs")
+
+			assert.Emptyf(t, stderr.String(), "expected no heading for format %q", format)
+		}
+	})
+
+	t.Run("heading is written in the default text mode", func(t *testing.T) {
+		var stderr bytes.Buffer
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, Tenant: "example"}
+
+		r.Heading("logs")
+
+		assert.Contains(t, stderr.String(), "example")
+		assert.Contains(t, stderr.String(), "logs")
 	})
 
 	t.Run("human mode is unaffected", func(t *testing.T) {

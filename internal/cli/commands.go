@@ -106,7 +106,7 @@ func commandsCmd(cli *cli) *cobra.Command {
 			if flat {
 				nodes := flattenCommands(start, scoped, detailed)
 				if cli.json {
-					return renderCommandTreeJSON(nodes)
+					return renderCommandTreeJSON(nodes, cli.jsonCompact)
 				}
 				renderCommandsFlatText(nodes, detailed)
 				return nil
@@ -123,7 +123,7 @@ func commandsCmd(cli *cli) *cobra.Command {
 				} else {
 					tree = buildCommandTree(start, depth, detailed)
 				}
-				return renderCommandTreeJSON(tree)
+				return renderCommandTreeJSON(tree, cli.jsonCompact)
 			}
 
 			renderCommandTreeText(start, depth, detailed)
@@ -296,43 +296,13 @@ func extractArguments(cmd *cobra.Command) []string {
 	return args
 }
 
-// renderJSONHelpIfRequested emits a command's help as JSON and returns true when
-// help is requested with --json (or in agent mode). It runs before Cobra parses
-// flags, so it also works for the root and namespace commands that have no --json
-// flag of their own. A specific command is described in detail; the root is a
-// compact overview.
-func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) bool {
-	if !hasJSONRequest(args) && !cli.agentMode {
-		return false
-	}
+// has already decided that JSON help is wanted. Compact mirrors the --json-compact
+// flag: when set, the tree is emitted as single-line JSON instead of indented.
+func renderCommandHelpJSON(cmd *cobra.Command, compact bool) {
+	root := cmd.Root()
+	detailed := cmd != root
 
-	// Drop the help/json tokens and let Cobra find the target from the rest.
-	var findArgs []string
-	for _, arg := range args {
-		switch arg {
-		case "help", "--help", "-h", "--json":
-			continue
-		}
-		findArgs = append(findArgs, arg)
-	}
-
-	target, remaining, err := root.Find(findArgs)
-	if err != nil || target == nil {
-		target = root
-		remaining = findArgs
-	}
-
-	// Render JSON help when help is explicitly requested, or when the invocation
-	// lands on a namespace without choosing a subcommand (a bare `auth0` or
-	// `auth0 apps`), which cobra would otherwise answer with human help. This is
-	// only reached in JSON/agent mode, so it stays out of the human path.
-	if !hasHelpRequest(args) && !isImplicitNamespaceHelp(target, remaining, args) {
-		return false
-	}
-
-	detailed := target != root
-
-	nodes := []commandNode{buildNode(target, 1, 0, detailed)}
+	nodes := []commandNode{buildNode(cmd, 1, 0, detailed)}
 	if detailed {
 		nodes = annotateWithRawAPINote(nodes)
 	} else {
@@ -343,84 +313,119 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 		// login-status blob appended to the command's Long is deliberately excluded,
 		// as it is human prose and noise for a JSON consumer.
 		nodes[0].Description = rootLong + "\n\n" + agentModeHelp
-		nodes[0].Flags = collectFlags(target)
+		nodes[0].Flags = collectFlags(cmd)
 	}
 
-	_ = renderCommandTreeJSON(nodes)
-	return true
+	_ = renderCommandTreeJSON(nodes, compact)
 }
 
-// isImplicitNamespaceHelp reports whether an invocation lands on a namespace (a
-// command with subcommands, including the root) without choosing one, so cobra
-// would fall back to printing that namespace's help. A bare `auth0` or
-// `auth0 apps` qualifies. It does not qualify when `--version`/`-v` is present
-// (which prints the version), when a leftover positional token remains (a command
-// was named, possibly mistyped, and must run so it can report "unknown command"),
-// or when an unrecognized flag is present (for example `auth0 apps --bogus`), which
-// must fail as a usage error rather than be answered with help. The remaining slice
-// is the leftover after cobra matched the command path, so it holds flags and any
-// un-matched positional.
-func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bool {
+// renderNamespaceJSONHelp handles the JSON-help cases Cobra's help func cannot reach,
+// both caused by a --json/--json-compact flag landing where Cobra rejects it before any
+// help renders:
+//
+//   - An explicit --json/--json-compact on a namespace (the root or a command group).
+//     A namespace defines no such flag of its own, so Cobra treats it as an unknown
+//     flag. This renders that namespace's JSON help.
+//   - A leading `help` subcommand carrying --json/--json-compact (for example
+//     `auth0 help apps --json`). Cobra's built-in help command rejects the unknown
+//     flag, so the named target is resolved here and its JSON help rendered, whether
+//     that target is a namespace or a leaf.
+//
+// Both report true when handled. Every other help path (--help, the help subcommand
+// without a JSON flag, and a bare namespace in agent mode, whose RunE calls Help()) is
+// left to Cobra and the root help func.
+//
+// For the namespace case it fires only when the invocation truly lands on a namespace
+// with no chosen subcommand. A leaf target (which defines --json itself), a mistyped
+// subcommand, or an unknown flag all fall through to Cobra so they run or error exactly
+// as they otherwise would. Cobra's own parser is used to tell a value-taking flag's
+// value (for example `--tenant foo`) from a leftover positional, so this does not
+// re-implement pflag.
+func renderNamespaceJSONHelp(root *cobra.Command, args []string) bool {
+	if !hasJSONRequest(args) {
+		return false
+	}
+
+	// --version prints the version, never help, even alongside --json.
 	for _, arg := range args {
 		if arg == "-v" || arg == "--version" {
 			return false
 		}
 	}
 
-	if !target.HasSubCommands() {
-		return false
-	}
+	compact := slices.Contains(args, "--json-compact")
 
-	for _, arg := range remaining {
-		if !strings.HasPrefix(arg, "-") {
+	// A leading `help` subcommand is always an explicit help request, but Cobra's
+	// built-in help command would reject the unknown JSON flag before rendering. Resolve
+	// the named target ourselves (dropping the `help` token and the JSON flags) and emit
+	// its JSON help directly, for a namespace or a leaf alike.
+	if len(args) > 0 && args[0] == "help" {
+		target, _, err := root.Find(stripJSONFlags(args[1:]))
+		if err != nil || target == nil {
 			return false
 		}
-		if !flagTokenIsKnown(target, arg) {
-			return false
-		}
-	}
 
-	return true
-}
-
-// flagTokenIsKnown reports whether a "-"-prefixed token names a flag defined on
-// cmd or inherited from a parent. A bare "-" or "--" is treated as known (it is not
-// an unknown flag). It is used to tell an accidental unknown flag on a namespace
-// apart from a legitimate global flag such as --debug.
-func flagTokenIsKnown(cmd *cobra.Command, token string) bool {
-	name, _, _ := strings.Cut(strings.TrimLeft(token, "-"), "=")
-	if name == "" {
+		renderCommandHelpJSON(target, compact)
 		return true
 	}
 
-	if strings.HasPrefix(token, "--") {
-		return cmd.Flags().Lookup(name) != nil || cmd.InheritedFlags().Lookup(name) != nil
+	// Namespaces do not define --json/--json-compact; drop them so Cobra can match the
+	// command path and parse the remaining (known) flags without erroring on them.
+	rest := stripJSONFlags(args)
+
+	target, remaining, err := root.Find(rest)
+	if err != nil || target == nil || !target.HasSubCommands() {
+		return false
 	}
 
-	short := name[:1]
-	return cmd.Flags().ShorthandLookup(short) != nil || cmd.InheritedFlags().ShorthandLookup(short) != nil
+	// Cobra adds the --help/-h flag lazily during execution; add it now so a
+	// `--help --json` combination parses instead of tripping on "unknown flag: --help".
+	target.InitDefaultHelpFlag()
+
+	// Let Cobra parse the leftover flags. An unknown flag (for example `apps --bogus
+	// --json`) errors here, and a named or mistyped subcommand stays in Args(); either
+	// way the invocation must go to Cobra, not to help.
+	if err := target.ParseFlags(remaining); err != nil {
+		return false
+	}
+	if len(target.Flags().Args()) > 0 {
+		return false
+	}
+
+	renderCommandHelpJSON(target, compact)
+	return true
 }
 
-// hasHelpRequest reports whether args request help via --help/-h or the `help`
-// subcommand. A bare "help" only counts in first position, not as a flag value.
-func hasHelpRequest(args []string) bool {
+// stripJSONFlags returns args with the JSON-output flags (--json/--json-compact)
+// removed, so a command path can be resolved by Cobra's parser, which does not know
+// those flags on namespaces or the built-in help command.
+func stripJSONFlags(args []string) []string {
+	rest := make([]string, 0, len(args))
 	for _, arg := range args {
-		if arg == "--help" || arg == "-h" {
-			return true
+		if arg == "--json" || arg == "--json-compact" {
+			continue
 		}
+		rest = append(rest, arg)
 	}
 
-	return len(args) > 0 && args[0] == "help"
+	return rest
 }
 
-// hasJSONRequest reports whether the args contain the `--json` flag.
+// hasJSONRequest reports whether the args contain a JSON-output flag (`--json`
+// or `--json-compact`). Both request machine-readable output, so JSON help and
+// namespace trees must behave identically for either.
 func hasJSONRequest(args []string) bool {
-	return slices.Contains(args, "--json")
+	return slices.Contains(args, "--json") || slices.Contains(args, "--json-compact")
 }
 
-func renderCommandTreeJSON(tree []commandNode) error {
+// renderCommandTreeJSON writes the tree as JSON. When compact is set it emits
+// single-line JSON (matching the --json-compact contract); otherwise it indents
+// for human-readable --json output.
+func renderCommandTreeJSON(tree []commandNode, compact bool) error {
 	encoder := json.NewEncoder(iostream.Output)
-	encoder.SetIndent("", "  ")
+	if !compact {
+		encoder.SetIndent("", "  ")
+	}
 	return encoder.Encode(tree)
 }
 
