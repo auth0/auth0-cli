@@ -220,6 +220,27 @@ func TestRenderer_StructuredMessages(t *testing.T) {
 		assert.Empty(t, stderr.String())
 	})
 
+	t.Run("heading is suppressed in JSON output modes", func(t *testing.T) {
+		for _, format := range []OutputFormat{OutputFormatJSON, OutputFormatJSONCompact} {
+			var stderr bytes.Buffer
+			r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, Format: format, Tenant: "example"}
+
+			r.Heading("logs")
+
+			assert.Emptyf(t, stderr.String(), "expected no heading for format %q", format)
+		}
+	})
+
+	t.Run("heading is written in the default text mode", func(t *testing.T) {
+		var stderr bytes.Buffer
+		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard, Tenant: "example"}
+
+		r.Heading("logs")
+
+		assert.Contains(t, stderr.String(), "example")
+		assert.Contains(t, stderr.String(), "logs")
+	})
+
 	t.Run("human mode is unaffected", func(t *testing.T) {
 		var stderr bytes.Buffer
 		r := &Renderer{MessageWriter: &stderr, ResultWriter: io.Discard}
