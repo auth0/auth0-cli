@@ -71,6 +71,15 @@ func (r *Renderer) Output(message string) {
 	}
 }
 
+// OutputPreformattedJSON writes an already-formatted JSON result to stdout,
+// always terminating with a trailing newline regardless of the output format.
+// It is for commands like `auth0 api` whose output is JSON even in the default
+// (human) format: plain Output only appends the newline in the JSON output
+// formats, so a piped human-mode result would otherwise lose its final line.
+func (r *Renderer) OutputPreformattedJSON(message string) {
+	fmt.Fprintln(r.ResultWriter, message)
+}
+
 func (r *Renderer) Newline() {
 	fmt.Fprintln(r.MessageWriter)
 }
