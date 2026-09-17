@@ -187,7 +187,7 @@ func TestReadAndValidateAttachesStructuredDetails(t *testing.T) {
 	// A payload missing a required field fails local schema validation. The
 	// returned error must classify as validation and carry the field-level
 	// failures as JSON details for the error envelope.
-	_, err = handler.ReadAndValidate(`{"name":"x","code":"module.exports = () => {}"}`, "POST", "/actions/actions")
+	_, _, err = handler.ReadAndValidate(`{"name":"x","code":"module.exports = () => {}"}`, "POST", "/actions/actions")
 	require.Error(t, err)
 	assert.Equal(t, "validation", errorClass(err))
 

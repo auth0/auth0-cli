@@ -173,6 +173,7 @@ func TestHasHelpRequest(t *testing.T) {
 
 func TestHasJSONRequest(t *testing.T) {
 	assert.True(t, hasJSONRequest([]string{"apps", "list", "--json"}))
+	assert.True(t, hasJSONRequest([]string{"apps", "list", "--json-compact"}))
 	assert.False(t, hasJSONRequest([]string{"apps", "list", "--flat"}))
 	assert.False(t, hasJSONRequest(nil))
 }
@@ -359,11 +360,73 @@ func TestRenderJSONHelpIfRequested(t *testing.T) {
 		assert.Equal(t, rawAPIFallbackNote, nodes[0].Note, "a namespace's help is detailed")
 	})
 
+	t.Run("bare namespace with a space-separated global flag value renders JSON help", func(t *testing.T) {
+		// Here root.Find leaves "my.auth0.com" as a leftover token; it must be read
+		// as --tenant's value, not a named subcommand, so the JSON tree still fires.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--tenant", "my.auth0.com"})
+		})
+		assert.True(t, fired)
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Len(t, nodes, 1)
+		assert.Equal(t, "auth0 apps", nodes[0].Path)
+	})
+
+	t.Run("the equals form of a global flag value also renders namespace JSON help", func(t *testing.T) {
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--tenant=my.auth0.com"})
+		})
+		assert.True(t, fired)
+		assert.Contains(t, out, "\"auth0 apps\"")
+	})
+
+	t.Run("--json-compact triggers namespace JSON help outside agent mode", func(t *testing.T) {
+		t.Setenv(agentModeEnvVar, "")
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "--json-compact"})
+		})
+		assert.True(t, fired)
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Len(t, nodes, 1)
+		assert.Equal(t, "auth0 apps", nodes[0].Path)
+	})
+
+	t.Run("--json-compact renders detailed leaf help outside agent mode", func(t *testing.T) {
+		t.Setenv(agentModeEnvVar, "")
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{}, root, []string{"apps", "create", "--help", "--json-compact"})
+		})
+		assert.True(t, fired)
+
+		var nodes []commandNode
+		assert.NoError(t, json.Unmarshal([]byte(out), &nodes))
+		assert.Equal(t, "auth0 apps create", nodes[0].Path)
+	})
+
 	t.Run("unknown subcommand under a namespace is not implicit help", func(t *testing.T) {
 		// `auth0 apps lst` must run so the namespace reports "unknown command".
 		var fired bool
 		out := captureOutput(t, func() {
 			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "lst"})
+		})
+		assert.False(t, fired)
+		assert.Empty(t, out)
+	})
+
+	t.Run("a positional after a space-separated flag value is not implicit help", func(t *testing.T) {
+		// After skipping --tenant's value, "lst" remains a positional, so the
+		// namespace must run and report "unknown command" rather than print help.
+		var fired bool
+		out := captureOutput(t, func() {
+			fired = renderJSONHelpIfRequested(&cli{agentMode: true}, root, []string{"apps", "--tenant", "foo", "lst"})
 		})
 		assert.False(t, fired)
 		assert.Empty(t, out)

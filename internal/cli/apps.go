@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -287,6 +288,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		RevealSecrets bool
 		Number        int
+		Schema        bool
+		Query         string
 	}
 
 	cmd := &cobra.Command{
@@ -294,17 +297,35 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your applications",
-		Long:    "List your existing applications. To create one, run: `auth0 apps create`.",
+		Long: `List your existing applications. To create one, run: ` + "`auth0 apps create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 apps list
   auth0 apps ls
   auth0 apps list --reveal-secrets
   auth0 apps list --reveal-secrets --number 100
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
-  auth0 apps ls --csv`,
+  auth0 apps ls --csv
+  auth0 apps list --schema
+  auth0 apps list --schema --json
+  auth0 apps list --query '{"app_type":"spa"}'
+  auth0 apps list --query '{"app_type":"spa"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/clients")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "clients",
+					SchemaCmd: "auth0 apps list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			list, err := getWithPagination(
@@ -343,6 +364,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -475,6 +498,8 @@ func createAppCmd(cli *cli) *cobra.Command {
 		IsFirstParty             bool
 		ThirdPartySecurityMode   string
 		RedirectionPolicy        string
+		Data                     string
+		Schema                   bool
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -485,7 +510,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Short: "Create a new application",
 		Long: "Create a new application.\n\n" +
 			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
-			"To create non-interactively, supply at least the application name, and type through the flags.",
+			"To create non-interactively, supply at least the application name, and type through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 apps create
   auth0 apps create --name myapp
   auth0 apps create --name myapp --description <description>
@@ -498,8 +525,29 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
-  auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection`,
+  auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
+
+  # Discover the payload schema
+  auth0 apps create --schema
+  auth0 apps create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apps create --data '{"name":"myapp","app_type":"spa"}'
+  auth0 apps create --data @app.json
+  cat app.json | auth0 apps create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/clients")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createAppFromJSON(cli, cmd, payload, inputs.RevealSecrets)
+			}
+
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -692,6 +740,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appIsFirstParty.RegisterBool(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterString(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterString(cmd, &inputs.RedirectionPolicy, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -715,6 +766,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		IsFirstParty           bool
 		ThirdPartySecurityMode string
 		RedirectionPolicy      string
+		Data                   string
+		Schema                 bool
 	}
 
 	cmd := &cobra.Command{
@@ -724,7 +777,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Long: "Update an application.\n\n" +
 			"To update interactively, use `auth0 apps update` with no arguments.\n\n" +
 			"To update non-interactively, supply the application id, name, type and other information you " +
-			"might want to change through the available flags.",
+			"might want to change through the available flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 apps update
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
@@ -736,8 +791,21 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
-  auth0 apps update <app-id> --redirection-policy allow_always`,
+  auth0 apps update <app-id> --redirection-policy allow_always
+
+  # Discover the payload schema
+  auth0 apps update --schema
+  auth0 apps update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apps update <app-id> --data '{"name":"myapp","description":"updated"}'
+  auth0 apps update <app-id> --data @app.json
+  cat app.json | auth0 apps update <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/clients/{id}")
+			}
+
 			var current *management.Client
 
 			if len(args) == 0 {
@@ -747,6 +815,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateAppFromJSON(cli, cmd, inputs.ID, payload, inputs.RevealSecrets)
 			}
 
 			if err := ansi.Waiting(func() (err error) {
@@ -952,8 +1028,48 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appIsFirstParty.RegisterBoolU(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterStringU(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterStringU(cmd, &inputs.RedirectionPolicy, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createAppFromJSON(cli *cli, cmd *cobra.Command, dataStr string, revealSecrets bool) error {
+	client, err := runJSONWrite[management.Client](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/clients",
+		URI:        cli.api.HTTPClient.URI("clients"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 apps create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create application: %w", err)
+	}
+
+	// Preserve the interactive path's side effect: the created app becomes the tenant default.
+	if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, client.GetClientID()); err != nil {
+		return err
+	}
+
+	cli.renderer.ApplicationCreate(client, revealSecrets)
+	return nil
+}
+
+func updateAppFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string, revealSecrets bool) error {
+	client, err := runJSONWrite[management.Client](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/clients/{id}",
+		URI:        cli.api.HTTPClient.URI("clients", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 apps update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update application with ID %q: %w", id, err)
+	}
+
+	cli.renderer.ApplicationUpdate(client, revealSecrets)
+	return nil
 }
 
 func openAppCmd(cli *cli) *cobra.Command {

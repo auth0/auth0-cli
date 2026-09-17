@@ -62,8 +62,10 @@ In agent mode the CLI:
     class is the envelope's "code" (usage, auth, validation, not_found, rate_limit,
     api, unknown); read that rather than the exit code to branch on the kind of failure.
   • Disables interactive prompts and colors.
-  • Exits 0 on success, 130 when interrupted, and 1 for any other failure. The exit
-    code is intentionally coarse; the granular class lives in the error envelope's "code".`
+  • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
+    scripts that treat any non-zero exit as failure keep working. The specific
+    failure class (usage, auth, validation, not_found, rate_limit, api) is carried
+    by the JSON error envelope's "code" field, not by the exit code.`
 
 const panicMessage = `
 !!     Uh oh. Something went wrong.
@@ -102,10 +104,9 @@ func Execute() {
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
-	// Wrap flag-parse errors so they map to the usage exit code (2).
-	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
-		return usageError{err}
-	})
+	// Wrap flag-parse errors so they classify as usage failures in the JSON
+	// error envelope (the process exit code stays the generic 1).
+	rootCmd.SetFlagErrorFunc(wrapFlagError)
 
 	addPersistentFlags(rootCmd, cli)
 	addSubCommands(rootCmd, cli)
@@ -213,21 +214,36 @@ func buildRootCmd(cli *cli) *cobra.Command {
 	return rootCmd
 }
 
+// wrapFlagError classifies a flag-parse failure as a usage error for the JSON
+// error envelope. On a command group an unknown flag usually rides along with a
+// mistyped subcommand (for example `auth0 actions lst --json`); pflag records the
+// leftover positional before it fails on the flag, so we surface both problems at
+// once: the unknown command (the likely root cause) and the unknown flag.
+func wrapFlagError(cmd *cobra.Command, err error) error {
+	if cmd.HasSubCommands() {
+		if positionals := cmd.Flags().Args(); len(positionals) > 0 {
+			return usageError{fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
+		}
+	}
+
+	return usageError{err}
+}
+
 // enforceUnknownSubcommand makes namespace (parent) commands reject an unknown
-// subcommand with a usage error (exit code 2) instead of silently printing help
-// and exiting 0. Cobra treats a non-runnable parent as a help request before it
-// ever validates positional args, so a plain `Args`/`cobra.NoArgs` on the parent
-// never fires. To close that gap we make each namespace runnable — its RunE just
-// prints help, preserving the bare `auth0 <group>` behavior — and give it an Args
-// validator that rejects any leftover token as an unknown command. The Args check
-// runs before PersistentPreRunE, so a typo like `auth0 actions lst` fails fast
-// without attempting authentication.
+// subcommand with a usage error (classified as "usage" in the JSON envelope, exit
+// code 1) instead of silently printing help and exiting 0. Cobra treats a
+// non-runnable parent as a help request before it ever validates positional args,
+// so a plain `Args`/`cobra.NoArgs` on the parent never fires. To close that gap we
+// make each namespace runnable — its RunE just prints help, preserving the bare
+// `auth0 <group>` behavior — and give it an Args validator that rejects any
+// leftover token as an unknown command. The Args check runs before
+// PersistentPreRunE, so a typo like `auth0 actions lst` fails fast without
+// attempting authentication.
 //
-// Unknown flags are NOT whitelisted: an unrecognized flag on a namespace (for
-// example `auth0 actions --bogus`) fails at flag parsing with a usage error (exit
-// code 2) via the root's flag-error func, rather than being swallowed into a help
-// screen that exits 0. A bare namespace with only known flags (such as `--debug`)
-// still prints help.
+// Unknown flags are not whitelisted either: an unrecognized flag on a namespace
+// (for example `auth0 actions --bogus`) fails at flag parsing as a usage error
+// (exit code 1) rather than being swallowed into a help screen that exits 0. A
+// bare namespace with only known flags (such as `--debug`) still prints help.
 func enforceUnknownSubcommand(cmd *cobra.Command) {
 	for _, sub := range cmd.Commands() {
 		enforceUnknownSubcommand(sub)

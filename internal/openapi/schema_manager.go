@@ -130,10 +130,7 @@ func (op *OperationSchema) FormatAsText() string {
 
 // ValidateRequest validates a request using openapi3filter.
 func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*ValidationResult, error) {
-	result := &ValidationResult{
-		Valid:  true,
-		Errors: []string{},
-	}
+	result := &ValidationResult{Status: StatusValid, Errors: []string{}}
 
 	operation, err := FindOperation(sm.doc, method, path)
 	if err != nil {
@@ -142,14 +139,14 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 
 	requestSchema := GetRequestSchema(operation)
 	if requestSchema == nil || requestSchema.Value == nil {
-		// No schema to validate against.
+		result.Status = StatusNoSchema
 		return result, nil
 	}
 
 	// Parse the JSON body.
 	var data interface{}
 	if err := json.Unmarshal(body, &data); err != nil {
-		result.Valid = false
+		result.Status = StatusInvalid
 		result.addFieldErrors([]FieldError{{Reason: fmt.Sprintf("Invalid JSON: %v", err)}})
 		return result, nil
 	}
@@ -157,7 +154,7 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	// Validate against schema. MultiErrors collects every validation failure
 	// instead of stopping at the first, so the caller sees all issues at once.
 	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors()); err != nil {
-		result.Valid = false
+		result.Status = StatusInvalid
 		result.addFieldErrors(fieldValidationErrors(err))
 		return result, nil
 	}
@@ -173,6 +170,20 @@ type FieldError struct {
 	Reason string `json:"reason"`
 }
 
+// ValidationStatus describes what happened when a payload was checked against
+// the operation's OpenAPI request schema.
+type ValidationStatus int
+
+const (
+	// StatusValid means a request schema existed and the payload satisfied it.
+	StatusValid ValidationStatus = iota
+	// StatusInvalid means a request schema existed and the payload failed it (see Errors).
+	StatusInvalid
+	// StatusNoSchema means the operation defines no request schema, so the payload
+	// was not checked and is sent as-is.
+	StatusNoSchema
+)
+
 // String renders a FieldError as "field: reason", or just the reason when the
 // error is not tied to a field.
 func (e FieldError) String() string {
@@ -182,11 +193,12 @@ func (e FieldError) String() string {
 	return e.Field + ": " + e.Reason
 }
 
-// ValidationResult contains the result of schema validation. Errors holds the
+// ValidationResult contains the result of schema validation. Status reports
+// whether a schema existed and whether the payload satisfied it; Errors holds the
 // human-readable strings; FieldErrors holds the same failures in structured form
 // for the JSON error envelope's "details" field.
 type ValidationResult struct {
-	Valid       bool
+	Status      ValidationStatus
 	Errors      []string
 	FieldErrors []FieldError
 }

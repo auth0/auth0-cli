@@ -41,7 +41,7 @@ func listOrganizationsClientGrantCmd(cli *cli) *cobra.Command {
   auth0 client-grants organizations list <client-grant-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if len(args) == 0 {

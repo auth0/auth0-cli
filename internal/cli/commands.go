@@ -310,7 +310,7 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 	var findArgs []string
 	for _, arg := range args {
 		switch arg {
-		case "help", "--help", "-h", "--json":
+		case "help", "--help", "-h", "--json", "--json-compact":
 			continue
 		}
 		findArgs = append(findArgs, arg)
@@ -371,12 +371,31 @@ func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bo
 		return false
 	}
 
-	for _, arg := range remaining {
+	// Merge parent persistent flags (e.g. the global --tenant) into target.Flags()
+	// so a value-taking flag can be told apart from a positional below. This is
+	// exactly what cobra does before it parses, so calling it early is harmless.
+	target.InheritedFlags()
+	flags := target.Flags()
+
+	// Because root.Find does not consume flag values, the space form "--tenant foo"
+	// leaves "foo" in remaining. Skip a value-taking flag's value token before
+	// deciding whether any leftover positional named a command.
+	for i := 0; i < len(remaining); i++ {
+		arg := remaining[i]
 		if !strings.HasPrefix(arg, "-") {
 			return false
 		}
+		// An unrecognized flag on a namespace (for example `auth0 apps --bogus`)
+		// must fail as a usage error, not be answered with help, so it is not an
+		// implicit help request.
 		if !flagTokenIsKnown(target, arg) {
 			return false
+		}
+		if strings.Contains(arg, "=") {
+			continue // "--name=value"/"-x=value" carry their value inline.
+		}
+		if f := lookupFlagToken(flags, arg); f != nil && f.NoOptDefVal == "" && i+1 < len(remaining) {
+			i++ // Consume the following value token.
 		}
 	}
 
@@ -401,6 +420,21 @@ func flagTokenIsKnown(cmd *cobra.Command, token string) bool {
 	return cmd.Flags().ShorthandLookup(short) != nil || cmd.InheritedFlags().ShorthandLookup(short) != nil
 }
 
+// lookupFlagToken resolves a "--name" or "-x" token to its flag definition in
+// the given set, returning nil when the token is malformed or unknown. It is
+// used to tell value-taking flags (which consume the next token in the space
+// form) from boolean flags (which do not).
+func lookupFlagToken(flags *pflag.FlagSet, arg string) *pflag.Flag {
+	switch {
+	case strings.HasPrefix(arg, "--"):
+		return flags.Lookup(strings.TrimPrefix(arg, "--"))
+	case strings.HasPrefix(arg, "-") && len(arg) > 1:
+		return flags.ShorthandLookup(arg[1:2])
+	default:
+		return nil
+	}
+}
+
 // hasHelpRequest reports whether args request help via --help/-h or the `help`
 // subcommand. A bare "help" only counts in first position, not as a flag value.
 func hasHelpRequest(args []string) bool {
@@ -413,9 +447,11 @@ func hasHelpRequest(args []string) bool {
 	return len(args) > 0 && args[0] == "help"
 }
 
-// hasJSONRequest reports whether the args contain the `--json` flag.
+// hasJSONRequest reports whether the args contain a JSON-output flag (`--json`
+// or `--json-compact`). Both request machine-readable output, so JSON help and
+// namespace trees must behave identically for either.
 func hasJSONRequest(args []string) bool {
-	return slices.Contains(args, "--json")
+	return slices.Contains(args, "--json") || slices.Contains(args, "--json-compact")
 }
 
 func renderCommandTreeJSON(tree []commandNode) error {

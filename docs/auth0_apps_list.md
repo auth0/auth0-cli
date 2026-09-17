@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing applications. To create one, run: `auth0 apps create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 apps list [flags]
@@ -22,6 +25,10 @@ auth0 apps list [flags]
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv
+  auth0 apps list --schema
+  auth0 apps list --schema --json
+  auth0 apps list --query '{"app_type":"spa"}'
+  auth0 apps list --query '{"app_type":"spa"}' --json
 ```
 
 
@@ -32,7 +39,9 @@ auth0 apps list [flags]
       --json             Output in json format.
       --json-compact     Output in compact json format.
   -n, --number int       Number of apps to retrieve. Minimum 1, maximum 1000. (default 100)
+  -q, --query string     Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters.
   -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
+      --schema           Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

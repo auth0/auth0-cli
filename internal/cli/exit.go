@@ -20,9 +20,9 @@ const (
 	exitInterrupted = 130
 )
 
-// usageError wraps a command-usage failure (bad flag, unknown flag) so it maps
-// to the dedicated usage exit code. Flag parse errors are wrapped via cobra's
-// FlagErrorFunc; see buildRootCmd.
+// usageError wraps a command-usage failure (bad flag, unknown flag) so it
+// classifies as "usage" in the JSON error envelope. Flag parse errors are wrapped
+// via cobra's FlagErrorFunc; see buildRootCmd.
 type usageError struct{ err error }
 
 func (e usageError) Error() string { return e.err.Error() }
@@ -30,9 +30,9 @@ func (e usageError) Error() string { return e.err.Error() }
 func (e usageError) Unwrap() error { return e.err }
 
 // authError wraps an authentication/authorization setup failure (expired token
-// in --no-input mode, corrupted token, failed credential refresh) so it maps to
-// the auth exit code, letting agents detect "must re-authenticate" from the code
-// alone instead of scraping the message.
+// in --no-input mode, corrupted token, failed credential refresh) so it
+// classifies as "auth" in the JSON error envelope, letting agents detect "must
+// re-authenticate" from the code alone instead of scraping the message.
 type authError struct{ err error }
 
 func (e authError) Error() string { return e.err.Error() }
@@ -40,10 +40,11 @@ func (e authError) Error() string { return e.err.Error() }
 func (e authError) Unwrap() error { return e.err }
 
 // validationError wraps a client-side input failure (unreadable/malformed JSON,
-// local schema validation) so it maps to the validation exit code before any API
-// call is made, matching the class a server-side 400/422 would produce. When
-// details is set it carries the field-level failures into the JSON error
-// envelope's "details" field via the errorDetailer interface.
+// local schema validation, invalid flag values) so it classifies as "validation"
+// in the JSON error envelope before any API call is made, matching the class a
+// server-side 400/422 would produce. When details is set it carries the
+// field-level failures into the JSON error envelope's "details" field via the
+// errorDetailer interface.
 type validationError struct {
 	err     error
 	details json.RawMessage
