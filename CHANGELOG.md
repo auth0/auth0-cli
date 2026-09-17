@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Render help as JSON in agent mode for a bare `auth0` and for a command group invoked without a subcommand (for example `auth0 apps`), instead of the human help text, and describe agent mode (its output contract and how to disable it) in the root help so it does not need to be re-announced on every command
 - `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
 
+### Fixed
+
+- `--data` input is now checked for well-formed JSON even when the operation has
+  no local schema, so malformed payloads fail locally with a clear message
+  instead of being sent to the API as-is.
+
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
