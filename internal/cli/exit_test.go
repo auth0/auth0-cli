@@ -85,6 +85,19 @@ func TestExitCodeForError(t *testing.T) {
 	}
 }
 
+// TestAgentModeHelpMatchesExitCodes guards the help text against re-introducing
+// a granular exit-code contract that exitCodeForError does not honor. Every
+// failure collapses to the generic code, so the class lives in the JSON
+// envelope's "code" field, not in the exit code.
+func TestAgentModeHelpMatchesExitCodes(t *testing.T) {
+	for _, class := range []string{"2 usage", "3 auth", "4 validation", "5 not-found", "6 rate-limit", "7 api"} {
+		assert.NotContains(t, agentModeHelp, class, "help must not promise a distinct numeric exit code per failure class")
+	}
+
+	assert.Contains(t, agentModeHelp, "exits 1", "help should state the coarse failure exit code")
+	assert.Contains(t, agentModeHelp, `"code" field`, "help should point the failure class at the JSON envelope")
+}
+
 func TestBuildErrorEnvelope(t *testing.T) {
 	t.Run("classifies and carries the HTTP status", func(t *testing.T) {
 		envelope := buildErrorEnvelope(fakeManagementError{status: 404, message: "404 Not Found: connection not found"})

@@ -43,6 +43,30 @@ The Auth0 CLI now includes features for AI agents and automation:
 See 'auth0 <resource> --help' for details on specific resources.
 For agent integration guide, visit: https://github.com/auth0/auth0-cli`
 
+// agentModeHelp describes agent mode in one place. It is shown in the root help,
+// both the human text and the JSON help an agent reads, so the CLI never has to
+// re-announce the mode on every command it runs.
+const agentModeHelp = `## Agent Mode
+
+Agent mode makes every command's output machine-readable. The CLI enables it
+automatically when it detects an AI agent. Force it with '--agent-mode' (or
+AUTH0_AGENT_MODE=true) and turn it off with '--agent-mode=false' (or
+AUTH0_AGENT_MODE=false).
+
+In agent mode the CLI:
+
+  • Prints results to stdout as JSON, and streams (for example 'auth0 logs tail')
+    as newline-delimited JSON, one object per line.
+  • Keeps stderr clean: human hints and progress messages are suppressed, so on
+    success stderr is empty and on failure it carries only a JSON error envelope
+    ({"error":{"code","message","status","details"}}). Because that envelope is
+    the only thing on stderr, even a merged stdout+stderr stream stays parseable.
+  • Disables interactive prompts and colors.
+  • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
+    scripts that treat any non-zero exit as failure keep working. The specific
+    failure class (usage, auth, validation, not_found, rate_limit, api) is carried
+    by the JSON error envelope's "code" field, not by the exit code.`
+
 const panicMessage = `
 !!     Uh oh. Something went wrong.
 !!     If this problem keeps happening feel free to report an issue at
@@ -151,7 +175,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Short:         rootShort,
-		Long:          rootLong + "\n\n" + getLogin(cli),
+		Long:          rootLong + "\n\n" + agentModeHelp + "\n\n" + getLogin(cli),
 		Version:       buildinfo.GetVersionWithCommit(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cli.executedCommandPath = cmd.CommandPath()
@@ -161,11 +185,6 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
-
-			// Emitted after ansi.Initialize so the notice respects the color setting.
-			if cli.agentMode {
-				cli.renderer.Infof("Agent mode on: JSON output, prompts and colors off. Disable with --agent-mode=false.")
-			}
 
 			// Namespace commands (e.g. `auth0 actions`) never call the API
 			// themselves; they only print help or reject an unknown

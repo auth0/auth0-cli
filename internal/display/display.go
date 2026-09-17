@@ -34,6 +34,13 @@ type Renderer struct {
 
 	// Format indicates how the results are rendered. Default (empty) will write as table.
 	Format OutputFormat
+
+	// AgentMode, when true, keeps stderr machine-clean: human diagnostics (info,
+	// success, detail, warning and non-fatal errors) and decorative output are
+	// suppressed, so the only thing an agent sees on stderr is the JSON error
+	// envelope on failure. It also selects the compact one-object-per-line form
+	// for streamed results. Enabled in agent mode.
+	AgentMode bool
 }
 
 type View interface {
@@ -51,13 +58,33 @@ func NewRenderer() *Renderer {
 
 func (r *Renderer) Output(message string) {
 	fmt.Fprint(r.ResultWriter, message)
+
+	// In JSON modes always terminate stdout with a newline so a piped reader (or
+	// an NDJSON parser) never drops the final record. A bare pipe otherwise gets
+	// no trailing newline, since the terminal check below is false.
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+		fmt.Fprintln(r.ResultWriter)
+		return
+	}
+
 	if iostream.IsOutputTerminal() {
 		r.Newline()
 	}
 }
 
 func (r *Renderer) Newline() {
+	// A bare newline is decorative spacing; suppress it in agent mode and any
+	// JSON output mode so a caller parsing stderr never sees a stray blank line.
+	if r.suppressDecorations() {
+		return
+	}
 	fmt.Fprintln(r.MessageWriter)
+}
+
+// suppressDecorations reports whether purely decorative stderr output (headings
+// and blank lines) should be dropped: in agent mode and in any JSON output mode.
+func (r *Renderer) suppressDecorations() bool {
+	return r.AgentMode || r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact
 }
 
 // ErrorEnvelope is the machine-readable error emitted on stderr in JSON/agent
@@ -87,13 +114,26 @@ func (r *Renderer) ErrorJSON(envelope ErrorEnvelope) {
 	fmt.Fprintln(r.MessageWriter, string(b))
 }
 
+// Diagnostic messages (info, success, detail, warning and non-fatal errors) are
+// human advice written to stderr. In agent mode they are suppressed entirely so
+// stderr carries nothing but the JSON error envelope on failure; that keeps a
+// merged stdout+stderr stream parseable, discriminated by the reserved "error"
+// key rather than a fragile per-message field. An agent gets everything it needs
+// from the result object on stdout.
+
 func (r *Renderer) Infof(format string, a ...interface{}) {
+	if r.AgentMode {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.Green(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 // Successf writes a success line with a green check-mark prefix.
 func (r *Renderer) Successf(format string, a ...interface{}) {
+	if r.AgentMode {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.Green("✓ "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
@@ -103,24 +143,37 @@ const detailIndent = "  "
 // Detailf writes an indented detail line with no prefix symbol, used for
 // supplementary information displayed beneath a success or info message.
 func (r *Renderer) Detailf(format string, a ...interface{}) {
+	if r.AgentMode {
+		return
+	}
 	fmt.Fprintf(r.MessageWriter, detailIndent+format+"\n", a...)
 }
 
 func (r *Renderer) Warnf(format string, a ...interface{}) {
+	if r.AgentMode {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.Yellow(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Errorf(format string, a ...interface{}) {
+	if r.AgentMode {
+		return
+	}
 	fmt.Fprint(r.MessageWriter, ansi.BrightRed(" ▸    "))
 	fmt.Fprintf(r.MessageWriter, format+"\n", a...)
 }
 
 func (r *Renderer) Heading(text ...string) {
-	heading := fmt.Sprintf("%s %s\n", ansi.Bold(r.Tenant), strings.Join(text, " "))
-	if r.Format != OutputFormatJSONCompact {
-		fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
+	// The heading is purely decorative, so it is suppressed in agent mode and
+	// in any JSON output mode to keep stderr free of non-JSON output.
+	if r.suppressDecorations() {
+		return
 	}
+
+	heading := fmt.Sprintf("%s %s\n", ansi.Bold(r.Tenant), strings.Join(text, " "))
+	fmt.Fprintf(r.MessageWriter, "\n%s %s\n", ansi.Faint("==="), heading)
 }
 
 func (r *Renderer) EmptyState(resource string, hint string) {
@@ -212,6 +265,14 @@ func (r *Renderer) Result(data View) {
 }
 
 func (r *Renderer) Stream(data []View, ch <-chan View) {
+	// In JSON modes a stream must be NDJSON (one object per line), never a JSON
+	// array, because an array never closes while tailing. Agent mode forces JSON,
+	// so this is also the path a tailing agent takes.
+	if r.Format == OutputFormatJSON || r.Format == OutputFormatJSONCompact {
+		r.streamJSON(data, ch)
+		return
+	}
+
 	w := r.ResultWriter
 
 	displayRow := func(row []string) {
@@ -252,6 +313,45 @@ func (r *Renderer) Stream(data []View, ch <-chan View) {
 
 	for v := range ch {
 		displayView(v)
+	}
+}
+
+// streamJSON writes each streamed record as its own JSON object to stdout, one
+// after another separated by newlines, never a JSON array (an array never closes
+// while tailing). With --json-compact each object is a single line (NDJSON); with
+// --json each object is indented for a human watching the live stream, which
+// streaming parsers such as jq still accept. Agent mode always uses the compact
+// form, since its machine-readable contract promises one object per line.
+func (r *Renderer) streamJSON(data []View, ch <-chan View) {
+	compact := r.Format == OutputFormatJSONCompact || r.AgentMode
+
+	emit := func(v View) {
+		var (
+			b   []byte
+			err error
+		)
+		if compact {
+			b, err = json.Marshal(v.Object())
+		} else {
+			b, err = json.MarshalIndent(v.Object(), "", "  ")
+		}
+		if err != nil {
+			r.Errorf("couldn't marshal stream record as JSON: %v", err)
+			return
+		}
+		fmt.Fprintln(r.ResultWriter, string(b))
+	}
+
+	for _, v := range data {
+		emit(v)
+	}
+
+	if ch == nil {
+		return
+	}
+
+	for v := range ch {
+		emit(v)
 	}
 }
 

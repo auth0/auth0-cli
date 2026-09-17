@@ -302,7 +302,7 @@ func extractArguments(cmd *cobra.Command) []string {
 // flag of their own. A specific command is described in detail; the root is a
 // compact overview.
 func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) bool {
-	if !hasHelpRequest(args) || (!hasJSONRequest(args) && !cli.agentMode) {
+	if !hasJSONRequest(args) && !cli.agentMode {
 		return false
 	}
 
@@ -310,15 +310,24 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 	var findArgs []string
 	for _, arg := range args {
 		switch arg {
-		case "help", "--help", "-h", "--json":
+		case "help", "--help", "-h", "--json", "--json-compact":
 			continue
 		}
 		findArgs = append(findArgs, arg)
 	}
 
-	target, _, err := root.Find(findArgs)
+	target, remaining, err := root.Find(findArgs)
 	if err != nil || target == nil {
 		target = root
+		remaining = findArgs
+	}
+
+	// Render JSON help when help is explicitly requested, or when the invocation
+	// lands on a namespace without choosing a subcommand (a bare `auth0` or
+	// `auth0 apps`), which cobra would otherwise answer with human help. This is
+	// only reached in JSON/agent mode, so it stays out of the human path.
+	if !hasHelpRequest(args) && !isImplicitNamespaceHelp(target, remaining, args) {
+		return false
 	}
 
 	detailed := target != root
@@ -326,10 +335,78 @@ func renderJSONHelpIfRequested(cli *cli, root *cobra.Command, args []string) boo
 	nodes := []commandNode{buildNode(target, 1, 0, detailed)}
 	if detailed {
 		nodes = annotateWithRawAPINote(nodes)
+	} else {
+		// Root help: give an agent the static, agent-relevant prose (the automation
+		// guidance plus the agent-mode output contract) and the global flags up
+		// front, since agent mode no longer prints a per-command notice and this is
+		// the one place an agent looks to learn how the CLI behaves. The dynamic
+		// login-status blob appended to the command's Long is deliberately excluded,
+		// as it is human prose and noise for a JSON consumer.
+		nodes[0].Description = rootLong + "\n\n" + agentModeHelp
+		nodes[0].Flags = collectFlags(target)
 	}
 
 	_ = renderCommandTreeJSON(nodes)
 	return true
+}
+
+// isImplicitNamespaceHelp reports whether an invocation lands on a namespace (a
+// command with subcommands, including the root) without choosing one, so cobra
+// would fall back to printing that namespace's help. A bare `auth0` or
+// `auth0 apps` qualifies. It does not qualify when `--version`/`-v` is present
+// (which prints the version), or when a leftover positional token remains, which
+// means a command was named (possibly mistyped) and must run so it can succeed
+// or report "unknown command" itself. The remaining slice is the leftover after
+// cobra matched the command path, so it holds flags and any un-matched positional.
+func isImplicitNamespaceHelp(target *cobra.Command, remaining, args []string) bool {
+	for _, arg := range args {
+		if arg == "-v" || arg == "--version" {
+			return false
+		}
+	}
+
+	if !target.HasSubCommands() {
+		return false
+	}
+
+	// Merge parent persistent flags (e.g. the global --tenant) into target.Flags()
+	// so a value-taking flag can be told apart from a positional below. This is
+	// exactly what cobra does before it parses, so calling it early is harmless.
+	target.InheritedFlags()
+	flags := target.Flags()
+
+	// Because root.Find does not consume flag values, the space form "--tenant foo"
+	// leaves "foo" in remaining. Skip a value-taking flag's value token before
+	// deciding whether any leftover positional named a command.
+	for i := 0; i < len(remaining); i++ {
+		arg := remaining[i]
+		if !strings.HasPrefix(arg, "-") {
+			return false
+		}
+		if strings.Contains(arg, "=") {
+			continue // "--name=value"/"-x=value" carry their value inline.
+		}
+		if f := lookupFlagToken(flags, arg); f != nil && f.NoOptDefVal == "" && i+1 < len(remaining) {
+			i++ // Consume the following value token.
+		}
+	}
+
+	return true
+}
+
+// lookupFlagToken resolves a "--name" or "-x" token to its flag definition in
+// the given set, returning nil when the token is malformed or unknown. It is
+// used to tell value-taking flags (which consume the next token in the space
+// form) from boolean flags (which do not).
+func lookupFlagToken(flags *pflag.FlagSet, arg string) *pflag.Flag {
+	switch {
+	case strings.HasPrefix(arg, "--"):
+		return flags.Lookup(strings.TrimPrefix(arg, "--"))
+	case strings.HasPrefix(arg, "-") && len(arg) > 1:
+		return flags.ShorthandLookup(arg[1:2])
+	default:
+		return nil
+	}
 }
 
 // hasHelpRequest reports whether args request help via --help/-h or the `help`
@@ -344,9 +421,11 @@ func hasHelpRequest(args []string) bool {
 	return len(args) > 0 && args[0] == "help"
 }
 
-// hasJSONRequest reports whether the args contain the `--json` flag.
+// hasJSONRequest reports whether the args contain a JSON-output flag (`--json`
+// or `--json-compact`). Both request machine-readable output, so JSON help and
+// namespace trees must behave identically for either.
 func hasJSONRequest(args []string) bool {
-	return slices.Contains(args, "--json")
+	return slices.Contains(args, "--json") || slices.Contains(args, "--json-compact")
 }
 
 func renderCommandTreeJSON(tree []commandNode) error {
