@@ -60,8 +60,10 @@ In agent mode the CLI:
   • Prints diagnostics to stderr as JSON lines ({"level","message"}) and errors as
     a JSON envelope ({"error":{"code","message","status","details"}}).
   • Disables interactive prompts and colors.
-  • Exits with a code per failure class: 0 success, 1 generic, 2 usage, 3 auth,
-    4 validation, 5 not-found, 6 rate-limit, 7 api, 130 interrupted.`
+  • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
+    scripts that treat any non-zero exit as failure keep working. The specific
+    failure class (usage, auth, validation, not_found, rate_limit, api) is carried
+    by the JSON error envelope's "code" field, not by the exit code.`
 
 const panicMessage = `
 !!     Uh oh. Something went wrong.
@@ -100,7 +102,8 @@ func Execute() {
 	rootCmd := buildRootCmd(cli)
 	rootCmd.SetUsageTemplate(namespaceUsageTemplate())
 
-	// Wrap flag-parse errors so they map to the usage exit code (2).
+	// Wrap flag-parse errors so they carry the "usage" failure class in the JSON
+	// error envelope. The process exit code stays the generic 1 (see exitCodeForError).
 	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return usageError{err}
 	})

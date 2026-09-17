@@ -123,8 +123,11 @@ func (r *Renderer) structuredMessage(level, format string, a ...interface{}) boo
 	// does not classify these Renderer methods as printf wrappers, which would
 	// flag every existing non-constant-format caller across the codebase.
 	line := messageLine{
-		Level:   level,
-		Message: strings.TrimRight(fmt.Sprintf(format+"\n", a...), "\n"),
+		Level: level,
+		// TrimSuffix drops only the single newline appended above (the concatenation
+		// keeps vet from classifying this as a printf wrapper), preserving any
+		// trailing newline that was already part of the message content.
+		Message: strings.TrimSuffix(fmt.Sprintf(format+"\n", a...), "\n"),
 	}
 
 	b, err := json.Marshal(line)

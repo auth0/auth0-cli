@@ -215,7 +215,7 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 
-	cmd.Flags().BoolVar(&cli.json, "json", false, "Tail logs as a stream of JSON, one indented object per event.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Tail logs as a stream of JSON, one indented object per event (newline-delimited compact objects in agent mode).")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Tail logs as newline-delimited JSON, one compact object per event.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
