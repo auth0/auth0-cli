@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
 - Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands and unknown flags on a command group are also rejected
+- `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
