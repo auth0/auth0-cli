@@ -81,13 +81,12 @@ type ErrorEnvelope struct {
 	Error ErrorBody `json:"error"`
 }
 
-// ErrorBody carries the classified error. Status and Details are omitted when
-// unavailable. Details holds structured (e.g. field-level validation) errors.
+// ErrorBody carries the classified error. Status is omitted when the failure did
+// not come from the Auth0 Management API.
 type ErrorBody struct {
-	Code    string          `json:"code"`
-	Message string          `json:"message"`
-	Status  int             `json:"status,omitempty"`
-	Details json.RawMessage `json:"details,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Status  int    `json:"status,omitempty"`
 }
 
 // ErrorJSON writes the error envelope as a single compact JSON line to stderr,
@@ -123,8 +122,11 @@ func (r *Renderer) structuredMessage(level, format string, a ...interface{}) boo
 	// does not classify these Renderer methods as printf wrappers, which would
 	// flag every existing non-constant-format caller across the codebase.
 	line := messageLine{
-		Level:   level,
-		Message: strings.TrimRight(fmt.Sprintf(format+"\n", a...), "\n"),
+		Level: level,
+		// TrimSuffix drops only the single newline appended above (the concatenation
+		// keeps vet from classifying this as a printf wrapper), preserving any
+		// trailing newline that was already part of the message content.
+		Message: strings.TrimSuffix(fmt.Sprintf(format+"\n", a...), "\n"),
 	}
 
 	b, err := json.Marshal(line)

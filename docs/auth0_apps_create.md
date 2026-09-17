@@ -11,6 +11,9 @@ To create interactively, use `auth0 apps create` with no arguments.
 
 To create non-interactively, supply at least the application name, and type through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 apps create [flags]
@@ -32,6 +35,15 @@ auth0 apps create [flags]
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
+
+  # Discover the payload schema
+  auth0 apps create --schema
+  auth0 apps create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apps create --data '{"name":"myapp","app_type":"spa"}'
+  auth0 apps create --data @app.json
+  cat app.json | auth0 apps create
 ```
 
 
@@ -41,6 +53,7 @@ auth0 apps create [flags]
   -p, --allow-any-profile-of-type strings   Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.
   -a, --auth-method string                  Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
   -c, --callbacks strings                   After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
+      --data string                         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string                  Description of the application. Max character count is 140.
   -g, --grants strings                      List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
   -f, --is-first-party                      Whether the application is a first-party client (true) or third-party client (false). (default true)
@@ -54,6 +67,7 @@ auth0 apps create [flags]
   -z, --refresh-token string                Refresh Token Config for the application, formatted as JSON.
       --resource-server-identifier string   The identifier of the resource server that this client is associated with. This property can only be sent when app_type=resource_server and cannot be changed once the client is created.
   -r, --reveal-secrets                      Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
+      --schema                              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --third-party-security-mode string    Security mode for third-party clients: 'strict' or 'permissive'. Require --is-first-party=false
   -t, --type string                         Type of application:
                                             - native: mobile, desktop, CLI and smart device apps running natively.
