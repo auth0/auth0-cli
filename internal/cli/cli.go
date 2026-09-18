@@ -83,7 +83,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		c.renderer.Warnf("Required scopes have changed (missing: %s). Please log in to re-authorize the CLI.\n", strings.Join(scopesErr.MissingScopes, ", "))
 		tenant, err = RunLoginAsUser(ctx, c, scopesErr.MissingScopes, "")
 		if err != nil {
-			return err
+			return authError{err: err, reason: "login_failed"}
 		}
 	}
 
@@ -94,9 +94,12 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 			// In --no-input mode, fail immediately instead of hanging on an interactive prompt.
 			if c.noInput {
-				return authError{fmt.Errorf(
-					"auth token expired and --no-input is set; run 'auth0 login' to re-authenticate",
-				)}
+				return authError{
+					err: fmt.Errorf(
+						"auth token expired and --no-input is set; run 'auth0 login' to re-authenticate",
+					),
+					reason: "session_expired",
+				}
 			}
 
 			// Determine tenant domain for login.
@@ -109,7 +112,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), tenantDomain)
 			if err != nil {
-				return err
+				return authError{err: err, reason: "login_failed"}
 			}
 		} else if err := tenant.RegenerateAccessToken(ctx); err != nil {
 			errorMessage := fmt.Errorf(
@@ -121,7 +124,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 				err,
 				ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
 			)
-			return authError{errorMessage}
+			return authError{err: errorMessage, reason: "credentials_refresh_failed"}
 		}
 
 		if err := c.Config.AddTenant(tenant); err != nil {
@@ -130,22 +133,25 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 	}
 
 	if errors.Is(err, config.ErrMalformedToken) {
-		return authError{fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
-			ansi.Cyan("auth0 logout && auth0 login"),
-			ansi.Yellow("Note: Token handling was enhanced in v1.18.0+ to prevent malformed tokens."),
-		)}
+		return authError{
+			err: fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
+				ansi.Cyan("auth0 logout && auth0 login"),
+				ansi.Yellow("Note: Token handling was enhanced in v1.18.0+ to prevent malformed tokens."),
+			),
+			reason: "token_malformed",
+		}
 	}
 
 	invokerMetadata := c.invokerMetadataHeaderValue()
 
 	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
 	if err != nil {
-		return err
+		return authError{err: err, reason: "client_init_failed"}
 	}
 
 	apiv3, err := initializeManagementClientV3(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
 	if err != nil {
-		return err
+		return authError{err: err, reason: "client_init_failed"}
 	}
 
 	c.api = auth0.NewAPI(api)

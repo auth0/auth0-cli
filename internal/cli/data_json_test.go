@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/openapi"
 )
 
 // newDataCommand builds a minimal create-like command with the flags that matter
@@ -175,4 +177,33 @@ func TestResolveData(t *testing.T) {
 			assert.Empty(t, payload)
 		})
 	})
+}
+
+func TestReadAndValidateAttachesStructuredDetails(t *testing.T) {
+	manager, err := openapi.NewSchemaManager()
+	require.NoError(t, err)
+	handler := &DataJSONHandler{cli: &cli{}, manager: manager}
+
+	// A payload missing a required field fails local schema validation. The
+	// returned error must classify as validation and carry the field-level
+	// failures as JSON details for the error envelope.
+	_, _, err = handler.ReadAndValidate(`{"name":"x","code":"module.exports = () => {}"}`, "POST", "/actions/actions")
+	require.Error(t, err)
+	assert.Equal(t, "validation", errorClass(err))
+
+	details := errorDetails(err)
+	require.NotEmpty(t, details, "expected structured details on the validation error")
+
+	var fieldErrors []openapi.FieldError
+	require.NoError(t, json.Unmarshal(details, &fieldErrors))
+	require.NotEmpty(t, fieldErrors)
+
+	var found bool
+	for _, fe := range fieldErrors {
+		assert.NotEmpty(t, fe.Reason)
+		if fe.Field == "supported_triggers" {
+			found = true
+		}
+	}
+	assert.True(t, found, "expected a field error for the missing supported_triggers")
 }
