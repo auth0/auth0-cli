@@ -253,11 +253,14 @@ func (i *apiCmdInputs) validateAndSetMethod() error {
 		}
 	}
 
-	return fmt.Errorf(
-		"invalid method given: %s, accepting only %s",
-		i.RawMethod,
-		strings.Join(apiValidMethods, ", "),
-	)
+	return usageError{
+		err: fmt.Errorf(
+			"invalid method given: %s, accepting only %s",
+			i.RawMethod,
+			strings.Join(apiValidMethods, ", "),
+		),
+		reason: "invalid_flag_value",
+	}
 }
 
 func (i *apiCmdInputs) validateAndSetData() error {
@@ -272,7 +275,7 @@ func (i *apiCmdInputs) validateAndSetData() error {
 
 	if len(data) > 0 {
 		if err := json.Unmarshal(data, &i.Data); err != nil {
-			return fmt.Errorf("invalid JSON data provided: %w", err)
+			return validationError{err: fmt.Errorf("invalid JSON data provided: %w", err), reason: "malformed_json"}
 		}
 	}
 
@@ -293,14 +296,14 @@ func (i *apiCmdInputs) resolveData() ([]byte, error) {
 				return nil, err
 			}
 			if len(data) == 0 {
-				return nil, fmt.Errorf("no data received on stdin")
+				return nil, validationError{err: fmt.Errorf("no data received on stdin"), reason: "missing_input"}
 			}
 			return data, nil
 		case strings.HasPrefix(i.RawData, "@"):
 			path := i.RawData[1:]
 			data, err := os.ReadFile(path)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read data file %q: %w", path, err)
+				return nil, usageError{err: fmt.Errorf("failed to read data file %q: %w", path, err), reason: "invalid_flag_value"}
 			}
 			return data, nil
 		default:
@@ -314,7 +317,7 @@ func (i *apiCmdInputs) resolveData() ([]byte, error) {
 func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	endpoint, err := url.Parse(fmt.Sprintf("https://%s/api/v2/%s", domain, strings.Trim(i.RawURI, "/")))
 	if err != nil {
-		return fmt.Errorf("invalid uri given: %w", err)
+		return usageError{err: fmt.Errorf("invalid uri given: %w", err), reason: "invalid_flag_value"}
 	}
 
 	params := endpoint.Query()
@@ -325,7 +328,7 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 		for _, pair := range strings.Split(raw, ",") {
 			key, value, found := strings.Cut(pair, "=")
 			if !found {
-				return fmt.Errorf("invalid query parameter %q: expected key=value", pair)
+				return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", pair), reason: "invalid_flag_value"}
 			}
 			// Add (not Set) so a repeated key sends every value instead of the last
 			// one overwriting the rest.
@@ -401,11 +404,14 @@ func isInsufficientScopeError(statusCode int, rawBody []byte) error {
 		}
 	}
 
-	return fmt.Errorf(
-		"request failed because access token lacks scope: %s.\n "+
-			"If authenticated via client credentials, add this scope to the designated client. "+
-			"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`",
-		recommendedScopeToAdd,
-		recommendedScopeToAdd,
-	)
+	return authError{
+		err: fmt.Errorf(
+			"request failed because access token lacks scope: %s.\n "+
+				"If authenticated via client credentials, add this scope to the designated client. "+
+				"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`",
+			recommendedScopeToAdd,
+			recommendedScopeToAdd,
+		),
+		reason: "insufficient_scope",
+	}
 }

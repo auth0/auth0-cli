@@ -268,8 +268,8 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 				return key, nil
 			}
 		}
-		return "", fmt.Errorf("invalid template '%s'. Available templates: %s",
-			providedTemplate, strings.Join(templateNames, ", "))
+		return "", usageError{err: fmt.Errorf("invalid template '%s'. Available templates: %s",
+			providedTemplate, strings.Join(templateNames, ", ")), reason: "invalid_flag_value"}
 	}
 
 	var chosenTemplateName string
@@ -326,7 +326,7 @@ func validateAndSelectScreens(cli *cli, screenIDs, providedScreens []string, mul
 			return nil, err
 		}
 		if len(selected) == 0 {
-			return nil, fmt.Errorf("at least one screen must be selected")
+			return nil, usageError{err: fmt.Errorf("at least one screen must be selected"), reason: "missing_required_flags"}
 		}
 		return selected, nil
 	}

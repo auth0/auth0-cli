@@ -482,7 +482,7 @@ func checkTerraformProviderAndCLIDomainsMatch(currentCLIDomain string) error {
 	if providerDomain == currentCLIDomain {
 		return nil
 	}
-	return fmt.Errorf("terraform provider tenant domain %q does not match current CLI tenant %q", providerDomain, currentCLIDomain)
+	return usageError{err: fmt.Errorf("terraform provider tenant domain %q does not match current CLI tenant %q", providerDomain, currentCLIDomain), reason: "tenant_domain_mismatch"}
 }
 
 func deduplicateResourceNames(data importDataList) importDataList {

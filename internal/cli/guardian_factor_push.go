@@ -79,12 +79,12 @@ func setGuardianPushProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			if provider == "" {
-				return fmt.Errorf("--provider is required: valid values are guardian, sns, direct")
+				return usageError{err: fmt.Errorf("--provider is required: valid values are guardian, sns, direct"), reason: "missing_required_flags"}
 			}
 
 			value, err := managementv3.NewGuardianFactorsProviderPushNotificationProviderDataEnumFromString(provider)
 			if err != nil {
-				return fmt.Errorf("invalid provider %q: valid values are guardian, sns, direct", provider)
+				return usageError{err: fmt.Errorf("invalid provider %q: valid values are guardian, sns, direct", provider), reason: "invalid_flag_value"}
 			}
 
 			body := &managementv3.SetGuardianFactorsProviderPushNotificationRequestContent{Provider: value}

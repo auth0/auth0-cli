@@ -186,7 +186,7 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
 			// The API requires a client_id, audience or default_for filter
 			// alongside subject_type; catch it early with a clearer message.
 			if inputs.SubjectType != "" && inputs.ClientID == "" && inputs.Audience == "" && inputs.DefaultFor == "" {
-				return fmt.Errorf("--subject-type must be combined with --client-id, --audience or --default-for")
+				return usageError{err: fmt.Errorf("--subject-type must be combined with --client-id, --audience or --default-for"), reason: "incompatible_flags"}
 			}
 
 			request := &managementv3.ListClientGrantsRequestParameters{}
@@ -352,7 +352,7 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.ClientID == "" && inputs.DefaultFor == "" {
-				return errors.New("one of --client-id or --default-for must be set")
+				return usageError{err: errors.New("one of --client-id or --default-for must be set"), reason: "missing_required_flags"}
 			}
 
 			// A default grant is a template for a group of clients rather than an
@@ -376,7 +376,7 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			if isDefaultGrant {
 				for _, f := range []*Flag{&clientGrantSubjectType, &clientGrantOrganizationUsage, &clientGrantAllowAnyOrganization} {
 					if f.IsSet(cmd) {
-						return fmt.Errorf("--%s cannot be set with --default-for", f.LongForm)
+						return usageError{err: fmt.Errorf("--%s cannot be set with --default-for", f.LongForm), reason: "incompatible_flags"}
 					}
 				}
 			}
@@ -892,7 +892,7 @@ func clientGrantSubjectTypeAllowsOrganizations(subjectType string) bool {
 // into a clear, actionable message for the non-interactive path.
 func validateClientGrantSubjectType(subjectType, organizationUsage string, allowAnyOrganization bool) error {
 	if !clientGrantSubjectTypeAllowsOrganizations(subjectType) && (organizationUsage != "" || allowAnyOrganization) {
-		return fmt.Errorf("--organization-usage and --allow-any-organization cannot be set when --subject-type is %q", subjectType)
+		return usageError{err: fmt.Errorf("--organization-usage and --allow-any-organization cannot be set when --subject-type is %q", subjectType), reason: "incompatible_flags"}
 	}
 	return nil
 }
@@ -909,7 +909,7 @@ func clientGrantOrganizationAllowsAny(organizationUsage string) bool {
 // 400 into a clear, actionable message.
 func validateClientGrantOrganization(organizationUsage string, allowAnyOrganization bool) error {
 	if allowAnyOrganization && !clientGrantOrganizationAllowsAny(organizationUsage) {
-		return errors.New("--allow-any-organization can only be enabled when --organization-usage is 'allow' or 'require'")
+		return usageError{err: errors.New("--allow-any-organization can only be enabled when --organization-usage is 'allow' or 'require'"), reason: "incompatible_flags"}
 	}
 	return nil
 }

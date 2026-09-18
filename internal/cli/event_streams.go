@@ -216,7 +216,7 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 			}
 
 			if len(inputs.Configuration) == 0 {
-				return fmt.Errorf("must provider configuration for event stream")
+				return usageError{err: fmt.Errorf("must provider configuration for event stream"), reason: "missing_required_flags"}
 			}
 
 			var subscriptions []management.EventStreamSubscription

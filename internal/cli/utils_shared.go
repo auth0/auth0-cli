@@ -453,7 +453,7 @@ func parseFlexibleDate(input string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("invalid date format: use RFC3339, 'YYYY-MM-DD', or formats like 'yesterday', '-2d'")
+	return "", usageError{err: fmt.Errorf("invalid date format: use RFC3339, 'YYYY-MM-DD', or formats like 'yesterday', '-2d'"), reason: "invalid_flag_value"}
 }
 
 // stringMapToAny converts a string-keyed string map (as produced by a
@@ -571,7 +571,7 @@ func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, e
 		return nil, err
 	}
 	if obj == nil {
-		return nil, errors.New("body must be a JSON object")
+		return nil, validationError{err: errors.New("body must be a JSON object"), reason: "malformed_json"}
 	}
 
 	encoded, err := json.Marshal(name)
@@ -593,7 +593,7 @@ func rejectRawNameField(body json.RawMessage, source string) error {
 		return nil
 	}
 	if _, ok := obj["name"]; ok {
-		return fmt.Errorf("the %s must not contain a top-level \"name\" field; set the name with --name instead", source)
+		return validationError{err: fmt.Errorf("the %s must not contain a top-level \"name\" field; set the name with --name instead", source), reason: "invalid_body"}
 	}
 
 	return nil
@@ -607,7 +607,7 @@ func rawJSONStringField(body json.RawMessage, field string) (string, error) {
 		return "", err
 	}
 	if obj == nil {
-		return "", errors.New("body must be a JSON object")
+		return "", validationError{err: errors.New("body must be a JSON object"), reason: "malformed_json"}
 	}
 
 	raw, ok := obj[field]

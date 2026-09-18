@@ -273,7 +273,7 @@ func (c *cli) apiPickerOptionsWithoutAuth0(ctx context.Context) (pickerOptions, 
 
 func (c *cli) pickRolePermissions(cmd *cobra.Command, apiScopes []management.ResourceServerScope, permissions *[]string) error {
 	if !canPrompt(cmd) {
-		return fmt.Errorf("missing a required flag in non-interactive mode: --permissions")
+		return usageError{err: fmt.Errorf("missing a required flag in non-interactive mode: --permissions"), reason: "missing_required_flags"}
 	}
 
 	// NOTE(cyx): We're inlining this for now since we have no generic

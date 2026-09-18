@@ -69,7 +69,7 @@ In agent mode the CLI:
     approves it in a browser.
   • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
     scripts that treat any non-zero exit as failure keep working. The specific
-    failure class (usage, auth, validation, not_found, rate_limit, api) is carried
+    failure class (usage, auth, validation, not_found, conflict, rate_limit, api) is carried
     by the JSON error envelope's "code" field, not by the exit code.`
 
 const panicMessage = `
@@ -476,6 +476,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(formsCmd(cli))
 	rootCmd.AddCommand(flowsCmd(cli))
 	rootCmd.AddCommand(networkACLCmd(cli))
+	rootCmd.AddCommand(connectionsCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
 	rootCmd.AddCommand(sessionsCmd(cli))

@@ -307,7 +307,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 		}
 
 		if _, err = strconv.Atoi(portInput); err != nil {
-			return fmt.Errorf("invalid port number: %s", portInput)
+			return usageError{err: fmt.Errorf("invalid port number: %s", portInput), reason: "invalid_flag_value"}
 		}
 
 		port = portInput
@@ -422,7 +422,7 @@ func runConnectedMode(ctx context.Context, cli *cli, projectDir, port string, sc
 func validateAculProject(projectDir string) error {
 	packagePath := filepath.Join(projectDir, "package.json")
 	if _, err := os.Stat(packagePath); os.IsNotExist(err) {
-		return fmt.Errorf("package.json not found. This doesn't appear to be a valid ACUL project")
+		return validationError{err: fmt.Errorf("package.json not found. This doesn't appear to be a valid ACUL project"), reason: "invalid_project_dir"}
 	}
 	return nil
 }

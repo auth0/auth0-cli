@@ -793,7 +793,7 @@ func diffActionCmd(cli *cli) *cobra.Command {
 				// Exactly one version was supplied. Require both or neither so an
 				// explicitly pinned version is never silently discarded (in
 				// interactive mode the picker would otherwise overwrite it).
-				return fmt.Errorf("provide both --version1 and --version2, or neither")
+				return usageError{err: fmt.Errorf("provide both --version1 and --version2, or neither"), reason: "incompatible_flags"}
 			case canPrompt(cmd):
 				var err error
 				inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
@@ -801,7 +801,7 @@ func diffActionCmd(cli *cli) *cobra.Command {
 					return err
 				}
 			default:
-				return fmt.Errorf("missing required flags in non-interactive mode: --version1 and --version2")
+				return usageError{err: fmt.Errorf("missing required flags in non-interactive mode: --version1 and --version2"), reason: "missing_required_flags"}
 			}
 
 			var code1, code2 string
@@ -967,7 +967,7 @@ func inputModulesToActionModules(modules []string) (*[]management.ActionModules,
 			key = strings.TrimSpace(key)
 			value = strings.TrimSpace(value)
 			if !found || key == "" || value == "" {
-				return nil, fmt.Errorf("invalid --module value %q: expected comma-separated key=value pairs (e.g. \"module_id=<uuid>,module_version_id=<uuid>\")", raw)
+				return nil, usageError{err: fmt.Errorf("invalid --module value %q: expected comma-separated key=value pairs (e.g. \"module_id=<uuid>,module_version_id=<uuid>\")", raw), reason: "invalid_flag_value"}
 			}
 
 			switch key {
@@ -976,15 +976,15 @@ func inputModulesToActionModules(modules []string) (*[]management.ActionModules,
 			case "module_version_id":
 				module.ModuleVersionID = auth0.String(value)
 			default:
-				return nil, fmt.Errorf("invalid --module value %q: unknown key %q (supported keys: module_id, module_version_id)", raw, key)
+				return nil, usageError{err: fmt.Errorf("invalid --module value %q: unknown key %q (supported keys: module_id, module_version_id)", raw, key), reason: "invalid_flag_value"}
 			}
 		}
 
 		if module.ModuleID == nil {
-			return nil, fmt.Errorf("invalid --module value %q: module_id is required", raw)
+			return nil, usageError{err: fmt.Errorf("invalid --module value %q: module_id is required", raw), reason: "invalid_flag_value"}
 		}
 		if module.ModuleVersionID == nil {
-			return nil, fmt.Errorf("invalid --module value %q: module_version_id is required (the UUID of a specific module version)", raw)
+			return nil, usageError{err: fmt.Errorf("invalid --module value %q: module_version_id is required (the UUID of a specific module version)", raw), reason: "invalid_flag_value"}
 		}
 
 		actionModules = append(actionModules, module)

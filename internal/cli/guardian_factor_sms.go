@@ -79,12 +79,12 @@ func setGuardianSmsProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			if provider == "" {
-				return fmt.Errorf("--provider is required: valid values are auth0, twilio, phone-message-hook")
+				return usageError{err: fmt.Errorf("--provider is required: valid values are auth0, twilio, phone-message-hook"), reason: "missing_required_flags"}
 			}
 
 			value, err := managementv3.NewGuardianFactorsProviderSmsProviderEnumFromString(provider)
 			if err != nil {
-				return fmt.Errorf("invalid provider %q: valid values are auth0, twilio, phone-message-hook", provider)
+				return usageError{err: fmt.Errorf("invalid provider %q: valid values are auth0, twilio, phone-message-hook", provider), reason: "invalid_flag_value"}
 			}
 
 			body := &managementv3.SetGuardianFactorsProviderSmsRequestContent{Provider: value}
