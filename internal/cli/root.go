@@ -62,6 +62,11 @@ In agent mode the CLI:
     ({"error":{"code","reason","message","status","details"}}). Because that envelope
     is the only thing on stderr, even a merged stdout+stderr stream stays parseable.
   • Disables interactive prompts and colors.
+  • Prefers machine (client-credentials) login, which needs no browser:
+    'auth0 login --domain <domain> --client-id <id> --client-secret <secret>'.
+    A bare 'auth0 login' still works but requires a human: the CLI emits the device
+    verification URL and code as a JSON object on stdout, then waits while a person
+    approves it in a browser.
   • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
     scripts that treat any non-zero exit as failure keep working. The specific
     failure class (usage, auth, validation, not_found, conflict, rate_limit, api) is carried

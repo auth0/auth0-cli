@@ -79,6 +79,12 @@ func TestWaitUntilUserLogsIn(t *testing.T) {
 			expect:     "slow down!",
 		},
 		{
+			name:       "should surface an expired device code",
+			httpStatus: http.StatusOK,
+			response:   "{\"error\": \"expired_token\", \"error_description\": \"The device code has expired.\"}",
+			expect:     "The device code has expired.",
+		},
+		{
 			name:       "should error if can't parse tenant info",
 			httpStatus: http.StatusOK,
 			response:   "{\"access_token\": \"bad.token\"}",

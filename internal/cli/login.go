@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -89,8 +90,11 @@ func loginCmd(cli *cli) *cobra.Command {
 		Short: "Authenticate the Auth0 CLI",
 		Long: "Authenticates the Auth0 CLI using either personal credentials (user login) or client credentials (machine login)." +
 			"\n\nUse user login on personal machines or interactive environments (not supported for Private Cloud users).\n" +
-			"Use machine login for servers, CI, or any non-interactive environments — " +
-			"this is the recommended method for Private Cloud users.\n\n",
+			"Use machine login for servers, CI, AI agents, or any non-interactive environments — " +
+			"this is the recommended method for Private Cloud users and for agent mode.\n\n" +
+			"In agent mode, machine login is preferred because it needs no browser. If you run user login in agent mode, " +
+			"the CLI emits the device verification URL and code as a JSON object on stdout so an agent can hand them to a human to finish in a browser. " +
+			"Agent-mode login also sets the newly authenticated tenant as the default automatically.\n\n",
 		Example: `  auth0 login
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>
   auth0 login --domain <tenant-domain> --client-id <client-id> --client-assertion-signing-alg RS256 --client-assertion-private-key <path-to-private-key>
@@ -284,35 +288,63 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		return config.Tenant{}, fmt.Errorf("failed to get the device code: %w", err)
 	}
 
-	message := fmt.Sprintf("\n%s\n\n",
-		"Verify "+ansi.Bold(state.UserCode)+" code in opened browser window to complete authentication.",
-	)
-	cli.renderer.Output(message)
-
-	if cli.noInput {
-		message = "Open the following URL in a browser: %s\n"
-		cli.renderer.Infof(message, ansi.Green(state.VerificationURI))
-	} else {
-		message = "%s to open the browser to log in or %s to quit..."
-		cli.renderer.Infof(message, ansi.Green("Press Enter"), ansi.Red("^C"))
-
-		if _, err = fmt.Scanln(); err != nil {
-			return config.Tenant{}, err
-		}
-
-		if err = browser.OpenURL(state.VerificationURI); err != nil {
-			message = "Couldn't open the URL, please do it manually: %s."
-			cli.renderer.Warnf(message, state.VerificationURI)
-		}
-	}
-
 	var result auth.Result
-	err = ansi.Spinner("Waiting for the login to complete in the browser", func() error {
-		result, err = auth.WaitUntilUserLogsIn(ctx, http.DefaultClient, state)
-		return err
-	})
-	if err != nil {
-		return config.Tenant{}, fmt.Errorf("login error: %w", err)
+
+	if cli.renderer.AgentMode {
+		// An agent has no browser to open and no stdin to press Enter on, so the
+		// interactive device-code prompts (and the stderr spinner) would strand it.
+		// Instead emit the verification details as a single JSON object to stdout so
+		// the agent can relay the link and code to a human, then poll below until
+		// that human approves in a browser or the device code expires.
+		details, marshalErr := json.Marshal(struct {
+			VerificationURI string `json:"verification_uri"`
+			UserCode        string `json:"user_code"`
+			ExpiresIn       int    `json:"expires_in"`
+			Interval        int    `json:"interval"`
+		}{
+			VerificationURI: state.VerificationURI,
+			UserCode:        state.UserCode,
+			ExpiresIn:       state.ExpiresIn,
+			Interval:        state.Interval,
+		})
+		if marshalErr != nil {
+			return config.Tenant{}, fmt.Errorf("failed to encode device login details: %w", marshalErr)
+		}
+		cli.renderer.OutputPreformattedJSON(string(details))
+
+		if result, err = auth.WaitUntilUserLogsIn(ctx, http.DefaultClient, state); err != nil {
+			return config.Tenant{}, fmt.Errorf("login error: %w", err)
+		}
+	} else {
+		message := fmt.Sprintf("\n%s\n\n",
+			"Verify "+ansi.Bold(state.UserCode)+" code in opened browser window to complete authentication.",
+		)
+		cli.renderer.Output(message)
+
+		if cli.noInput {
+			message = "Open the following URL in a browser: %s\n"
+			cli.renderer.Infof(message, ansi.Green(state.VerificationURI))
+		} else {
+			message = "%s to open the browser to log in or %s to quit..."
+			cli.renderer.Infof(message, ansi.Green("Press Enter"), ansi.Red("^C"))
+
+			if _, err = fmt.Scanln(); err != nil {
+				return config.Tenant{}, err
+			}
+
+			if err = browser.OpenURL(state.VerificationURI); err != nil {
+				message = "Couldn't open the URL, please do it manually: %s."
+				cli.renderer.Warnf(message, state.VerificationURI)
+			}
+		}
+
+		err = ansi.Spinner("Waiting for the login to complete in the browser", func() error {
+			result, err = auth.WaitUntilUserLogsIn(ctx, http.DefaultClient, state)
+			return err
+		})
+		if err != nil {
+			return config.Tenant{}, fmt.Errorf("login error: %w", err)
+		}
 	}
 
 	cli.renderer.Newline()
@@ -340,8 +372,43 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 
 	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-User")
 
+	if cli.renderer.AgentMode {
+		// The "Successfully logged in" lines above are suppressed in agent mode, so
+		// emit a final machine-readable confirmation on stdout. This closes the
+		// stream that opened with the device verification object.
+		details, marshalErr := json.Marshal(struct {
+			LoggedIn bool   `json:"logged_in"`
+			Tenant   string `json:"tenant"`
+			Domain   string `json:"domain"`
+		}{
+			LoggedIn: true,
+			Tenant:   result.Tenant,
+			Domain:   result.Domain,
+		})
+		if marshalErr != nil {
+			return config.Tenant{}, fmt.Errorf("failed to encode login result: %w", marshalErr)
+		}
+		cli.renderer.OutputPreformattedJSON(string(details))
+	}
+
 	if cli.Config.DefaultTenant != result.Domain {
-		message = fmt.Sprintf(
+		// In agent mode there is no human to answer this prompt, and running login is
+		// an explicit request to use this tenant, so switch the default automatically
+		// instead of prompting. Prompting would either strand the login on the old
+		// default (closed stdin answers "no") or block on an interactive prompt.
+		if cli.renderer.AgentMode {
+			// The login already succeeded and {"logged_in":true,...} was emitted on
+			// stdout, so a failure to switch the default tenant is a convenience step
+			// that must not turn a successful login into a non-zero exit. Mirror the
+			// human path and treat it as non-fatal. Warnf is suppressed in agent mode,
+			// keeping stderr clean while the success object stands.
+			if err := cli.Config.SetDefaultTenant(result.Domain); err != nil {
+				cli.renderer.Warnf("Failed to set the default tenant, run 'auth0 tenants use %s' to switch: %v", result.Domain, err)
+			}
+			return tenant, nil
+		}
+
+		message := fmt.Sprintf(
 			"Your default tenant is %s. Do you want to change it to %s?",
 			cli.Config.DefaultTenant,
 			result.Domain,
@@ -430,7 +497,11 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 	domain := "https://" + inputs.Domain
 
 	if !strings.HasPrefix(inputs.ClientAssertionPrivateKey, "-----BEGIN ") {
-		inputs.ClientAssertionPrivateKey = readPrivateKey(inputs.ClientAssertionPrivateKey)
+		key, err := readPrivateKey(inputs.ClientAssertionPrivateKey)
+		if err != nil {
+			return fmt.Errorf("failed to read the private key file: %w", err)
+		}
+		inputs.ClientAssertionPrivateKey = key
 	}
 
 	token, err := auth.GetAccessTokenFromClientPrivateJWT(
@@ -474,14 +545,12 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 	return nil
 }
 
-func readPrivateKey(path string) string {
+func readPrivateKey(path string) (string, error) {
 	// Read the content of the file.
 	content, err := os.ReadFile(path)
 	if err != nil {
-		// Handle the error appropriately, e.g., log it or return an empty string with an error.
-		fmt.Println("Error reading private key file:", err)
-		return ""
+		return "", err
 	}
 	// Return the content.
-	return string(content)
+	return string(content), nil
 }

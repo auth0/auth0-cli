@@ -57,16 +57,14 @@ func withPipedStdin(t *testing.T, content string, fn func()) {
 }
 
 func TestReadJSONInput(t *testing.T) {
-	handler := &DataJSONHandler{}
-
 	t.Run("inline JSON is returned verbatim", func(t *testing.T) {
-		data, err := handler.readJSONInput(`{"name":"x"}`)
+		data, err := readJSONInput(`{"name":"x"}`)
 		require.NoError(t, err)
 		assert.Equal(t, `{"name":"x"}`, string(data))
 	})
 
 	t.Run("empty input is an error", func(t *testing.T) {
-		_, err := handler.readJSONInput("")
+		_, err := readJSONInput("")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no input provided")
 	})
@@ -75,7 +73,7 @@ func TestReadJSONInput(t *testing.T) {
 	// passing the flag explicitly.
 	t.Run("@- reads from piped stdin", func(t *testing.T) {
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			data, err := handler.readJSONInput("@-")
+			data, err := readJSONInput("@-")
 			require.NoError(t, err)
 			assert.Equal(t, `{"name":"from-pipe"}`, string(data))
 		})
@@ -83,7 +81,7 @@ func TestReadJSONInput(t *testing.T) {
 
 	t.Run("- reads from piped stdin", func(t *testing.T) {
 		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
-			data, err := handler.readJSONInput("-")
+			data, err := readJSONInput("-")
 			require.NoError(t, err)
 			assert.Equal(t, `{"name":"from-pipe"}`, string(data))
 		})
@@ -91,7 +89,7 @@ func TestReadJSONInput(t *testing.T) {
 
 	t.Run("@- with empty stdin is an error", func(t *testing.T) {
 		withPipedStdin(t, "", func() {
-			_, err := handler.readJSONInput("@-")
+			_, err := readJSONInput("@-")
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "no data received on stdin")
 		})

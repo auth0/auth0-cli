@@ -541,12 +541,7 @@ Use '--schema' to print the request payload schema.`,
 // --- Raw HTTP writes (full-fidelity, schema-validated) ---.
 
 func (c *cli) createConnectionFromJSON(cmd *cobra.Command, payload string) error {
-	handler, err := NewDataJSONHandler(c)
-	if err != nil {
-		return fmt.Errorf("failed to initialize JSON handler: %w", err)
-	}
-
-	body, validated, err := handler.ReadAndValidate(payload, http.MethodPost, "/connections")
+	body, validated, err := readAndValidateJSON(c, payload, http.MethodPost, "/connections")
 	if err != nil {
 		c.renderer.Infof("Run 'auth0 connections create --schema' to see the expected schema.")
 		return err
@@ -587,12 +582,7 @@ func (c *cli) enhanceConnectionAPIError(err error, method, path string) error {
 }
 
 func (c *cli) updateConnectionFromJSON(cmd *cobra.Command, id, payload string) error {
-	handler, err := NewDataJSONHandler(c)
-	if err != nil {
-		return fmt.Errorf("failed to initialize JSON handler: %w", err)
-	}
-
-	body, validated, err := handler.ReadAndValidate(payload, http.MethodPatch, "/connections/{id}")
+	body, validated, err := readAndValidateJSON(c, payload, http.MethodPatch, "/connections/{id}")
 	if err != nil {
 		c.renderer.Infof("Run 'auth0 connections update --schema' to see the expected schema.")
 		return err

@@ -92,6 +92,7 @@ func TestErrorReason(t *testing.T) {
 		{name: "usage default", err: usageError{err: errors.New("bad flag")}, expected: "flag_parse"},
 		{name: "usage tagged required flag", err: usageError{err: errors.New("required flag(s) \"x\" not set"), reason: "required_flag"}, expected: "required_flag"},
 		{name: "auth tagged session expired", err: authError{err: errors.New("expired"), reason: "session_expired"}, expected: "session_expired"},
+		{name: "auth tagged missing scopes", err: authError{err: errors.New("missing required scopes"), reason: "missing_scopes"}, expected: "missing_scopes"},
 		{name: "auth tagged login failed", err: authError{err: errors.New("login"), reason: "login_failed"}, expected: "login_failed"},
 		{name: "auth tagged client init", err: authError{err: errors.New("init"), reason: "client_init_failed"}, expected: "client_init_failed"},
 		{name: "auth untagged", err: authError{err: errors.New("generic auth")}, expected: "auth_failed"},

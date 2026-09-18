@@ -24,10 +24,26 @@ const (
 
 	// Bound the schema fetch so a slow or unreachable host cannot hang the CLI.
 	schemaHTTPTimeout = 30 * time.Second
+
+	// The docs endpoint intermittently returns transient non-200 responses (an
+	// edge cache can answer 404 for a request that succeeds moments later), so a
+	// single attempt is flaky. Retry a few times with exponential backoff before
+	// giving up and falling back to a cached copy.
+	schemaFetchAttempts = 3
 )
 
 // schemaHTTPClient fetches the OpenAPI schema with an explicit timeout.
 var schemaHTTPClient = &http.Client{Timeout: schemaHTTPTimeout}
+
+var (
+	// The URL fetchDoc downloads from. It defaults to the public SchemaURL and is
+	// a var so tests can point it at a local server.
+	schemaEndpoint = SchemaURL
+
+	// The base delay for the retry backoff, a var so tests can shrink it and avoid
+	// real sleeps.
+	schemaFetchBackoff = 1 * time.Second
+)
 
 var (
 	globalDoc *openapi3.T
@@ -69,9 +85,31 @@ func cacheInMemory(doc *openapi3.T) *openapi3.T {
 	return doc
 }
 
-// fetchDoc downloads and parses the OpenAPI schema.
+// fetchDoc downloads and parses the OpenAPI schema, retrying transient failures
+// with exponential backoff. The docs endpoint occasionally answers a request
+// that would otherwise succeed with a transient error (e.g. a 404 from an edge
+// cache), so a lone attempt is unreliable; the retries absorb those blips.
 func fetchDoc() (*openapi3.T, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, SchemaURL, nil)
+	var lastErr error
+	for attempt := 0; attempt < schemaFetchAttempts; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff before each retry: 1s, 2s, ...
+			time.Sleep(schemaFetchBackoff << (attempt - 1))
+		}
+
+		doc, err := fetchDocOnce()
+		if err == nil {
+			return doc, nil
+		}
+		lastErr = err
+	}
+
+	return nil, lastErr
+}
+
+// fetchDocOnce performs a single download and parse of the OpenAPI schema.
+func fetchDocOnce() (*openapi3.T, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, schemaEndpoint, nil)
 	if err != nil {
 		return nil, err
 	}

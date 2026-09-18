@@ -80,7 +80,25 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 	err = tenant.CheckAuthenticationStatus()
 	var scopesErr config.ErrTokenMissingRequiredScopes
 	if errors.As(err, &scopesErr) {
-		c.renderer.Warnf("Required scopes have changed (missing: %s). Please log in to re-authorize the CLI.\n", strings.Join(scopesErr.MissingScopes, ", "))
+		missing := strings.Join(scopesErr.MissingScopes, ", ")
+		c.renderer.Warnf("Required scopes have changed (missing: %s). Please log in to re-authorize the CLI.\n", missing)
+
+		// In --no-input mode (which agent mode enables) the interactive
+		// device-code re-auth would block indefinitely waiting for a human to
+		// approve in a browser. Fail fast with a machine-readable scope error
+		// instead, so a non-interactive caller gets a parseable failure rather
+		// than a silent hang and can re-authorize explicitly.
+		if c.noInput {
+			return authError{
+				err: fmt.Errorf(
+					"missing required scopes (%s) and --no-input is set; "+
+						"run 'auth0 login --scopes %s' to re-authorize",
+					missing, strings.Join(scopesErr.MissingScopes, ","),
+				),
+				reason: "missing_scopes",
+			}
+		}
+
 		tenant, err = RunLoginAsUser(ctx, c, scopesErr.MissingScopes, "")
 		if err != nil {
 			return authError{err: err, reason: "login_failed"}

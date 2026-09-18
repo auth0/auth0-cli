@@ -86,7 +86,9 @@ CONNECTED MODE (--connected):
 - Optionally runs build:watch in the background for continuous asset updates
 - Watches and patches assets automatically when changes are detected
 
-⚠️  Connected mode should only be used on stage/dev tenants, not production!`,
+⚠️  Connected mode should only be used on stage/dev tenants, not production!
+
+This command runs an interactive local dev server and browser preview, so it is not available in agent mode.`,
 		Example: `  # Dev mode
   auth0 acul dev --port 55444
   auth0 acul dev -p 55444 --dir ./my_project
@@ -99,6 +101,17 @@ CONNECTED MODE (--connected):
   auth0 acul dev --connected --screens login-id
   auth0 acul dev -c -s login-id,signup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// This command runs a long-lived local dev server and opens a browser
+			// (and, in connected mode, prompts interactively). None of that can be
+			// driven by an agent, and its human-facing output is written with raw
+			// fmt.Print* that would pollute the JSON-only stdout, so fail fast.
+			if cli.renderer.AgentMode {
+				return usageError{
+					err:    fmt.Errorf("`acul dev` runs an interactive local dev server and browser preview and cannot run in agent mode"),
+					reason: "unsupported_in_agent_mode",
+				}
+			}
+
 			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}

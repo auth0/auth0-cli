@@ -859,9 +859,7 @@ func validateFormData(
 	requireName bool,
 	preClean func(json.RawMessage) (json.RawMessage, error),
 ) (json.RawMessage, error) {
-	handler := &DataJSONHandler{cli: cli}
-
-	raw, err := handler.readJSONInput(dataStr)
+	raw, err := readJSONInput(dataStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read JSON input: %w", err)
 	}

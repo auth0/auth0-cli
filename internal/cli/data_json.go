@@ -51,7 +51,7 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 // it is false when the operation defines no request schema, so the caller can
 // signal that the payload is being sent without local validation.
 func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data json.RawMessage, validated bool, err error) {
-	jsonData, err := h.readJSONInput(inputStr)
+	jsonData, err := readJSONInput(inputStr)
 	if err != nil {
 		return nil, false, validationError{err: fmt.Errorf("failed to read JSON input: %w", err)}
 	}
@@ -98,8 +98,26 @@ func marshalFieldErrors(fieldErrors []openapi.FieldError) json.RawMessage {
 	return raw
 }
 
+// readAndValidateJSON reads a --data payload and validates it against the OpenAPI
+// schema. When the schema document can't be loaded (e.g. it couldn't be fetched
+// and no cached copy exists), local validation is skipped and the raw payload is
+// returned with validated=false, so the caller sends it to the API and lets the
+// API perform its own validation instead of failing the command outright.
+func readAndValidateJSON(cli *cli, inputStr, method, path string) (json.RawMessage, bool, error) {
+	handler, err := NewDataJSONHandler(cli)
+	if err != nil {
+		data, readErr := readJSONInput(inputStr)
+		if readErr != nil {
+			return nil, false, validationError{err: fmt.Errorf("failed to read JSON input: %w", readErr)}
+		}
+		return data, false, nil
+	}
+
+	return handler.ReadAndValidate(inputStr, method, path)
+}
+
 // readJSONInput reads JSON from various input sources.
-func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
+func readJSONInput(input string) ([]byte, error) {
 	if input == "" {
 		return nil, validationError{err: fmt.Errorf("no input provided"), reason: "missing_input"}
 	}
@@ -196,12 +214,7 @@ type jsonWriteSpec struct {
 // supplying their spec and the management type; the API's own semantics (e.g. PATCH
 // preserving unspecified fields) apply to the exact bytes sent.
 func runJSONWrite[T any](cli *cli, cmd *cobra.Command, spec jsonWriteSpec) (*T, error) {
-	handler, err := NewDataJSONHandler(cli)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize JSON handler: %w", err)
-	}
-
-	payload, validated, err := handler.ReadAndValidate(spec.Data, spec.Method, spec.SchemaPath)
+	payload, validated, err := readAndValidateJSON(cli, spec.Data, spec.Method, spec.SchemaPath)
 	if err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", spec.SchemaCmd)
 		return nil, err

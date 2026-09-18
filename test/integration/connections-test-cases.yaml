@@ -53,13 +53,6 @@ tests:
     command: auth0 connections list --query '{"strategy":["auth0"]}'
     exit-code: 0
 
-  008 - it successfully prints the create schema:
-    command: auth0 connections create --schema
-    exit-code: 0
-    stdout:
-      contains:
-        - strategy
-
   009 - given a test connection, it successfully shows the connection details:
     command: auth0 connections show $(./test/integration/scripts/get-connection-id.sh)
     exit-code: 0
@@ -87,14 +80,6 @@ tests:
   012 - given a test connection, it successfully shows the enabled clients:
     command: auth0 connections enabled-clients show $(./test/integration/scripts/get-connection-id.sh)
     exit-code: 0
-
-  013 - it successfully prints the enabled-clients update schema:
-    command: auth0 connections enabled-clients update --schema
-    exit-code: 0
-    stdout:
-      contains:
-        - client_id
-        - status
 
   014 - it fails to update enabled clients without data non-interactively:
     command: auth0 connections enabled-clients update $(./test/integration/scripts/get-connection-id.sh) --no-input

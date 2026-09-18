@@ -178,7 +178,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string, customParams map[string]string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
-	err := ansi.Spinner("Waiting for login flow to complete", func() error {
+	flow := func() error {
 		callbackAdded, err := addLocalCallbackURLToClient(ctx, cli.api.Client, c)
 		if err != nil {
 			return err
@@ -200,9 +200,17 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			return err
 		}
 
-		if cli.noInput {
+		switch {
+		case cli.renderer.AgentMode:
+			// An agent has no browser to open, so emit the login URL as a JSON object
+			// on stdout for a human to complete in a browser. The browser then redirects
+			// to the local callback server the flow waits on below.
+			if err := emitURLJSON(cli, "login_url", loginURL); err != nil {
+				return err
+			}
+		case cli.noInput:
 			cli.renderer.Infof("Open the following URL in a browser: %s\n", loginURL)
-		} else {
+		default:
 			if err := browser.OpenURL(loginURL); err != nil {
 				return err
 			}
@@ -210,7 +218,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 
 		// Launch a HTTP server to wait for the callback to capture the auth
 		// code.
-		authCode, authState, err := authutil.WaitForBrowserCallback(cliLoginTestingCallbackAddr)
+		authCode, authState, err := authutil.WaitForBrowserCallback(ctx, cliLoginTestingCallbackAddr)
 		if err != nil {
 			return err
 		}
@@ -244,7 +252,16 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 		}()
 
 		return nil
-	})
+	}
+
+	// The spinner writes decorative frames to stderr, which agent mode keeps clean,
+	// so run the flow directly there and wrap it in the spinner only for humans.
+	var err error
+	if cli.renderer.AgentMode {
+		err = flow()
+	} else {
+		err = ansi.Spinner("Waiting for login flow to complete", flow)
+	}
 
 	return tokenResponse, err
 }
@@ -324,6 +341,19 @@ func containsStr(s []string, u string) bool {
 	return false
 }
 
+// emitURLJSON writes a single-field URL object to stdout for agent mode, e.g.
+// {"manage_url":"..."}. It centralizes the marshal-and-emit the URL openers and
+// docs commands share, so every site handles a marshal failure the same way
+// (returning the error) instead of some sites silently swallowing it.
+func emitURLJSON(cli *cli, key, url string) error {
+	details, err := json.Marshal(map[string]string{key: url})
+	if err != nil {
+		return fmt.Errorf("failed to encode %s: %w", key, err)
+	}
+	cli.renderer.OutputPreformattedJSON(string(details))
+	return nil
+}
+
 func openManageURL(cli *cli, tenant string, path string) {
 	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
@@ -332,6 +362,15 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 
 	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, path)
+
+	if cli.renderer.AgentMode {
+		// An agent has no browser, so emit the dashboard URL as JSON on stdout rather
+		// than through Infof, which agent mode suppresses.
+		if err := emitURLJSON(cli, "manage_url", settingsURL); err != nil {
+			cli.renderer.Errorf("%v", err)
+		}
+		return
+	}
 
 	if cli.noInput {
 		cli.renderer.Infof("Open the following URL in a browser: %s", settingsURL)
@@ -618,6 +657,15 @@ func openBuilderURL(cli *cli, path string) {
 	url := formatBuilderPageURL(cli.Config.DefaultTenant, &cli.Config, path)
 	if url == "" {
 		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		return
+	}
+
+	if cli.renderer.AgentMode {
+		// An agent has no browser, so emit the builder URL as JSON on stdout rather
+		// than through Infof, which agent mode suppresses.
+		if err := emitURLJSON(cli, "builder_url", url); err != nil {
+			cli.renderer.Errorf("%v", err)
+		}
 		return
 	}
 

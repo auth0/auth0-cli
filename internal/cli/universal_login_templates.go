@@ -135,12 +135,24 @@ func updateBrandingTemplateCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.NoArgs,
 		Short: "Update the custom template for Universal Login",
-		Long:  "Update the custom template for the New Universal Login Experience.",
+		Long: "Update the custom template for the New Universal Login Experience.\n\n" +
+			"This opens an interactive terminal editor and a browser preview, so it is not available in agent mode. " +
+			"Set the template non-interactively with `auth0 api put branding/templates/universal-login`.",
 		Example: `  auth0 universal-login templates update
   auth0 ul templates update
   cat login.liquid | auth0 ul templates update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			// Updating the template opens an interactive terminal editor and a local
+			// browser preview server that blocks until the editor is closed, so it
+			// cannot be driven by an agent. Fail fast instead of hanging.
+			if cli.renderer.AgentMode {
+				return usageError{
+					err:    fmt.Errorf("`universal-login templates update` opens an interactive editor and browser preview and cannot run in agent mode; set the template non-interactively with `auth0 api put branding/templates/universal-login`"),
+					reason: "unsupported_in_agent_mode",
+				}
+			}
 
 			cli.renderer.Warnf("An improved branding customization UI experience is available through the `auth0 universal-login customize` command.")
 
