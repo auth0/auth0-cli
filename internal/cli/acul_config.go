@@ -653,14 +653,7 @@ func aculConfigDocsCmd(cli *cli) *cobra.Command {
 			// object on stdout instead of printing it via Infof (which is suppressed)
 			// and trying to launch a browser.
 			if cli.renderer.AgentMode {
-				details, err := json.Marshal(struct {
-					DocsURL string `json:"docs_url"`
-				}{DocsURL: url})
-				if err != nil {
-					return fmt.Errorf("failed to encode documentation details: %w", err)
-				}
-				cli.renderer.OutputPreformattedJSON(string(details))
-				return nil
+				return emitURLJSON(cli, "docs_url", url)
 			}
 
 			cli.renderer.Infof("Opening documentation: %s", url)

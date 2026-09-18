@@ -205,13 +205,9 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			// An agent has no browser to open, so emit the login URL as a JSON object
 			// on stdout for a human to complete in a browser. The browser then redirects
 			// to the local callback server the flow waits on below.
-			details, marshalErr := json.Marshal(struct {
-				LoginURL string `json:"login_url"`
-			}{LoginURL: loginURL})
-			if marshalErr != nil {
-				return fmt.Errorf("failed to encode login details: %w", marshalErr)
+			if err := emitURLJSON(cli, "login_url", loginURL); err != nil {
+				return err
 			}
-			cli.renderer.OutputPreformattedJSON(string(details))
 		case cli.noInput:
 			cli.renderer.Infof("Open the following URL in a browser: %s\n", loginURL)
 		default:
@@ -345,6 +341,19 @@ func containsStr(s []string, u string) bool {
 	return false
 }
 
+// emitURLJSON writes a single-field URL object to stdout for agent mode, e.g.
+// {"manage_url":"..."}. It centralizes the marshal-and-emit the URL openers and
+// docs commands share, so every site handles a marshal failure the same way
+// (returning the error) instead of some sites silently swallowing it.
+func emitURLJSON(cli *cli, key, url string) error {
+	details, err := json.Marshal(map[string]string{key: url})
+	if err != nil {
+		return fmt.Errorf("failed to encode %s: %w", key, err)
+	}
+	cli.renderer.OutputPreformattedJSON(string(details))
+	return nil
+}
+
 func openManageURL(cli *cli, tenant string, path string) {
 	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
@@ -357,11 +366,8 @@ func openManageURL(cli *cli, tenant string, path string) {
 	if cli.renderer.AgentMode {
 		// An agent has no browser, so emit the dashboard URL as JSON on stdout rather
 		// than through Infof, which agent mode suppresses.
-		details, err := json.Marshal(struct {
-			ManageURL string `json:"manage_url"`
-		}{ManageURL: settingsURL})
-		if err == nil {
-			cli.renderer.OutputPreformattedJSON(string(details))
+		if err := emitURLJSON(cli, "manage_url", settingsURL); err != nil {
+			cli.renderer.Errorf("%v", err)
 		}
 		return
 	}
@@ -657,11 +663,8 @@ func openBuilderURL(cli *cli, path string) {
 	if cli.renderer.AgentMode {
 		// An agent has no browser, so emit the builder URL as JSON on stdout rather
 		// than through Infof, which agent mode suppresses.
-		details, err := json.Marshal(struct {
-			BuilderURL string `json:"builder_url"`
-		}{BuilderURL: url})
-		if err == nil {
-			cli.renderer.OutputPreformattedJSON(string(details))
+		if err := emitURLJSON(cli, "builder_url", url); err != nil {
+			cli.renderer.Errorf("%v", err)
 		}
 		return
 	}

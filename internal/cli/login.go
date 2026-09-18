@@ -397,8 +397,13 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		// instead of prompting. Prompting would either strand the login on the old
 		// default (closed stdin answers "no") or block on an interactive prompt.
 		if cli.renderer.AgentMode {
+			// The login already succeeded and {"logged_in":true,...} was emitted on
+			// stdout, so a failure to switch the default tenant is a convenience step
+			// that must not turn a successful login into a non-zero exit. Mirror the
+			// human path and treat it as non-fatal. Warnf is suppressed in agent mode,
+			// keeping stderr clean while the success object stands.
 			if err := cli.Config.SetDefaultTenant(result.Domain); err != nil {
-				return config.Tenant{}, fmt.Errorf("failed to set the default tenant: %w", err)
+				cli.renderer.Warnf("Failed to set the default tenant, run 'auth0 tenants use %s' to switch: %v", result.Domain, err)
 			}
 			return tenant, nil
 		}
