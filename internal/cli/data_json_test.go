@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/openapi"
 )
 
 // newDataCommand builds a minimal create-like command with the flags that matter
@@ -52,6 +54,48 @@ func withPipedStdin(t *testing.T, content string, fn func()) {
 
 	fn()
 	require.NoError(t, r.Close())
+}
+
+func TestReadJSONInput(t *testing.T) {
+	handler := &DataJSONHandler{}
+
+	t.Run("inline JSON is returned verbatim", func(t *testing.T) {
+		data, err := handler.readJSONInput(`{"name":"x"}`)
+		require.NoError(t, err)
+		assert.Equal(t, `{"name":"x"}`, string(data))
+	})
+
+	t.Run("empty input is an error", func(t *testing.T) {
+		_, err := handler.readJSONInput("")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no input provided")
+	})
+
+	// "@-" reads the payload from stdin, letting a script pipe a body while still
+	// passing the flag explicitly.
+	t.Run("@- reads from piped stdin", func(t *testing.T) {
+		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
+			data, err := handler.readJSONInput("@-")
+			require.NoError(t, err)
+			assert.Equal(t, `{"name":"from-pipe"}`, string(data))
+		})
+	})
+
+	t.Run("- reads from piped stdin", func(t *testing.T) {
+		withPipedStdin(t, `{"name":"from-pipe"}`, func() {
+			data, err := handler.readJSONInput("-")
+			require.NoError(t, err)
+			assert.Equal(t, `{"name":"from-pipe"}`, string(data))
+		})
+	})
+
+	t.Run("@- with empty stdin is an error", func(t *testing.T) {
+		withPipedStdin(t, "", func() {
+			_, err := handler.readJSONInput("@-")
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "no data received on stdin")
+		})
+	})
 }
 
 func TestResolveData(t *testing.T) {
@@ -133,4 +177,33 @@ func TestResolveData(t *testing.T) {
 			assert.Empty(t, payload)
 		})
 	})
+}
+
+func TestReadAndValidateAttachesStructuredDetails(t *testing.T) {
+	manager, err := openapi.NewSchemaManager()
+	require.NoError(t, err)
+	handler := &DataJSONHandler{cli: &cli{}, manager: manager}
+
+	// A payload missing a required field fails local schema validation. The
+	// returned error must classify as validation and carry the field-level
+	// failures as JSON details for the error envelope.
+	_, _, err = handler.ReadAndValidate(`{"name":"x","code":"module.exports = () => {}"}`, "POST", "/actions/actions")
+	require.Error(t, err)
+	assert.Equal(t, "validation", errorClass(err))
+
+	details := errorDetails(err)
+	require.NotEmpty(t, details, "expected structured details on the validation error")
+
+	var fieldErrors []openapi.FieldError
+	require.NoError(t, json.Unmarshal(details, &fieldErrors))
+	require.NotEmpty(t, fieldErrors)
+
+	var found bool
+	for _, fe := range fieldErrors {
+		assert.NotEmpty(t, fe.Reason)
+		if fe.Field == "supported_triggers" {
+			found = true
+		}
+	}
+	assert.True(t, found, "expected a field error for the missing supported_triggers")
 }

@@ -11,6 +11,9 @@ To update interactively, use `auth0 apps update` with no arguments.
 
 To update non-interactively, supply the application id, name, type and other information you might want to change through the available flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 apps update [flags]
@@ -31,6 +34,15 @@ auth0 apps update [flags]
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps update <app-id> --redirection-policy allow_always
+
+  # Discover the payload schema
+  auth0 apps update --schema
+  auth0 apps update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apps update <app-id> --data '{"name":"myapp","description":"updated"}'
+  auth0 apps update <app-id> --data @app.json
+  cat app.json | auth0 apps update <app-id>
 ```
 
 
@@ -40,6 +52,7 @@ auth0 apps update [flags]
   -p, --allow-any-profile-of-type strings   Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.
   -a, --auth-method string                  Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
   -c, --callbacks strings                   After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
+      --data string                         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string                  Description of the application. Max character count is 140.
   -g, --grants strings                      List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
   -f, --is-first-party                      Whether the application is a first-party client (true) or third-party client (false). (default true)
@@ -52,6 +65,7 @@ auth0 apps update [flags]
   -y, --redirection-policy string           Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false
   -z, --refresh-token string                Refresh Token Config for the application, formatted as JSON.
   -r, --reveal-secrets                      Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
+      --schema                              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --third-party-security-mode string    Security mode for third-party clients: 'strict' or 'permissive'. Require --is-first-party=false
   -t, --type string                         Type of application:
                                             - native: mobile, desktop, CLI and smart device apps running natively.

@@ -15,10 +15,11 @@ import (
 // outputFlags control output or behavior, not input, so they may be combined
 // with --data. Every other input flag conflicts with a whole-payload --data.
 var outputFlags = map[string]bool{
-	"json":         true,
-	"json-compact": true,
-	"csv":          true,
-	"force":        true,
+	"json":           true,
+	"json-compact":   true,
+	"csv":            true,
+	"force":          true,
+	"reveal-secrets": true, // Display-only toggle.
 }
 
 var schemaFlag = Flag{
@@ -61,6 +62,20 @@ func printOperationSchema(cli *cli, method, path string) error {
 
 	cli.renderer.Output(opSchema.FormatAsText())
 	return nil
+}
+
+// requiredBypassFlags supersede the granular required flags: --data and --query
+// carry the whole payload, --schema prints the schema and exits before RunE.
+var requiredBypassFlags = []string{"data", "query", "schema"}
+
+// hasRequiredBypassFlag reports whether the user set one of requiredBypassFlags.
+func hasRequiredBypassFlag(cmd *cobra.Command) bool {
+	for _, name := range requiredBypassFlags {
+		if f := cmd.Flags().Lookup(name); f != nil && f.Changed {
+			return true
+		}
+	}
+	return false
 }
 
 // markDataExclusive rejects combining a whole-payload --data with any granular

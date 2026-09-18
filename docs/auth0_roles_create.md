@@ -11,6 +11,9 @@ To create interactively, use `auth0 roles create` with no arguments.
 
 To create non-interactively, supply the role name and description through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 roles create [flags]
@@ -23,16 +26,27 @@ auth0 roles create [flags]
   auth0 roles create --name myrole --description "awesome role"
   auth0 roles create -n myrole -d "awesome role" --json-compact
   auth0 roles create -n myrole -d "awesome role" --json
+
+  # Discover the payload schema
+  auth0 roles create --schema
+  auth0 roles create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 roles create --data '{"name":"myrole","description":"awesome role"}'
+  auth0 roles create --data @role.json
+  cat role.json | auth0 roles create
 ```
 
 
 ## Flags
 
 ```
+      --data string          JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string   Description of the role.
       --json                 Output in json format.
       --json-compact         Output in compact json format.
   -n, --name string          Name of the role.
+      --schema               Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

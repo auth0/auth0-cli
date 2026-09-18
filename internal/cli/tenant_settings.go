@@ -84,7 +84,7 @@ auth0 tenant-settings update set flags.enable_sso --json`,
 			if len(args) != 0 {
 				selectedFlags = append(selectedFlags, args...)
 			} else {
-				selectedFlags, err = selectTenantSettingsParams(true)
+				selectedFlags, err = selectTenantSettingsParams(cmd, true)
 				if err != nil {
 					return err
 				}
@@ -132,7 +132,7 @@ auth0 tenant-settings update unset flags.enable_pipeline2 --json`,
 			if len(args) != 0 {
 				selectedFlags = append(selectedFlags, args...)
 			} else {
-				selectedFlags, err = selectTenantSettingsParams(false)
+				selectedFlags, err = selectTenantSettingsParams(cmd, false)
 				if err != nil {
 					return err
 				}
@@ -159,7 +159,11 @@ auth0 tenant-settings update unset flags.enable_pipeline2 --json`,
 	return cmd
 }
 
-func selectTenantSettingsParams(isSet bool) ([]string, error) {
+func selectTenantSettingsParams(cmd *cobra.Command, isSet bool) ([]string, error) {
+	if !canPrompt(cmd) {
+		return nil, fmt.Errorf("missing required arguments in non-interactive mode: pass the setting flags to change as arguments")
+	}
+
 	var selectedFlags []string
 	label := "Please select the flags you want to "
 	if isSet {

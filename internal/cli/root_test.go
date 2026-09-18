@@ -55,6 +55,114 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 	}
 }
 
+func TestEnforceUnknownSubcommand(t *testing.T) {
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0"}
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		return root
+	}
+
+	t.Run("namespace rejects an unknown subcommand as a usage error", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+
+		err = group.Args(group, []string{"lst"})
+		assert.Error(t, err)
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		// The class is still "usage" for the JSON envelope, but every failure
+		// collapses to the generic exit code for backwards compatibility.
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, exitGeneric, exitCodeForError(err))
+	})
+
+	t.Run("namespace accepts no args and prints help", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		assert.NoError(t, group.Args(group, []string{}))
+		assert.True(t, group.Runnable())
+	})
+
+	t.Run("root rejects an unknown top-level command as a usage error", func(t *testing.T) {
+		root := newTree()
+		assert.Error(t, root.Args(root, []string{"bogus"}))
+		assert.Equal(t, exitGeneric, exitCodeForError(root.Args(root, []string{"bogus"})))
+	})
+
+	t.Run("does not override a runnable leaf command", func(t *testing.T) {
+		leaf, _, err := newTree().Find([]string{"actions", "list"})
+		assert.NoError(t, err)
+		assert.Nil(t, leaf.Args)
+	})
+
+	t.Run("namespace still rejects unknown flags", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		// Whitelisting unknown flags would let `auth0 actions --bogus` (and even
+		// `auth0 actions --bogus list`, which swallows the subcommand) print help
+		// and exit 0. The namespace must keep rejecting unknown flags so they
+		// surface as a usage error with a non-zero exit.
+		assert.False(t, group.FParseErrWhitelist.UnknownFlags)
+	})
+}
+
+func TestWrapFlagError(t *testing.T) {
+	// Drive real command execution so wrapFlagError sees exactly what pflag
+	// leaves behind (the leftover positional, if any) at flag-error time.
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0", SilenceUsage: true, SilenceErrors: true}
+		root.PersistentFlags().Bool("debug", false, "")
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		root.SetFlagErrorFunc(wrapFlagError)
+		return root
+	}
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "mistyped subcommand plus unknown flag reports both",
+			args:    []string{"actions", "lst", "--bogus"},
+			wantErr: `unknown command "lst" for "auth0 actions" (also: unknown flag: --bogus)`,
+		},
+		{
+			name:    "flag before the positional reports only the flag",
+			args:    []string{"actions", "--bogus", "lst"},
+			wantErr: "unknown flag: --bogus",
+		},
+		{
+			name:    "unknown flag with no positional reports only the flag",
+			args:    []string{"actions", "--bogus"},
+			wantErr: "unknown flag: --bogus",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := newTree()
+			root.SetArgs(test.args)
+			err := root.Execute()
+			assert.EqualError(t, err, test.wantErr)
+
+			var usageErr usageError
+			assert.True(t, errors.As(err, &usageErr))
+			assert.Equal(t, "usage", errorClass(err))
+			assert.Equal(t, exitGeneric, exitCodeForError(err))
+		})
+	}
+}
+
 func TestClassifyCommandFailure(t *testing.T) {
 	t.Run("classifies 401 and 403 management errors as auth", func(t *testing.T) {
 		for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {
@@ -102,6 +210,37 @@ func TestClassifyCommandFailure(t *testing.T) {
 			props := classifyCommandFailure(err)
 			assert.Equal(t, "auth", props["error_class"])
 		}
+	})
+
+	t.Run("emits the finer error_reason alongside error_class", func(t *testing.T) {
+		props := classifyCommandFailure(config.ErrInvalidToken)
+		assert.Equal(t, "auth", props["error_class"])
+		assert.Equal(t, "session_expired", props["error_reason"])
+	})
+}
+
+func TestClassifyRequiredFlagError(t *testing.T) {
+	t.Run("wraps cobra's missing-required-flag error as usage/required_flag", func(t *testing.T) {
+		err := classifyRequiredFlagError(errors.New(`required flag(s) "client-id" not set`))
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, "required_flag", errorReason(err))
+	})
+
+	t.Run("passes a nil error through", func(t *testing.T) {
+		assert.NoError(t, classifyRequiredFlagError(nil))
+	})
+
+	t.Run("leaves an unrelated error unwrapped", func(t *testing.T) {
+		err := errors.New("something else")
+		assert.Same(t, err, classifyRequiredFlagError(err))
+	})
+
+	t.Run("does not double-wrap an already classified usage error", func(t *testing.T) {
+		original := usageError{err: errors.New("unknown flag: --bogus")}
+		assert.Equal(t, original, classifyRequiredFlagError(original))
 	})
 }
 

@@ -92,6 +92,13 @@ func fetchDoc() (*openapi3.T, error) {
 		return nil, err
 	}
 
+	return LoadDocFromData(data)
+}
+
+// LoadDocFromData parses an OpenAPI document from raw bytes using the same loader
+// configuration as the network and on-disk paths. It is exported so tests can
+// build a fixture document and validate against it without touching the network.
+func LoadDocFromData(data []byte) (*openapi3.T, error) {
 	loader := openapi3.NewLoader()
 	loader.IsExternalRefsAllowed = true
 	doc, err := loader.LoadFromData(data)

@@ -535,10 +535,17 @@ func (c *cli) createConnectionFromJSON(cmd *cobra.Command, payload string) error
 		return fmt.Errorf("failed to initialize JSON handler: %w", err)
 	}
 
-	body, err := handler.ReadAndValidate(payload, http.MethodPost, "/connections")
+	body, validated, err := handler.ReadAndValidate(payload, http.MethodPost, "/connections")
 	if err != nil {
 		c.renderer.Infof("Run 'auth0 connections create --schema' to see the expected schema.")
 		return err
+	}
+
+	if !validated {
+		c.renderer.Warnf(
+			"No local schema found for %s %s; sending --data to the API without local validation.",
+			http.MethodPost, "/connections",
+		)
 	}
 
 	raw, err := c.rawJSONRequest(cmd.Context(), http.MethodPost, c.api.HTTPClient.URI("connections"), body)
@@ -555,10 +562,17 @@ func (c *cli) updateConnectionFromJSON(cmd *cobra.Command, id, payload string) e
 		return fmt.Errorf("failed to initialize JSON handler: %w", err)
 	}
 
-	body, err := handler.ReadAndValidate(payload, http.MethodPatch, "/connections/{id}")
+	body, validated, err := handler.ReadAndValidate(payload, http.MethodPatch, "/connections/{id}")
 	if err != nil {
 		c.renderer.Infof("Run 'auth0 connections update --schema' to see the expected schema.")
 		return err
+	}
+
+	if !validated {
+		c.renderer.Warnf(
+			"No local schema found for %s %s; sending --data to the API without local validation.",
+			http.MethodPatch, "/connections/{id}",
+		)
 	}
 
 	raw, err := c.rawJSONRequest(cmd.Context(), http.MethodPatch, c.api.HTTPClient.URI("connections", id), body)
