@@ -433,7 +433,7 @@ func askIntSlice(i commandInput, value *[]int, defaultValue *[]int) error {
 		}
 		v := 0
 		if _, err := fmt.Sscanf(part, "%d", &v); err != nil {
-			return fmt.Errorf("invalid integer value: %s", part)
+			return usageError{err: fmt.Errorf("invalid integer value: %s", part), reason: "invalid_flag_value"}
 		}
 		result = append(result, v)
 	}

@@ -437,7 +437,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 			return nil, nil, false, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
 		}
 		if err := json.Unmarshal(data, &renderSettings); err != nil {
-			return nil, nil, false, fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err)
+			return nil, nil, false, validationError{err: fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err), reason: "malformed_json"}
 		}
 		clearValue, shouldClear := detectHeadTagsClear(data)
 		return renderSettings, clearValue, shouldClear, nil
@@ -452,7 +452,7 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 			message := fmt.Sprintf("Use file '%s' for updating remote ACUL configs for '%s'? : ", ansi.Green(defaultFilePath), ansi.Blue(input.screenName))
 			if confirmed := prompt.Confirm(message); confirmed {
 				if err := json.Unmarshal(data, &renderSettings); err != nil {
-					return nil, nil, false, fmt.Errorf("file %s contains invalid JSON: %v", defaultFilePath, err)
+					return nil, nil, false, validationError{err: fmt.Errorf("file %s contains invalid JSON: %v", defaultFilePath, err), reason: "malformed_json"}
 				}
 				clearValue, shouldClear := detectHeadTagsClear(data)
 				return renderSettings, clearValue, shouldClear, nil

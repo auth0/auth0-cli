@@ -87,7 +87,7 @@ func createGuardianEnrollmentTicketCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !guardianEnrollmentUserID.IsSet(cmd) {
 				if !canPrompt(cmd) {
-					return fmt.Errorf("--user-id is required when running non-interactively")
+					return usageError{err: fmt.Errorf("--user-id is required when running non-interactively"), reason: "missing_required_flags"}
 				}
 				if err := guardianEnrollmentUserID.Ask(cmd, &inputs.UserID, nil); err != nil {
 					return err

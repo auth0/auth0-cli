@@ -208,7 +208,7 @@ func createActionModuleCmd(cli *cli) *cobra.Command {
 			}
 
 			if !actionModuleNamePattern.MatchString(inputs.Name) {
-				return fmt.Errorf("invalid name %q: must start with a lowercase letter or digit and contain only lowercase letters, digits, underscores, and hyphens", inputs.Name)
+				return validationError{err: fmt.Errorf("invalid name %q: must start with a lowercase letter or digit and contain only lowercase letters, digits, underscores, and hyphens", inputs.Name), reason: "invalid_flag_value"}
 			}
 
 			if err := actionModuleCode.OpenEditor(

@@ -86,12 +86,12 @@ func setGuardianPhoneProviderCmd(cli *cli) *cobra.Command {
 			}
 
 			if provider == "" {
-				return fmt.Errorf("--provider is required: valid values are auth0, twilio, phone-message-hook")
+				return usageError{err: fmt.Errorf("--provider is required: valid values are auth0, twilio, phone-message-hook"), reason: "missing_required_flags"}
 			}
 
 			value, err := managementv3.NewGuardianFactorsProviderSmsProviderEnumFromString(provider)
 			if err != nil {
-				return fmt.Errorf("invalid provider %q: valid values are auth0, twilio, phone-message-hook", provider)
+				return usageError{err: fmt.Errorf("invalid provider %q: valid values are auth0, twilio, phone-message-hook", provider), reason: "invalid_flag_value"}
 			}
 
 			body := &managementv3.SetGuardianFactorsProviderPhoneRequestContent{Provider: value}
@@ -160,7 +160,7 @@ func setGuardianPhoneMessageTypesCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !guardianMessageType.IsSet(cmd) {
 				if !canPrompt(cmd) {
-					return fmt.Errorf("--message-type is required when running non-interactively; supported values: sms, voice")
+					return usageError{err: fmt.Errorf("--message-type is required when running non-interactively; supported values: sms, voice"), reason: "missing_required_flags"}
 				}
 				if err := guardianMessageType.PickMany(cmd, &messageTypes, staticPickerOptions(guardianMessageTypeOptions)); err != nil {
 					return err
@@ -171,7 +171,7 @@ func setGuardianPhoneMessageTypesCmd(cli *cli) *cobra.Command {
 			for _, t := range messageTypes {
 				value, err := managementv3.NewGuardianFactorPhoneFactorMessageTypeEnumFromString(t)
 				if err != nil {
-					return fmt.Errorf("invalid message type %q: valid values are sms, voice", t)
+					return usageError{err: fmt.Errorf("invalid message type %q: valid values are sms, voice", t), reason: "invalid_flag_value"}
 				}
 				types = append(types, value)
 			}

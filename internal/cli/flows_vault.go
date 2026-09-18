@@ -230,7 +230,7 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 					return err
 				}
 				if inputs.AppID == "" {
-					return errors.New("an app id is required")
+					return usageError{err: errors.New("an app id is required"), reason: "missing_required_flags"}
 				}
 				cli.renderer.Warnf("Setup schema for %s. Save to a file and pass with --setup-file.", inputs.AppID)
 				cli.renderer.FlowExport(vaultConnectionSeedForApp(inputs.AppID))
@@ -241,13 +241,13 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 			if inputs.Name == "" {
-				return errors.New("a name is required")
+				return usageError{err: errors.New("a name is required"), reason: "missing_required_flags"}
 			}
 			if err := vaultConnectionAppID.Pick(cmd, &inputs.AppID, cli.vaultAppIDPickerOptions); err != nil {
 				return err
 			}
 			if inputs.AppID == "" {
-				return errors.New("an app id is required")
+				return usageError{err: errors.New("an app id is required"), reason: "missing_required_flags"}
 			}
 
 			var setupBody json.RawMessage

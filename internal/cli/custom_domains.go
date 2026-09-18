@@ -125,7 +125,7 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Validate EA-only flags.
 			if inputs.sortBy != "" && inputs.sortBy != "domain" {
-				return fmt.Errorf("sorting is only supported by domain at this time")
+				return usageError{err: fmt.Errorf("sorting is only supported by domain at this time"), reason: "invalid_flag_value"}
 			}
 
 			var domains []*management.CustomDomain
