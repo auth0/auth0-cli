@@ -13,6 +13,8 @@ with the currently-enabled ones pre-selected, and only your changes are sent.
 To update non-interactively, supply the desired client statuses through '--data' as a
 JSON array of objects with 'client_id' and 'status' fields (up to 50 per request).
 
+Use '--schema' to print the request payload schema.
+
 ## Usage
 ```
 auth0 connections enabled-clients update [flags]
@@ -25,6 +27,7 @@ auth0 connections enabled-clients update [flags]
   auth0 connections enabled-clients update <connection-id>
   auth0 connections enabled-clients update <connection-id> --data @clients.json
   auth0 connections enabled-clients update <connection-id> --data '[{"client_id":"abc","status":true}]'
+  auth0 connections enabled-clients update --schema
 ```
 
 
@@ -32,6 +35,7 @@ auth0 connections enabled-clients update [flags]
 
 ```
       --data string   JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
+      --schema        Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

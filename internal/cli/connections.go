@@ -37,13 +37,6 @@ var (
 		IsRequired: true,
 	}
 
-	connectionListQuery = Flag{
-		Name:      "Query",
-		LongForm:  "query",
-		ShortForm: "q",
-		Help:      "Filter connections with a JSON object of query parameters (e.g. '{\"strategy\":[\"auth0\"]}'). Any API-supported parameter works immediately. Run '--schema' to see documented parameters.",
-	}
-
 	// ConnectionCommonStrategies powers the interactive strategy picker. Any
 	// strategy string is accepted via --strategy; this is only a convenience list.
 	connectionCommonStrategies = []string{
@@ -154,7 +147,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
-	connectionListQuery.RegisterString(cmd, &inputs.Query, "")
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -261,7 +254,11 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
 				return err
 			}
 
-			return cli.createConnectionFromJSON(cmd, string(body))
+			// The flag path builds a trivially-valid {name, strategy} body, so it
+			// sends raw and skips the schema handler. That keeps interactive and
+			// flag-based creation working even when the OpenAPI schema can't be
+			// fetched (e.g. a fresh machine that is offline).
+			return cli.sendConnectionCreate(cmd, body)
 		},
 	}
 
@@ -356,6 +353,11 @@ against the OpenAPI schema before sending to the API.`,
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+
+	// --data supplies the whole payload, so it cannot be combined with granular
+	// input flags. There are none today, so this is a no-op that keeps future
+	// per-field update flags automatically exclusive with --data.
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -462,8 +464,9 @@ func showConnectionEnabledClientsCmd(cli *cli) *cobra.Command {
 
 func updateConnectionEnabledClientsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID   string
-		Data string
+		ID     string
+		Data   string
+		Schema bool
 	}
 
 	cmd := &cobra.Command{
@@ -476,12 +479,19 @@ To update interactively, run without '--data': the tenant's applications are lis
 with the currently-enabled ones pre-selected, and only your changes are sent.
 
 To update non-interactively, supply the desired client statuses through '--data' as a
-JSON array of objects with 'client_id' and 'status' fields (up to 50 per request).`,
+JSON array of objects with 'client_id' and 'status' fields (up to 50 per request).
+
+Use '--schema' to print the request payload schema.`,
 		Example: `  auth0 connections enabled-clients update
   auth0 connections enabled-clients update <connection-id>
   auth0 connections enabled-clients update <connection-id> --data @clients.json
-  auth0 connections enabled-clients update <connection-id> --data '[{"client_id":"abc","status":true}]'`,
+  auth0 connections enabled-clients update <connection-id> --data '[{"client_id":"abc","status":true}]'
+  auth0 connections enabled-clients update --schema`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/connections/{id}/clients")
+			}
+
 			if err := cli.resolveConnectionID(cmd, args, &inputs.ID); err != nil {
 				return err
 			}
@@ -523,6 +533,7 @@ JSON array of objects with 'client_id' and 'status' fields (up to 50 per request
 	}
 
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 
 	return cmd
 }
@@ -548,12 +559,31 @@ func (c *cli) createConnectionFromJSON(cmd *cobra.Command, payload string) error
 		)
 	}
 
+	return c.sendConnectionCreate(cmd, body)
+}
+
+// sendConnectionCreate POSTs a connection body to the API verbatim and renders
+// the result. It is shared by the --data path (which validates against the schema
+// first) and the flag path (name/strategy only), so the trivially-valid flag
+// payload never has to load the OpenAPI schema.
+func (c *cli) sendConnectionCreate(cmd *cobra.Command, body json.RawMessage) error {
 	raw, err := c.rawJSONRequest(cmd.Context(), http.MethodPost, c.api.HTTPClient.URI("connections"), body)
 	if err != nil {
-		return fmt.Errorf("failed to create connection: %w", err)
+		return fmt.Errorf("failed to create connection: %w", c.enhanceConnectionAPIError(err, http.MethodPost, "/connections"))
 	}
 
 	return c.renderer.ConnectionCreateRaw(raw)
+}
+
+// enhanceConnectionAPIError appends the expected request schema to an API error
+// for human output, matching runJSONWrite. In JSON/agent error mode the schema
+// dump is noise inside the error envelope, so the raw API error is returned
+// unchanged and the schema stays discoverable via --schema.
+func (c *cli) enhanceConnectionAPIError(err error, method, path string) error {
+	if c.wantsJSONError() {
+		return err
+	}
+	return enhanceAPIError(err, method, path)
 }
 
 func (c *cli) updateConnectionFromJSON(cmd *cobra.Command, id, payload string) error {
@@ -577,7 +607,7 @@ func (c *cli) updateConnectionFromJSON(cmd *cobra.Command, id, payload string) e
 
 	raw, err := c.rawJSONRequest(cmd.Context(), http.MethodPatch, c.api.HTTPClient.URI("connections", id), body)
 	if err != nil {
-		return fmt.Errorf("failed to update connection with ID %q: %w", id, err)
+		return fmt.Errorf("failed to update connection with ID %q: %w", id, c.enhanceConnectionAPIError(err, http.MethodPatch, "/connections/{id}"))
 	}
 
 	return c.renderer.ConnectionUpdateRaw(raw)
