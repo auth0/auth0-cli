@@ -314,7 +314,7 @@ func createFormCmd(cli *cli) *cobra.Command {
 				return err
 			}
 			if inputs.Name == "" {
-				return errors.New("a form name is required; supply --name, --data, or pipe JSON via stdin")
+				return usageError{err: errors.New("a form name is required; supply --name, --data, or pipe JSON via stdin"), reason: "missing_required_flags"}
 			}
 
 			rawBody := json.RawMessage(formCreateSkeleton)
@@ -704,7 +704,7 @@ func importFormCmd(cli *cli) *cobra.Command {
 				return err
 			}
 			if body == nil {
-				return errors.New("no form body provided; supply --data or pipe JSON via stdin")
+				return usageError{err: errors.New("no form body provided; supply --data or pipe JSON via stdin"), reason: "missing_required_flags"}
 			}
 
 			if isFormEnvelope(body) {
@@ -727,7 +727,7 @@ func importFormCmd(cli *cli) *cobra.Command {
 
 			if inputs.ID == "" {
 				if meta.Name == "" {
-					return errors.New("a form name is required in the imported body")
+					return validationError{err: errors.New("a form name is required in the imported body"), reason: "invalid_body"}
 				}
 
 				raw, err := cli.formRawCreate(cmd.Context(), body)
@@ -886,7 +886,7 @@ func validateFormData(
 		}
 		if name == "" {
 			cli.renderer.Infof("Run '%s --schema' to see the accepted schema.", schemaCmd)
-			return nil, errors.New(`the form payload must include a non-empty "name"`)
+			return nil, validationError{err: errors.New(`the form payload must include a non-empty "name"`), reason: "invalid_body"}
 		}
 	}
 
@@ -915,7 +915,7 @@ func applyRawFormOverrides(body json.RawMessage, name, primary, def string) (jso
 		return nil, err
 	}
 	if form == nil {
-		return nil, errors.New("form body must be a JSON object")
+		return nil, validationError{err: errors.New("form body must be a JSON object"), reason: "malformed_json"}
 	}
 
 	if name != "" {
@@ -963,7 +963,7 @@ func rawFormStringField(body json.RawMessage, field string) (string, error) {
 		return "", err
 	}
 	if form == nil {
-		return "", errors.New("form body must be a JSON object")
+		return "", validationError{err: errors.New("form body must be a JSON object"), reason: "malformed_json"}
 	}
 
 	raw, ok := form[field]

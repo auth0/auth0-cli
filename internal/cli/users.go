@@ -593,15 +593,15 @@ func validateRequiredFlags(inputs *userInput) error {
 	switch inputs.connectionName {
 	case "email":
 		if inputs.email == "" {
-			return fmt.Errorf("required flag email not set")
+			return usageError{err: fmt.Errorf("required flag email not set"), reason: "missing_required_flags"}
 		}
 	case "sms":
 		if inputs.phoneNumber == "" {
-			return fmt.Errorf("required flag phone-number not set")
+			return usageError{err: fmt.Errorf("required flag phone-number not set"), reason: "missing_required_flags"}
 		}
 	default:
 		if inputs.email == "" || inputs.password == "" {
-			return fmt.Errorf("required flag email or password not set")
+			return usageError{err: fmt.Errorf("required flag email or password not set"), reason: "missing_required_flags"}
 		}
 	}
 

@@ -133,7 +133,7 @@ func loginCmd(cli *cli) *cobra.Command {
 					inputs.ClientAssertionSigningAlg == "" && inputs.ClientAssertionPrivateKey == "":
 					shouldLoginAsUser = true
 				case inputs.Domain != "" || inputs.ClientID != "" || inputs.ClientSecret != "" || inputs.ClientAssertionSigningAlg != "" || inputs.ClientAssertionPrivateKey != "":
-					return fmt.Errorf("for machine login, provide domain with either (client-id, client-secret) or (client-id, client-assertion-signing-alg, client-assertion-private-key)")
+					return usageError{err: fmt.Errorf("for machine login, provide domain with either (client-id, client-secret) or (client-id, client-assertion-signing-alg, client-assertion-private-key)"), reason: "missing_required_flags"}
 				default:
 					/*
 						If no flags are passed along with --no-input, it is defaulted to user login flow.
@@ -260,7 +260,7 @@ func ensureAuth0URL(input string) (string, error) {
 
 	// Check if the input ends with auth0.com .
 	if !strings.HasSuffix(input, "auth0.com") {
-		return "", fmt.Errorf("not a valid auth0.com domain")
+		return "", validationError{err: fmt.Errorf("not a valid auth0.com domain"), reason: "invalid_flag_value"}
 	}
 
 	// Extract the domain part without any path.

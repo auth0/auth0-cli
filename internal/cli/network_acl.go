@@ -66,10 +66,10 @@ type networkACLBasicInputs struct {
 // validateNetworkACLDescription ensures the description is non-empty and within the API length limit.
 func validateNetworkACLDescription(description string) error {
 	if len(description) == 0 {
-		return fmt.Errorf("description cannot be empty")
+		return validationError{err: fmt.Errorf("description cannot be empty"), reason: "invalid_flag_value"}
 	}
 	if len(description) > 255 {
-		return fmt.Errorf("description cannot exceed 255 characters")
+		return validationError{err: fmt.Errorf("description cannot exceed 255 characters"), reason: "invalid_flag_value"}
 	}
 	return nil
 }
@@ -86,7 +86,7 @@ func validateAndSetBasicFields(inputs *networkACLBasicInputs, patch *management.
 	if networkACLActive.IsSet(cmd) {
 		active, err := strconv.ParseBool(inputs.ActiveStr)
 		if err != nil {
-			return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+			return usageError{err: fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr), reason: "invalid_flag_value"}
 		}
 		inputs.Active = active
 		patch.Active = &inputs.Active
@@ -143,7 +143,7 @@ func selectNetworkACLParams() (map[string]bool, error) {
 	}
 
 	if len(selected) == 0 {
-		return nil, errors.New("at least one parameter must be selected")
+		return nil, usageError{err: errors.New("at least one parameter must be selected"), reason: "missing_required_flags"}
 	}
 
 	// Convert selected slice to map for easier lookup.
@@ -327,7 +327,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 			return nil, err
 		}
 		if inputs.RedirectURI == "" {
-			return nil, fmt.Errorf("redirect URI is required when action is redirect")
+			return nil, usageError{err: fmt.Errorf("redirect URI is required when action is redirect"), reason: "missing_required_flags"}
 		}
 	}
 
@@ -617,7 +617,7 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	}
 
 	if !matchProvided {
-		return nil, fmt.Errorf("at least one match criteria must be provided")
+		return nil, usageError{err: fmt.Errorf("at least one match criteria must be provided"), reason: "missing_required_flags"}
 	}
 
 	// Set match or notmatch based on user choice.
@@ -760,7 +760,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			if networkACLActive.IsSet(cmd) {
 				active, err := strconv.ParseBool(inputs.ActiveStr)
 				if err != nil {
-					return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+					return usageError{err: fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr), reason: "invalid_flag_value"}
 				}
 				inputs.Active = active
 			}
@@ -857,7 +857,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 				networkACLPriority.IsSet(cmd) || networkACLRule.IsSet(cmd)
 
 			if !canPrompt(cmd) && !flagsProvided {
-				return fmt.Errorf("in non-interactive mode, at least one field must be specified to update")
+				return usageError{err: fmt.Errorf("in non-interactive mode, at least one field must be specified to update"), reason: "missing_required_flags"}
 			}
 
 			// Build patch object with only the fields that should be updated.

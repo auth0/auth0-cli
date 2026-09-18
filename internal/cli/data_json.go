@@ -101,7 +101,7 @@ func marshalFieldErrors(fieldErrors []openapi.FieldError) json.RawMessage {
 // readJSONInput reads JSON from various input sources.
 func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
 	if input == "" {
-		return nil, fmt.Errorf("no input provided")
+		return nil, validationError{err: fmt.Errorf("no input provided"), reason: "missing_input"}
 	}
 
 	// "@-" and "-" read the payload from stdin, the common agent/script idiom for

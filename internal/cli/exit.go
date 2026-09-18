@@ -307,10 +307,12 @@ func errorClassForHTTPStatus(status int) string {
 	switch {
 	case status == 401 || status == 403:
 		return "auth"
-	case status == 400 || status == 422:
+	case status == 400 || status == 422 || status == 410 || status == 415:
 		return "validation"
 	case status == 404:
 		return "not_found"
+	case status == 409:
+		return "conflict"
 	case status == 429:
 		return "rate_limit"
 	case status >= 500:
@@ -332,6 +334,12 @@ func reasonForHTTPStatus(status int) string {
 		return "invalid_request"
 	case 404:
 		return "not_found"
+	case 409:
+		return "conflict"
+	case 410:
+		return "gone"
+	case 415:
+		return "unsupported_media_type"
 	case 429:
 		return "rate_limited"
 	default:

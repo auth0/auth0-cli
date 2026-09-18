@@ -631,7 +631,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 					inputs.ResourceServerIdentifier = selectedAPI.GetIdentifier()
 				} else if strings.TrimSpace(inputs.ResourceServerIdentifier) == "" {
-					return fmt.Errorf("resource-server-identifier cannot be empty for resource_server app type")
+					return usageError{err: fmt.Errorf("resource-server-identifier cannot be empty for resource_server app type"), reason: "missing_required_flags"}
 				}
 			}
 
@@ -669,7 +669,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			if len(inputs.RefreshToken) != 0 {
 				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
-					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+					return validationError{err: fmt.Errorf("apps: %s refreshToken invalid JSON", err), reason: "malformed_json"}
 				}
 			}
 
@@ -975,7 +975,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.RefreshToken = current.RefreshToken
 			} else {
 				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
-					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+					return validationError{err: fmt.Errorf("apps: %s refreshToken invalid JSON", err), reason: "malformed_json"}
 				}
 			}
 

@@ -102,7 +102,7 @@ func setGuardianPoliciesCmd(cli *cli) *cobra.Command {
 			// Interactively pick a policy unless the user passed --policy or --none.
 			if !guardianPolicies.IsSet(cmd) && !inputs.None {
 				if !canPrompt(cmd) {
-					return fmt.Errorf("--policy or --none is required when running non-interactively; supported values: all-applications, confidence-score, none")
+					return usageError{err: fmt.Errorf("--policy or --none is required when running non-interactively; supported values: all-applications, confidence-score, none"), reason: "missing_required_flags"}
 				}
 				if err := guardianPolicies.Select(cmd, &inputs.Policy, guardianPolicyOptions, nil); err != nil {
 					return err
@@ -113,7 +113,7 @@ func setGuardianPoliciesCmd(cli *cli) *cobra.Command {
 			if !inputs.None && inputs.Policy != "" && inputs.Policy != guardianPolicyNone {
 				policy, err := managementv3.NewMfaPolicyEnumFromString(inputs.Policy)
 				if err != nil {
-					return fmt.Errorf("invalid policy %q: valid values are all-applications, confidence-score, none", inputs.Policy)
+					return usageError{err: fmt.Errorf("invalid policy %q: valid values are all-applications, confidence-score, none", inputs.Policy), reason: "invalid_flag_value"}
 				}
 				body = append(body, policy)
 			}

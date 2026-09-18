@@ -161,7 +161,7 @@ auth0 tenant-settings update unset flags.enable_pipeline2 --json`,
 
 func selectTenantSettingsParams(cmd *cobra.Command, isSet bool) ([]string, error) {
 	if !canPrompt(cmd) {
-		return nil, fmt.Errorf("missing required arguments in non-interactive mode: pass the setting flags to change as arguments")
+		return nil, usageError{err: fmt.Errorf("missing required arguments in non-interactive mode: pass the setting flags to change as arguments"), reason: "missing_required_flags"}
 	}
 
 	var selectedFlags []string
