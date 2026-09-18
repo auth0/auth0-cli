@@ -53,7 +53,7 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data json.RawMessage, validated bool, err error) {
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
-		return nil, false, validationError{fmt.Errorf("failed to read JSON input: %w", err)}
+		return nil, false, validationError{err: fmt.Errorf("failed to read JSON input: %w", err)}
 	}
 
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
@@ -65,7 +65,10 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data j
 	}
 
 	if result.Status == openapi.StatusInvalid {
-		return nil, false, validationError{fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))}
+		return nil, false, validationError{
+			err:     fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors)),
+			details: marshalFieldErrors(result.FieldErrors),
+		}
 	}
 
 	// Fail closed on an unrecorded outcome. ValidateRequest never returns
@@ -77,6 +80,22 @@ func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data j
 	}
 
 	return jsonData, result.Status == openapi.StatusValid, nil
+}
+
+// marshalFieldErrors renders structured validation failures for the JSON error
+// envelope's "details" field, returning nil (which omits the field) when there
+// are none or marshaling fails.
+func marshalFieldErrors(fieldErrors []openapi.FieldError) json.RawMessage {
+	if len(fieldErrors) == 0 {
+		return nil
+	}
+
+	raw, err := json.Marshal(fieldErrors)
+	if err != nil {
+		return nil
+	}
+
+	return raw
 }
 
 // readJSONInput reads JSON from various input sources.
@@ -200,6 +219,14 @@ func runJSONWrite[T any](cli *cli, cmd *cobra.Command, spec jsonWriteSpec) (*T, 
 	if err := ansi.Waiting(func() error {
 		return cli.api.HTTPClient.Request(cmd.Context(), spec.Method, spec.URI, &payload)
 	}); err != nil {
+		// In JSON/agent mode the multi-line "Expected Request Schema" dump is noise
+		// inside the error envelope's message; the failure is already classified as
+		// validation via the 400 status and the schema stays discoverable through
+		// --schema. Keep the API's own error clean for machines and enrich it with
+		// the schema hint only for humans.
+		if cli.wantsJSONError() {
+			return nil, err
+		}
 		return nil, enhanceAPIError(err, spec.Method, spec.SchemaPath)
 	}
 

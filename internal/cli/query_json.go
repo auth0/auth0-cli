@@ -112,7 +112,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	var queryParams map[string]interface{}
 	if err := decoder.Decode(&queryParams); err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected query parameters.", spec.SchemaCmd)
-		return validationError{fmt.Errorf("invalid --query value: must be a JSON object: %w", err)}
+		return validationError{err: fmt.Errorf("invalid --query value: must be a JSON object: %w", err)}
 	}
 
 	u, err := url.Parse(cli.api.HTTPClient.URI(strings.Split(spec.Path, "/")...))
@@ -123,7 +123,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	query, err := encodeQueryParams(u.Query(), queryParams)
 	if err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected query parameters.", spec.SchemaCmd)
-		return validationError{fmt.Errorf("invalid --query value: %w", err)}
+		return validationError{err: fmt.Errorf("invalid --query value: %w", err)}
 	}
 	u.RawQuery = query.Encode()
 

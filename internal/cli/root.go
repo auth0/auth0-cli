@@ -59,8 +59,8 @@ In agent mode the CLI:
     as newline-delimited JSON, one object per line.
   • Keeps stderr clean: human hints and progress messages are suppressed, so on
     success stderr is empty and on failure it carries only a JSON error envelope
-    ({"error":{"code","message","status","details"}}). Because that envelope is
-    the only thing on stderr, even a merged stdout+stderr stream stays parseable.
+    ({"error":{"code","reason","message","status","details"}}). Because that envelope
+    is the only thing on stderr, even a merged stdout+stderr stream stays parseable.
   • Disables interactive prompts and colors.
   • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
     scripts that treat any non-zero exit as failure keep working. The specific
@@ -167,7 +167,7 @@ func Execute() {
 	ansi.InitConsole()
 
 	cancelCtx := contextWithCancel()
-	err := rootCmd.ExecuteContext(cancelCtx)
+	err := classifyRequiredFlagError(rootCmd.ExecuteContext(cancelCtx))
 	trackCommandOutcome(cli, err)
 
 	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
@@ -245,14 +245,36 @@ func buildRootCmd(cli *cli) *cobra.Command {
 // mistyped subcommand (for example `auth0 actions lst --json`); pflag records the
 // leftover positional before it fails on the flag, so we surface both problems at
 // once: the unknown command (the likely root cause) and the unknown flag.
+// classifyRequiredFlagError wraps cobra's missing-required-flag error as a usage
+// error so it classifies consistently in analytics and the JSON envelope. Cobra
+// returns this error directly from ValidateRequiredFlags, bypassing the
+// FlagErrorFunc that wrapFlagError is registered on, so it would otherwise reach
+// the top level as an unclassified "unknown" error.
+func classifyRequiredFlagError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var usageErr usageError
+	if errors.As(err, &usageErr) {
+		return err
+	}
+
+	if strings.HasPrefix(err.Error(), "required flag(s) ") {
+		return usageError{err: err, reason: "required_flag"}
+	}
+
+	return err
+}
+
 func wrapFlagError(cmd *cobra.Command, err error) error {
 	if cmd.HasSubCommands() {
 		if positionals := cmd.Flags().Args(); len(positionals) > 0 {
-			return usageError{fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
+			return usageError{err: fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
 		}
 	}
 
-	return usageError{err}
+	return usageError{err: err}
 }
 
 // enforceUnknownSubcommand makes namespace (parent) commands reject an unknown
@@ -550,8 +572,9 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 	}
 
 	successProperties := mergeProperties(properties, map[string]string{
-		"success":     "true",
-		"error_class": "none",
+		"success":      "true",
+		"error_class":  "none",
+		"error_reason": "none",
 	})
 	cli.tracker.TrackCommandRun(cli.executedCommandPath, installID, successProperties)
 }
@@ -640,7 +663,8 @@ func resolveInstallIDForTracking(cli *cli) string {
 
 func classifyCommandFailure(err error) map[string]string {
 	return map[string]string{
-		"success":     "false",
-		"error_class": errorClass(err),
+		"success":      "false",
+		"error_class":  errorClass(err),
+		"error_reason": errorReason(err),
 	}
 }
