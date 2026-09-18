@@ -218,7 +218,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 
 		// Launch a HTTP server to wait for the callback to capture the auth
 		// code.
-		authCode, authState, err := authutil.WaitForBrowserCallback(cliLoginTestingCallbackAddr)
+		authCode, authState, err := authutil.WaitForBrowserCallback(ctx, cliLoginTestingCallbackAddr)
 		if err != nil {
 			return err
 		}
