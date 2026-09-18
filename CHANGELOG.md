@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--query` list output now honors `--json-compact`, emitting a single dense JSON line when that flag is set (the default stays pretty-printed)
 - `--query` list commands now print a diagnostic to stderr when the response is a page of a larger result set, so the returned records aren't mistaken for the full set; the output itself is unchanged
 - `--csv` combined with `--query` now returns a clear error instead of being silently ignored, since the raw API JSON has no fixed columns to flatten; use `--json` or `--json-compact` instead
+- In agent mode, `auth0 login` without machine credentials (the user/device-code flow) now emits the device verification URL and code as a JSON object on stdout and polls without opening a browser, pressing Enter, or showing a spinner, then emits a final `{"logged_in":true,"tenant":"...","domain":"..."}` object on success, so an agent can hand the link to a human and detect completion. It also switches the default tenant to the newly authenticated one automatically instead of prompting, since there is no human to answer the change-default prompt
 
 ### Fixed
 - Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
@@ -39,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--data` input is now checked for well-formed JSON even when the operation has no local schema, so malformed payloads fail locally with a clear message instead of being sent to the API as-is.
 - Encode `--query` filters with real JSON-to-query semantics. An array value now sends repeated parameters (`?fields=a&fields=b`) instead of the literal `[a b]`, numbers keep their original literal (no more `1e+06` for `1000000`), a JSON `null` omits the parameter instead of sending an empty value, and a nested object is rejected with a clear error rather than silently building a wrong request. A malformed or nested `--query` now classifies as a `validation` error in the JSON error envelope instead of `unknown`.
 - Send every value of a repeated `-q`/`--query` param on `auth0 api` (for example `-q "fields=a" -q "fields=b"`), instead of keeping only the last one
+- Fail fast with a clear error instead of hanging when a command that needs an interactive browser or terminal editor runs in agent mode: `auth0 universal-login customize`, `auth0 universal-login templates update`, and `auth0 acul dev` would otherwise open a browser or editor and block on a local server that never returns
+- Emit machine-readable JSON on stdout in agent mode for `auth0 terraform generate` (the output directory and a `status` of `generated`, `plan_failed`, `terraform_install_failed`, or `credentials_missing`) and for `auth0 acul config docs` (the documentation URL), instead of losing the result to suppressed human-only output and, for the docs command, trying to open a browser
+- Surface a private-key file read failure on `auth0 login` machine login (Private Key JWT) through the normal error path instead of printing it to stdout, keeping stdout machine-clean
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 

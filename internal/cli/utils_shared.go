@@ -178,7 +178,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string, customParams map[string]string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
-	err := ansi.Spinner("Waiting for login flow to complete", func() error {
+	flow := func() error {
 		callbackAdded, err := addLocalCallbackURLToClient(ctx, cli.api.Client, c)
 		if err != nil {
 			return err
@@ -200,9 +200,21 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			return err
 		}
 
-		if cli.noInput {
+		switch {
+		case cli.renderer.AgentMode:
+			// An agent has no browser to open, so emit the login URL as a JSON object
+			// on stdout for a human to complete in a browser. The browser then redirects
+			// to the local callback server the flow waits on below.
+			details, marshalErr := json.Marshal(struct {
+				LoginURL string `json:"login_url"`
+			}{LoginURL: loginURL})
+			if marshalErr != nil {
+				return fmt.Errorf("failed to encode login details: %w", marshalErr)
+			}
+			cli.renderer.OutputPreformattedJSON(string(details))
+		case cli.noInput:
 			cli.renderer.Infof("Open the following URL in a browser: %s\n", loginURL)
-		} else {
+		default:
 			if err := browser.OpenURL(loginURL); err != nil {
 				return err
 			}
@@ -244,7 +256,16 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 		}()
 
 		return nil
-	})
+	}
+
+	// The spinner writes decorative frames to stderr, which agent mode keeps clean,
+	// so run the flow directly there and wrap it in the spinner only for humans.
+	var err error
+	if cli.renderer.AgentMode {
+		err = flow()
+	} else {
+		err = ansi.Spinner("Waiting for login flow to complete", flow)
+	}
 
 	return tokenResponse, err
 }
@@ -332,6 +353,18 @@ func openManageURL(cli *cli, tenant string, path string) {
 	}
 
 	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, path)
+
+	if cli.renderer.AgentMode {
+		// An agent has no browser, so emit the dashboard URL as JSON on stdout rather
+		// than through Infof, which agent mode suppresses.
+		details, err := json.Marshal(struct {
+			ManageURL string `json:"manage_url"`
+		}{ManageURL: settingsURL})
+		if err == nil {
+			cli.renderer.OutputPreformattedJSON(string(details))
+		}
+		return
+	}
 
 	if cli.noInput {
 		cli.renderer.Infof("Open the following URL in a browser: %s", settingsURL)
@@ -618,6 +651,18 @@ func openBuilderURL(cli *cli, path string) {
 	url := formatBuilderPageURL(cli.Config.DefaultTenant, &cli.Config, path)
 	if url == "" {
 		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
+		return
+	}
+
+	if cli.renderer.AgentMode {
+		// An agent has no browser, so emit the builder URL as JSON on stdout rather
+		// than through Infof, which agent mode suppresses.
+		details, err := json.Marshal(struct {
+			BuilderURL string `json:"builder_url"`
+		}{BuilderURL: url})
+		if err == nil {
+			cli.renderer.OutputPreformattedJSON(string(details))
+		}
 		return
 	}
 

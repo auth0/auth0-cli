@@ -392,6 +392,22 @@ For AI agents and automation, **agent mode** makes output machine-friendly: stru
 
 Precedence: `--agent-mode` flag > `AUTH0_AGENT_MODE` env var > auto-detection (set `--agent-mode=false` to opt out). Destructive commands still require `--force`; without it (and with prompts disabled) they fail with an error rather than proceeding.
 
+**Authentication in agent mode:** Machine login with M2M client credentials is recommended because it needs no browser and completes without a human:
+
+```bash
+auth0 login --domain <domain> --client-id <client-id> --client-secret <client-secret>
+```
+
+If you run `auth0 login` without credentials, the CLI falls back to user login. It cannot open a browser for you, so instead it emits the device verification URL and code as a JSON object on stdout, then waits while a person opens the link and approves it:
+
+```json
+{"verification_uri":"https://your-tenant.auth0.com/activate?user_code=ABCD-EFGH","user_code":"ABCD-EFGH","expires_in":900,"interval":5}
+```
+
+An agent can surface that link and code to a human to complete the login. Once approved, the command emits a final `{"logged_in":true,"tenant":"...","domain":"..."}` object and stores the credentials as usual. In agent mode the newly authenticated tenant also becomes the default automatically, because there is no human to answer the usual change-default prompt.
+
+**Commands that need a browser or editor:** a few commands are inherently interactive and cannot run in agent mode. `auth0 universal-login customize`, `auth0 universal-login templates update`, and `auth0 acul dev` open a browser or terminal editor and block on a local server, so in agent mode they fail fast with a clear error instead of hanging. Use `auth0 acul config` and `auth0 api` to manage the same configuration non-interactively.
+
 ## Usage Analytics Disclosure
 
 Usage data points are collected during use of this CLI. This includes the CLI version, operating system, timestamp, the command executed, whether it was run by a human, a CI system, or an AI agent, and — when you're authenticated — the domain of the tenant you're operating against. Tenant domain can identify your Auth0 account and is not anonymized.

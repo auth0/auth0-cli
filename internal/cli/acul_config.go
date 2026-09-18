@@ -648,6 +648,21 @@ func aculConfigDocsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 acul config docs`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			url := "https://auth0.com/docs/customize/login-pages/advanced-customizations/getting-started/configure-acul-screens"
+
+			// In agent mode there is no browser to open, so emit the URL as a JSON
+			// object on stdout instead of printing it via Infof (which is suppressed)
+			// and trying to launch a browser.
+			if cli.renderer.AgentMode {
+				details, err := json.Marshal(struct {
+					DocsURL string `json:"docs_url"`
+				}{DocsURL: url})
+				if err != nil {
+					return fmt.Errorf("failed to encode documentation details: %w", err)
+				}
+				cli.renderer.OutputPreformattedJSON(string(details))
+				return nil
+			}
+
 			cli.renderer.Infof("Opening documentation: %s", url)
 			return browser.OpenURL(url)
 		},

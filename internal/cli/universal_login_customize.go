@@ -309,12 +309,25 @@ func customizeUniversalLoginCmd(cli *cli) *cobra.Command {
 			"   For future Advanced Customizations, use: auth0 acul config <command>\n\n" +
 			"* Advanced mode is recommended for full customization and granular control of the login experience, allowing integration of your own component design system.\n" +
 			"  Choosing Advanced mode will open the default terminal editor with rendering configurations in a settings.json file.\n\n" +
-			"  Closing the terminal editor will save the settings to your tenant.",
+			"  Closing the terminal editor will save the settings to your tenant.\n\n" +
+			"This command opens a browser or terminal editor, so it is not available in agent mode. Use `auth0 acul config` to manage advanced rendering configuration non-interactively.",
 
 		Example: `  auth0 universal-login customize
   auth0 ul customize`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			// This command is inherently interactive: standard mode opens a browser
+			// and blocks on a local websocket editor, and advanced mode opens a
+			// terminal editor. Neither can be driven by an agent, so fail fast with a
+			// clear message instead of stranding the agent on a server that never
+			// returns. Advanced customizations should use `auth0 acul config` instead.
+			if cli.renderer.AgentMode {
+				return usageError{
+					err:    fmt.Errorf("`universal-login customize` requires an interactive browser or terminal editor and cannot run in agent mode; use `auth0 acul config` to manage advanced rendering configuration non-interactively"),
+					reason: "unsupported_in_agent_mode",
+				}
+			}
 
 			if err := ensureCustomDomainIsEnabled(ctx, cli.api); err != nil {
 				return err
