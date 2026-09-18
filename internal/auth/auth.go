@@ -137,7 +137,7 @@ var RequiredScopes = []string{
 	"read:flows_executions",
 	"read:forms", "create:forms", "update:forms", "delete:forms",
 	"read:flows_vault_connections", "create:flows_vault_connections", "update:flows_vault_connections", "delete:flows_vault_connections",
-	"read:connections", "update:connections", "read:connections_options", "update:connections_options",
+	"create:connections", "read:connections", "update:connections", "delete:connections", "read:connections_options", "update:connections_options",
 	"read:client_keys", "read:logs", "read:tenant_settings", "update:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",

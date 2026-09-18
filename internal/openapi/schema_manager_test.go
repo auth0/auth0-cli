@@ -166,6 +166,71 @@ func TestFormatAsText(t *testing.T) {
 	assert.Contains(t, textOutput, "supported_triggers")
 }
 
+// arrayBodyFixtureDoc models an operation whose request body is a top-level array
+// of objects, like PATCH /connections/{id}/clients (an array of {client_id, status}).
+const arrayBodyFixtureDoc = `{
+  "openapi": "3.0.0",
+  "info": {"title": "fixture", "version": "1.0.0"},
+  "paths": {
+    "/connections/{id}/clients": {
+      "patch": {
+        "operationId": "patch_enabled_clients",
+        "summary": "Update enabled clients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["client_id", "status"],
+                  "properties": {
+                    "client_id": {"type": "string"},
+                    "status": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`
+
+func TestFormatAsText_TopLevelArrayBody(t *testing.T) {
+	doc, err := LoadDocFromData([]byte(arrayBodyFixtureDoc))
+	require.NoError(t, err)
+
+	opSchema, err := NewSchemaManagerFromDoc(doc).GetOperationSchema("PATCH", "/connections/{id}/clients")
+	require.NoError(t, err)
+
+	textOutput := opSchema.FormatAsText()
+
+	// A top-level array body must descend into its item schema so the fields
+	// surface, rather than stopping at a bare "Type: array".
+	assert.Contains(t, textOutput, "Request Payload:")
+	assert.Contains(t, textOutput, "Type: array")
+	assert.Contains(t, textOutput, "client_id")
+	assert.Contains(t, textOutput, "status")
+}
+
+func TestFormatAsJSON_TopLevelArrayBody(t *testing.T) {
+	doc, err := LoadDocFromData([]byte(arrayBodyFixtureDoc))
+	require.NoError(t, err)
+
+	opSchema, err := NewSchemaManagerFromDoc(doc).GetOperationSchema("PATCH", "/connections/{id}/clients")
+	require.NoError(t, err)
+
+	jsonOutput, err := opSchema.FormatAsJSON()
+	require.NoError(t, err)
+
+	assert.Contains(t, jsonOutput, "request_schema")
+	assert.Contains(t, jsonOutput, "client_id")
+	assert.Contains(t, jsonOutput, "status")
+}
+
 func TestValidateRequest(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)

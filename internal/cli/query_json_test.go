@@ -480,3 +480,34 @@ func TestRunJSONQuery_BuildsURLWithQueryParams(t *testing.T) {
 	assert.Contains(t, capturedURL, "deployed=true")
 	assert.Contains(t, capturedURL, "per_page=5")
 }
+
+func TestRunJSONQuery_ExpandsArrayValuesIntoRepeatedParams(t *testing.T) {
+	var capturedURL string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedURL = r.URL.String()
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer server.Close()
+
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+		api: &auth0.API{
+			HTTPClient: &mockHTTPClientAPI{baseURL: server.URL},
+		},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "connections",
+		SchemaCmd: "auth0 connections list",
+	}, `{"strategy":["auth0","oidc"]}`)
+
+	assert.NoError(t, err)
+	assert.Contains(t, capturedURL, "strategy=auth0")
+	assert.Contains(t, capturedURL, "strategy=oidc")
+}

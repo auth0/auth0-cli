@@ -471,6 +471,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(formsCmd(cli))
 	rootCmd.AddCommand(flowsCmd(cli))
 	rootCmd.AddCommand(networkACLCmd(cli))
+	rootCmd.AddCommand(connectionsCmd(cli))
 	rootCmd.AddCommand(tenantSettingsCmd(cli))
 	rootCmd.AddCommand(tokenExchangeCmd(cli))
 	rootCmd.AddCommand(sessionsCmd(cli))

@@ -97,6 +97,8 @@ type APIV3 struct {
 	GuardianFactorPush           GuardianFactorPushAPIV3
 	GuardianFactorDuo            GuardianFactorDuoAPIV3
 	NetworkACLKey                NetworkACLKeyAPIV3
+	Connection                   ConnectionAPIV3
+	ConnectionEnabledClient      ConnectionEnabledClientAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -124,6 +126,8 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		GuardianFactorPush:           m.Guardian.Factors.PushNotification,
 		GuardianFactorDuo:            m.Guardian.Factors.Duo.Settings,
 		NetworkACLKey:                m.Keys.NetworkACLs,
+		Connection:                   m.Connections,
+		ConnectionEnabledClient:      m.Connections.Clients,
 	}
 }
 
