@@ -211,6 +211,37 @@ func TestClassifyCommandFailure(t *testing.T) {
 			assert.Equal(t, "auth", props["error_class"])
 		}
 	})
+
+	t.Run("emits the finer error_reason alongside error_class", func(t *testing.T) {
+		props := classifyCommandFailure(config.ErrInvalidToken)
+		assert.Equal(t, "auth", props["error_class"])
+		assert.Equal(t, "session_expired", props["error_reason"])
+	})
+}
+
+func TestClassifyRequiredFlagError(t *testing.T) {
+	t.Run("wraps cobra's missing-required-flag error as usage/required_flag", func(t *testing.T) {
+		err := classifyRequiredFlagError(errors.New(`required flag(s) "client-id" not set`))
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, "required_flag", errorReason(err))
+	})
+
+	t.Run("passes a nil error through", func(t *testing.T) {
+		assert.NoError(t, classifyRequiredFlagError(nil))
+	})
+
+	t.Run("leaves an unrelated error unwrapped", func(t *testing.T) {
+		err := errors.New("something else")
+		assert.Same(t, err, classifyRequiredFlagError(err))
+	})
+
+	t.Run("does not double-wrap an already classified usage error", func(t *testing.T) {
+		original := usageError{err: errors.New("unknown flag: --bogus")}
+		assert.Equal(t, original, classifyRequiredFlagError(original))
+	})
 }
 
 func TestTestManagementErrorSatisfiesManagementError(t *testing.T) {
