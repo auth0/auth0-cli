@@ -52,14 +52,14 @@ tests:
       contains:
         - "Failed to parse command inputs: invalid method given"
 
-  008 - it throws a warning when both piped data and the data flag are present:
+  008 - it uses the data flag as-is and ignores piped input when both are present:
     command: cat ./test/integration/fixtures/update-tenant-settings.json | auth0 api patch "tenants/settings" --data "{\"idle_session_lifetime\":72}"
     exit-code: 0
     stdout:
       json:
         idle_session_lifetime: "72"
     stderr:
-      contains:
+      not-contains:
         - "JSON data was provided via both the flag and piped input. The Auth0 CLI will use the data from the flag."
 
   009 - it successfully prints out debug log messages:

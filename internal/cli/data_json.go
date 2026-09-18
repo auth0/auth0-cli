@@ -27,9 +27,14 @@ type DataJSONHandler struct {
 	manager *openapi.SchemaManager
 }
 
+// newSchemaManager builds the schema manager backing --data validation. It is a
+// package var so tests can inject a fixture-backed manager and keep the unit
+// suite off the network.
+var newSchemaManager = openapi.NewSchemaManager
+
 // NewDataJSONHandler creates a new data JSON handler.
 func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
-	manager, err := openapi.NewSchemaManager()
+	manager, err := newSchemaManager()
 	if err != nil {
 		return nil, err
 	}
@@ -41,29 +46,56 @@ func NewDataJSONHandler(c *cli) (*DataJSONHandler, error) {
 
 // ReadAndValidate reads the JSON input and validates it against the schema,
 // returning the raw bytes so the caller can send them to the API unchanged
-// (no SDK struct round-trip that would drop fields or apply omitempty).
-func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (json.RawMessage, error) {
+// (no SDK struct round-trip that would drop fields or apply omitempty). The
+// validated result reports whether a schema actually existed to check against;
+// it is false when the operation defines no request schema, so the caller can
+// signal that the payload is being sent without local validation.
+func (h *DataJSONHandler) ReadAndValidate(inputStr, method, path string) (data json.RawMessage, validated bool, err error) {
 	jsonData, err := h.readJSONInput(inputStr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read JSON input: %w", err)
+		return nil, false, validationError{fmt.Errorf("failed to read JSON input: %w", err)}
 	}
 
 	result, err := h.manager.ValidateRequest(method, path, jsonData)
 	if err != nil {
-		return nil, fmt.Errorf("schema validation error: %w", err)
+		// This path fires only when the operation can't be found in the embedded
+		// OpenAPI spec (an internal schema-lookup failure), not because the user's
+		// payload is bad, so it stays unclassified rather than "validation".
+		return nil, false, fmt.Errorf("schema validation error: %w", err)
 	}
 
-	if !result.Valid {
-		return nil, fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))
+	if result.Status == openapi.StatusInvalid {
+		return nil, false, validationError{fmt.Errorf("schema validation failed:\n%s", formatValidationErrors(result.Errors))}
 	}
 
-	return jsonData, nil
+	// Fail closed on an unrecorded outcome. ValidateRequest never returns
+	// StatusUnknown today, so this only guards against a future path that forgets
+	// to set a status; without it a zero-value result would slip through as an
+	// unvalidated send instead of surfacing the bug.
+	if result.Status == openapi.StatusUnknown {
+		return nil, false, fmt.Errorf("schema validation returned no result for %s %s", method, path)
+	}
+
+	return jsonData, result.Status == openapi.StatusValid, nil
 }
 
 // readJSONInput reads JSON from various input sources.
 func (h *DataJSONHandler) readJSONInput(input string) ([]byte, error) {
 	if input == "" {
 		return nil, fmt.Errorf("no input provided")
+	}
+
+	// "@-" and "-" read the payload from stdin, the common agent/script idiom for
+	// piping a body while still passing the flag explicitly.
+	if input == "@-" || input == "-" {
+		data, err := iostream.PipedInput()
+		if err != nil {
+			return nil, err
+		}
+		if len(data) == 0 {
+			return nil, fmt.Errorf("no data received on stdin")
+		}
+		return data, nil
 	}
 
 	if input[0] == '@' { // @file.
@@ -99,7 +131,10 @@ func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) 
 		return flagValue, true, nil
 	}
 
-	pipedPayload := iostream.PipedInput()
+	pipedPayload, err := iostream.PipedInput()
+	if err != nil {
+		return "", false, err
+	}
 	if len(pipedPayload) == 0 {
 		return "", false, nil
 	}
@@ -147,10 +182,19 @@ func runJSONWrite[T any](cli *cli, cmd *cobra.Command, spec jsonWriteSpec) (*T, 
 		return nil, fmt.Errorf("failed to initialize JSON handler: %w", err)
 	}
 
-	payload, err := handler.ReadAndValidate(spec.Data, spec.Method, spec.SchemaPath)
+	payload, validated, err := handler.ReadAndValidate(spec.Data, spec.Method, spec.SchemaPath)
 	if err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", spec.SchemaCmd)
 		return nil, err
+	}
+
+	// When the operation has no local schema, the payload was not checked before
+	// sending. Tell the caller so a passing exit isn't read as "payload validated".
+	if !validated {
+		cli.renderer.Warnf(
+			"No local schema found for %s %s; sending --data to the API without local validation.",
+			spec.Method, spec.SchemaPath,
+		)
 	}
 
 	if err := ansi.Waiting(func() error {

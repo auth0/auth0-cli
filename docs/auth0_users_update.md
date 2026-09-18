@@ -11,6 +11,9 @@ To update interactively, use `auth0 users update` with no arguments.
 
 To update non-interactively, supply the user id and other information through the available flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 users update [flags]
@@ -19,11 +22,11 @@ auth0 users update [flags]
 ## Examples
 
 ```
-  auth0 users update 
-  auth0 users update <user-id> 
+  auth0 users update
+  auth0 users update <user-id>
   auth0 users update <user-id> --name "John Doe"
-  auth0 users update <user-id> --blocked=true"
-  auth0 users update <user-id> --blocked=false"
+  auth0 users update <user-id> --blocked=true
+  auth0 users update <user-id> --blocked=false
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json
   auth0 users update <user-id> -n "John Kennedy" -e johnk@example.com --json-compact
   auth0 users update <user-id> -n "John Kennedy" -p <newPassword>
@@ -32,6 +35,15 @@ auth0 users update [flags]
   auth0 users update <user-id> -e johnk@example.com
   auth0 users update <user-id> --phone-number +916898989899
   auth0 users update <user-id> -m +916898989899 --json
+
+  # Discover the payload schema
+  auth0 users update --schema
+  auth0 users update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 users update <user-id> --data '{"name":"John Doe","email":"john@example.com"}'
+  auth0 users update <user-id> --data @user.json
+  cat user.json | auth0 users update <user-id>
 ```
 
 
@@ -40,12 +52,14 @@ auth0 users update [flags]
 ```
   -b, --blocked                  Block the user authentication.
   -c, --connection-name string   Name of the database connection this user should be created in.
+      --data string              JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -e, --email string             The user's email.
       --json                     Output in json format.
       --json-compact             Output in compact json format.
   -n, --name string              The user's full name.
   -p, --password string          Initial password for this user (mandatory for non-SMS connections).
   -m, --phone-number string      The user's phone number.
+      --schema                   Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -u, --username string          The user's username. Only valid if the connection requires a username.
 ```
 

@@ -37,15 +37,22 @@ type jsonQuerySpec struct {
 //     fmt.Sprintf("%v", …) that rendered an array as the literal "[a b]";
 //   - a nested object or an array containing objects/arrays is rejected, since
 //     there is no unambiguous query encoding for it (better a clear error than a
-//     silently wrong request).
+//     silently wrong request);
+//   - a JSON null omits the parameter rather than sending an empty value, so
+//     {"page":null} drops the key instead of building "?page=".
 //
 // Numbers must arrive as json.Number (decode with UseNumber) so their original
 // literal is preserved.
 func encodeQueryParams(query url.Values, params map[string]interface{}) (url.Values, error) {
 	for key, val := range params {
 		switch v := val.(type) {
+		case nil:
+			continue
 		case []interface{}:
 			for _, item := range v {
+				if item == nil {
+					continue
+				}
 				s, err := queryScalarString(key, item)
 				if err != nil {
 					return nil, err
@@ -66,16 +73,21 @@ func encodeQueryParams(query url.Values, params map[string]interface{}) (url.Val
 
 // queryScalarString renders a single JSON scalar as a query-parameter string. A
 // nested object or array is not a scalar and is rejected, naming the offending key.
+// Callers skip JSON null before reaching here (see encodeQueryParams).
 func queryScalarString(key string, val interface{}) (string, error) {
 	switch v := val.(type) {
-	case nil:
-		return "", nil
 	case string:
 		return v, nil
 	case bool:
 		return strconv.FormatBool(v), nil
 	case json.Number:
 		return v.String(), nil
+	case float64:
+		// The sole caller decodes with UseNumber, so numbers arrive as
+		// json.Number. This keeps encodeQueryParams correct for a future caller
+		// that decodes without UseNumber: 'f' formatting avoids scientific
+		// notation, so 1000000 stays "1000000".
+		return strconv.FormatFloat(v, 'f', -1, 64), nil
 	default:
 		return "", fmt.Errorf(
 			"query parameter %q must be a scalar or an array of scalars; "+
@@ -100,7 +112,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	var queryParams map[string]interface{}
 	if err := decoder.Decode(&queryParams); err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected query parameters.", spec.SchemaCmd)
-		return fmt.Errorf("invalid --query value: must be a JSON object: %w", err)
+		return validationError{fmt.Errorf("invalid --query value: must be a JSON object: %w", err)}
 	}
 
 	u, err := url.Parse(cli.api.HTTPClient.URI(strings.Split(spec.Path, "/")...))
@@ -111,7 +123,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	query, err := encodeQueryParams(u.Query(), queryParams)
 	if err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected query parameters.", spec.SchemaCmd)
-		return fmt.Errorf("invalid --query value: %w", err)
+		return validationError{fmt.Errorf("invalid --query value: %w", err)}
 	}
 	u.RawQuery = query.Encode()
 
@@ -159,7 +171,7 @@ func runJSONQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, queryJSON st
 	if err := json.Indent(&prettyJSON, rawJSON, "", "  "); err != nil {
 		return fmt.Errorf("failed to format response: %w", err)
 	}
-	cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
+	cli.renderer.OutputPreformattedJSON(ansi.ColorizeJSON(prettyJSON.String()))
 	return nil
 }
 
