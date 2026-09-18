@@ -412,6 +412,16 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 				}
 			}
 		}
+	} else if schema.Type != nil && schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil {
+		// A top-level array body (e.g. PATCH /connections/{id}/clients takes an
+		// array of {client_id, status}). Describe the array, then recurse into the
+		// item schema so its fields surface instead of a bare "Type: array".
+		fmt.Fprintf(&sb, "%sType: array\n", indent)
+		if schema.Description != "" {
+			fmt.Fprintf(&sb, "%sDescription: %s\n", indent, schema.Description)
+		}
+		fmt.Fprintf(&sb, "%sEach item:\n", indent)
+		sb.WriteString(formatSchema(schema.Items.Value, indent+"  "))
 	} else {
 		// Non-object type.
 		if schema.Type != nil {
