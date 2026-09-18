@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Emit a machine-readable JSON error envelope on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text. The envelope carries a `code` classifying the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`) and a `status` with the HTTP status when the error came from the Auth0 Management API, for example `{"error":{"code":"not_found","message":"...","status":404}}`. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure
 - Populate the JSON error envelope's `details` with field-level schema errors (`[{"field","reason"}]`) when a `--data` payload fails local validation, so an agent can pinpoint the offending field instead of parsing a prose list
 - Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
+- Accept `--data @file` and `--data @-`/`--data -` on `auth0 api`, so a request body can come from a file or from stdin instead of being embedded on the command line
+- Add `--json` and `--json-compact` to `auth0 api`; the response is always JSON, and `--json-compact` emits it as a single dense line so an NDJSON reader gets one record per line, while `--json` (the default) keeps the pretty, colorized form
 - Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
 
 ### Changed
@@ -32,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quit the `auth0 logs tail` follow loop and decline confirmation prompts cleanly when no interactive terminal is available (an agent or piped run), instead of panicking
 - Report a recovered panic on stderr (as a JSON error envelope in JSON or agent mode) and exit non-zero, so a crash never masquerades as success or corrupts JSON written to stdout
 - `--data` input is now checked for well-formed JSON even when the operation has no local schema, so malformed payloads fail locally with a clear message instead of being sent to the API as-is.
+- Send every value of a repeated `-q`/`--query` param on `auth0 api` (for example `-q "fields=a" -q "fields=b"`), instead of keeping only the last one
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
