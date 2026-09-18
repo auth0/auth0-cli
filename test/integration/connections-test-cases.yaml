@@ -88,14 +88,22 @@ tests:
     command: auth0 connections enabled-clients show $(./test/integration/scripts/get-connection-id.sh)
     exit-code: 0
 
-  013 - it fails to update enabled clients without data non-interactively:
+  013 - it successfully prints the enabled-clients update schema:
+    command: auth0 connections enabled-clients update --schema
+    exit-code: 0
+    stdout:
+      contains:
+        - client_id
+        - status
+
+  014 - it fails to update enabled clients without data non-interactively:
     command: auth0 connections enabled-clients update $(./test/integration/scripts/get-connection-id.sh) --no-input
     exit-code: 1
     stderr:
       contains:
         - client statuses provided
 
-  014 - agent mode refuses to delete a connection without force:
+  015 - agent mode refuses to delete a connection without force:
     command: AUTH0_AGENT_MODE=true auth0 connections delete $(./test/integration/scripts/get-connection-id.sh)
     exit-code: 1
     stderr:
@@ -103,10 +111,10 @@ tests:
         - destructive command
         - --force
 
-  015 - given a test connection, it successfully deletes the connection:
+  016 - given a test connection, it successfully deletes the connection:
     command: auth0 connections delete $(./test/integration/scripts/get-connection-id.sh) --force
     exit-code: 0
 
-  016 - it cleans up all connections created by this suite:
+  017 - it cleans up all connections created by this suite:
     command: ./test/integration/scripts/cleanup-connections.sh
     exit-code: 0
