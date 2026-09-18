@@ -102,15 +102,20 @@ type ErrorEnvelope struct {
 	Error ErrorBody `json:"error"`
 }
 
-// ErrorBody carries the classified error. Status is omitted when the failure did
-// not come from the Auth0 Management API. Details is an optional, structured bag
-// of extra context an agent can act on (for example the "did you mean" candidates
-// for a mistyped command, under the "suggestions" key); it is omitted when empty.
+// ErrorBody carries the classified error. Code is the coarse, stable failure
+// class; Reason is a finer sub-classification that lives alongside it and is
+// omitted when no finer classification is available. Status is omitted when the
+// failure did not come from the Auth0 Management API. Details is an optional,
+// structured JSON bag of extra context an agent can act on (for example the
+// field-level validation failures of a rejected `--data` payload, or the "did you
+// mean" candidates for a mistyped command under the "suggestions" key); it is
+// omitted when empty.
 type ErrorBody struct {
-	Code    string                 `json:"code"`
-	Message string                 `json:"message"`
-	Status  int                    `json:"status,omitempty"`
-	Details map[string]interface{} `json:"details,omitempty"`
+	Code    string          `json:"code"`
+	Reason  string          `json:"reason,omitempty"`
+	Message string          `json:"message"`
+	Status  int             `json:"status,omitempty"`
+	Details json.RawMessage `json:"details,omitempty"`
 }
 
 // ErrorJSON writes the error envelope as a single compact JSON line to stderr,
