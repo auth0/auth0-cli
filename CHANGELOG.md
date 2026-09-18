@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Quit the `auth0 logs tail` follow loop and decline confirmation prompts cleanly when no interactive terminal is available (an agent or piped run), instead of panicking
 - Report a recovered panic on stderr (as a JSON error envelope in JSON or agent mode) and exit non-zero, so a crash never masquerades as success or corrupts JSON written to stdout
 - `--data` input is now checked for well-formed JSON even when the operation has no local schema, so malformed payloads fail locally with a clear message instead of being sent to the API as-is.
-- Encode `--query` filters with real JSON-to-query semantics. An array value now sends repeated parameters (`?fields=a&fields=b`) instead of the literal `[a b]`, numbers keep their original literal (no more `1e+06` for `1000000`), and a nested object is rejected with a clear error rather than silently building a wrong request.
+- Encode `--query` filters with real JSON-to-query semantics. An array value now sends repeated parameters (`?fields=a&fields=b`) instead of the literal `[a b]`, numbers keep their original literal (no more `1e+06` for `1000000`), a JSON `null` omits the parameter instead of sending an empty value, and a nested object is rejected with a clear error rather than silently building a wrong request. A malformed or nested `--query` now classifies as a `validation` error in the JSON error envelope instead of `unknown`.
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
