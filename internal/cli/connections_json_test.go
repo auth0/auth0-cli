@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -149,6 +150,46 @@ func TestConnectionsCreateCmdData(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "schema validation")
 		assert.False(t, captured.called, "must not reach the API when validation fails")
+	})
+}
+
+// useUnavailableSchema simulates the OpenAPI document being unreachable (e.g. the
+// fetch 404s and there is no cache) so tests can exercise the validation bypass.
+func useUnavailableSchema(t *testing.T) {
+	t.Helper()
+	prev := newSchemaManager
+	newSchemaManager = func() (*openapi.SchemaManager, error) {
+		return nil, errors.New("failed to fetch OpenAPI schema: unexpected status code: 404")
+	}
+	t.Cleanup(func() { newSchemaManager = prev })
+}
+
+func TestConnectionsCreateCmdDataSchemaUnavailable(t *testing.T) {
+	useUnavailableSchema(t)
+
+	t.Run("sends --data to the API without local validation", func(t *testing.T) {
+		c, captured := newConnectionWriteCLI(t)
+		cmd := createConnectionCmd(c)
+		prepareInteractivity(cmd)
+		cmd.SetArgs([]string{"--data", `{"name":"my-db","strategy":"auth0"}`})
+
+		require.NoError(t, cmd.Execute())
+		assert.True(t, captured.called, "must fall back to the API when the schema is unavailable")
+		assert.Equal(t, http.MethodPost, captured.method)
+		assert.Contains(t, captured.path, "/connections")
+	})
+
+	t.Run("passes a payload that local validation would reject through to the API", func(t *testing.T) {
+		c, captured := newConnectionWriteCLI(t)
+		cmd := createConnectionCmd(c)
+		prepareInteractivity(cmd)
+		// {"name":123} fails the fixture schema, but with no schema to validate
+		// against the payload must reach the API, which does its own validation.
+		cmd.SetArgs([]string{"--data", `{"name":123}`})
+
+		require.NoError(t, cmd.Execute())
+		assert.True(t, captured.called)
+		assert.Equal(t, http.MethodPost, captured.method)
 	})
 }
 
