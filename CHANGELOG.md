@@ -8,43 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.36.0](https://github.com/auth0/auth0-cli/tree/v1.36.0) (September 18, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.35.0...v1.36.0)
+
 ### Added
-- Emit a machine-readable JSON error envelope on stderr when running in JSON or agent mode, so agents and scripts can branch on the failure class without parsing human text. The envelope carries a `code` classifying the failure (`usage`, `auth`, `validation`, `not_found`, `rate_limit`, `api`, or `unknown`) and a `status` with the HTTP status when the error came from the Auth0 Management API, for example `{"error":{"code":"not_found","message":"...","status":404}}`. Process exit codes stay coarse and backwards compatible: `0` on success and `1` on any failure
-- Populate the JSON error envelope's `details` with field-level schema errors (`[{"field","reason"}]`) when a `--data` payload fails local validation, so an agent can pinpoint the offending field instead of parsing a prose list
-- Accept `--data @-` and `--data -` to read a JSON payload from stdin explicitly on `--data`-driven create/update commands, so a script can pipe a body while still passing the flag
-- Accept `--data @file` and `--data @-`/`--data -` on `auth0 api`, so a request body can come from a file or from stdin instead of being embedded on the command line
-- Add `--json` and `--json-compact` to `auth0 api`; the response is always JSON, and `--json-compact` emits it as a single dense line so an NDJSON reader gets one record per line, while `--json` (the default) keeps the pretty, colorized form
-- Add `--version1` and `--version2` flags to `auth0 actions diff` so the two versions to compare can be supplied non-interactively instead of only through the interactive picker
+- Add native `auth0 connections` commands to manage connections and their enabled clients [#1662]
+- Add `auth0 guardian` commands to manage multi-factor authentication (MFA) policies, enrollments, and factors [#1646]
+- Add a machine-readable JSON error envelope with stable failure classes in JSON and agent mode [#1663]
+- Add field-level validation `details`, a `reason` field, and a `network` failure class to the JSON error envelope [#1670]
+- Add `--data` file and stdin sources and `--json`/`--json-compact` output to `auth0 api` [#1669]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 apps` commands [#1664]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 apis` commands [#1661]
+- Add `--schema` and `--data` flags to `auth0 users` commands [#1660]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 roles` commands [#1659]
+- Add `--version1` and `--version2` flags to `auth0 actions diff` [#1666]
+- Add a warning when `--data` is sent without local schema validation [#1673]
 
 ### Changed
-- Exit with `130` instead of `0` when a command is interrupted with `Ctrl-C`, so an interrupted run reports failure
-- Reject an unknown subcommand on a command group (for example `auth0 actions lst`) with a usage error and exit code `1` instead of silently printing help and exiting `0`; unknown top-level commands and unknown flags on a command group (for example `auth0 actions --bogus`) are also rejected, in both normal and agent mode, while a bare group with only known global flags (such as `--debug`) still prints help
-- Stream results as a sequence of newline-separated JSON objects instead of a JSON array when a streaming command such as `auth0 logs tail` runs in JSON or agent mode, so a reader can consume records incrementally without waiting for an array that never closes while tailing. Agent mode and `--json-compact` emit compact newline-delimited JSON (one object per line); `--json` indents each object for a human watching the live stream
-- Always terminate JSON output on stdout with a trailing newline so a piped or NDJSON reader never drops the final record
-- Stop appending the multi-line "Expected Request Schema" dump to a failed `--data` request in JSON or agent mode, keeping the error envelope's `message` to the API's actual error (the schema stays discoverable via `--schema`); human output is unchanged
-- Keep stderr machine-clean in agent mode by suppressing human diagnostics (info, success, detail, warning, non-fatal error), progress hints and the decorative heading and blank lines. On success stderr is empty and on failure it carries only the JSON error envelope, so a merged stdout+stderr stream stays parseable, discriminated by the reserved `error` key rather than a fragile per-message field
-- Render help as JSON in agent mode for a bare `auth0` and for a command group invoked without a subcommand (for example `auth0 apps`), instead of the human help text, and describe agent mode (its output contract and how to disable it) in the root help so it does not need to be re-announced on every command
-- `--data` create/update commands now print a diagnostic when the operation has no local schema to validate against, so a successful run isn't mistaken for "payload validated". The payload is still sent; only the missing local check is signaled
-- `--query` list output now honors `--json-compact`, emitting a single dense JSON line when that flag is set (the default stays pretty-printed)
-- `--query` list commands now print a diagnostic to stderr when the response is a page of a larger result set, so the returned records aren't mistaken for the full set; the output itself is unchanged
-- `--csv` combined with `--query` now returns a clear error instead of being silently ignored, since the raw API JSON has no fixed columns to flatten; use `--json` or `--json-compact` instead
-- In agent mode, `auth0 login` without machine credentials (the user/device-code flow) now emits the device verification URL and code as a JSON object on stdout and polls without opening a browser, pressing Enter, or showing a spinner, then emits a final `{"logged_in":true,"tenant":"...","domain":"..."}` object on success, so an agent can hand the link to a human and detect completion. It also switches the default tenant to the newly authenticated one automatically instead of prompting, since there is no human to answer the change-default prompt
+- Emit fully machine-readable JSON output in agent mode, with newline-delimited streaming, a trailing newline on JSON stdout, clean stderr, and JSON help [#1665]
+- Emit machine-readable agent-mode output for interactive and browser-based commands, and fail fast instead of hanging when a TTY or browser is unavailable [#1681]
+- Honor `--json-compact` and signal pagination in `--query` list output [#1672]
 
 ### Fixed
-- Return a clear error naming the missing input instead of hanging on an interactive prompt when a required selection is absent in non-interactive or agent mode, on `auth0 actions diff`, `auth0 roles permissions add`/`remove`, `auth0 users roles add`/`remove`, `auth0 tenant-settings update set`/`unset`, and `auth0 event-streams deliveries redeliver`; `auth0 test token` now skips the optional scope prompt and proceeds
-- Read piped stdin without panicking when the read fails; a broken or unreadable pipe now surfaces as a normal error instead of crashing the CLI
-- Do not read stdin on `auth0 api` (or any `--data`-driven command) when `--data` is set, so a request that supplies its body via the flag no longer blocks forever on an open, EOF-less pipe (the common agent and CI case)
-- Preserve the real error body of a `403` response from `auth0 api` that is not an insufficient-scope error, instead of losing it and falling back to a bare `Forbidden`
-- Quit the `auth0 logs tail` follow loop and decline confirmation prompts cleanly when no interactive terminal is available (an agent or piped run), instead of panicking
-- Report a recovered panic on stderr (as a JSON error envelope in JSON or agent mode) and exit non-zero, so a crash never masquerades as success or corrupts JSON written to stdout
-- `--data` input is now checked for well-formed JSON even when the operation has no local schema, so malformed payloads fail locally with a clear message instead of being sent to the API as-is.
-- Encode `--query` filters with real JSON-to-query semantics. An array value now sends repeated parameters (`?fields=a&fields=b`) instead of the literal `[a b]`, numbers keep their original literal (no more `1e+06` for `1000000`), a JSON `null` omits the parameter instead of sending an empty value, and a nested object is rejected with a clear error rather than silently building a wrong request. A malformed or nested `--query` now classifies as a `validation` error in the JSON error envelope instead of `unknown`.
-- Send every value of a repeated `-q`/`--query` param on `auth0 api` (for example `-q "fields=a" -q "fields=b"`), instead of keeping only the last one
-- Fail fast with a clear error instead of hanging when a command that needs an interactive browser or terminal editor runs in agent mode: `auth0 universal-login customize`, `auth0 universal-login templates update`, and `auth0 acul dev` would otherwise open a browser or editor and block on a local server that never returns
-- Emit machine-readable JSON on stdout in agent mode for `auth0 terraform generate` (the output directory and a `status` of `generated`, `plan_failed`, `terraform_install_failed`, or `credentials_missing`) and for `auth0 acul config docs` (the documentation URL), instead of losing the result to suppressed human-only output and, for the docs command, trying to open a browser
-- Surface a private-key file read failure on `auth0 login` machine login (Private Key JWT) through the normal error path instead of printing it to stdout, keeping stdout machine-clean
-- Classify local, user-fixable command failures with a specific `code` and `reason` in the JSON error envelope instead of the generic `unknown`/`unclassified`. Missing required flags, incompatible flag combinations, and invalid flag values (across `auth0 client-grants`, `auth0 apps`, `auth0 quickstarts`, `auth0 network-acl`, `auth0 guardian`, `auth0 email`, `auth0 actions`, `auth0 roles`, `auth0 users`, `auth0 flows`, `auth0 forms`, `auth0 login`, `auth0 terraform generate`, and others) now surface as `usage`; malformed local JSON payloads and other client-side input validation surface as `validation`. Human-facing messages are unchanged
-- Classify `409` API responses as `conflict` in the JSON error envelope, and `410`/`415` as `validation`, instead of the generic `unknown`/`server_error`
+- Harden agent input handling and reject unknown flags on command groups with a usage error [#1666]
+- Fix `--query` filter encoding to send arrays as repeated parameters and preserve numeric literals [#1671]
+- Classify local command failures and `409`/`410`/`415` API responses in the JSON error envelope instead of the generic `unknown` [#1680]
+- Fix `--json-compact` output for `auth0 event-streams` delivery and stream stats [#1677]
+- Fix `--data` validation to reject malformed JSON locally for operations without a request schema [#1674]
+- Fix `--data`, `--query`, and `--schema` being incorrectly rejected by required-flag validation [#1667]
+
+### Removed
+- Remove non-functional rule flags from `auth0 network-acl create` and `update` in favor of `--rule` [#1675]
 
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
@@ -844,7 +839,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.35.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.36.0...HEAD
+[#1681]: https://github.com/auth0/auth0-cli/pull/1681
+[#1680]: https://github.com/auth0/auth0-cli/pull/1680
+[#1677]: https://github.com/auth0/auth0-cli/pull/1677
+[#1675]: https://github.com/auth0/auth0-cli/pull/1675
+[#1674]: https://github.com/auth0/auth0-cli/pull/1674
+[#1673]: https://github.com/auth0/auth0-cli/pull/1673
+[#1672]: https://github.com/auth0/auth0-cli/pull/1672
+[#1671]: https://github.com/auth0/auth0-cli/pull/1671
+[#1670]: https://github.com/auth0/auth0-cli/pull/1670
+[#1669]: https://github.com/auth0/auth0-cli/pull/1669
+[#1667]: https://github.com/auth0/auth0-cli/pull/1667
+[#1666]: https://github.com/auth0/auth0-cli/pull/1666
+[#1665]: https://github.com/auth0/auth0-cli/pull/1665
+[#1664]: https://github.com/auth0/auth0-cli/pull/1664
+[#1663]: https://github.com/auth0/auth0-cli/pull/1663
+[#1662]: https://github.com/auth0/auth0-cli/pull/1662
+[#1661]: https://github.com/auth0/auth0-cli/pull/1661
+[#1660]: https://github.com/auth0/auth0-cli/pull/1660
+[#1659]: https://github.com/auth0/auth0-cli/pull/1659
+[#1646]: https://github.com/auth0/auth0-cli/pull/1646
 [#1653]: https://github.com/auth0/auth0-cli/pull/1653
 [#1652]: https://github.com/auth0/auth0-cli/pull/1652
 [#1648]: https://github.com/auth0/auth0-cli/pull/1648
