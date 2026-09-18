@@ -376,7 +376,8 @@ func schemaToMap(schema *openapi3.Schema) map[string]interface{} {
 func formatSchema(schema *openapi3.Schema, indent string) string {
 	var sb strings.Builder
 
-	if schema.Type != nil && schema.Type.Is("object") {
+	switch {
+	case schema.Type != nil && schema.Type.Is("object"):
 		// Required fields.
 		if len(schema.Required) > 0 {
 			fmt.Fprintf(&sb, "%sRequired fields:\n", indent)
@@ -412,7 +413,7 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 				}
 			}
 		}
-	} else if schema.Type != nil && schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil {
+	case schema.Type != nil && schema.Type.Is("array") && schema.Items != nil && schema.Items.Value != nil:
 		// A top-level array body (e.g. PATCH /connections/{id}/clients takes an
 		// array of {client_id, status}). Describe the array, then recurse into the
 		// item schema so its fields surface instead of a bare "Type: array".
@@ -422,7 +423,7 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 		}
 		fmt.Fprintf(&sb, "%sEach item:\n", indent)
 		sb.WriteString(formatSchema(schema.Items.Value, indent+"  "))
-	} else {
+	default:
 		// Non-object type.
 		if schema.Type != nil {
 			types := schema.Type.Slice()
