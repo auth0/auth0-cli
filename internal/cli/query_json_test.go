@@ -267,6 +267,155 @@ func TestRunJSONQuery_NestedObjectIsError(t *testing.T) {
 	assert.ErrorContains(t, err, "filter")
 }
 
+func TestRunJSONQuery_CompactOutput(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"actions":[{"id":"a"}],"total":1}`))
+	}))
+	defer server.Close()
+
+	var resultBuf strings.Builder
+	cli := &cli{
+		jsonCompact: true,
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  &resultBuf,
+		},
+		api: &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "actions/actions",
+		SchemaCmd: "auth0 actions list",
+	}, `{}`)
+
+	require.NoError(t, err)
+	out := strings.TrimSpace(resultBuf.String())
+	// Compact output is a single dense line with no indentation newlines.
+	assert.Equal(t, `{"actions":[{"id":"a"}],"total":1}`, out)
+	assert.NotContains(t, out, "\n")
+}
+
+func TestRunJSONQuery_CSVIsRejected(t *testing.T) {
+	cli := &cli{
+		csv: true,
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+		api: &auth0.API{},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "actions/actions",
+		SchemaCmd: "auth0 actions list",
+	}, `{}`)
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "--csv is not supported with --query")
+}
+
+func TestPaginationHint(t *testing.T) {
+	t.Run("offset with totals, more results signals a hint", func(t *testing.T) {
+		// Standard include_totals envelope: first of two pages.
+		hint := paginationHint([]byte(`{"clients":[],"total":100,"start":0,"limit":50,"length":50}`))
+		assert.Contains(t, hint, "Showing 50 of 100")
+		assert.Contains(t, hint, "More results exist")
+	})
+
+	t.Run("offset uses length for the returned count", func(t *testing.T) {
+		// "length" is the number actually returned; the hint reports it, not "limit".
+		hint := paginationHint([]byte(`{"clients":[],"total":100,"start":0,"limit":50,"length":42}`))
+		assert.Contains(t, hint, "Showing 42 of 100")
+	})
+
+	t.Run("offset without limit yields no hint (spurious total is ignored)", func(t *testing.T) {
+		// A "total" without the rest of the include_totals envelope is not a
+		// reliable pagination signal, so no hint is emitted.
+		hint := paginationHint([]byte(`{"actions":[{"id":"a"},{"id":"b"}],"total":10}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("checkpoint pagination signals a hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"logs":[{"id":"a"}],"next":"tok_abc"}`))
+		assert.Contains(t, hint, "checkpoint")
+		assert.Contains(t, hint, "next")
+		// Wording stays tentative: a final page can still carry a "next" token.
+		assert.Contains(t, hint, "There may be")
+		assert.NotContains(t, hint, "More results exist")
+	})
+
+	t.Run("offset without length states the total but no page count", func(t *testing.T) {
+		// No "length" field: the hint must not invent a returned count from "limit".
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"}],"total":100,"start":0,"limit":50}`))
+		assert.Contains(t, hint, "one page of 100 total results")
+		assert.Contains(t, hint, "More results exist")
+		assert.NotContains(t, hint, "Showing")
+	})
+
+	t.Run("checkpoint with an empty page has no hint", func(t *testing.T) {
+		// A "next" token on a page that returned nothing must not claim more results.
+		hint := paginationHint([]byte(`{"users":[],"next":"tok_abc","length":0}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("complete result set has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":2,"start":0,"limit":50,"length":2}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("last page has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"clients":[{"id":"a"}],"total":100,"start":99,"limit":50,"length":1}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("empty checkpoint token has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"logs":[{"id":"a"}],"next":""}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("no total and no next has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`{"actions":[{"id":"a"}]}`))
+		assert.Empty(t, hint)
+	})
+
+	t.Run("bare array has no hint", func(t *testing.T) {
+		hint := paginationHint([]byte(`[{"id":"a"}]`))
+		assert.Empty(t, hint)
+	})
+}
+
+func TestRunJSONQuery_TruncationWarning(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"clients":[{"id":"a"},{"id":"b"}],"total":100,"start":0,"limit":50}`))
+	}))
+	defer server.Close()
+
+	var msgBuf strings.Builder
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: &msgBuf,
+			ResultWriter:  io.Discard,
+		},
+		api: &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+	}
+	cmd := &cobra.Command{}
+	cmd.SetContext(context.Background())
+
+	err := runJSONQuery(cli, cmd, jsonQuerySpec{
+		Path:      "clients",
+		SchemaCmd: "auth0 apps list",
+	}, `{}`)
+
+	require.NoError(t, err)
+	assert.Contains(t, msgBuf.String(), "More results exist")
+}
+
 // TestRunJSONQuery_InvalidQueryClassifiesAsValidation covers that client-side
 // --query failures classify as "validation" (not "unknown") in the error
 // envelope, matching how a server-side 400/422 and the --data path classify.
