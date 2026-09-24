@@ -280,6 +280,13 @@ func TestDocsResultURL(t *testing.T) {
 			agentMode: false,
 			expected:  "https://auth0.com/docs/quickstart#sec",
 		},
+		{
+			name:      "leading-slash page does not produce a double slash",
+			page:      "/docs/quickstart",
+			hash:      "",
+			agentMode: false,
+			expected:  "https://auth0.com/docs/quickstart",
+		},
 	}
 
 	for _, tc := range tests {
@@ -287,6 +294,51 @@ func TestDocsResultURL(t *testing.T) {
 			r := docsSearchResult{Page: tc.page}
 			r.Metadata.Hash = tc.hash
 			assert.Equal(t, tc.expected, docsResultURL(r, tc.agentMode))
+		})
+	}
+}
+
+// TestDocsShouldPromptForResult verifies the interactive picker gate, in particular
+// that a machine output format suppresses the picker even in an interactive terminal
+// with multiple results (so --json --open does not launch a prompt over the JSON).
+func TestDocsShouldPromptForResult(t *testing.T) {
+	tests := []struct {
+		name          string
+		interactive   bool
+		resultCount   int
+		machineFormat bool
+		expected      bool
+	}{
+		{
+			name:        "interactive TTY with multiple results prompts",
+			interactive: true,
+			resultCount: 3,
+			expected:    true,
+		},
+		{
+			name:          "machine format suppresses the picker even in a TTY",
+			interactive:   true,
+			resultCount:   3,
+			machineFormat: true,
+			expected:      false,
+		},
+		{
+			name:        "single result never prompts",
+			interactive: true,
+			resultCount: 1,
+			expected:    false,
+		},
+		{
+			name:        "non-interactive never prompts",
+			interactive: false,
+			resultCount: 3,
+			expected:    false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expected, docsShouldPromptForResult(tc.interactive, tc.resultCount, tc.machineFormat))
 		})
 	}
 }
@@ -313,6 +365,11 @@ func TestDocsResultType(t *testing.T) {
 			name:     "DELETE endpoint with path param",
 			openapi:  "docs/oas/management.json DELETE /roles/{id}",
 			expected: "DELETE /roles/{id}",
+		},
+		{
+			name:     "single-token openapi returns the token verbatim",
+			openapi:  "POST",
+			expected: "POST",
 		},
 	}
 

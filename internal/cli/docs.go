@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -33,6 +34,13 @@ var docsBaseURL = "https://auth0.com/"
 var docsSupportedLanguages = []string{"en", "fr", "ja"}
 
 const docsSnippetMaxLen = 160
+
+// Upper bounds on response body reads so a malformed or oversized response cannot
+// exhaust memory. The search index returns ~6 small results; markdown pages are larger.
+const (
+	docsSearchResponseMaxBytes = 512 * 1024      // 512 KiB.
+	docsMarkdownMaxBytes       = 2 * 1024 * 1024 // 2 MiB.
+)
 
 type docsSearchResult struct {
 	Page     string `json:"page"`
@@ -111,11 +119,18 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 			}
 
 			var results []docsSearchResult
-			if err := ansi.Waiting(func() error {
+			search := func() error {
 				var err error
 				results, err = runDocsSearch(cmd.Context(), inputs.Query, inputs.Language)
 				return err
-			}); err != nil {
+			}
+			// In agent mode, skip the spinner so stderr stays clean and
+			// machine-readable, matching the rest of the CLI.
+			if cli.agentMode {
+				if err := search(); err != nil {
+					return err
+				}
+			} else if err := ansi.Waiting(search); err != nil {
 				return err
 			}
 
@@ -153,7 +168,7 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.Open && len(views) > 0 {
-				return openDocsResult(cmd, cli, results)
+				return openDocsResult(cmd, cli, results, machineFormat)
 			}
 			return nil
 		},
@@ -210,7 +225,8 @@ func runDocsSearch(ctx context.Context, query, language string) ([]docsSearchRes
 		return nil, fmt.Errorf("documentation search failed with status code %d", resp.StatusCode)
 	}
 
-	raw, err := io.ReadAll(resp.Body)
+	// Cap the read so a malformed or oversized response cannot exhaust memory.
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, docsSearchResponseMaxBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read search response: %w", err)
 	}
@@ -240,24 +256,33 @@ func validateDocsLanguage(language string) error {
 // docsResultURL builds the public URL. Agent mode gets the raw-markdown ".md" form
 // (no anchor); human mode gets the normal page plus a "#hash" anchor when present.
 func docsResultURL(r docsSearchResult, agentMode bool) string {
-	url := docsBaseURL + r.Page
+	// JoinPath normalizes the separator so a leading-slash page path does not
+	// produce a double slash; fall back to plain concatenation if it ever errors.
+	pageURL, err := url.JoinPath(docsBaseURL, r.Page)
+	if err != nil {
+		pageURL = docsBaseURL + r.Page
+	}
 	if agentMode {
-		return url + ".md"
+		return pageURL + ".md"
 	}
 	if r.Metadata.Hash != "" {
-		url += "#" + r.Metadata.Hash
+		pageURL += "#" + r.Metadata.Hash
 	}
-	return url
+	return pageURL
 }
 
 // docsResultType returns "Doc" for prose pages, or the "<METHOD> <PATH>" parsed from the
 // openapi metadata for Management API reference pages (e.g. "POST /users").
 func docsResultType(r docsSearchResult) string {
 	fields := strings.Fields(r.Metadata.OpenAPI)
-	if len(fields) >= 2 {
+	switch len(fields) {
+	case 0:
+		return "Doc"
+	case 1:
+		return fields[0]
+	default:
 		return fields[len(fields)-2] + " " + fields[len(fields)-1]
 	}
-	return "Doc"
 }
 
 func docsResultTitle(r docsSearchResult) string {
@@ -285,20 +310,30 @@ func docsSnippet(r docsSearchResult) string {
 	return content
 }
 
+// docsShouldPromptForResult reports whether the interactive result picker should run:
+// only in an interactive terminal, with more than one result, and when no machine
+// output format was requested (that output must not be clobbered by a prompt).
+func docsShouldPromptForResult(interactive bool, resultCount int, machineFormat bool) bool {
+	return interactive && resultCount > 1 && !machineFormat
+}
+
 // openDocsResult opens a result in the browser: interactive pick in a TTY, top result
 // otherwise. It always opens the human-facing page (never the ".md" raw-markdown form),
-// since opening a browser is inherently an interactive, human action.
-func openDocsResult(cmd *cobra.Command, cli *cli, results []docsSearchResult) error {
+// since opening a browser is inherently an interactive, human action. A machine output
+// format (--json/--json-compact/--csv) suppresses the picker and opens the top result,
+// so the emitted machine output is not clobbered by an interactive prompt.
+func openDocsResult(cmd *cobra.Command, cli *cli, results []docsSearchResult, machineFormat bool) error {
 	target := docsResultURL(results[0], false)
-	if canPrompt(cmd) && len(results) > 1 {
+	if docsShouldPromptForResult(canPrompt(cmd), len(results), machineFormat) {
 		labels := make([]string, len(results))
 		byLabel := make(map[string]string, len(results))
 		for i, r := range results {
 			// Label as "Title (URL)"; the URL keeps labels unique when two pages
 			// share a title.
-			label := fmt.Sprintf("%s (%s)", docsResultTitle(r), docsResultURL(r, false))
+			u := docsResultURL(r, false)
+			label := fmt.Sprintf("%s (%s)", docsResultTitle(r), u)
 			labels[i] = label
-			byLabel[label] = docsResultURL(r, false)
+			byLabel[label] = u
 		}
 		var choice string
 		q := prompt.SelectInput("result", "Select a result to open:", "Choose which documentation page to open in your browser.", labels, labels[0], true)
@@ -329,11 +364,18 @@ func fetchDocsMarkdown(cmd *cobra.Command, cli *cli, result docsSearchResult) er
 	url := docsResultURL(result, true)
 
 	var content string
-	if err := ansi.Waiting(func() error {
+	fetch := func() error {
 		var err error
 		content, err = fetchDocsMarkdownContent(cmd.Context(), url)
 		return err
-	}); err != nil {
+	}
+	// This path only runs in agent mode, so skip the spinner to keep stderr
+	// clean and machine-readable.
+	if cli.agentMode {
+		if err := fetch(); err != nil {
+			return err
+		}
+	} else if err := ansi.Waiting(fetch); err != nil {
 		return err
 	}
 
@@ -370,7 +412,8 @@ func fetchDocsMarkdownContent(ctx context.Context, url string) (string, error) {
 		return "", fmt.Errorf("fetching documentation content failed with status code %d", resp.StatusCode)
 	}
 
-	raw, err := io.ReadAll(resp.Body)
+	// Cap the read so a malformed or oversized response cannot exhaust memory.
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, docsMarkdownMaxBytes))
 	if err != nil {
 		return "", fmt.Errorf("failed to read documentation content: %w", err)
 	}
