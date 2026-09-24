@@ -35,12 +35,9 @@ var docsSupportedLanguages = []string{"en", "fr", "ja"}
 
 const docsSnippetMaxLen = 160
 
-// Upper bounds on response body reads so a malformed or oversized response cannot
-// exhaust memory. The search index returns ~6 small results; markdown pages are larger.
-const (
-	docsSearchResponseMaxBytes = 512 * 1024      // 512 KiB.
-	docsMarkdownMaxBytes       = 2 * 1024 * 1024 // 2 MiB.
-)
+// docsSearchResponseMaxBytes bounds the search response read so a malformed or
+// oversized response cannot exhaust memory. The index returns ~6 small results.
+const docsSearchResponseMaxBytes = 512 * 1024 // 512 KiB.
 
 type docsSearchResult struct {
 	Page     string `json:"page"`
@@ -74,7 +71,7 @@ var (
 	docsSearchOpen = Flag{
 		Name:     "Open",
 		LongForm: "open",
-		Help:     "Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. In agent mode no browser opens; the top result's markdown content is printed instead.",
+		Help:     "Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. Not supported in agent mode.",
 	}
 )
 
@@ -109,6 +106,17 @@ func searchDocsCmd(cli *cli) *cobra.Command {
   auth0 docs search actions --open
   auth0 docs search rules --json-compact | jq '.[] | {title, url}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// --open opens a result in a browser and, in a terminal, lets a human
+			// pick which one. An agent can do neither, and it already gets every
+			// result's raw-markdown ".md" URL in the normal JSON output to fetch
+			// directly, so fail fast rather than guessing at the top result.
+			if inputs.Open && cli.agentMode {
+				return usageError{
+					err:    fmt.Errorf("`--open` opens a result in a browser and is not supported in agent mode; run the search without `--open` and fetch a result's `url` (raw markdown) directly"),
+					reason: "unsupported_in_agent_mode",
+				}
+			}
+
 			if len(args) > 0 {
 				inputs.Query = args[0]
 			}
@@ -132,16 +140,6 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 				}
 			} else if err := ansi.Waiting(search); err != nil {
 				return err
-			}
-
-			// Agent mode --open: an agent has no browser, so fetch the top result's
-			// raw markdown and emit it as JSON instead of launching one.
-			if inputs.Open && cli.agentMode {
-				if len(results) == 0 {
-					cli.renderer.DocsSearchResults(nil, inputs.Query)
-					return nil
-				}
-				return fetchDocsMarkdown(cmd, cli, results[0])
 			}
 
 			views := make([]display.DocsSearchResult, 0, len(results))
@@ -347,77 +345,4 @@ func openDocsResult(cmd *cobra.Command, cli *cli, results []docsSearchResult, ma
 		return fmt.Errorf("failed to open browser: %w", err)
 	}
 	return nil
-}
-
-// docsMarkdownOutput is the JSON shape emitted by agent-mode --open: the top result's
-// title, its ".md" URL, and the fetched raw markdown content.
-type docsMarkdownOutput struct {
-	Title   string `json:"title"`
-	URL     string `json:"url"`
-	Content string `json:"content"`
-}
-
-// fetchDocsMarkdown fetches a result's raw markdown (the ".md" URL) and emits it as JSON.
-// It backs agent-mode --open, where launching a browser makes no sense, so the agent gets
-// the documentation text directly on stdout.
-func fetchDocsMarkdown(cmd *cobra.Command, cli *cli, result docsSearchResult) error {
-	url := docsResultURL(result, true)
-
-	var content string
-	fetch := func() error {
-		var err error
-		content, err = fetchDocsMarkdownContent(cmd.Context(), url)
-		return err
-	}
-	// This path only runs in agent mode, so skip the spinner to keep stderr
-	// clean and machine-readable.
-	if cli.agentMode {
-		if err := fetch(); err != nil {
-			return err
-		}
-	} else if err := ansi.Waiting(fetch); err != nil {
-		return err
-	}
-
-	out := docsMarkdownOutput{
-		Title:   docsResultTitle(result),
-		URL:     url,
-		Content: content,
-	}
-	if cli.jsonCompact {
-		cli.renderer.JSONCompactResult(out)
-	} else {
-		cli.renderer.JSONResult(out)
-	}
-	return nil
-}
-
-// fetchDocsMarkdownContent GETs the given ".md" URL and returns its raw body.
-func fetchDocsMarkdownContent(ctx context.Context, url string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to build documentation request: %w", err)
-	}
-	req.Header.Set("Accept", "text/markdown, text/plain, */*")
-	req.Header.Set("User-Agent", "auth0-cli")
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch documentation content: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("fetching documentation content failed with status code %d", resp.StatusCode)
-	}
-
-	// Cap the read so a malformed or oversized response cannot exhaust memory.
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, docsMarkdownMaxBytes))
-	if err != nil {
-		return "", fmt.Errorf("failed to read documentation content: %w", err)
-	}
-	// Return the markdown verbatim (it is already the ideal, structured form for an
-	// agent); only trim surrounding whitespace so the content starts cleanly.
-	return strings.TrimSpace(string(raw)), nil
 }

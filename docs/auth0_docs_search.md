@@ -31,7 +31,7 @@ auth0 docs search [flags]
       --json              Output in json format.
       --json-compact      Output in compact json format.
   -l, --language string   Documentation language to search. One of: en, fr, ja. (default "en")
-      --open              Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. In agent mode no browser opens; the top result's markdown content is printed instead.
+      --open              Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. Not supported in agent mode.
 ```
 
 

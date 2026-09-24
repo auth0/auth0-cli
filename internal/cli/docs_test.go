@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/auth0/auth0-cli/internal/display"
 )
 
 // buildDocsSearchServer creates an httptest server that responds with the given
@@ -208,34 +210,19 @@ func TestRunDocsSearch_EmptyResults(t *testing.T) {
 	assert.Empty(t, results)
 }
 
-// TestFetchDocsMarkdownContent verifies the markdown fetch used by agent-mode --open:
-// it GETs the URL and returns the raw body, and surfaces non-200 as an error.
-func TestFetchDocsMarkdownContent(t *testing.T) {
-	t.Run("returns trimmed body on 200 and sends a GET", func(t *testing.T) {
-		var gotMethod string
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			gotMethod = r.Method
-			// Surrounding whitespace should be trimmed off the returned content.
-			_, _ = fmt.Fprint(w, "\n\n# Actions\nActions are secure.\n\n")
-		}))
-		defer server.Close()
+// TestSearchDocsCmd_OpenRejectedInAgentMode verifies that --open fails fast in agent
+// mode instead of guessing at the top result, since an agent cannot open a browser or
+// pick a result and already gets each result's raw-markdown URL in the JSON output.
+func TestSearchDocsCmd_OpenRejectedInAgentMode(t *testing.T) {
+	c := &cli{agentMode: true, renderer: &display.Renderer{}}
+	cmd := searchDocsCmd(c)
+	cmd.SetArgs([]string{"actions", "--open"})
+	cmd.SilenceUsage = true
+	cmd.SilenceErrors = true
 
-		content, err := fetchDocsMarkdownContent(context.Background(), server.URL)
-		require.NoError(t, err)
-		assert.Equal(t, http.MethodGet, gotMethod)
-		assert.Equal(t, "# Actions\nActions are secure.", content)
-	})
-
-	t.Run("non-200 status is surfaced as an error with the code", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-		}))
-		defer server.Close()
-
-		_, err := fetchDocsMarkdownContent(context.Background(), server.URL)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "404")
-	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not supported in agent mode")
 }
 
 // TestDocsResultURL_UsesBaseURL verifies docsResultURL builds off the docsBaseURL
