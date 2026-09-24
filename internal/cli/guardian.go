@@ -47,10 +47,16 @@ func isEmptyResponseErr(err error) bool {
 
 func guardianCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "guardian",
-		Short: "Manage multi-factor authentication (Guardian)",
+		Use:     "guardian",
+		Aliases: []string{"mfa"},
+		Short:   "Manage multi-factor authentication (Guardian)",
 		Long: "Manage Auth0 multi-factor authentication (MFA), also known as Guardian. " +
 			"Configure MFA policies, factors and their providers, and manage user enrollments.",
+		Example: `  auth0 guardian factors list
+  auth0 guardian factors set sms --enabled
+  auth0 guardian factors phone set-message-types --message-type sms
+  auth0 guardian factors phone set-provider --provider auth0
+  auth0 guardian policies set --policy all-applications`,
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())

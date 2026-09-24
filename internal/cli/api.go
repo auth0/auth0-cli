@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/auth0/go-auth0/v3/management/core"
@@ -64,7 +65,7 @@ type (
 		RawQueryParams []string
 		Method         string
 		URL            *url.URL
-		Data           interface{}
+		Data           any
 	}
 )
 
@@ -181,7 +182,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			}
 
 			if cli.debug {
-				cli.renderer.Infof("Sending the following request: %+v", map[string]interface{}{
+				cli.renderer.Infof("Sending the following request: %+v", map[string]any{
 					"method":  request.Method,
 					"url":     request.URL.String(),
 					"payload": inputs.Data,
@@ -210,7 +211,11 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 		}
 
 		if response.StatusCode >= http.StatusBadRequest {
-			return newAPIResponseError(response.StatusCode, response.Header, rawBodyJSON)
+			err := newAPIResponseError(response.StatusCode, response.Header, rawBodyJSON)
+			if isWrongMethod404(inputs.Method, response.StatusCode, rawBodyJSON) {
+				return apiResponseHintError{err: err, hint: apiWrongMethodHintText}
+			}
+			return err
 		}
 
 		if len(rawBodyJSON) == 0 {
@@ -246,11 +251,9 @@ func (i *apiCmdInputs) fromArgs(args []string, domain string) error {
 }
 
 func (i *apiCmdInputs) validateAndSetMethod() error {
-	for _, validMethod := range apiValidMethods {
-		if i.RawMethod == validMethod {
-			i.Method = i.RawMethod
-			return nil
-		}
+	if slices.Contains(apiValidMethods, i.RawMethod) {
+		i.Method = i.RawMethod
+		return nil
 	}
 
 	return usageError{
@@ -369,6 +372,61 @@ func newAPIResponseError(statusCode int, header http.Header, body []byte) error 
 	}
 
 	return core.NewAPIError(statusCode, header, fmt.Errorf("API request failed: %s", message))
+}
+
+// isWrongMethod404 reports whether a PATCH likely used the wrong verb. Many
+// Management API endpoints accept PUT but reject PATCH with a bare "Not Found"
+// instead of a 405, so it is limited to PATCH and to the generic routing-miss
+// body (empty, or "Not Found" with no errorCode); a resource-specific 404 or any
+// other verb returns false.
+func isWrongMethod404(method string, statusCode int, rawBody []byte) bool {
+	if statusCode != http.StatusNotFound || method != http.MethodPatch {
+		return false
+	}
+
+	if len(bytes.TrimSpace(rawBody)) == 0 {
+		return true
+	}
+
+	var body struct {
+		Message   string `json:"message"`
+		ErrorCode string `json:"errorCode"`
+	}
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		return false
+	}
+
+	message := strings.TrimSpace(body.Message)
+	return body.ErrorCode == "" && (message == "" || strings.EqualFold(message, "Not Found"))
+}
+
+const apiWrongMethodHintText = "The endpoint returned a generic 404. If the path is correct, the HTTP method may " +
+	"not be supported there — many Auth0 Management API endpoints accept PUT but not PATCH. " +
+	"Verify both the path and the method."
+
+// apiResponseHintError attaches an actionable hint to a non-2xx `auth0 api`
+// response. Error() stays the terse API message so the JSON envelope's message
+// field is clean; the hint travels in the envelope's details via ErrorDetails and
+// is printed separately by renderErrorMessage. It unwraps to the underlying error
+// so status classification is unchanged.
+type apiResponseHintError struct {
+	err  error
+	hint string
+}
+
+func (e apiResponseHintError) Error() string { return e.err.Error() }
+
+func (e apiResponseHintError) Unwrap() error { return e.err }
+
+func (e apiResponseHintError) ErrorDetails() json.RawMessage {
+	raw, err := json.Marshal(struct {
+		Hint string `json:"hint"`
+	}{Hint: e.hint})
+	if err != nil {
+		return nil
+	}
+
+	return raw
 }
 
 func isInsufficientScopeError(statusCode int, rawBody []byte) error {
