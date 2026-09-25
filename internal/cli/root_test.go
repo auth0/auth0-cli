@@ -27,6 +27,10 @@ func (m testManagementError) Status() int {
 	return m.status
 }
 
+func (m testManagementError) Code() string {
+	return ""
+}
+
 func TestCommandRequiresAuthentication(t *testing.T) {
 	var testCases = []struct {
 		givenCommand                    string

@@ -23,6 +23,10 @@ func (m *mockError) Status() int {
 	return m.statusCode
 }
 
+func (m *mockError) Code() string {
+	return ""
+}
+
 func TestEnhanceError_400Error(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)

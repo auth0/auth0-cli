@@ -23,6 +23,7 @@ type fakeManagementError struct {
 }
 
 func (e fakeManagementError) Status() int   { return e.status }
+func (e fakeManagementError) Code() string  { return "" }
 func (e fakeManagementError) Error() string { return e.message }
 
 func TestErrorClass(t *testing.T) {
