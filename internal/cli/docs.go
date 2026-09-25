@@ -39,10 +39,9 @@ type docsSearchResult struct {
 	Header   string `json:"header"`
 	Content  string `json:"content"`
 	Metadata struct {
-		Title       string   `json:"title"`
-		Breadcrumbs []string `json:"breadcrumbs"`
-		Hash        string   `json:"hash"`
-		OpenAPI     string   `json:"openapi"`
+		Title   string `json:"title"`
+		Hash    string `json:"hash"`
+		OpenAPI string `json:"openapi"`
 	} `json:"metadata"`
 	Score float64 `json:"score"`
 }
@@ -128,7 +127,6 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 			for _, r := range results {
 				views = append(views, display.DocsSearchResult{
 					Title:   docsResultTitle(r),
-					Section: docsResultSection(r),
 					Type:    docsResultType(r),
 					URL:     docsResultURL(r, cli.agentMode),
 					Snippet: docsSnippet(r),
@@ -246,10 +244,6 @@ func docsResultTitle(r docsSearchResult) string {
 		return r.Metadata.Title
 	}
 	return r.Header
-}
-
-func docsResultSection(r docsSearchResult) string {
-	return strings.Join(r.Metadata.Breadcrumbs, " > ")
 }
 
 // docsSnippet strips the leading duplicated header line from content, collapses

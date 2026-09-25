@@ -96,7 +96,6 @@ func TestRunDocsSearch_HappyPath(t *testing.T) {
 	assert.Equal(t, "docs/quickstart", results[0].Page)
 	assert.Equal(t, "Quickstart", results[0].Header)
 	assert.Equal(t, "Auth0 Quickstart", results[0].Metadata.Title)
-	assert.Equal(t, []string{"Docs", "Quickstart"}, results[0].Metadata.Breadcrumbs)
 	assert.Equal(t, "step1", results[0].Metadata.Hash)
 	assert.Equal(t, "", results[0].Metadata.OpenAPI)
 }
@@ -342,45 +341,6 @@ func TestDocsResultTitle(t *testing.T) {
 			r := docsSearchResult{Header: tc.header}
 			r.Metadata.Title = tc.title
 			assert.Equal(t, tc.expected, docsResultTitle(r))
-		})
-	}
-}
-
-// TestDocsResultSection verifies that breadcrumbs are joined with " > " and
-// that an empty slice yields an empty string.
-func TestDocsResultSection(t *testing.T) {
-	tests := []struct {
-		name        string
-		breadcrumbs []string
-		expected    string
-	}{
-		{
-			name:        "multiple breadcrumbs joined with >",
-			breadcrumbs: []string{"A", "B", "C"},
-			expected:    "A > B > C",
-		},
-		{
-			name:        "empty breadcrumbs returns empty string",
-			breadcrumbs: []string{},
-			expected:    "",
-		},
-		{
-			name:        "nil breadcrumbs returns empty string",
-			breadcrumbs: nil,
-			expected:    "",
-		},
-		{
-			name:        "single breadcrumb returned as-is",
-			breadcrumbs: []string{"Docs"},
-			expected:    "Docs",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			r := docsSearchResult{}
-			r.Metadata.Breadcrumbs = tc.breadcrumbs
-			assert.Equal(t, tc.expected, docsResultSection(r))
 		})
 	}
 }
