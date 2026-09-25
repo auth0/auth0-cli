@@ -84,7 +84,7 @@ func TestRunDocsSearch_HappyPath(t *testing.T) {
 	defer server.Close()
 	overrideDocsSearchURL(t, server.URL)
 
-	results, err := runDocsSearch(context.Background(), "get started", "en")
+	results, err := runDocsSearch(context.Background(), "get started")
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 
@@ -104,75 +104,20 @@ func TestRunDocsSearch_HappyPath(t *testing.T) {
 // TestRunDocsSearch_RequestShape verifies the HTTP request shape sent by
 // runDocsSearch, including method, Content-Type, and body payload.
 func TestRunDocsSearch_RequestShape(t *testing.T) {
-	t.Run("explicit language is forwarded in filters", func(t *testing.T) {
-		var captured map[string]interface{}
-		server := buildDocsSearchServer(t, http.StatusOK, `{"results":[]}`, &captured)
-		defer server.Close()
-		overrideDocsSearchURL(t, server.URL)
+	var captured map[string]interface{}
+	server := buildDocsSearchServer(t, http.StatusOK, `{"results":[]}`, &captured)
+	defer server.Close()
+	overrideDocsSearchURL(t, server.URL)
 
-		_, err := runDocsSearch(context.Background(), "mfa", "ja")
-		require.NoError(t, err)
+	_, err := runDocsSearch(context.Background(), "mfa")
+	require.NoError(t, err)
 
-		require.NotNil(t, captured)
-		assert.Equal(t, "mfa", captured["query"])
+	require.NotNil(t, captured)
+	assert.Equal(t, "mfa", captured["query"])
 
-		filters, ok := captured["filters"].(map[string]interface{})
-		require.True(t, ok, "filters should be a map")
-		assert.Equal(t, "ja", filters["language"])
-	})
-
-	t.Run("language is normalized before forwarding", func(t *testing.T) {
-		var captured map[string]interface{}
-		server := buildDocsSearchServer(t, http.StatusOK, `{"results":[]}`, &captured)
-		defer server.Close()
-		overrideDocsSearchURL(t, server.URL)
-
-		_, err := runDocsSearch(context.Background(), "mfa", "  FR ")
-		require.NoError(t, err)
-
-		require.NotNil(t, captured)
-		filters, ok := captured["filters"].(map[string]interface{})
-		require.True(t, ok, "filters should be a map")
-		assert.Equal(t, "fr", filters["language"])
-	})
-
-	t.Run("empty language defaults to en", func(t *testing.T) {
-		var captured map[string]interface{}
-		server := buildDocsSearchServer(t, http.StatusOK, `{"results":[]}`, &captured)
-		defer server.Close()
-		overrideDocsSearchURL(t, server.URL)
-
-		_, err := runDocsSearch(context.Background(), "x", "")
-		require.NoError(t, err)
-
-		require.NotNil(t, captured)
-		filters, ok := captured["filters"].(map[string]interface{})
-		require.True(t, ok, "filters should be a map")
-		assert.Equal(t, "en", filters["language"])
-	})
-}
-
-// TestRunDocsSearch_UnsupportedLanguage verifies that a language the docs index is
-// not localized in is rejected before any network call, with a helpful message.
-func TestRunDocsSearch_UnsupportedLanguage(t *testing.T) {
-	// Point the URL at a server that would fail the test if it were ever hit, to
-	// prove validation happens before the request.
-	overrideDocsSearchURL(t, "http://127.0.0.1:0")
-
-	_, err := runDocsSearch(context.Background(), "mfa", "es")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), `"es"`)
-	assert.Contains(t, err.Error(), "en, fr, ja")
-}
-
-// TestValidateDocsLanguage covers the supported/unsupported language check.
-func TestValidateDocsLanguage(t *testing.T) {
-	for _, lang := range []string{"en", "fr", "ja"} {
-		assert.NoError(t, validateDocsLanguage(lang), "%q should be supported", lang)
-	}
-	for _, lang := range []string{"es", "de", "pt", "zh", "xx", ""} {
-		assert.Error(t, validateDocsLanguage(lang), "%q should be rejected", lang)
-	}
+	filters, ok := captured["filters"].(map[string]interface{})
+	require.True(t, ok, "filters should be a map")
+	assert.Equal(t, "en", filters["language"])
 }
 
 // TestRunDocsSearch_Non200 verifies that a non-200 HTTP status is surfaced as
@@ -182,7 +127,7 @@ func TestRunDocsSearch_Non200(t *testing.T) {
 	defer server.Close()
 	overrideDocsSearchURL(t, server.URL)
 
-	_, err := runDocsSearch(context.Background(), "anything", "en")
+	_, err := runDocsSearch(context.Background(), "anything")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
 }
@@ -194,7 +139,7 @@ func TestRunDocsSearch_InvalidJSON(t *testing.T) {
 	defer server.Close()
 	overrideDocsSearchURL(t, server.URL)
 
-	_, err := runDocsSearch(context.Background(), "anything", "en")
+	_, err := runDocsSearch(context.Background(), "anything")
 	require.Error(t, err)
 }
 
@@ -205,7 +150,7 @@ func TestRunDocsSearch_EmptyResults(t *testing.T) {
 	defer server.Close()
 	overrideDocsSearchURL(t, server.URL)
 
-	results, err := runDocsSearch(context.Background(), "anything", "en")
+	results, err := runDocsSearch(context.Background(), "anything")
 	require.NoError(t, err)
 	assert.Empty(t, results)
 }

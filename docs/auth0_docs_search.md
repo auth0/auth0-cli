@@ -18,7 +18,6 @@ auth0 docs search [flags]
   auth0 docs search browser
   auth0 docs search "custom domains"
   auth0 docs search "refresh token" --json
-  auth0 docs search mfa --language ja
   auth0 docs search actions --open
   auth0 docs search rules --json-compact | jq '.[] | {title, url}'
 ```
@@ -27,11 +26,10 @@ auth0 docs search [flags]
 ## Flags
 
 ```
-      --csv               Output in csv format.
-      --json              Output in json format.
-      --json-compact      Output in compact json format.
-  -l, --language string   Documentation language to search. One of: en, fr, ja. (default "en")
-      --open              Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. Not supported in agent mode.
+      --csv            Output in csv format.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+      --open           Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. Not supported in agent mode.
 ```
 
 

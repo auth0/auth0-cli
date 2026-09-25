@@ -20,23 +20,18 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-// docsSearchURL is the public docs search index; a package var so tests can
-// point it at an httptest server.
+// docsSearchURL is the public docs search index (a var so tests can override it).
 var docsSearchURL = "https://leaves.mintlify.com/api/search/auth0"
 
-// docsBaseURL is the public docs host; a package var so tests can point the
-// page/markdown URLs at an httptest server.
+// docsBaseURL is the public docs host (a var so tests can override it).
 var docsBaseURL = "https://auth0.com/"
 
-// docsSupportedLanguages are the languages the Auth0 docs index is actually
-// localized in. Any other value makes the API silently fall back to a single
-// irrelevant result, so we reject unsupported values up front instead.
-var docsSupportedLanguages = []string{"en", "fr", "ja"}
+// docsLanguage is the docs language we search; only English for now.
+const docsLanguage = "en"
 
 const docsSnippetMaxLen = 160
 
-// docsSearchResponseMaxBytes bounds the search response read so a malformed or
-// oversized response cannot exhaust memory. The index returns ~6 small results.
+// docsSearchResponseMaxBytes caps the response read to avoid exhausting memory.
 const docsSearchResponseMaxBytes = 512 * 1024 // 512 KiB.
 
 type docsSearchResult struct {
@@ -61,19 +56,11 @@ var docsSearchQuery = Argument{
 	Help: "Search term to look up in the Auth0 documentation.",
 }
 
-var (
-	docsSearchLanguage = Flag{
-		Name:      "Language",
-		LongForm:  "language",
-		ShortForm: "l",
-		Help:      "Documentation language to search. One of: en, fr, ja.",
-	}
-	docsSearchOpen = Flag{
-		Name:     "Open",
-		LongForm: "open",
-		Help:     "Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. Not supported in agent mode.",
-	}
-)
+var docsSearchOpen = Flag{
+	Name:     "Open",
+	LongForm: "open",
+	Help:     "Open a result in the browser. In an interactive terminal you pick which one; otherwise the top result opens. Not supported in agent mode.",
+}
 
 func docsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -88,9 +75,8 @@ func docsCmd(cli *cli) *cobra.Command {
 
 func searchDocsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		Query    string
-		Language string
-		Open     bool
+		Query string
+		Open  bool
 	}
 
 	cmd := &cobra.Command{
@@ -102,14 +88,11 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 docs search browser
   auth0 docs search "custom domains"
   auth0 docs search "refresh token" --json
-  auth0 docs search mfa --language ja
   auth0 docs search actions --open
   auth0 docs search rules --json-compact | jq '.[] | {title, url}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// --open opens a result in a browser and, in a terminal, lets a human
-			// pick which one. An agent can do neither, and it already gets every
-			// result's raw-markdown ".md" URL in the normal JSON output to fetch
-			// directly, so fail fast rather than guessing at the top result.
+			// An agent can't open a browser and already gets each result's ".md"
+			// URL in the JSON output, so reject --open rather than guess.
 			if inputs.Open && cli.agentMode {
 				return usageError{
 					err:    fmt.Errorf("`--open` opens a result in a browser and is not supported in agent mode; run the search without `--open` and fetch a result's `url` (raw markdown) directly"),
@@ -129,11 +112,10 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 			var results []docsSearchResult
 			search := func() error {
 				var err error
-				results, err = runDocsSearch(cmd.Context(), inputs.Query, inputs.Language)
+				results, err = runDocsSearch(cmd.Context(), inputs.Query)
 				return err
 			}
-			// In agent mode, skip the spinner so stderr stays clean and
-			// machine-readable, matching the rest of the CLI.
+			// Skip the spinner in agent mode to keep stderr machine-readable.
 			if cli.agentMode {
 				if err := search(); err != nil {
 					return err
@@ -154,11 +136,8 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 				})
 			}
 
-			// A machine output format (--json/--json-compact/--csv) signals scripting
-			// intent, so keep that output intact and open the top result without a
-			// picker. The interactive picker is only for the default human format,
-			// where it also lists the results, so we skip the table to avoid showing
-			// them twice.
+			// The picker only runs for the human format (and lists results itself,
+			// so skip the table then); a machine format keeps its output intact.
 			machineFormat := cli.json || cli.jsonCompact || cli.csv
 			interactivePick := inputs.Open && canPrompt(cmd) && len(views) > 1 && !machineFormat
 			if !interactivePick {
@@ -177,26 +156,17 @@ func searchDocsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
-	docsSearchLanguage.RegisterString(cmd, &inputs.Language, "en")
 	docsSearchOpen.RegisterBool(cmd, &inputs.Open, false)
 
 	return cmd
 }
 
-// runDocsSearch calls the public Auth0 docs search index and returns results sorted by
-// descending relevance score (the API returns them unsorted). The API caps results at ~6.
-func runDocsSearch(ctx context.Context, query, language string) ([]docsSearchResult, error) {
-	language = strings.ToLower(strings.TrimSpace(language))
-	if language == "" {
-		language = "en"
-	}
-	if err := validateDocsLanguage(language); err != nil {
-		return nil, err
-	}
-
+// runDocsSearch queries the docs index and returns results sorted by descending
+// relevance score (the API returns them unsorted, capped at ~6).
+func runDocsSearch(ctx context.Context, query string) ([]docsSearchResult, error) {
 	body, err := json.Marshal(map[string]interface{}{
 		"query":   query,
-		"filters": map[string]string{"language": language},
+		"filters": map[string]string{"language": docsLanguage},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode search request: %w", err)
@@ -240,22 +210,10 @@ func runDocsSearch(ctx context.Context, query, language string) ([]docsSearchRes
 	return parsed.Results, nil
 }
 
-// validateDocsLanguage rejects languages the docs index is not localized in, since
-// the API silently returns a single irrelevant result for those rather than erroring.
-func validateDocsLanguage(language string) error {
-	for _, l := range docsSupportedLanguages {
-		if language == l {
-			return nil
-		}
-	}
-	return fmt.Errorf("unsupported documentation language %q (supported: %s)", language, strings.Join(docsSupportedLanguages, ", "))
-}
-
-// docsResultURL builds the public URL. Agent mode gets the raw-markdown ".md" form
-// (no anchor); human mode gets the normal page plus a "#hash" anchor when present.
+// docsResultURL builds the public URL: agent mode gets the ".md" form (no anchor),
+// human mode gets the page plus a "#hash" anchor when present.
 func docsResultURL(r docsSearchResult, agentMode bool) string {
-	// JoinPath normalizes the separator so a leading-slash page path does not
-	// produce a double slash; fall back to plain concatenation if it ever errors.
+	// JoinPath avoids a double slash on leading-slash paths; fall back on error.
 	pageURL, err := url.JoinPath(docsBaseURL, r.Page)
 	if err != nil {
 		pageURL = docsBaseURL + r.Page
@@ -269,8 +227,8 @@ func docsResultURL(r docsSearchResult, agentMode bool) string {
 	return pageURL
 }
 
-// docsResultType returns "Doc" for prose pages, or the "<METHOD> <PATH>" parsed from the
-// openapi metadata for Management API reference pages (e.g. "POST /users").
+// docsResultType returns "Doc" for prose pages, or "<METHOD> <PATH>" (e.g.
+// "POST /users") parsed from the openapi metadata for API reference pages.
 func docsResultType(r docsSearchResult) string {
 	fields := strings.Fields(r.Metadata.OpenAPI)
 	switch len(fields) {
@@ -300,34 +258,29 @@ func docsSnippet(r docsSearchResult) string {
 	content := strings.TrimSpace(r.Content)
 	content = strings.TrimPrefix(content, r.Header)
 	content = strings.Join(strings.Fields(content), " ")
-	// Truncate on rune boundaries so multi-byte characters in non-English docs
-	// (selected via --language) are never split into an invalid byte sequence.
+	// Truncate on rune boundaries so multi-byte characters aren't split.
 	if runes := []rune(content); len(runes) > docsSnippetMaxLen {
 		content = strings.TrimSpace(string(runes[:docsSnippetMaxLen])) + "..."
 	}
 	return content
 }
 
-// docsShouldPromptForResult reports whether the interactive result picker should run:
-// only in an interactive terminal, with more than one result, and when no machine
-// output format was requested (that output must not be clobbered by a prompt).
+// docsShouldPromptForResult reports whether the picker runs: interactive terminal,
+// more than one result, and no machine output format to clobber.
 func docsShouldPromptForResult(interactive bool, resultCount int, machineFormat bool) bool {
 	return interactive && resultCount > 1 && !machineFormat
 }
 
-// openDocsResult opens a result in the browser: interactive pick in a TTY, top result
-// otherwise. It always opens the human-facing page (never the ".md" raw-markdown form),
-// since opening a browser is inherently an interactive, human action. A machine output
-// format (--json/--json-compact/--csv) suppresses the picker and opens the top result,
-// so the emitted machine output is not clobbered by an interactive prompt.
+// openDocsResult opens a result in the browser: interactive pick in a TTY, else the
+// top result. It always opens the human page (never ".md"); a machine format
+// suppresses the picker so its output isn't clobbered by a prompt.
 func openDocsResult(cmd *cobra.Command, cli *cli, results []docsSearchResult, machineFormat bool) error {
 	target := docsResultURL(results[0], false)
 	if docsShouldPromptForResult(canPrompt(cmd), len(results), machineFormat) {
 		labels := make([]string, len(results))
 		byLabel := make(map[string]string, len(results))
 		for i, r := range results {
-			// Label as "Title (URL)"; the URL keeps labels unique when two pages
-			// share a title.
+			// Include the URL so labels stay unique when titles collide.
 			u := docsResultURL(r, false)
 			label := fmt.Sprintf("%s (%s)", docsResultTitle(r), u)
 			labels[i] = label
