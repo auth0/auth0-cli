@@ -56,7 +56,10 @@ func guardianCmd(cli *cli) *cobra.Command {
   auth0 guardian factors set sms --enabled
   auth0 guardian factors phone set-message-types --message-type sms
   auth0 guardian factors phone set-provider --provider auth0
-  auth0 guardian policies set --policy all-applications`,
+  auth0 guardian policies set --policy all-applications
+  auth0 mfa factors list
+  auth0 mfa factors set sms --enabled
+  auth0 mfa policies set --policy all-applications`,
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
