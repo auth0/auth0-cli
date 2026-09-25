@@ -342,6 +342,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 " + cobra.ShellCompRequestCmd,
 		"auth0 commands",
 		"auth0 completion",
+		"auth0 docs search",
 		"auth0 help",
 		"auth0 login",
 		"auth0 logout",
@@ -483,6 +484,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(refreshTokensCmd(cli))
 	rootCmd.AddCommand(guardianCmd(cli))
 
+	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))
 	rootCmd.AddCommand(agentCmd(cli))
 
