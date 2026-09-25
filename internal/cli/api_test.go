@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -327,6 +330,114 @@ func TestAPICmd_RegistersJSONOutputFlags(t *testing.T) {
 		err := cmd.Execute()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "json")
+	})
+}
+
+func TestAPICmd_WrongMethodHint(t *testing.T) {
+	const genericNotFound = `{"statusCode":404,"error":"Not Found","message":"Not Found"}`
+
+	var testCases = []struct {
+		name       string
+		method     string
+		statusCode int
+		body       string
+		wantHint   bool
+	}{
+		{
+			name:       "generic 404 on PATCH hints at a wrong method",
+			method:     http.MethodPatch,
+			statusCode: 404,
+			body:       genericNotFound,
+			wantHint:   true,
+		},
+		{
+			name:       "generic 404 on PATCH with an empty body still hints",
+			method:     http.MethodPatch,
+			statusCode: 404,
+			body:       "",
+			wantHint:   true,
+		},
+		{
+			name:       "generic 404 on POST is a wrong path, not a wrong verb",
+			method:     http.MethodPost,
+			statusCode: 404,
+			body:       genericNotFound,
+			wantHint:   false,
+		},
+		{
+			name:       "generic 404 on PUT does not hint",
+			method:     http.MethodPut,
+			statusCode: 404,
+			body:       genericNotFound,
+			wantHint:   false,
+		},
+		{
+			name:       "generic 404 on DELETE does not hint",
+			method:     http.MethodDelete,
+			statusCode: 404,
+			body:       genericNotFound,
+			wantHint:   false,
+		},
+		{
+			name:       "GET 404 is a missing resource, not a wrong verb",
+			method:     http.MethodGet,
+			statusCode: 404,
+			body:       genericNotFound,
+			wantHint:   false,
+		},
+		{
+			name:       "resource-specific PATCH 404 with an errorCode is left untouched",
+			method:     http.MethodPatch,
+			statusCode: 404,
+			body:       `{"statusCode":404,"errorCode":"inexistent_connection","message":"The connection does not exist"}`,
+			wantHint:   false,
+		},
+		{
+			name:       "descriptive PATCH 404 message is left untouched",
+			method:     http.MethodPatch,
+			statusCode: 404,
+			body:       `{"statusCode":404,"error":"Not Found","message":"The user does not exist."}`,
+			wantHint:   false,
+		},
+		{
+			name:       "non-404 status never hints",
+			method:     http.MethodPatch,
+			statusCode: 400,
+			body:       `{"statusCode":400,"error":"Bad Request","message":"Not Found"}`,
+			wantHint:   false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			assert.Equal(t, testCase.wantHint, isWrongMethod404(testCase.method, testCase.statusCode, []byte(testCase.body)))
+		})
+	}
+}
+
+// TestAPICmd_ResponseHintError checks that a hinted 404 keeps the terse API
+// message in the envelope while carrying the hint in the details field, and
+// unwraps to the underlying API error so status classification is unchanged.
+func TestAPICmd_ResponseHintError(t *testing.T) {
+	apiErr := core.NewAPIError(http.StatusNotFound, http.Header{}, fmt.Errorf("API request failed: Not Found"))
+	err := apiResponseHintError{err: apiErr, hint: apiWrongMethodHintText}
+
+	t.Run("Error() stays the terse API message, not the hint", func(t *testing.T) {
+		assert.Equal(t, apiErr.Error(), err.Error())
+		assert.NotContains(t, err.Error(), apiWrongMethodHintText)
+	})
+
+	t.Run("ErrorDetails() carries the hint", func(t *testing.T) {
+		require.NotNil(t, err.ErrorDetails())
+		assert.JSONEq(t, `{"hint":`+strconv.Quote(apiWrongMethodHintText)+`}`, string(err.ErrorDetails()))
+	})
+
+	t.Run("the envelope keeps a terse message and a hinted details field", func(t *testing.T) {
+		envelope := buildErrorEnvelope(err)
+		assert.Equal(t, apiErr.Error(), envelope.Error.Message)
+		assert.NotContains(t, envelope.Error.Message, apiWrongMethodHintText)
+		assert.Equal(t, http.StatusNotFound, envelope.Error.Status)
+		assert.JSONEq(t, `{"hint":`+strconv.Quote(apiWrongMethodHintText)+`}`, string(envelope.Error.Details))
 	})
 }
 

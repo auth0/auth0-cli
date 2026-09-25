@@ -554,6 +554,14 @@ func renderErrorMessage(display *display.Renderer, err error) {
 		}
 	}
 
+	// Surface an `auth0 api` hint (kept out of the terse message) for interactive
+	// users, mirroring the "did you mean" block above.
+	var apiHint apiResponseHintError
+	if errors.As(err, &apiHint) && apiHint.hint != "" {
+		display.Newline()
+		display.Infof(apiHint.hint)
+	}
+
 	display.Newline()
 }
 
