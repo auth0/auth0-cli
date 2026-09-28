@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
@@ -55,6 +57,41 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		t.Run(fmt.Sprintf("TestCase #%d Command: %s", index, testCase.givenCommand), func(t *testing.T) {
 			actualAuth := commandRequiresAuthentication(testCase.givenCommand)
 			assert.Equal(t, testCase.expectedToRequireAuthentication, actualAuth)
+		})
+	}
+}
+
+// TestPersistentPreRunSkipsAuthForSchema verifies --schema skips the auth gate:
+// with an empty HOME only the --schema case passes; without it, auth is required.
+func TestPersistentPreRunSkipsAuthForSchema(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	findCommand := func(t *testing.T, path ...string) (*cobra.Command, *cobra.Command) {
+		t.Helper()
+		testCLI := &cli{renderer: display.NewRenderer()}
+		root := buildRootCmd(testCLI)
+		addSubCommands(root, testCLI)
+		cmd, _, err := root.Find(path)
+		require.NoError(t, err)
+		require.Equal(t, path[len(path)-1], cmd.Name())
+		return root, cmd
+	}
+
+	testCases := [][]string{
+		{"apis", "list"},
+		{"apis", "create"},
+		{"apis", "update"},
+		{"acul", "config", "set"},
+	}
+
+	for _, path := range testCases {
+		t.Run(strings.Join(path, " "), func(t *testing.T) {
+			root, cmd := findCommand(t, path...)
+			require.Error(t, root.PersistentPreRunE(cmd, nil), "auth must be required without --schema")
+
+			root, cmd = findCommand(t, path...)
+			require.NoError(t, cmd.Flags().Set("schema", "true"))
+			require.NoError(t, root.PersistentPreRunE(cmd, nil), "--schema must skip the auth gate")
 		})
 	}
 }

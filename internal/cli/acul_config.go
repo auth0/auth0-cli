@@ -391,9 +391,15 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 	file.RegisterString(cmd, &input.filePath, "")
 	fileDataAlias.RegisterString(cmd, &input.filePath, "")
 	schemaFlag.RegisterBool(cmd, &schema, false)
+	// --data aliases --file (both bind input.filePath), so reject setting both;
+	// markDataExclusive marks --data exclusive with every input flag, here --file.
+	markDataExclusive(cmd)
 	return cmd
 }
 

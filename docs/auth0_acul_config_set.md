@@ -32,9 +32,11 @@ auth0 acul config set [flags]
 ## Flags
 
 ```
-      --data string   Alias for --file. Rendering config as inline JSON, an @file.json reference, or a file path.
-  -f, --file string   File to save the rendering configs to.
-      --schema        Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
+      --data string    Alias for --file. Rendering config as inline JSON, an @file.json reference, or a file path.
+  -f, --file string    File to save the rendering configs to.
+      --json           Output in json format.
+      --json-compact   Output in compact json format.
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
