@@ -326,31 +326,19 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 
 	params := endpoint.Query()
 	for _, raw := range i.RawQueryParams {
-		// A comma only starts a new key=value pair when the fragment after it
-		// actually contains "=". This keeps the historical multi-pair form
-		// (-q "from=1,to=2" → two params) working while also letting a single
-		// param carry a comma-separated list value (-q "fields=a,b,c"), which is
-		// how the Management API expects `fields`, `include_fields`, and similar.
-		// A repeated flag (-q "fields=a" -q "fields=b") works too, since every
-		// occurrence is kept.
-		var lastKey string
-		haveKey := false
-		for frag := range strings.SplitSeq(raw, ",") {
-			if key, value, found := strings.Cut(frag, "="); found {
-				// Add (not Set) so a repeated key sends every value instead of the
-				// last one overwriting the rest.
-				params.Add(key, value)
-				lastKey, haveKey = key, true
-				continue
-			}
-			if !haveKey {
-				return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", frag), reason: "invalid_flag_value"}
-			}
-			// A comma fragment with no "=" continues the previous key's value, so
-			// the comma-separated list is sent as a single param value.
-			values := params[lastKey]
-			values[len(values)-1] += "," + frag
+		// Each -q value is exactly one query param, split once on the first "=".
+		// Commas are kept literally as part of the value, so a comma-separated
+		// list is sent as a single param (-q "fields=a,b,c" → fields=a,b,c),
+		// which is how the Management API expects `fields`, `include_fields`, and
+		// similar. A value may itself contain "=" (-q "q=name=John,city=NY"), and
+		// repeating the flag sends multiple params (-q "from=1" -q "to=2").
+		key, value, found := strings.Cut(raw, "=")
+		if !found {
+			return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", raw), reason: "invalid_flag_value"}
 		}
+		// Add (not Set) so a repeated key sends every value instead of the last
+		// one overwriting the rest.
+		params.Add(key, value)
 	}
 	endpoint.RawQuery = params.Encode()
 
