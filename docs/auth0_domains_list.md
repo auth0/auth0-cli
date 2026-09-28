@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing custom domains. To create one, run: `auth0 domains create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 domains list [flags]
@@ -21,6 +24,10 @@ auth0 domains list [flags]
   auth0 domains ls --json-compact
   auth0 domains ls --csv
   auth0 domains ls --filter "domain:demo* AND status:pending_verification"
+  auth0 domains list --schema
+  auth0 domains list --schema --json
+  auth0 domains list --query '{"take":10}'
+  auth0 domains list --query '{"take":10}' --json
 ```
 
 
@@ -31,6 +38,8 @@ auth0 domains list [flags]
       --filter string   Filter custom domains (EA-only).
       --json            Output in json format.
       --json-compact    Output in compact json format.
+  -q, --query string    Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema          Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
       --sort string     Sort by a field (EA-only). Only 'domain' is supported.
 ```
 

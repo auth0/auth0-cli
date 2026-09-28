@@ -60,6 +60,8 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Filter string
 		Num    int
 		Picker bool
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -67,7 +69,10 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Show the tenant logs",
-		Long:    "Display the tenant logs allowing to filter using Lucene query syntax.",
+		Long: `Display the tenant logs allowing to filter using Lucene query syntax.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 logs list
   auth0 logs list --filter "client_id:<client-id> --picker"
   auth0 logs list --filter "client_id:<client-id>"
@@ -79,8 +84,23 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs ls -n 250 -p
   auth0 logs ls --json
   auth0 logs ls --json-compact
-  auth0 logs ls --csv`,
+  auth0 logs ls --csv
+  auth0 logs list --schema
+  auth0 logs list --schema --json
+  auth0 logs list --query '{"per_page":5,"include_totals":true}'
+  auth0 logs list --query '{"per_page":5}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/logs")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "logs",
+					SchemaCmd: "auth0 logs list",
+				}, inputs.Query)
+			}
+
 			if inputs.Num < 1 || inputs.Num > 1000 {
 				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
@@ -121,6 +141,8 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 	logPicker.RegisterBool(cmd, &inputs.Picker, false)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")

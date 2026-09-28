@@ -24,6 +24,15 @@ auth0 universal-login update [flags]
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png"
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json-compact
+
+  # Discover the payload schema
+  auth0 universal-login update --schema
+  auth0 universal-login update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ul update --data '{"colors":{"primary":"#FF4F40","page_background":"#2A2E35"}}'
+  auth0 ul update --data @branding.json
+  cat branding.json | auth0 ul update
 ```
 
 
@@ -32,11 +41,13 @@ auth0 universal-login update [flags]
 ```
   -a, --accent string       Accent color.
   -b, --background string   Page background color
+      --data string         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -f, --favicon string      URL for the favicon. Must use HTTPS.
   -c, --font string         URL for the custom font. The URL must point to a font file and not a stylesheet. Must use HTTPS.
       --json                Output in json format.
       --json-compact        Output in compact json format.
   -l, --logo string         URL for the logo. Must use HTTPS.
+      --schema              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

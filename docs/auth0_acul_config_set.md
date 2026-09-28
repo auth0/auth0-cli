@@ -7,6 +7,10 @@ has_toc: false
 
 Set the rendering settings for a specific screen.
 
+Provide the config with `--file` (or its alias `--data`), which accepts inline JSON, an `@file.json` reference, or a file path.
+
+Use '--schema' to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 acul config set [flags]
@@ -19,13 +23,18 @@ auth0 acul config set [flags]
   auth0 acul config set <screen-name> --file settings.json
   auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id
+  auth0 acul config set signup-id --data '{"rendering_mode":"advanced"}'
+  auth0 acul config set signup-id --data @settings.json
+  auth0 acul config set --schema
 ```
 
 
 ## Flags
 
 ```
+      --data string   Alias for --file. Rendering config as inline JSON, an @file.json reference, or a file path.
   -f, --file string   File to save the rendering configs to.
+      --schema        Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

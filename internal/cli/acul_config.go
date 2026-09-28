@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/auth0/go-auth0/management"
 
@@ -33,6 +34,11 @@ var (
 		ShortForm:  "f",
 		Help:       "File to save the rendering configs to.",
 		IsRequired: false,
+	}
+	fileDataAlias = Flag{
+		Name:     "Data",
+		LongForm: "data",
+		Help:     "Alias for --file. Rendering config as inline JSON, an @file.json reference, or a file path.",
 	}
 	rendererScript = Flag{
 		Name:       "Script",
@@ -346,17 +352,28 @@ func shouldCancelOverwrite(cli *cli, cmd *cobra.Command, filePath, message strin
 
 func aculConfigSetCmd(cli *cli) *cobra.Command {
 	var input aculConfigInput
+	var schema bool
 
 	cmd := &cobra.Command{
 		Use:   "set",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Set the rendering settings for a specific screen",
-		Long:  "Set the rendering settings for a specific screen.",
+		Long: "Set the rendering settings for a specific screen.\n\n" +
+			"Provide the config with `--file` (or its alias `--data`), which accepts inline JSON, " +
+			"an `@file.json` reference, or a file path.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 acul config set <screen-name>
   auth0 acul config set <screen-name> --file settings.json
   auth0 acul config set signup-id --file settings.json
-  auth0 acul config set login-id`,
+  auth0 acul config set login-id
+  auth0 acul config set signup-id --data '{"rendering_mode":"advanced"}'
+  auth0 acul config set signup-id --data @settings.json
+  auth0 acul config set --schema`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if schema {
+				return printOperationSchema(cli, "PATCH", "/prompts/{prompt}/screen/{screen}/rendering")
+			}
+
 			if err := ensureACULPrerequisites(cmd.Context(), cli.api); err != nil {
 				return err
 			}
@@ -375,6 +392,8 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
 	}
 
 	file.RegisterString(cmd, &input.filePath, "")
+	fileDataAlias.RegisterString(cmd, &input.filePath, "")
+	schemaFlag.RegisterBool(cmd, &schema, false)
 	return cmd
 }
 
@@ -422,6 +441,27 @@ func clearHeadTags(cmd *cobra.Command, cli *cli, screenName string, headTagsValu
 	return cli.api.HTTPClient.Request(cmd.Context(), http.MethodPatch, uri, payload)
 }
 
+// resolveACULConfigData turns the --file/--data value into raw JSON bytes. It
+// accepts inline JSON, an @file.json reference, or a bare file path (the
+// original --file behavior, kept for backward compatibility), so the flag
+// matches the whole-payload --data contract used elsewhere in the CLI.
+func resolveACULConfigData(value string) ([]byte, error) {
+	// Inline JSON: a value opening with an object/array delimiter is used as-is
+	// rather than treated as a path.
+	if trimmed := strings.TrimSpace(value); strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+		return []byte(value), nil
+	}
+
+	// Otherwise the value is a file path; @file.json is accepted for parity with
+	// --data, and a bare path preserves the original --file behavior.
+	path := strings.TrimPrefix(value, "@")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read file %q: %v", path, err)
+	}
+	return data, nil
+}
+
 func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*management.PromptRendering, interface{}, bool, error) {
 	var (
 		userRenderSettings string
@@ -431,13 +471,13 @@ func fetchRenderSettings(cmd *cobra.Command, cli *cli, input aculConfigInput) (*
 	)
 
 	if input.filePath != "" {
-		// Case 1: File path is provided, use that file's content.
-		data, err := os.ReadFile(input.filePath)
+		// Case 1: --file/--data provided — inline JSON, @file.json, or a bare path.
+		data, err := resolveACULConfigData(input.filePath)
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("unable to read file %q: %v", input.filePath, err)
+			return nil, nil, false, err
 		}
 		if err := json.Unmarshal(data, &renderSettings); err != nil {
-			return nil, nil, false, validationError{err: fmt.Errorf("file %q contains invalid JSON: %v", input.filePath, err), reason: "malformed_json"}
+			return nil, nil, false, validationError{err: fmt.Errorf("--file/--data contains invalid JSON: %v", err), reason: "malformed_json"}
 		}
 		clearValue, shouldClear := detectHeadTagsClear(data)
 		return renderSettings, clearValue, shouldClear, nil
@@ -569,16 +609,23 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 		screen        string
 		renderingMode string
 		query         string
+		schema        bool
 	)
 
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List Universal Login rendering configurations",
-		Long:    "List Universal Login rendering configurations with optional filters and pagination.",
+		Long: "List Universal Login rendering configurations with optional filters and pagination.\n\n" +
+			"Use '--schema' to see available query parameters.",
 		Example: `  auth0 acul config list --prompt reset-password
-  auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration`,
+  auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
+  auth0 acul config list --schema`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if schema {
+				return printOperationSchema(cli, "GET", "/prompts/rendering")
+			}
+
 			ctx := cmd.Context()
 			if err := ensureACULPrerequisites(ctx, cli.api); err != nil {
 				return err
@@ -636,6 +683,7 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 	screenFlag.RegisterString(cmd, &screen, "")
 	renderingModeFlag.RegisterString(cmd, &renderingMode, "")
 	queryFlag.RegisterString(cmd, &query, "")
+	schemaFlag.RegisterBool(cmd, &schema, false)
 
 	return cmd
 }

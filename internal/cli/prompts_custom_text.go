@@ -95,6 +95,7 @@ func showPromptsTextCmd(cli *cli) *cobra.Command {
 
 func updatePromptsTextCmd(cli *cli) *cobra.Command {
 	var inputs promptsTextInput
+	var data string
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -103,11 +104,16 @@ func updatePromptsTextCmd(cli *cli) *cobra.Command {
 		Long:  "Update the custom text for a prompt.",
 		Example: `  auth0 universal-login prompts update <prompt>
   auth0 universal-login prompts update <prompt> --language <language>
-  auth0 ul prompts update signup -l es`,
+  auth0 ul prompts update signup -l es
+
+  # JSON input mode (for agents and automation)
+  auth0 ul prompts update signup -l es --data '{"signup":{"title":"Sign Up"}}'
+  auth0 ul prompts update signup -l es --data @signup.json`,
 		RunE: updateBrandingText(cli, &inputs),
 	}
 
 	textLanguage.RegisterString(cmd, &inputs.Language, textLanguageDefault)
+	dataFlag.RegisterString(cmd, &data, "")
 
 	return cmd
 }
@@ -155,6 +161,12 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 		} else {
 			inputs.Prompt = args[0]
 		}
+
+		if HasData(cmd) {
+			dataStr, _ := GetData(cmd)
+			return updatePromptsTextFromJSON(cli, cmd, inputs.Prompt, inputs.Language, dataStr)
+		}
+
 		piped, err := iostream.PipedInput()
 		if err != nil {
 			return err
@@ -191,6 +203,33 @@ func updateBrandingText(cli *cli, inputs *promptsTextInput) func(cmd *cobra.Comm
 
 		return nil
 	}
+}
+
+func updatePromptsTextFromJSON(cli *cli, cmd *cobra.Command, prompt, language, dataStr string) error {
+	text, err := runJSONWrite[map[string]interface{}](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPut,
+		SchemaPath: "/prompts/{prompt}/custom-text/{language}",
+		URI:        cli.api.HTTPClient.URI("prompts", prompt, "custom-text", language),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 universal-login prompts update",
+	})
+	if err != nil {
+		return fmt.Errorf(
+			"failed to set custom text for prompt %q and language %q: %w",
+			prompt,
+			language,
+			err,
+		)
+	}
+
+	textJSON, err := json.MarshalIndent(text, "", "    ")
+	if err != nil {
+		return fmt.Errorf("failed to serialize the prompt custom text to JSON: %w", err)
+	}
+
+	cli.renderer.BrandingTextUpdate(string(textJSON), prompt, language)
+
+	return nil
 }
 
 func fetchBrandingTextContentToEdit(ctx context.Context, cli *cli, inputs *promptsTextInput) (string, error) {
