@@ -211,6 +211,21 @@ var (
 		ShortForm: "y",
 		Help:      "Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false",
 	}
+	appOrganizationUsage = Flag{
+		Name:     "Organization Usage",
+		LongForm: "organization-usage",
+		Help:     "How the application handles organizations at authentication: 'deny', 'allow', or 'require'.",
+	}
+	appOrganizationRequireBehavior = Flag{
+		Name:     "Organization Require Behavior",
+		LongForm: "organization-require-behavior",
+		Help:     "How to prompt for an organization when --organization-usage is 'require': 'no_prompt', 'pre_login_prompt', or 'post_login_prompt'.",
+	}
+	appOrganizationDiscoveryMethods = Flag{
+		Name:     "Organization Discovery Methods",
+		LongForm: "organization-discovery-methods",
+		Help:     "Comma-separated list of methods for discovering organizations during the 'pre_login_prompt'. Possible values: 'email', 'organization_name'. Requires --organization-require-behavior=pre_login_prompt.",
+	}
 )
 
 func appsCmd(cli *cli) *cobra.Command {
@@ -498,6 +513,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 		IsFirstParty             bool
 		ThirdPartySecurityMode   string
 		RedirectionPolicy        string
+		OrganizationUsage        string
+		OrganizationRequire      string
+		OrganizationDiscovery    []string
 		Data                     string
 		Schema                   bool
 	}
@@ -526,6 +544,7 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
+  auth0 apps create --name myapp --type regular --organization-usage require --organization-require-behavior pre_login_prompt --organization-discovery-methods email,organization_name
 
   # Discover the payload schema
   auth0 apps create --schema
@@ -697,6 +716,17 @@ func createAppCmd(cli *cli) *cobra.Command {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
 			}
 
+			// Set organization behavior.
+			if inputs.OrganizationUsage != "" {
+				a.OrganizationUsage = &inputs.OrganizationUsage
+			}
+			if inputs.OrganizationRequire != "" {
+				a.OrganizationRequireBehavior = &inputs.OrganizationRequire
+			}
+			if len(inputs.OrganizationDiscovery) > 0 {
+				a.OrganizationDiscoveryMethods = &inputs.OrganizationDiscovery
+			}
+
 			// Set grants.
 			if len(inputs.Grants) > 0 {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
@@ -740,6 +770,9 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appIsFirstParty.RegisterBool(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterString(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterString(cmd, &inputs.RedirectionPolicy, "")
+	appOrganizationUsage.RegisterString(cmd, &inputs.OrganizationUsage, "")
+	appOrganizationRequireBehavior.RegisterString(cmd, &inputs.OrganizationRequire, "")
+	appOrganizationDiscoveryMethods.RegisterStringSlice(cmd, &inputs.OrganizationDiscovery, nil)
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	markDataExclusive(cmd)
@@ -766,6 +799,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		IsFirstParty           bool
 		ThirdPartySecurityMode string
 		RedirectionPolicy      string
+		OrganizationUsage      string
+		OrganizationRequire    string
+		OrganizationDiscovery  []string
 		Data                   string
 		Schema                 bool
 	}
@@ -792,6 +828,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps update <app-id> --redirection-policy allow_always
+  auth0 apps update <app-id> --organization-usage require --organization-require-behavior pre_login_prompt
 
   # Discover the payload schema
   auth0 apps update --schema
@@ -998,6 +1035,18 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
 			}
 
+			if appOrganizationUsage.IsSet(cmd) {
+				a.OrganizationUsage = &inputs.OrganizationUsage
+			}
+
+			if appOrganizationRequireBehavior.IsSet(cmd) {
+				a.OrganizationRequireBehavior = &inputs.OrganizationRequire
+			}
+
+			if appOrganizationDiscoveryMethods.IsSet(cmd) {
+				a.OrganizationDiscoveryMethods = &inputs.OrganizationDiscovery
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
@@ -1028,6 +1077,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appIsFirstParty.RegisterBoolU(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterStringU(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterStringU(cmd, &inputs.RedirectionPolicy, "")
+	appOrganizationUsage.RegisterStringU(cmd, &inputs.OrganizationUsage, "")
+	appOrganizationRequireBehavior.RegisterStringU(cmd, &inputs.OrganizationRequire, "")
+	appOrganizationDiscoveryMethods.RegisterStringSliceU(cmd, &inputs.OrganizationDiscovery, nil)
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	markDataExclusive(cmd)
