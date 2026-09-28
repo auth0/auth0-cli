@@ -253,6 +253,21 @@ func TestAPICmdInputs_QueryParams(t *testing.T) {
 		assert.Equal(t, "https://"+testDomain+"/api/v2/stats/daily?from=20221101&to=20221118", inputs.URL.String())
 	})
 
+	// A comma fragment with no "=" continues the previous key, so a single
+	// param can carry a comma-separated list value the way the Management API
+	// expects `fields`, `include_fields`, etc.
+	t.Run("a comma-separated list is sent as a single param value", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=a,b,c"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=a%2Cb%2Cc", inputs.URL.String())
+	})
+
+	t.Run("a list value and a distinct keyed param coexist", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=a,b,c", "include_fields=true"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=a%2Cb%2Cc&include_fields=true", inputs.URL.String())
+	})
+
 	// The registered flag delivers a comma-separated value whole (StringArray);
 	// the comma split into pairs happens later, in validateAndSetEndpoint.
 	t.Run("the -q flag delivers a comma-separated value unsplit", func(t *testing.T) {

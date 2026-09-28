@@ -36,7 +36,7 @@ var apiFlags = apiCmdFlags{
 		Name:         "QueryParams",
 		LongForm:     "query",
 		ShortForm:    "q",
-		Help:         "Query params to send with the request. Repeat the flag to send a param more than once, for example -q \"fields=a\" -q \"fields=b\".",
+		Help:         "Query params to send with the request. A comma-separated value is sent as a single param, for example -q \"fields=a,b,c\". Repeat the flag to send a param more than once, for example -q \"fields=a\" -q \"fields=b\".",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	},
@@ -88,6 +88,7 @@ Additional scopes may need to be requested during authentication step via the %s
 		),
 		Example: `  auth0 api get "tenants/settings"
   auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
+  auth0 api "clients" -q "fields=name,app_type,callbacks"
   auth0 api delete "actions/actions/<action-id>" --force
   auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
   cat data.json | auth0 api post clients`,
@@ -325,17 +326,30 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 
 	params := endpoint.Query()
 	for _, raw := range i.RawQueryParams {
-		// Split each value on commas so the historical comma-separated multi-pair
-		// form (-q "from=1,to=2") still expands to multiple params. A repeated flag
-		// (-q "fields=a" -q "fields=b") works too, since every occurrence is kept.
-		for _, pair := range strings.Split(raw, ",") {
-			key, value, found := strings.Cut(pair, "=")
-			if !found {
-				return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", pair), reason: "invalid_flag_value"}
+		// A comma only starts a new key=value pair when the fragment after it
+		// actually contains "=". This keeps the historical multi-pair form
+		// (-q "from=1,to=2" → two params) working while also letting a single
+		// param carry a comma-separated list value (-q "fields=a,b,c"), which is
+		// how the Management API expects `fields`, `include_fields`, and similar.
+		// A repeated flag (-q "fields=a" -q "fields=b") works too, since every
+		// occurrence is kept.
+		var lastKey string
+		haveKey := false
+		for frag := range strings.SplitSeq(raw, ",") {
+			if key, value, found := strings.Cut(frag, "="); found {
+				// Add (not Set) so a repeated key sends every value instead of the
+				// last one overwriting the rest.
+				params.Add(key, value)
+				lastKey, haveKey = key, true
+				continue
 			}
-			// Add (not Set) so a repeated key sends every value instead of the last
-			// one overwriting the rest.
-			params.Add(key, value)
+			if !haveKey {
+				return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", frag), reason: "invalid_flag_value"}
+			}
+			// A comma fragment with no "=" continues the previous key's value, so
+			// the comma-separated list is sent as a single param value.
+			values := params[lastKey]
+			values[len(values)-1] += "," + frag
 		}
 	}
 	endpoint.RawQuery = params.Encode()
