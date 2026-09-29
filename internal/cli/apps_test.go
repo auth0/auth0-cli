@@ -125,6 +125,27 @@ func TestAppsCreateCmd(t *testing.T) {
 			},
 			expectedError: "resource-server-identifier cannot be empty for resource_server app type",
 		},
+		{
+			name: "Organization - discovery methods without require behavior",
+			args: []string{
+				"--name", "My App",
+				"--type", "regular",
+				"--organization-usage", "require",
+				"--organization-discovery-methods", "email",
+			},
+			expectedError: "--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt",
+		},
+		{
+			name: "Organization - discovery methods with wrong require behavior",
+			args: []string{
+				"--name", "My App",
+				"--type", "regular",
+				"--organization-usage", "require",
+				"--organization-require-behavior", "no_prompt",
+				"--organization-discovery-methods", "email",
+			},
+			expectedError: `--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt, but got "no_prompt"`,
+		},
 	}
 
 	for _, test := range tests {
@@ -202,6 +223,101 @@ func TestAppsUseCmdRejectedInEnvAuthMode(t *testing.T) {
 	var authErr authError
 	assert.True(t, errors.As(err, &authErr))
 	assert.Equal(t, "env_auth_not_persistable", authErr.reason)
+}
+
+func TestAppsUpdateCmdOrganizationFlags(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		assertClient func(t testing.TB, c *management.Client)
+	}{
+		{
+			name: "sets all organization fields when flags are provided",
+			args: []string{
+				"some-id",
+				"--organization-usage", "require",
+				"--organization-require-behavior", "pre_login_prompt",
+				"--organization-discovery-methods", "email,organization_name",
+			},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Equal(t, "require", c.GetOrganizationUsage())
+				assert.Equal(t, "pre_login_prompt", c.GetOrganizationRequireBehavior())
+				assert.Equal(t, []string{"email", "organization_name"}, c.GetOrganizationDiscoveryMethods())
+			},
+		},
+		{
+			name: "leaves organization fields unset when flags are omitted",
+			args: []string{"some-id"},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Nil(t, c.OrganizationUsage)
+				assert.Nil(t, c.OrganizationRequireBehavior)
+				assert.Nil(t, c.OrganizationDiscoveryMethods)
+			},
+		},
+		{
+			name: "updates only discovery methods when require behavior is already set server-side",
+			args: []string{
+				"some-id",
+				"--organization-discovery-methods", "email",
+			},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Nil(t, c.OrganizationRequireBehavior)
+				assert.Equal(t, []string{"email"}, c.GetOrganizationDiscoveryMethods())
+			},
+		},
+		{
+			name: "strips empty discovery method entries from a trailing comma",
+			args: []string{
+				"some-id",
+				"--organization-require-behavior", "pre_login_prompt",
+				"--organization-discovery-methods", "email,",
+			},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Equal(t, []string{"email"}, c.GetOrganizationDiscoveryMethods())
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			clientAPI.EXPECT().
+				Read(gomock.Any(), "some-id", gomock.Any()).
+				Return(&management.Client{
+					Name:    auth0.String("some-name"),
+					AppType: auth0.String("regular_web"),
+				}, nil)
+
+			var captured *management.Client
+			clientAPI.EXPECT().
+				Update(gomock.Any(), "some-id", gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ string, c *management.Client, _ ...management.RequestOption) error {
+					captured = c
+					return nil
+				})
+
+			cli := &cli{
+				noInput: true,
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				api: &auth0.API{Client: clientAPI},
+			}
+
+			cmd := updateAppCmd(cli)
+			cmd.SetArgs(test.args)
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+
+			test.assertClient(t, captured)
+		})
+	}
 }
 
 func TestFormatAppSettingsPath(t *testing.T) {
