@@ -228,6 +228,38 @@ var (
 	}
 )
 
+// validateAppOrganizationFlags enforces the documented dependency that
+// --organization-discovery-methods only applies when the require behavior is
+// pre_login_prompt, so a misconfiguration surfaces as an actionable client-side
+// error instead of an opaque server-side 400. On create the require behavior
+// must be supplied alongside the discovery methods; on update it may already be
+// set on the application, so an absent flag is left to the server to validate.
+func validateAppOrganizationFlags(cmd *cobra.Command, requireBehavior string, requireBehaviorMandatory bool) error {
+	if !appOrganizationDiscoveryMethods.IsSet(cmd) {
+		return nil
+	}
+
+	if !appOrganizationRequireBehavior.IsSet(cmd) {
+		if requireBehaviorMandatory {
+			return usageError{
+				err:    errors.New("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt"),
+				reason: "missing_required_flags",
+			}
+		}
+
+		return nil
+	}
+
+	if requireBehavior != "pre_login_prompt" {
+		return validationError{
+			err:    fmt.Errorf("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt, but got %q", requireBehavior),
+			reason: "invalid_flag_value",
+		}
+	}
+
+	return nil
+}
+
 func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "apps",
@@ -717,13 +749,16 @@ func createAppCmd(cli *cli) *cobra.Command {
 			}
 
 			// Set organization behavior.
-			if inputs.OrganizationUsage != "" {
+			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, true); err != nil {
+				return err
+			}
+			if appOrganizationUsage.IsSet(cmd) {
 				a.OrganizationUsage = &inputs.OrganizationUsage
 			}
-			if inputs.OrganizationRequire != "" {
+			if appOrganizationRequireBehavior.IsSet(cmd) {
 				a.OrganizationRequireBehavior = &inputs.OrganizationRequire
 			}
-			if len(inputs.OrganizationDiscovery) > 0 {
+			if appOrganizationDiscoveryMethods.IsSet(cmd) {
 				a.OrganizationDiscoveryMethods = &inputs.OrganizationDiscovery
 			}
 
@@ -1033,6 +1068,10 @@ func updateAppCmd(cli *cli) *cobra.Command {
 
 			if appRedirectionPolicy.IsSet(cmd) {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
+			}
+
+			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, false); err != nil {
+				return err
 			}
 
 			if appOrganizationUsage.IsSet(cmd) {
