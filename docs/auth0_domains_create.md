@@ -11,6 +11,9 @@ To create interactively, use `auth0 domains create` with no arguments.
 
 To create non-interactively, supply the domain name, type, policy and other information through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 domains create [flags]
@@ -22,23 +25,34 @@ auth0 domains create [flags]
   auth0 domains create
   auth0 domains create --domain <domain-name>
   auth0 domains create --domain <domain-name> --policy recommended
-  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}' 
+  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}'
   auth0 domains create --domain <domain-name> --policy recommended --type auth0
   auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
   auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json
   auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json-compact
+
+  # Discover the payload schema
+  auth0 domains create --schema
+  auth0 domains create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 domains create --data '{"domain":"login.example.com","type":"auth0_managed_certs"}'
+  auth0 domains create --data @domain.json
+  cat domain.json | auth0 domains create
 ```
 
 
 ## Flags
 
 ```
+      --data string           JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --domain string         Domain name.
   -i, --ip-header string      The HTTP header to fetch the client's IP address.
       --json                  Output in json format.
       --json-compact          Output in compact json format.
   -m, --metadata string       The Custom Domain Metadata, formatted as JSON.
   -p, --policy string         The TLS version policy. Can be either 'compatible' or 'recommended'.
+      --schema                Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -t, --type string           Custom domain provisioning type. Must be 'auth0' for Auth0-managed certs or 'self' for self-managed certs.
   -v, --verification string   *DEPRECATED* Custom domain verification method. Must be 'txt'.
 ```

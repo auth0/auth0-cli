@@ -7,6 +7,8 @@ has_toc: false
 
 List Universal Login rendering configurations with optional filters and pagination.
 
+Use '--schema' to see available query parameters.
+
 ## Usage
 ```
 auth0 acul config list [flags]
@@ -17,6 +19,7 @@ auth0 acul config list [flags]
 ```
   auth0 acul config list --prompt reset-password
   auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
+  auth0 acul config list --schema
 ```
 
 
@@ -33,6 +36,7 @@ auth0 acul config list [flags]
       --prompt string           Filter by the Universal Login prompt.
   -q, --query string            Advanced query.
       --rendering-mode string   Filter by the rendering mode (advanced or standard).
+      --schema                  Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
       --screen string           Filter by the Universal Login screen.
 ```
 

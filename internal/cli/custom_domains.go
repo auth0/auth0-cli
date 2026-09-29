@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/auth0/go-auth0/management"
@@ -108,6 +109,8 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		filter string
 		sortBy string
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -115,14 +118,32 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your custom domains",
-		Long:    "List your existing custom domains. To create one, run: `auth0 domains create`.",
+		Long: `List your existing custom domains. To create one, run: ` + "`auth0 domains create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 domains list
   auth0 domains ls
   auth0 domains ls --json
   auth0 domains ls --json-compact
   auth0 domains ls --csv
-  auth0 domains ls --filter "domain:demo* AND status:pending_verification"`,
+  auth0 domains ls --filter "domain:demo* AND status:pending_verification"
+  auth0 domains list --schema
+  auth0 domains list --schema --json
+  auth0 domains list --query '{"take":10}'
+  auth0 domains list --query '{"take":10}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/custom-domains")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "custom-domains",
+					SchemaCmd: "auth0 domains list",
+				}, inputs.Query)
+			}
+
 			// Validate EA-only flags.
 			if inputs.sortBy != "" && inputs.sortBy != "domain" {
 				return usageError{err: fmt.Errorf("sorting is only supported by domain at this time"), reason: "invalid_flag_value"}
@@ -172,6 +193,8 @@ func listCustomDomainsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -228,6 +251,8 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		TLSPolicy            string
 		CustomClientIPHeader string
 		DomainMetadata       string
+		Data                 string
+		Schema               bool
 	}
 
 	cmd := &cobra.Command{
@@ -237,16 +262,39 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 		Long: "Create a custom domain.\n\n" +
 			"To create interactively, use `auth0 domains create` with no arguments.\n\n" +
 			"To create non-interactively, supply the domain name, type, policy and " +
-			"other information through the flags.",
+			"other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 domains create
   auth0 domains create --domain <domain-name>
   auth0 domains create --domain <domain-name> --policy recommended
-  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}' 
+  auth0 domains create --domain <domain-name> --policy recommended --metadata '{"key1":"value1","key2":"value2"}'
   auth0 domains create --domain <domain-name> --policy recommended --type auth0
   auth0 domains create --domain <domain-name> --policy recommended --type auth0 --ip-header "cf-connecting-ip"
   auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json
-  auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json-compact`,
+  auth0 domains create -d <domain-name> -p recommended -t auth0 -i "cf-connecting-ip" --json-compact
+
+  # Discover the payload schema
+  auth0 domains create --schema
+  auth0 domains create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 domains create --data '{"domain":"login.example.com","type":"auth0_managed_certs"}'
+  auth0 domains create --data @domain.json
+  cat domain.json | auth0 domains create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/custom-domains")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createCustomDomainFromJSON(cli, cmd, payload)
+			}
+
 			if err := customDomainDomain.Ask(cmd, &inputs.Domain, nil); err != nil {
 				return err
 			}
@@ -304,6 +352,9 @@ func createCustomDomainCmd(cli *cli) *cobra.Command {
 	customDomainPolicy.RegisterString(cmd, &inputs.TLSPolicy, "")
 	customDomainIPHeader.RegisterString(cmd, &inputs.CustomClientIPHeader, "")
 	customDomainMetadata.RegisterString(cmd, &inputs.DomainMetadata, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -314,6 +365,8 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		TLSPolicy            string
 		CustomClientIPHeader string
 		DomainMetadata       string
+		Data                 string
+		Schema               bool
 	}
 
 	cmd := &cobra.Command{
@@ -323,15 +376,30 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 		Long: "Update a custom domain.\n\n" +
 			"To update interactively, use `auth0 domains update` with no arguments.\n\n" +
 			"To update non-interactively, supply the domain name, type, policy and " +
-			"other information through the flags.",
+			"other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 domains update
   auth0 domains update <domain-id> --policy compatible
   auth0 domains update <domain-id> --policy compatible --ip-header "cf-connecting-ip"
   auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
-  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json-compact`,
+  auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json-compact
+
+  # Discover the payload schema
+  auth0 domains update --schema
+  auth0 domains update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 domains update <domain-id> --data '{"tls_policy":"recommended"}'
+  auth0 domains update <domain-id> --data @domain.json
+  cat domain.json | auth0 domains update <domain-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var current *management.CustomDomain
+
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/custom-domains/{id}")
+			}
 
 			if len(args) == 0 {
 				if err := customDomainID.Pick(cmd, &inputs.ID, cli.customDomainsPickerOptions); err != nil {
@@ -339,6 +407,14 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateCustomDomainFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			if err := ansi.Waiting(func() (err error) {
@@ -405,11 +481,48 @@ func updateCustomDomainCmd(cli *cli) *cobra.Command {
 	customDomainPolicy.RegisterStringU(cmd, &inputs.TLSPolicy, "")
 	customDomainIPHeader.RegisterStringU(cmd, &inputs.CustomClientIPHeader, "")
 	customDomainMetadata.RegisterString(cmd, &inputs.DomainMetadata, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
+}
+
+func createCustomDomainFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	domain, err := runJSONWrite[management.CustomDomain](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/custom-domains",
+		URI:        cli.api.HTTPClient.URI("custom-domains"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 domains create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create custom domain: %w", err)
+	}
+
+	cli.renderer.CustomDomainCreate(domain)
+
+	return nil
+}
+
+func updateCustomDomainFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	domain, err := runJSONWrite[management.CustomDomain](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/custom-domains/{id}",
+		URI:        cli.api.HTTPClient.URI("custom-domains", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 domains update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update custom domain with ID %q: %w", id, err)
+	}
+
+	cli.renderer.CustomDomainUpdate(domain)
+
+	return nil
 }
 
 func deleteCustomDomainCmd(cli *cli) *cobra.Command {

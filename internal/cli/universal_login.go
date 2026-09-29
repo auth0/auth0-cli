@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -150,6 +151,8 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 		LogoURL         string
 		FaviconURL      string
 		CustomFontURL   string
+		Data            string
+		Schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -165,8 +168,29 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
   auth0 ul update --accent "#FF4F40" --background "#2A2E35" --logo "https://example.com/logo.png"
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png"
   auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json
-  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json-compact`,
+  auth0 ul update -a "#FF4F40" -b "#2A2E35" -l "https://example.com/logo.png" --json-compact
+
+  # Discover the payload schema
+  auth0 universal-login update --schema
+  auth0 universal-login update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ul update --data '{"colors":{"primary":"#FF4F40","page_background":"#2A2E35"}}'
+  auth0 ul update --data @branding.json
+  cat branding.json | auth0 ul update`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/branding")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateUniversalLoginFromJSON(cli, cmd, payload)
+			}
+
 			var current *management.Branding
 
 			if err := ansi.Waiting(func() (err error) {
@@ -238,6 +262,24 @@ func updateUniversalLoginCmd(cli *cli) *cobra.Command {
 	brandingLogo.RegisterStringU(cmd, &inputs.LogoURL, "")
 	brandingFavicon.RegisterStringU(cmd, &inputs.FaviconURL, "")
 	brandingFont.RegisterStringU(cmd, &inputs.CustomFontURL, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func updateUniversalLoginFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	b, err := runJSONWrite[management.Branding](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/branding",
+		URI:        cli.api.HTTPClient.URI("branding"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 universal-login update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update branding settings: %w", err)
+	}
+	cli.renderer.BrandingUpdate(b)
+	return nil
 }
