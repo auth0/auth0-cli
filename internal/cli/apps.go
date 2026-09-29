@@ -219,7 +219,7 @@ var (
 	appOrganizationRequireBehavior = Flag{
 		Name:     "Organization Require Behavior",
 		LongForm: "organization-require-behavior",
-		Help:     "How to prompt for an organization when --organization-usage is 'require': 'no_prompt', 'pre_login_prompt', or 'post_login_prompt'.",
+		Help:     "How to prompt for an organization at authentication: 'no_prompt', 'pre_login_prompt', or 'post_login_prompt'. 'post_login_prompt' requires an OIDC-conformant application.",
 	}
 	appOrganizationDiscoveryMethods = Flag{
 		Name:     "Organization Discovery Methods",
@@ -228,32 +228,37 @@ var (
 	}
 )
 
-// validateAppOrganizationFlags enforces the documented dependency that
-// --organization-discovery-methods only applies when the require behavior is
-// pre_login_prompt, so a misconfiguration surfaces as an actionable client-side
-// error instead of an opaque server-side 400. On create the require behavior
-// must be supplied alongside the discovery methods; on update it may already be
-// set on the application, so an absent flag is left to the server to validate.
-func validateAppOrganizationFlags(cmd *cobra.Command, requireBehavior string, requireBehaviorMandatory bool) error {
-	if !appOrganizationDiscoveryMethods.IsSet(cmd) {
-		return nil
-	}
-
-	if !appOrganizationRequireBehavior.IsSet(cmd) {
-		if requireBehaviorMandatory {
-			return usageError{
-				err:    errors.New("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt"),
-				reason: "missing_required_flags",
+// validateAppOrganizationFlags mirrors the one cross-field dependency the
+// Management API actually enforces, so a misconfiguration surfaces as an
+// actionable client-side error instead of a 400 from the server:
+//   - --organization-discovery-methods can only be used when
+//     --organization-require-behavior is "pre_login_prompt".
+//
+// Deliberately NOT validated here, because the API imposes no such rule
+// (confirmed by sweeping every combination against a live tenant):
+//   - --organization-require-behavior has no dependency on --organization-usage;
+//     the server accepts any usage, or none, alongside any require behavior.
+//   - --organization-require-behavior=post_login_prompt requires an
+//     OIDC-conformant application, a condition on a different field that the
+//     server validates and reports on its own.
+//
+// On create the prerequisite flag must be supplied alongside the dependent one.
+// On update it may already be set on the application, so an absent prerequisite
+// flag is left to the server to validate.
+func validateAppOrganizationFlags(cmd *cobra.Command, requireBehavior string, prerequisiteMandatory bool) error {
+	if appOrganizationDiscoveryMethods.IsSet(cmd) {
+		if !appOrganizationRequireBehavior.IsSet(cmd) {
+			if prerequisiteMandatory {
+				return usageError{
+					err:    errors.New("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt"),
+					reason: "missing_required_flags",
+				}
 			}
-		}
-
-		return nil
-	}
-
-	if requireBehavior != "pre_login_prompt" {
-		return validationError{
-			err:    fmt.Errorf("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt, but got %q", requireBehavior),
-			reason: "invalid_flag_value",
+		} else if requireBehavior != "pre_login_prompt" {
+			return validationError{
+				err:    fmt.Errorf("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt, but got %q", requireBehavior),
+				reason: "invalid_flag_value",
+			}
 		}
 	}
 
@@ -599,6 +604,12 @@ func createAppCmd(cli *cli) *cobra.Command {
 				return createAppFromJSON(cli, cmd, payload, inputs.RevealSecrets)
 			}
 
+			// Validate organization flag dependencies before any interactive
+			// prompts so a misconfiguration fails fast.
+			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, true); err != nil {
+				return err
+			}
+
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -749,9 +760,6 @@ func createAppCmd(cli *cli) *cobra.Command {
 			}
 
 			// Set organization behavior.
-			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, true); err != nil {
-				return err
-			}
 			if appOrganizationUsage.IsSet(cmd) {
 				a.OrganizationUsage = &inputs.OrganizationUsage
 			}
@@ -759,7 +767,8 @@ func createAppCmd(cli *cli) *cobra.Command {
 				a.OrganizationRequireBehavior = &inputs.OrganizationRequire
 			}
 			if appOrganizationDiscoveryMethods.IsSet(cmd) {
-				a.OrganizationDiscoveryMethods = &inputs.OrganizationDiscovery
+				discoveryMethods := excludeEmptyEntries(inputs.OrganizationDiscovery)
+				a.OrganizationDiscoveryMethods = &discoveryMethods
 			}
 
 			// Set grants.
@@ -876,6 +885,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
 				return printOperationSchema(cli, "PATCH", "/clients/{id}")
+			}
+
+			// Validate organization flag dependencies before the network read
+			// and interactive prompts so a misconfiguration fails fast. On
+			// update a prerequisite may already be set on the application, so an
+			// absent flag is deferred to the server.
+			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, false); err != nil {
+				return err
 			}
 
 			var current *management.Client
@@ -1070,10 +1087,6 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
 			}
 
-			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, false); err != nil {
-				return err
-			}
-
 			if appOrganizationUsage.IsSet(cmd) {
 				a.OrganizationUsage = &inputs.OrganizationUsage
 			}
@@ -1083,7 +1096,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 			}
 
 			if appOrganizationDiscoveryMethods.IsSet(cmd) {
-				a.OrganizationDiscoveryMethods = &inputs.OrganizationDiscovery
+				discoveryMethods := excludeEmptyEntries(inputs.OrganizationDiscovery)
+				a.OrganizationDiscoveryMethods = &discoveryMethods
 			}
 
 			if err := ansi.Waiting(func() error {

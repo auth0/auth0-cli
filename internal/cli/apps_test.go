@@ -129,6 +129,7 @@ func TestAppsCreateCmd(t *testing.T) {
 			args: []string{
 				"--name", "My App",
 				"--type", "regular",
+				"--organization-usage", "require",
 				"--organization-discovery-methods", "email",
 			},
 			expectedError: "--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt",
@@ -138,6 +139,7 @@ func TestAppsCreateCmd(t *testing.T) {
 			args: []string{
 				"--name", "My App",
 				"--type", "regular",
+				"--organization-usage", "require",
 				"--organization-require-behavior", "no_prompt",
 				"--organization-discovery-methods", "email",
 			},
@@ -195,6 +197,17 @@ func TestAppsUpdateCmdOrganizationFlags(t *testing.T) {
 			},
 			assertClient: func(t testing.TB, c *management.Client) {
 				assert.Nil(t, c.OrganizationRequireBehavior)
+				assert.Equal(t, []string{"email"}, c.GetOrganizationDiscoveryMethods())
+			},
+		},
+		{
+			name: "strips empty discovery method entries from a trailing comma",
+			args: []string{
+				"some-id",
+				"--organization-require-behavior", "pre_login_prompt",
+				"--organization-discovery-methods", "email,",
+			},
+			assertClient: func(t testing.TB, c *management.Client) {
 				assert.Equal(t, []string{"email"}, c.GetOrganizationDiscoveryMethods())
 			},
 		},
