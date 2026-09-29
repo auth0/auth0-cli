@@ -333,7 +333,7 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 		// similar. A value may itself contain "=" (-q "q=name=John,city=NY"), and
 		// repeating the flag sends multiple params (-q "from=1" -q "to=2").
 		key, value, found := strings.Cut(raw, "=")
-		if !found {
+		if !found || key == "" {
 			return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", raw), reason: "invalid_flag_value"}
 		}
 		// Add (not Set) so a repeated key sends every value instead of the last

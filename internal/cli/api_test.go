@@ -294,6 +294,15 @@ func TestAPICmdInputs_QueryParams(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `invalid query parameter "fields": expected key=value`)
 	})
+
+	// A leading "=" leaves the key empty, which would encode a nameless "?=value"
+	// param, so it is rejected the same way a missing "=" is.
+	t.Run("a query param with an empty key is rejected", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"=name"}}
+		err := inputs.fromArgs([]string{"get", "clients"}, testDomain)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `invalid query parameter "=name": expected key=value`)
+	})
 }
 
 func TestFormatAPIResponse(t *testing.T) {
