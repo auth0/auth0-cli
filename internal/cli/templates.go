@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -39,6 +40,15 @@ func WrappedAliases(cmd *cobra.Command) string {
 }
 
 func getLogin(cli *cli) string {
+	// Env auth mode authenticates from environment variables and must never touch
+	// the keychain. This runs while building help text, before env mode is
+	// selected in PersistentPreRunE, so guard it here: IsLoggedInWithTenant reads
+	// the stored token, which on a locked or inaccessible keychain can hang or
+	// prompt. The login hint is irrelevant in env mode anyway.
+	if envAuthEnabled(os.Getenv) {
+		return ""
+	}
+
 	if !cli.Config.IsLoggedInWithTenant(cli.tenant) {
 		return ansi.Italic(`
 Before using the CLI, you'll need to login:

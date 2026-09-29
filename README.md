@@ -408,6 +408,64 @@ If you run `auth0 login` without credentials, the CLI falls back to user login. 
 
 An agent can surface that link and code to a human to complete the login. Once approved, the command emits a final `{"logged_in":true,"tenant":"...","domain":"..."}` object and stores the credentials as usual. In agent mode the newly authenticated tenant also becomes the default automatically, because there is no human to answer the usual change-default prompt.
 
+When you authenticate as a user, the login response also tells you how long the session is good for. In agent mode the final JSON object carries an `expires_at` timestamp (RFC 3339), and the human-readable output prints a matching "This session is valid until ..." line. Once that time passes, calls fail with an `auth` error whose reason is `session_expired`, and the tenant needs to log in again. Machine login with client credentials does not have this problem, because the CLI exchanges credentials for a fresh token whenever the stored one expires.
+
+### Authentication without the keychain or a writable config (sandboxes and CI)
+
+> [!IMPORTANT]
+> This mode removes the keychain and config-file requirements only. It does **not** bypass network isolation. The CLI still has to reach the Auth0 Management API over the network, so if your sandbox also blocks outbound network access, no form of authentication will make the calls succeed from inside it. In that case, run the `auth0` command outside the sandbox (or in an environment that has network access), where a normal login works.
+
+By default the CLI stores your access token in the operating system keychain and writes tenant details to a config file on disk. Some environments block both, for example the read-only, network-isolated sandboxes that coding agents run in. In those environments a normal `auth0 login` cannot save anything, and a later command that tries to read the token back reports an `auth` error. The reason is `stored_token_unavailable` when the keychain cannot be read, or `config_not_writable` when the config file cannot be written. Both errors explain what happened and point you at the escape hatch below.
+
+For these environments the CLI supports an opt-in, non-persistent authentication mode that reads credentials straight from environment variables and never touches the keychain or the config file. Enable it by setting:
+
+```bash
+export AUTH0_CLI_AUTH_MODE=env
+```
+
+With that set, provide credentials in one of two ways:
+
+- **A pre-minted Management API token.** Set `AUTH0_DOMAIN` to your tenant domain (for example `tenant.us.auth0.com`) and `AUTH0_API_TOKEN` to a valid Management API access token. The CLI uses the token as-is, so it keeps whatever identity minted it.
+
+```bash
+export AUTH0_CLI_AUTH_MODE=env
+export AUTH0_DOMAIN=tenant.us.auth0.com
+export AUTH0_API_TOKEN=<management-api-token>
+```
+
+- **Machine (M2M) client credentials.** Set `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET`, and the CLI exchanges them for an access token in memory for the duration of the command.
+
+```bash
+export AUTH0_CLI_AUTH_MODE=env
+export AUTH0_DOMAIN=tenant.us.auth0.com
+export AUTH0_CLIENT_ID=<client-id>
+export AUTH0_CLIENT_SECRET=<client-secret>
+```
+
+Because this mode never persists anything, the M2M path exchanges your client credentials for a brand new access token on **every** command invocation. That is correct and safe, but in a sandbox where an agent runs many commands it means a token request per call, which adds latency and consumes tenant rate limits. If you expect a lot of calls, the better pattern is to mint a token once yourself and pass it through `AUTH0_API_TOKEN` instead of the client credentials, so the CLI reuses the same token across calls:
+
+```bash
+# Mint one token up front (outside the sandbox, where you have network access).
+export AUTH0_API_TOKEN=$(curl -s --request POST \
+  --url "https://tenant.us.auth0.com/oauth/token" \
+  --header 'content-type: application/json' \
+  --data '{
+    "client_id": "<client-id>",
+    "client_secret": "<client-secret>",
+    "audience": "https://tenant.us.auth0.com/api/v2/",
+    "grant_type": "client_credentials"
+  }' | jq -r .access_token)
+# Then run the agent with AUTH0_CLI_AUTH_MODE=env and AUTH0_API_TOKEN set.
+```
+
+Just remember that a minted token expires, so refresh it and update `AUTH0_API_TOKEN` before it does. If minting and rotating a token is impractical, the alternative is to relax the sandbox policy so it can run the `auth0` CLI directly (allowing at least the read-only commands you need), rather than working around the keychain at all.
+
+This mode is deliberately explicit. The CLI only reads these variables when `AUTH0_CLI_AUTH_MODE=env` is set, because the same `AUTH0_*` variables are also used by the Terraform provider and the sample apps this CLI scaffolds, and their mere presence must never silently replace a saved login or switch you to a different tenant. The CLI itself writes nothing to disk or the keychain in this mode; it only reads these variables. Note, though, that an exported variable lives in the parent shell or agent environment for as long as that environment does, which is beyond the single command. If that is a concern, scope the variables to a single invocation (for example prefix them on the command line rather than `export`ing them) and unset them when you are done.
+
+In this mode the tenant is fixed by `AUTH0_DOMAIN`. If you also pass `--tenant` and it points at a different domain, the command fails with a clear error instead of silently targeting `AUTH0_DOMAIN`, so a write can never land on the wrong tenant. Drop the flag, or set `AUTH0_DOMAIN` to the tenant you mean to target.
+
+Keep in mind that env-based auth solves the keychain and config problem, but it does not solve network isolation. If the sandbox also blocks outbound network access, the CLI still cannot reach the Auth0 Management API from inside it. In that case, run the `auth0` command outside the sandbox (or in an environment with network access and write permissions) where a normal login can succeed.
+
 **Commands that need a browser or editor:** a few commands are inherently interactive and cannot run in agent mode. `auth0 universal-login customize`, `auth0 universal-login templates update`, and `auth0 acul dev` open a browser or terminal editor and block on a local server, so in agent mode they fail fast with a clear error instead of hanging. Use `auth0 acul config` and `auth0 api` to manage the same configuration non-interactively.
 
 ## Usage Analytics Disclosure

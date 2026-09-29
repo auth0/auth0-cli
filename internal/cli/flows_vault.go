@@ -506,9 +506,7 @@ func openVaultAppCmd(cli *cli) *cobra.Command {
 				inputs.AppID = args[0]
 			}
 
-			openBuilderURL(cli, fmt.Sprintf("vault/apps/%s/edit", inputs.AppID))
-
-			return nil
+			return openBuilderURL(cli, fmt.Sprintf("vault/apps/%s/edit", inputs.AppID))
 		},
 	}
 

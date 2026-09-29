@@ -20,6 +20,13 @@ var (
 	ErrInvalidToken = errors.New("token is invalid")
 	// ErrMalformedToken indicates a corrupted JWT token was found in keyring.
 	ErrMalformedToken = errors.New("corrupted authentication token detected")
+	// ErrStoredTokenUnavailable indicates the login still looks live (its config
+	// expiry is in the future) but the stored access token could not be read from
+	// the keyring, for example because the OS keychain is locked or inaccessible.
+	// This is distinct from an expired session: the token has not expired, it just
+	// cannot be retrieved, so the caller should retry with keychain access rather
+	// than assume the session ended.
+	ErrStoredTokenUnavailable = errors.New("stored access token is unavailable")
 )
 
 type ErrTokenMissingRequiredScopes struct {
@@ -100,34 +107,68 @@ func (t *Tenant) HasExpiredToken() bool {
 	return time.Now().Add(accessTokenExpThreshold).After(t.ExpiresAt)
 }
 
-// GetAccessToken retrieves the tenant's access token.
-func (t *Tenant) GetAccessToken() string {
-	accessToken, err := keyring.GetAccessToken(t.Domain)
-	if err == nil && accessToken != "" {
-		return accessToken
+// resolveAccessToken retrieves the tenant's access token and reports any keyring
+// read error. The token is first read from the keyring; when that yields an empty
+// value it falls back to the legacy inline token persisted in config.json. An
+// empty token together with a non-nil keyringErr means the stored token could not
+// be read (for example the keychain is locked or inaccessible), which is distinct
+// from a tenant that simply has no token stored.
+func (t *Tenant) resolveAccessToken() (accessToken string, keyringErr error) {
+	accessToken, keyringErr = keyring.GetAccessToken(t.Domain)
+	if keyringErr == nil && accessToken != "" {
+		return accessToken, nil
 	}
 
-	return t.AccessToken
+	if t.AccessToken != "" {
+		return t.AccessToken, nil
+	}
+
+	return "", keyringErr
 }
 
-// CheckAuthenticationStatus checks to see if the tenant in the config
-// has all the required scopes and that the access token is not expired.
-func (t *Tenant) CheckAuthenticationStatus() error {
+// GetAccessToken retrieves the tenant's access token.
+func (t *Tenant) GetAccessToken() string {
+	accessToken, _ := t.resolveAccessToken()
+	return accessToken
+}
+
+// CheckAuthenticationStatus checks to see if the tenant in the config has all
+// the required scopes and that the access token is not expired. On success it
+// returns the validated access token it read, so the caller can hand that exact
+// token to the SDK without reading the keyring a second time; a second read
+// could fail differently (an intermittently locked keychain) and change the
+// result after validation already passed. On any error the returned token is
+// empty.
+func (t *Tenant) CheckAuthenticationStatus() (string, error) {
 	if missingScopes := t.GetMissingRequiredScopes(); len(missingScopes) > 0 && t.IsAuthenticatedWithDeviceCodeFlow() {
-		return ErrTokenMissingRequiredScopes{MissingScopes: missingScopes}
+		return "", ErrTokenMissingRequiredScopes{MissingScopes: missingScopes}
 	}
 
-	accessToken := t.GetAccessToken()
-	if accessToken == "" || t.HasExpiredToken() {
-		return ErrInvalidToken
+	accessToken, keyringErr := t.resolveAccessToken()
+	if accessToken == "" {
+		// The login still looks live (expiry in the future) but no token could be
+		// read from the keyring: report it as unavailable rather than expired, so
+		// the caller can suggest retrying with keychain access instead of a
+		// re-login. This only applies to user (device-code) logins; client-
+		// credential tenants recover by regenerating the token from the stored
+		// client secret, so they keep the existing invalid-token handling.
+		if t.IsAuthenticatedWithDeviceCodeFlow() && keyringErr != nil && !t.HasExpiredToken() {
+			return "", ErrStoredTokenUnavailable
+		}
+
+		return "", ErrInvalidToken
+	}
+
+	if t.HasExpiredToken() {
+		return "", ErrInvalidToken
 	}
 
 	// Validate that the access token is a well-formed JWT token.
 	if _, err := jwt.ParseInsecure([]byte(accessToken)); err != nil {
-		return ErrMalformedToken
+		return "", ErrMalformedToken
 	}
 
-	return nil
+	return accessToken, nil
 }
 
 // RegenerateAccessToken regenerates the access token for the tenant.

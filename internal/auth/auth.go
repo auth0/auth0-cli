@@ -250,6 +250,17 @@ func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) 
 		return Result{}, err
 	}
 
+	// The client secret is about to be POSTed to u.Host. A domain that carries
+	// userinfo, a port, or a path (for example "tenant.example@evil.example")
+	// parses to a host other than the tenant and would leak the secret there, so
+	// require the domain to be a bare host that parses back to itself.
+	if u.User != nil || u.Host != args.Domain || u.Path != "" {
+		return Result{}, fmt.Errorf(
+			"invalid tenant domain %q: expected a bare host such as tenant.us.auth0.com",
+			args.Domain,
+		)
+	}
+
 	credsConfig := &clientcredentials.Config{
 		ClientID:     args.ClientID,
 		ClientSecret: args.ClientSecret,

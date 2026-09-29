@@ -19,6 +19,12 @@ var ErrConfigFileMissing = errors.New("config.json file is missing")
 // ErrNoAuthenticatedTenants is thrown when the config file has no authenticated tenants.
 var ErrNoAuthenticatedTenants = errors.New("not logged in. Try `auth0 login`")
 
+// ErrConfigNotWritable is thrown when the config file cannot be persisted to
+// disk, for example because the filesystem is read-only or the path is not
+// writable (as happens inside some sandboxes). It is distinct from a missing
+// config: the CLI knows what to write but cannot save it.
+var ErrConfigNotWritable = errors.New("auth0 config file is not writable")
+
 // Config holds cli configuration settings.
 type Config struct {
 	onlyOnce  sync.Once
@@ -235,7 +241,7 @@ func (c *Config) saveToDisk() error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		const dirPerm os.FileMode = 0700 // Directory permissions (read, write, and execute for the owner only).
 		if err := os.MkdirAll(dir, dirPerm); err != nil {
-			return err
+			return fmt.Errorf("%w: %s: %v", ErrConfigNotWritable, dir, err)
 		}
 	}
 
@@ -245,7 +251,11 @@ func (c *Config) saveToDisk() error {
 	}
 
 	const filePerm os.FileMode = 0600 // File permissions (read and write for the owner only).
-	return os.WriteFile(c.path, buffer, filePerm)
+	if err := os.WriteFile(c.path, buffer, filePerm); err != nil {
+		return fmt.Errorf("%w: %s: %v", ErrConfigNotWritable, c.path, err)
+	}
+
+	return nil
 }
 
 func defaultPath() string {

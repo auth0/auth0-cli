@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 
@@ -252,6 +253,21 @@ func useAppCmd(cli *cli) *cobra.Command {
   auth0 apps use --none
   auth0 apps use <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// 'apps use' exists only to save a default application into the on-disk
+			// config. Env auth mode does not use that config, so the selection could
+			// never persist. Fail fast with a clear message instead of surfacing a
+			// confusing "config file is missing" error from the write attempt.
+			if envAuthEnabled(os.Getenv) {
+				return authError{
+					err: fmt.Errorf(
+						"'auth0 apps use' saves a default application to the on-disk config, which is not used in %s=%s mode. "+
+							"Pass the application ID directly to each command instead",
+						authModeEnvVar, authModeEnv,
+					),
+					reason: "env_auth_not_persistable",
+				}
+			}
+
 			if inputs.None {
 				inputs.ID = ""
 			} else {
@@ -711,9 +727,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to create application: %w", err)
 			}
 
-			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
-				return err
-			}
+			persistDefaultAppID(cli, a.GetClientID())
 
 			cli.renderer.ApplicationCreate(a, inputs.RevealSecrets)
 
@@ -1035,6 +1049,25 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// persistDefaultAppID records a newly created app as the tenant's default. This
+// is a local convenience only: the app already exists in Auth0, so a failure to
+// save the preference (for example a missing or read-only config in env auth
+// mode) must not turn a successful create into a command failure. It warns and
+// continues instead, and the warning is suppressed in agent mode.
+func persistDefaultAppID(cli *cli, clientID string) {
+	// Env auth mode is non-persistent by design: the CLI reads credentials from
+	// the environment and writes nothing to disk. Skip saving the default app
+	// entirely rather than attempting a config write that would contradict that
+	// contract (and, where a config file happens to exist, mutate it).
+	if envAuthEnabled(os.Getenv) {
+		return
+	}
+
+	if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, clientID); err != nil {
+		cli.renderer.Warnf("Application created, but it could not be saved as the default for this tenant: %v", err)
+	}
+}
+
 func createAppFromJSON(cli *cli, cmd *cobra.Command, dataStr string, revealSecrets bool) error {
 	client, err := runJSONWrite[management.Client](cli, cmd, jsonWriteSpec{
 		Method:     http.MethodPost,
@@ -1047,10 +1080,10 @@ func createAppFromJSON(cli *cli, cmd *cobra.Command, dataStr string, revealSecre
 		return fmt.Errorf("failed to create application: %w", err)
 	}
 
-	// Preserve the interactive path's side effect: the created app becomes the tenant default.
-	if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, client.GetClientID()); err != nil {
-		return err
-	}
+	// Preserve the interactive path's side effect: the created app becomes the
+	// tenant default. This is best-effort and non-fatal (see persistDefaultAppID),
+	// so a config-write failure cannot mask an app that was already created.
+	persistDefaultAppID(cli, client.GetClientID())
 
 	cli.renderer.ApplicationCreate(client, revealSecrets)
 	return nil
@@ -1093,9 +1126,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatAppSettingsPath(inputs.ID))
-
-			return nil
+			return openManageURL(cli, cli.tenant, formatAppSettingsPath(inputs.ID))
 		},
 	}
 
@@ -1253,9 +1284,15 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 			return nil, fmt.Errorf("failed to list applications: %w", err)
 		}
 
-		tenant, err := c.Config.GetTenant(c.tenant)
-		if err != nil {
-			return nil, err
+		// Env auth mode reads nothing from the on-disk config, so there is no saved
+		// default application to prioritize. Only look one up in the normal mode.
+		var defaultAppID string
+		if !envAuthEnabled(os.Getenv) {
+			tenant, err := c.Config.GetTenant(c.tenant)
+			if err != nil {
+				return nil, err
+			}
+			defaultAppID = tenant.DefaultAppID
 		}
 
 		var priorityOpts, opts pickerOptions
@@ -1269,7 +1306,7 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 			)
 			option := pickerOption{value: value, label: label}
 
-			if tenant.DefaultAppID == client.GetClientID() {
+			if defaultAppID == client.GetClientID() {
 				priorityOpts = append(priorityOpts, option)
 			} else {
 				opts = append(opts, option)

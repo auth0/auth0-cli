@@ -235,3 +235,27 @@ func TestParseTenant(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAccessTokenFromClientCredsRejectsUnsafeDomain(t *testing.T) {
+	// A domain that parses to a host other than itself must be rejected before any
+	// token request, so the client secret can never be POSTed to another host.
+	tests := []struct {
+		name   string
+		domain string
+	}{
+		{name: "userinfo redirects the host", domain: "tenant.example@evil.example"},
+		{name: "path redirects the request", domain: "tenant.us.auth0.com/oauth/token"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := GetAccessTokenFromClientCreds(context.Background(), ClientCredentials{
+				ClientID:     "client-id",
+				ClientSecret: "client-secret",
+				Domain:       test.domain,
+			})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid tenant domain")
+		})
+	}
+}
