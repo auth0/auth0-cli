@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix `-q` flag in `auth0 api` to treat each value as a single query parameter, preserving comma-separated values like `fields=a,b,c` instead of splitting them [#1689]
+- Hint that `auth0 api` should retry with `PUT` when a `PATCH` request returns a generic 404 [#1687]
 
 # [v1.36.0](https://github.com/auth0/auth0-cli/tree/v1.36.0) (September 18, 2026)
 
