@@ -629,9 +629,7 @@ func openFlowCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openBuilderURL(cli, fmt.Sprintf("flows/%s/edit", inputs.ID))
-
-			return nil
+			return openBuilderURL(cli, fmt.Sprintf("flows/%s/edit", inputs.ID))
 		},
 	}
 

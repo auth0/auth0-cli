@@ -354,31 +354,45 @@ func emitURLJSON(cli *cli, key, url string) error {
 	return nil
 }
 
-func openManageURL(cli *cli, tenant string, path string) {
+func openManageURL(cli *cli, tenant string, path string) error {
 	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
-		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
-		return
+		return dashboardURLUnavailableError(tenant)
 	}
 
 	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, path)
 
 	if cli.renderer.AgentMode {
 		// An agent has no browser, so emit the dashboard URL as JSON on stdout rather
-		// than through Infof, which agent mode suppresses.
-		if err := emitURLJSON(cli, "manage_url", settingsURL); err != nil {
-			cli.renderer.Errorf("%v", err)
-		}
-		return
+		// than through Infof, which agent mode suppresses. Surface a marshal failure
+		// as the command error instead of exiting 0 with no output.
+		return emitURLJSON(cli, "manage_url", settingsURL)
 	}
 
 	if cli.noInput {
 		cli.renderer.Infof("Open the following URL in a browser: %s", settingsURL)
-		return
+		return nil
 	}
 
 	if err := browser.OpenURL(settingsURL); err != nil {
 		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", settingsURL)
+	}
+
+	return nil
+}
+
+// dashboardURLUnavailableError reports that a dashboard or builder link cannot be
+// built because the tenant's details are not saved locally (the expected state in
+// env auth mode). It is a hard error, not a warning, so an "open" command never
+// exits 0 with no output for an agent.
+func dashboardURLUnavailableError(tenant string) error {
+	return authError{
+		err: fmt.Errorf(
+			"cannot build the dashboard URL for tenant %q because its details are not saved locally; "+
+				"run 'auth0 login' to save them, or open the Auth0 dashboard in a browser manually",
+			tenant,
+		),
+		reason: "dashboard_url_unavailable",
 	}
 }
 
@@ -653,30 +667,29 @@ func editJSONBody(cli *cli, resource, seed string, target interface{}) error {
 
 // openBuilderURL opens a Forms/Flows builder page in a browser, or prints the URL
 // when interactivity is disabled.
-func openBuilderURL(cli *cli, path string) {
-	url := formatBuilderPageURL(cli.Config.DefaultTenant, &cli.Config, path)
+func openBuilderURL(cli *cli, path string) error {
+	url := formatBuilderPageURL(cli.tenant, &cli.Config, path)
 	if url == "" {
-		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
-		return
+		return dashboardURLUnavailableError(cli.tenant)
 	}
 
 	if cli.renderer.AgentMode {
 		// An agent has no browser, so emit the builder URL as JSON on stdout rather
-		// than through Infof, which agent mode suppresses.
-		if err := emitURLJSON(cli, "builder_url", url); err != nil {
-			cli.renderer.Errorf("%v", err)
-		}
-		return
+		// than through Infof, which agent mode suppresses. Surface a marshal failure
+		// as the command error instead of exiting 0 with no output.
+		return emitURLJSON(cli, "builder_url", url)
 	}
 
 	if cli.noInput {
 		cli.renderer.Infof("Open the following URL in a browser: %s", url)
-		return
+		return nil
 	}
 
 	if err := browser.OpenURL(url); err != nil {
 		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", url)
 	}
+
+	return nil
 }
 
 // formatBuilderPageURL builds a Forms/Flows builder URL for the given path,

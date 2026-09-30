@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -347,11 +348,6 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		}
 	}
 
-	cli.renderer.Newline()
-	cli.renderer.Infof("Successfully logged in.")
-	cli.renderer.Infof("Tenant: %s", result.Domain)
-	cli.renderer.Newline()
-
 	tenant := config.Tenant{
 		Name:      result.Tenant,
 		Domain:    result.Domain,
@@ -367,8 +363,19 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 
 	err = cli.Config.AddTenant(tenant)
 	if err != nil {
-		return config.Tenant{}, fmt.Errorf("failed to add the tenant to the config: %w", err)
+		return config.Tenant{}, configPersistError(fmt.Errorf("failed to add the tenant to the config: %w", err))
 	}
+
+	// Announce success only after the token and tenant are actually persisted, so a
+	// save failure above can never follow a "Successfully logged in" message. These
+	// human lines are suppressed in agent mode, which emits the JSON object below.
+	cli.renderer.Newline()
+	cli.renderer.Infof("Successfully logged in.")
+	cli.renderer.Infof("Tenant: %s", result.Domain)
+	if !result.ExpiresAt.IsZero() {
+		cli.renderer.Infof("This session is valid until %s.", result.ExpiresAt.Format(time.RFC1123))
+	}
+	cli.renderer.Newline()
 
 	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-User")
 
@@ -376,14 +383,20 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 		// The "Successfully logged in" lines above are suppressed in agent mode, so
 		// emit a final machine-readable confirmation on stdout. This closes the
 		// stream that opened with the device verification object.
+		expiresAt := ""
+		if !result.ExpiresAt.IsZero() {
+			expiresAt = result.ExpiresAt.Format(time.RFC3339)
+		}
 		details, marshalErr := json.Marshal(struct {
-			LoggedIn bool   `json:"logged_in"`
-			Tenant   string `json:"tenant"`
-			Domain   string `json:"domain"`
+			LoggedIn  bool   `json:"logged_in"`
+			Tenant    string `json:"tenant"`
+			Domain    string `json:"domain"`
+			ExpiresAt string `json:"expires_at,omitempty"`
 		}{
-			LoggedIn: true,
-			Tenant:   result.Tenant,
-			Domain:   result.Domain,
+			LoggedIn:  true,
+			Tenant:    result.Tenant,
+			Domain:    result.Domain,
+			ExpiresAt: expiresAt,
 		})
 		if marshalErr != nil {
 			return config.Tenant{}, fmt.Errorf("failed to encode login result: %w", marshalErr)
@@ -467,7 +480,7 @@ func RunLoginAsMachineSecret(ctx context.Context, inputs LoginInputs, cli *cli, 
 	}
 
 	if err = cli.Config.AddTenant(tenant); err != nil {
-		return fmt.Errorf("failed to save tenant data: %w", err)
+		return configPersistError(fmt.Errorf("failed to save tenant data: %w", err))
 	}
 
 	cli.renderer.Newline()
@@ -533,7 +546,7 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 	}
 
 	if err = cli.Config.AddTenant(tenant); err != nil {
-		return fmt.Errorf("failed to save tenant data: %w", err)
+		return configPersistError(fmt.Errorf("failed to save tenant data: %w", err))
 	}
 
 	cli.renderer.Newline()

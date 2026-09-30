@@ -114,7 +114,9 @@ func errorClass(err error) string {
 
 	if errors.Is(err, config.ErrInvalidToken) ||
 		errors.Is(err, config.ErrMalformedToken) ||
+		errors.Is(err, config.ErrStoredTokenUnavailable) ||
 		errors.Is(err, config.ErrNoAuthenticatedTenants) ||
+		errors.Is(err, config.ErrConfigNotWritable) ||
 		errors.Is(err, config.ErrConfigFileMissing) {
 		return "auth"
 	}
@@ -166,8 +168,12 @@ func errorReason(err error) string {
 		return "not_logged_in"
 	case errors.Is(err, config.ErrConfigFileMissing):
 		return "no_config"
+	case errors.Is(err, config.ErrConfigNotWritable):
+		return "config_not_writable"
 	case errors.Is(err, config.ErrInvalidToken):
 		return "session_expired"
+	case errors.Is(err, config.ErrStoredTokenUnavailable):
+		return "stored_token_unavailable"
 	case errors.Is(err, config.ErrMalformedToken):
 		return "token_malformed"
 	}

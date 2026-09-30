@@ -268,9 +268,7 @@ func openLogStreamsCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatLogStreamSettingsPath(inputs.ID))
-
-			return nil
+			return openManageURL(cli, cli.tenant, formatLogStreamSettingsPath(inputs.ID))
 		},
 	}
 

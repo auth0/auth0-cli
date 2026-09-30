@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"testing"
 
@@ -158,6 +159,70 @@ func TestAppsCreateCmd(t *testing.T) {
 			assert.EqualError(t, err, test.expectedError)
 		})
 	}
+}
+
+// TestAppsCreateCmdSucceedsWithoutSavedConfig guards the fix for a create that
+// touches the API before persisting the default app locally: with no saved
+// config (an empty HOME, as in a read-only sandbox), the app is still created
+// via the API and the command must succeed, treating the failed local
+// default-app write as a non-fatal warning rather than reporting failure for an
+// app that already exists.
+func TestAppsCreateCmdSucceedsWithoutSavedConfig(t *testing.T) {
+	// Point config resolution at an empty temp home so no real config is read or
+	// written and SetDefaultAppIDForTenant fails the way it would in a sandbox.
+	t.Setenv("HOME", t.TempDir())
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	clientAPI.EXPECT().
+		Create(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, c *management.Client, _ ...management.RequestOption) error {
+			c.ClientID = auth0.String("created-client-id")
+			return nil
+		})
+
+	cli := &cli{
+		noInput: true,
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+		api: &auth0.API{Client: clientAPI},
+	}
+
+	cmd := createAppCmd(cli)
+	cmd.SetArgs([]string{"--name", "My App", "--type", "regular"})
+
+	assert.NoError(t, cmd.Execute())
+}
+
+// TestAppsUseCmdRejectedInEnvAuthMode guards that 'apps use', whose only job is
+// to persist a default application into the on-disk config, fails fast with a
+// clear, tagged error in env auth mode (which does not use that config) instead
+// of surfacing a confusing "config file is missing" error from the write.
+func TestAppsUseCmdRejectedInEnvAuthMode(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv(authModeEnvVar, authModeEnv)
+
+	cli := &cli{
+		noInput: true,
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+	}
+
+	cmd := useAppCmd(cli)
+	cmd.SetArgs([]string{"--none"})
+
+	err := cmd.Execute()
+	assert.Error(t, err)
+
+	var authErr authError
+	assert.True(t, errors.As(err, &authErr))
+	assert.Equal(t, "env_auth_not_persistable", authErr.reason)
 }
 
 func TestAppsUpdateCmdOrganizationFlags(t *testing.T) {

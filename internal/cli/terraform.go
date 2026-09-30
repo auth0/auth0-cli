@@ -223,7 +223,7 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		}
 
 		if terraformProviderCredentialsAreAvailable() {
-			err := checkTerraformProviderAndCLIDomainsMatch(cli.Config.DefaultTenant)
+			err := checkTerraformProviderAndCLIDomainsMatch(cli.tenant)
 			if err != nil {
 				return err
 			}

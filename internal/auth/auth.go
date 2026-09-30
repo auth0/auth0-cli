@@ -250,6 +250,16 @@ func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) 
 		return Result{}, err
 	}
 
+	// Guard against a domain that parses to a different host (for example
+	// "tenant.example@evil.example"), which would POST the client secret to that
+	// other host. Require it to be a bare host that parses back to itself.
+	if u.User != nil || u.Host != args.Domain || u.Path != "" {
+		return Result{}, fmt.Errorf(
+			"invalid tenant domain %q: expected a bare host such as tenant.us.auth0.com",
+			args.Domain,
+		)
+	}
+
 	credsConfig := &clientcredentials.Config{
 		ClientID:     args.ClientID,
 		ClientSecret: args.ClientSecret,

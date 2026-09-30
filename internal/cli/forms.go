@@ -779,9 +779,7 @@ func openFormCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openBuilderURL(cli, fmt.Sprintf("forms/%s/edit", inputs.ID))
-
-			return nil
+			return openBuilderURL(cli, fmt.Sprintf("forms/%s/edit", inputs.ID))
 		},
 	}
 

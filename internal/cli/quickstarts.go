@@ -1017,12 +1017,15 @@ func validateNonInteractiveRequirements(inputs SetupInputs, canPromptFlag bool) 
 func printClientDetails(cli *cli, client *management.Client) {
 	cli.renderer.Successf("App %s has been created in the management console", ansi.Magenta(client.GetName()))
 	cli.renderer.Newline()
-	manageTenantURL := formatManageTenantURL(cli.Config.DefaultTenant, &cli.Config)
 
-	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAppSettingsPath(client.GetClientID()))
-	cli.renderer.Successf("You can manage your application %s(%s) from here:", client.GetName(), ansi.Magenta(client.GetClientID()))
-	cli.renderer.Detailf(ansi.Magenta(settingsURL))
-	cli.renderer.Newline()
+	// The dashboard link needs saved tenant metadata, absent in env auth mode. Only
+	// print it when it can be built, otherwise it would show a bare relative path.
+	if manageTenantURL := formatManageTenantURL(cli.tenant, &cli.Config); manageTenantURL != "" {
+		settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAppSettingsPath(client.GetClientID()))
+		cli.renderer.Successf("You can manage your application %s(%s) from here:", client.GetName(), ansi.Magenta(client.GetClientID()))
+		cli.renderer.Detailf(ansi.Magenta(settingsURL))
+		cli.renderer.Newline()
+	}
 
 	if len(client.GetCallbacks()) > 0 {
 		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard: %s", ansi.Magenta(strings.Join(client.GetCallbacks(), ", ")))
@@ -1040,11 +1043,13 @@ func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 	cli.renderer.Detailf("Identifier: %s", ansi.Magenta(rs.GetIdentifier()))
 	cli.renderer.Newline()
 
-	manageTenantURL := formatManageTenantURL(cli.Config.DefaultTenant, &cli.Config)
-	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAPISettingsPath(rs.GetID()))
-
-	cli.renderer.Successf("You can manage your API from here:")
-	cli.renderer.Detailf("%s", ansi.Magenta(settingsURL))
+	// Skip the dashboard link when no saved tenant metadata is available (env auth
+	// mode), otherwise it would print a relative path.
+	if manageTenantURL := formatManageTenantURL(cli.tenant, &cli.Config); manageTenantURL != "" {
+		settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAPISettingsPath(rs.GetID()))
+		cli.renderer.Successf("You can manage your API from here:")
+		cli.renderer.Detailf("%s", ansi.Magenta(settingsURL))
+	}
 }
 
 // createQuickstartApp creates an Auth0 application client for the given quickstart config key,
