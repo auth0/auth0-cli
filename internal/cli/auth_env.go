@@ -13,11 +13,10 @@ import (
 )
 
 const (
-	// AUTH0_CLI_AUTH_MODE opts the CLI into non-persistent, environment-driven
-	// authentication. It must be set explicitly: the AUTH0_* credential vars this
-	// mode reads are also consumed by the Terraform provider and by the sample
-	// apps the CLI scaffolds, so their mere presence must never silently replace a
-	// saved login or select a different tenant.
+	// AUTH0_CLI_AUTH_MODE opts the CLI into non-persistent, env-driven auth. It
+	// must be explicit because the AUTH0_* credential vars this mode reads are
+	// shared with the Terraform provider and scaffolded sample apps, so their
+	// presence alone must never replace a saved login or switch tenants.
 	authModeEnvVar = "AUTH0_CLI_AUTH_MODE"
 	// Value of authModeEnvVar that selects the env credential source.
 	authModeEnv = "env"
@@ -34,12 +33,64 @@ func envAuthEnabled(getenv func(string) string) bool {
 	return strings.EqualFold(strings.TrimSpace(getenv(authModeEnvVar)), authModeEnv)
 }
 
-// validateAuthMode rejects a nonempty AUTH0_CLI_AUTH_MODE that is not a
-// recognized value. Without this a typo such as "evn" would fail the
-// envAuthEnabled check and silently fall through to the saved-login path, so a
-// command could target the saved default tenant even though the caller set
-// AUTH0_DOMAIN and expected env credentials. An empty value (env mode off) and
-// the exact env value are both accepted.
+// envCredentialKind describes which env-mode credential source is present.
+type envCredentialKind int
+
+const (
+	envCredentialNone envCredentialKind = iota
+	envCredentialAPIToken
+	envCredentialM2M
+)
+
+// envCredentialsAvailable reports usable env credentials present while env auth
+// mode is off, so a failing auth path can point the caller at enabling it. Kind
+// is envCredentialNone when the domain or a token source is missing.
+func envCredentialsAvailable(getenv func(string) string) (domain string, kind envCredentialKind) {
+	domain = strings.TrimSpace(getenv(envDomain))
+	if domain == "" {
+		return "", envCredentialNone
+	}
+
+	if strings.TrimSpace(getenv(envAPIToken)) != "" {
+		return domain, envCredentialAPIToken
+	}
+
+	if strings.TrimSpace(getenv(envClientID)) != "" && strings.TrimSpace(getenv(envClientSecret)) != "" {
+		return domain, envCredentialM2M
+	}
+
+	return "", envCredentialNone
+}
+
+// envAuthSetupHint returns guidance for authenticating without the keychain or a
+// writable config: enable env auth mode when credentials are already present,
+// otherwise list the variables to provide.
+func envAuthSetupHint(getenv func(string) string) string {
+	mode := authModeEnvVar + "=" + authModeEnv
+
+	switch domain, kind := envCredentialsAvailable(getenv); kind {
+	case envCredentialAPIToken:
+		return fmt.Sprintf(
+			"%s and %s are already set for %q, so set %s to use them without the keychain or a writable config",
+			envDomain, envAPIToken, domain, mode,
+		)
+	case envCredentialM2M:
+		return fmt.Sprintf(
+			"%s, %s and %s are already set for %q, so set %s to use these M2M credentials without the keychain or a writable config",
+			envDomain, envClientID, envClientSecret, domain, mode,
+		)
+	default:
+		return fmt.Sprintf(
+			"to authenticate without the keychain or a writable config, set %s together with %s (or %s, %s and %s)",
+			mode, envAPIToken, envDomain, envClientID, envClientSecret,
+		)
+	}
+}
+
+// validateAuthMode rejects a nonempty AUTH0_CLI_AUTH_MODE that is not recognized.
+// Without this a typo such as "evn" would silently fall through to the saved
+// login even though the caller expected env credentials. Empty (mode off) and the
+// exact env value are both accepted.
 func validateAuthMode(getenv func(string) string) error {
 	mode := strings.TrimSpace(getenv(authModeEnvVar))
 	if mode == "" || strings.EqualFold(mode, authModeEnv) {
@@ -56,15 +107,10 @@ func validateAuthMode(getenv func(string) string) error {
 }
 
 // setupWithEnvAuthentication authenticates purely from environment variables,
-// without reading or writing the on-disk config or the OS keychain. It is the
-// opt-in path for agents, CI, and sandboxes that cannot reach the keychain.
-//
-// It accepts either a pre-minted Management API token via AUTH0_API_TOKEN (used
-// directly, preserving whatever identity minted it) or client credentials via
-// AUTH0_CLIENT_ID and AUTH0_CLIENT_SECRET (exchanged for a token). AUTH0_DOMAIN
-// is always required. The resolved token is held in memory for this command only
-// and is never persisted. This mirrors the env convention the Terraform provider
-// already uses (see terraformProviderCredentialsAreAvailable).
+// touching neither the on-disk config nor the keychain. It accepts a pre-minted
+// Management API token via AUTH0_API_TOKEN, or client credentials via
+// AUTH0_CLIENT_ID and AUTH0_CLIENT_SECRET (exchanged for a token); AUTH0_DOMAIN is
+// always required. The resolved token is held in memory for this command only.
 func (c *cli) setupWithEnvAuthentication(ctx context.Context) error {
 	domain := strings.TrimSpace(os.Getenv(envDomain))
 	apiToken := strings.TrimSpace(os.Getenv(envAPIToken))
@@ -85,10 +131,9 @@ func (c *cli) setupWithEnvAuthentication(ctx context.Context) error {
 		return authError{err: err, reason: "env_auth_invalid_domain"}
 	}
 
-	// In env mode the tenant is fixed by AUTH0_DOMAIN. If the caller also passed an
-	// explicit --tenant that points somewhere else, fail loudly rather than
-	// silently ignoring the flag and targeting AUTH0_DOMAIN, which could send a
-	// write to the wrong tenant.
+	// In env mode the tenant is fixed by AUTH0_DOMAIN. If an explicit --tenant
+	// points elsewhere, fail loudly rather than silently writing to the wrong
+	// tenant.
 	if c.tenantExplicit {
 		if requested := strings.TrimSpace(c.tenant); !strings.EqualFold(requested, domain) {
 			return authError{
@@ -107,10 +152,9 @@ func (c *cli) setupWithEnvAuthentication(ctx context.Context) error {
 		return err
 	}
 
-	// Record the tenant for display and analytics only; no config is loaded or
-	// written in this mode. The renderer's tenant was set from the flag default
-	// during earlier setup, so refresh it here too, otherwise human-readable
-	// headings would show the old or an empty tenant instead of AUTH0_DOMAIN.
+	// Record the tenant for display and analytics only; nothing is persisted.
+	// Refresh the renderer too, otherwise headings would show the old or empty
+	// tenant instead of AUTH0_DOMAIN.
 	c.tenant = domain
 	c.renderer.Tenant = domain
 
@@ -171,10 +215,9 @@ func (c *cli) resolveEnvAccessToken(ctx context.Context, domain, apiToken, clien
 }
 
 // configPersistError converts a config-write failure into an actionable auth
-// error. It is used wherever the CLI must persist a tenant or refreshed token to
-// disk: when the config file is not writable (for example a read-only sandbox),
-// it points the caller at env-mode auth, which needs no disk access, or at
-// running outside the sandbox. Any other error is returned unchanged.
+// error: when the config file is not writable (for example a read-only sandbox),
+// it points the caller at env-mode auth, which needs no disk access. Any other
+// error is returned unchanged.
 func configPersistError(err error) error {
 	if err == nil {
 		return nil
@@ -187,25 +230,20 @@ func configPersistError(err error) error {
 	return authError{
 		err: fmt.Errorf(
 			"%w. The login could not be saved because the config file is not writable, which "+
-				"happens in read-only sandboxes. To authenticate without writing to disk, set "+
-				"AUTH0_CLI_AUTH_MODE=env together with AUTH0_API_TOKEN (or AUTH0_DOMAIN, AUTH0_CLIENT_ID "+
-				"and AUTH0_CLIENT_SECRET). Otherwise run the command outside the sandbox with write access",
-			err,
+				"happens in read-only sandboxes; %s. Otherwise run the command outside the sandbox "+
+				"with write access",
+			err, envAuthSetupHint(os.Getenv),
 		),
 		reason: "config_not_writable",
 	}
 }
 
-// validateTenantDomainHost ensures AUTH0_DOMAIN is a bare host name rather than a
-// URL. The Management SDK expects a host such as "tenant.us.auth0.com"; a scheme
-// or path would otherwise produce confusing downstream failures.
-//
-// It rejects any character that is not valid in a DNS host name. That is a
-// security check, not just cosmetics: a value such as "tenant.example@evil.example"
-// parses as a URL whose host is "evil.example" with "tenant.example" as userinfo,
-// so a client-credentials token request would send the client secret to
-// evil.example. Restricting the input to host characters closes that path before
-// any token is requested.
+// validateTenantDomainHost ensures AUTH0_DOMAIN is a bare host such as
+// "tenant.us.auth0.com", not a URL. It rejects any non-hostname character as a
+// security check: a value like "tenant.example@evil.example" parses to host
+// "evil.example" with "tenant.example" as userinfo, so a client-credentials
+// request would send the client secret there. Restricting to host characters
+// closes that path before any token is requested.
 func validateTenantDomainHost(domain string) error {
 	for _, r := range domain {
 		isLetter := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')

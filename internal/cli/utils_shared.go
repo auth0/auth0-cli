@@ -381,11 +381,10 @@ func openManageURL(cli *cli, tenant string, path string) error {
 	return nil
 }
 
-// dashboardURLUnavailableError explains that a dashboard or builder link cannot
-// be produced because the tenant's details are not saved locally. This is the
-// expected state in env auth mode, which persists nothing, and it must be a
-// hard error rather than a suppressed warning so an "open" command never exits 0
-// with no output for an agent.
+// dashboardURLUnavailableError reports that a dashboard or builder link cannot be
+// built because the tenant's details are not saved locally (the expected state in
+// env auth mode). It is a hard error, not a warning, so an "open" command never
+// exits 0 with no output for an agent.
 func dashboardURLUnavailableError(tenant string) error {
 	return authError{
 		err: fmt.Errorf(

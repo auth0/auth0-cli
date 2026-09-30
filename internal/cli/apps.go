@@ -305,10 +305,9 @@ func useAppCmd(cli *cli) *cobra.Command {
   auth0 apps use --none
   auth0 apps use <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// 'apps use' exists only to save a default application into the on-disk
-			// config. Env auth mode does not use that config, so the selection could
-			// never persist. Fail fast with a clear message instead of surfacing a
-			// confusing "config file is missing" error from the write attempt.
+			// 'apps use' only saves a default app to the on-disk config, which env
+			// auth mode does not use. Fail fast instead of surfacing a confusing
+			// config-write error.
 			if envAuthEnabled(os.Getenv) {
 				return authError{
 					err: fmt.Errorf(
@@ -1154,16 +1153,12 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// persistDefaultAppID records a newly created app as the tenant's default. This
-// is a local convenience only: the app already exists in Auth0, so a failure to
-// save the preference (for example a missing or read-only config in env auth
-// mode) must not turn a successful create into a command failure. It warns and
-// continues instead, and the warning is suppressed in agent mode.
+// persistDefaultAppID records a newly created app as the tenant's default. It is
+// a local convenience only: the app already exists in Auth0, so a failed
+// preference write must never turn a successful create into a failure. It warns
+// and continues.
 func persistDefaultAppID(cli *cli, clientID string) {
-	// Env auth mode is non-persistent by design: the CLI reads credentials from
-	// the environment and writes nothing to disk. Skip saving the default app
-	// entirely rather than attempting a config write that would contradict that
-	// contract (and, where a config file happens to exist, mutate it).
+	// Env auth mode writes nothing to disk, so skip the save entirely.
 	if envAuthEnabled(os.Getenv) {
 		return
 	}
@@ -1186,8 +1181,7 @@ func createAppFromJSON(cli *cli, cmd *cobra.Command, dataStr string, revealSecre
 	}
 
 	// Preserve the interactive path's side effect: the created app becomes the
-	// tenant default. This is best-effort and non-fatal (see persistDefaultAppID),
-	// so a config-write failure cannot mask an app that was already created.
+	// tenant default (best-effort and non-fatal, see persistDefaultAppID).
 	persistDefaultAppID(cli, client.GetClientID())
 
 	cli.renderer.ApplicationCreate(client, revealSecrets)
@@ -1389,8 +1383,8 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 			return nil, fmt.Errorf("failed to list applications: %w", err)
 		}
 
-		// Env auth mode reads nothing from the on-disk config, so there is no saved
-		// default application to prioritize. Only look one up in the normal mode.
+		// Env auth mode has no saved default app to prioritize; only look one up in
+		// normal mode.
 		var defaultAppID string
 		if !envAuthEnabled(os.Getenv) {
 			tenant, err := c.Config.GetTenant(c.tenant)

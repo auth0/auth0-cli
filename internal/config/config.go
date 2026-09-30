@@ -19,10 +19,9 @@ var ErrConfigFileMissing = errors.New("config.json file is missing")
 // ErrNoAuthenticatedTenants is thrown when the config file has no authenticated tenants.
 var ErrNoAuthenticatedTenants = errors.New("not logged in. Try `auth0 login`")
 
-// ErrConfigNotWritable is thrown when the config file cannot be persisted to
-// disk, for example because the filesystem is read-only or the path is not
-// writable (as happens inside some sandboxes). It is distinct from a missing
-// config: the CLI knows what to write but cannot save it.
+// ErrConfigNotWritable indicates the config file cannot be persisted to disk, for
+// example on a read-only filesystem (as in some sandboxes). It is distinct from a
+// missing config: the CLI knows what to write but cannot save it.
 var ErrConfigNotWritable = errors.New("auth0 config file is not writable")
 
 // Config holds cli configuration settings.

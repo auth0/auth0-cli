@@ -242,3 +242,101 @@ func TestConfigPersistError(t *testing.T) {
 		assert.Contains(t, err.Error(), "AUTH0_CLI_AUTH_MODE=env")
 	})
 }
+
+func TestEnvCredentialsAvailable(t *testing.T) {
+	tests := []struct {
+		name         string
+		env          map[string]string
+		expectDomain string
+		expectKind   envCredentialKind
+	}{
+		{
+			name:       "no domain is none",
+			env:        map[string]string{envAPIToken: "tok"},
+			expectKind: envCredentialNone,
+		},
+		{
+			name:       "domain without any token source is none",
+			env:        map[string]string{envDomain: "tenant.us.auth0.com"},
+			expectKind: envCredentialNone,
+		},
+		{
+			name:         "domain and api token is api-token",
+			env:          map[string]string{envDomain: "tenant.us.auth0.com", envAPIToken: "tok"},
+			expectDomain: "tenant.us.auth0.com",
+			expectKind:   envCredentialAPIToken,
+		},
+		{
+			name: "api token is preferred over client credentials",
+			env: map[string]string{
+				envDomain: "tenant.us.auth0.com", envAPIToken: "tok",
+				envClientID: "cid", envClientSecret: "sec",
+			},
+			expectDomain: "tenant.us.auth0.com",
+			expectKind:   envCredentialAPIToken,
+		},
+		{
+			name: "domain and client id plus secret is m2m",
+			env: map[string]string{
+				envDomain: "tenant.us.auth0.com", envClientID: "cid", envClientSecret: "sec",
+			},
+			expectDomain: "tenant.us.auth0.com",
+			expectKind:   envCredentialM2M,
+		},
+		{
+			name:       "client id without secret is none",
+			env:        map[string]string{envDomain: "tenant.us.auth0.com", envClientID: "cid"},
+			expectKind: envCredentialNone,
+		},
+		{
+			name:         "domain is trimmed",
+			env:          map[string]string{envDomain: "  tenant.us.auth0.com  ", envAPIToken: "tok"},
+			expectDomain: "tenant.us.auth0.com",
+			expectKind:   envCredentialAPIToken,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			getenv := func(key string) string { return test.env[key] }
+			domain, kind := envCredentialsAvailable(getenv)
+			assert.Equal(t, test.expectKind, kind)
+			assert.Equal(t, test.expectDomain, domain)
+		})
+	}
+}
+
+func TestEnvAuthSetupHint(t *testing.T) {
+	t.Run("api token present names the token variable and the tenant", func(t *testing.T) {
+		getenv := func(key string) string {
+			return map[string]string{envDomain: "tenant.us.auth0.com", envAPIToken: "tok"}[key]
+		}
+		hint := envAuthSetupHint(getenv)
+		assert.Contains(t, hint, envAPIToken)
+		assert.Contains(t, hint, "tenant.us.auth0.com")
+		assert.Contains(t, hint, "AUTH0_CLI_AUTH_MODE=env")
+		assert.NotContains(t, hint, "M2M")
+	})
+
+	t.Run("client credentials present name both variables and M2M", func(t *testing.T) {
+		getenv := func(key string) string {
+			return map[string]string{
+				envDomain: "tenant.us.auth0.com", envClientID: "cid", envClientSecret: "sec",
+			}[key]
+		}
+		hint := envAuthSetupHint(getenv)
+		assert.Contains(t, hint, envClientID)
+		assert.Contains(t, hint, envClientSecret)
+		assert.Contains(t, hint, "M2M")
+		assert.Contains(t, hint, "tenant.us.auth0.com")
+		assert.Contains(t, hint, "AUTH0_CLI_AUTH_MODE=env")
+	})
+
+	t.Run("no credentials present falls back to generic guidance", func(t *testing.T) {
+		getenv := func(string) string { return "" }
+		hint := envAuthSetupHint(getenv)
+		assert.Contains(t, hint, "AUTH0_CLI_AUTH_MODE=env")
+		assert.Contains(t, hint, "together with")
+		assert.Contains(t, hint, envAPIToken)
+	})
+}

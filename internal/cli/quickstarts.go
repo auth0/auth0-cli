@@ -1018,9 +1018,8 @@ func printClientDetails(cli *cli, client *management.Client) {
 	cli.renderer.Successf("App %s has been created in the management console", ansi.Magenta(client.GetName()))
 	cli.renderer.Newline()
 
-	// The dashboard URL needs saved tenant metadata, which is absent in env auth
-	// mode (and can be for a not-yet-saved tenant). Only print the link when it can
-	// be built, otherwise the message would show a bare relative path.
+	// The dashboard link needs saved tenant metadata, absent in env auth mode. Only
+	// print it when it can be built, otherwise it would show a bare relative path.
 	if manageTenantURL := formatManageTenantURL(cli.tenant, &cli.Config); manageTenantURL != "" {
 		settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAppSettingsPath(client.GetClientID()))
 		cli.renderer.Successf("You can manage your application %s(%s) from here:", client.GetName(), ansi.Magenta(client.GetClientID()))
@@ -1045,7 +1044,7 @@ func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 	cli.renderer.Newline()
 
 	// Skip the dashboard link when no saved tenant metadata is available (env auth
-	// mode, or a not-yet-saved tenant), otherwise it would print a relative path.
+	// mode), otherwise it would print a relative path.
 	if manageTenantURL := formatManageTenantURL(cli.tenant, &cli.Config); manageTenantURL != "" {
 		settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAPISettingsPath(rs.GetID()))
 		cli.renderer.Successf("You can manage your API from here:")

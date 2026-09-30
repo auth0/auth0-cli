@@ -61,12 +61,9 @@ type cli struct {
 // and regenerate its access token if needed. The access token will
 // then be used to configure an instance of the Auth0 Management SDK.
 func (c *cli) setupWithAuthentication(ctx context.Context) error {
-	// Opt-in, non-persistent env authentication for agents, CI, and sandboxes that
-	// cannot reach the keychain. This must be explicit (AUTH0_CLI_AUTH_MODE=env):
-	// the credential vars it reads are shared with other tooling, so we never let
-	// their presence alone override a saved login. Reject a nonempty but
-	// unrecognized mode first, so a typo cannot quietly fall through to the saved
-	// login while the caller believes env credentials are in effect.
+	// Opt-in, non-persistent env auth for agents, CI, and sandboxes without
+	// keychain access. Validate the mode first so a typo cannot fall through to the
+	// saved login while the caller expects env credentials.
 	if err := validateAuthMode(os.Getenv); err != nil {
 		return err
 	}
@@ -76,6 +73,11 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 	// Validate that we have at least one tenant that we can use.
 	if err := c.Config.Validate(); err != nil {
+		// No saved login but env credentials are present. For a non-interactive
+		// caller, point at enabling env auth mode so it can retry.
+		if _, kind := envCredentialsAvailable(os.Getenv); c.noInput && kind != envCredentialNone {
+			return fmt.Errorf("%w. %s", err, envAuthSetupHint(os.Getenv))
+		}
 		return err
 	}
 
@@ -91,9 +93,8 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		return err
 	}
 
-	// Check authentication status. On success this returns the exact token it
-	// validated, which is reused for SDK setup below so the keyring is read only
-	// once; the re-auth branches refresh accessToken from the freshly stored token.
+	// Returns the validated token so the keyring is read only once; re-auth
+	// branches below refresh accessToken from the freshly stored token.
 	accessToken, err := tenant.CheckAuthenticationStatus()
 	var scopesErr config.ErrTokenMissingRequiredScopes
 	if errors.As(err, &scopesErr) {
@@ -140,11 +141,9 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 				if storedTokenUnavailable {
 					return authError{
 						err: fmt.Errorf(
-							"the saved access token could not be read and --no-input is set; the system keychain " +
-								"may be locked or inaccessible. To authenticate without the keychain, set " +
-								"AUTH0_CLI_AUTH_MODE=env together with AUTH0_API_TOKEN (or AUTH0_DOMAIN, " +
-								"AUTH0_CLIENT_ID and AUTH0_CLIENT_SECRET). Otherwise run 'auth0 login' with " +
-								"keychain access",
+							"the saved access token could not be read and --no-input is set; the system keychain "+
+								"may be locked or inaccessible; %s. Otherwise run 'auth0 login' with keychain access",
+							envAuthSetupHint(os.Getenv),
 						),
 						reason: "stored_token_unavailable",
 					}
@@ -204,9 +203,8 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 	invokerMetadata := c.invokerMetadataHeaderValue()
 
-	// The access token was resolved once above (validated token on the happy path,
-	// or the freshly stored token after a re-auth) and is shared across both
-	// Management SDK clients so the keyring is not read again here.
+	// Reuse the token resolved above across both SDK clients so the keyring is not
+	// read again here.
 	api, err := initializeManagementClient(tenant.Domain, accessToken, invokerMetadata)
 	if err != nil {
 		return authError{err: err, reason: "client_init_failed"}

@@ -240,10 +240,8 @@ func buildRootCmd(cli *cli) *cobra.Command {
 				return nil
 			}
 
-			// Record whether --tenant was explicitly passed (its default is the
-			// configured default tenant, so the value alone cannot tell us). Env
-			// auth mode uses this to reject a --tenant that conflicts with
-			// AUTH0_DOMAIN instead of silently targeting the wrong tenant.
+			// Record whether --tenant was explicitly passed; env auth mode uses this
+			// to reject a --tenant that conflicts with AUTH0_DOMAIN.
 			cli.tenantExplicit = cmd.Flags().Changed("tenant")
 
 			if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
@@ -679,9 +677,8 @@ func resolveInstallIDForTracking(cli *cli) string {
 		return cli.Config.InstallID
 	}
 
-	// Env auth mode is non-persistent and must not read the on-disk config. Skip
-	// the initialize-from-disk fallback and report no install ID rather than
-	// touching config.json, keeping the "reads nothing from disk" contract intact.
+	// Env auth mode must not read the on-disk config, so report no install ID
+	// rather than initializing from config.json.
 	if envAuthEnabled(os.Getenv) {
 		return ""
 	}
