@@ -239,22 +239,39 @@ func TestAPICmdInputs_QueryParams(t *testing.T) {
 		assert.Equal(t, "https://"+testDomain+"/api/v2/stats/daily?from=20221101&to=20221118", inputs.URL.String())
 	})
 
+	// Only the first "=" splits key from value, so a value may itself contain
+	// "=" (for example a Lucene-style query) and is sent as a single param.
 	t.Run("a value may itself contain an equals sign", func(t *testing.T) {
 		inputs := &apiCmdInputs{RawQueryParams: []string{"q=name=foo"}}
 		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
 		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?q=name%3Dfoo", inputs.URL.String())
 	})
 
-	// The historical comma-separated multi-pair form must still expand to separate
-	// params, so a script relying on the old stringToString behavior keeps working.
-	t.Run("a comma-separated value expands to multiple params", func(t *testing.T) {
-		inputs := &apiCmdInputs{RawQueryParams: []string{"from=20221101,to=20221118"}}
-		require.NoError(t, inputs.fromArgs([]string{"get", "stats/daily"}, testDomain))
-		assert.Equal(t, "https://"+testDomain+"/api/v2/stats/daily?from=20221101&to=20221118", inputs.URL.String())
+	// A comma is a literal value character, so a comma-separated list is sent as
+	// a single param the way the Management API expects `fields`, `include_fields`,
+	// and similar.
+	t.Run("a comma-separated list is sent as a single param value", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=a,b,c"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=a%2Cb%2Cc", inputs.URL.String())
+	})
+
+	// A value carrying both commas and "=" (a Lucene query with multiple clauses)
+	// stays a single param instead of being mis-split on either character.
+	t.Run("a comma-and-equals value stays a single param", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"q=name=John,email=jane@x.com"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "users"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/users?q=name%3DJohn%2Cemail%3Djane%40x.com", inputs.URL.String())
+	})
+
+	t.Run("a list value and a distinct keyed param coexist", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"fields=a,b,c", "include_fields=true"}}
+		require.NoError(t, inputs.fromArgs([]string{"get", "clients"}, testDomain))
+		assert.Equal(t, "https://"+testDomain+"/api/v2/clients?fields=a%2Cb%2Cc&include_fields=true", inputs.URL.String())
 	})
 
 	// The registered flag delivers a comma-separated value whole (StringArray);
-	// the comma split into pairs happens later, in validateAndSetEndpoint.
+	// validateAndSetEndpoint then keeps it as one param value.
 	t.Run("the -q flag delivers a comma-separated value unsplit", func(t *testing.T) {
 		cmd := apiCmd(&cli{renderer: &display.Renderer{}})
 		require.NoError(t, cmd.Flags().Parse([]string{"-q", "from=1,to=2"}))
@@ -276,6 +293,15 @@ func TestAPICmdInputs_QueryParams(t *testing.T) {
 		err := inputs.fromArgs([]string{"get", "clients"}, testDomain)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), `invalid query parameter "fields": expected key=value`)
+	})
+
+	// A leading "=" leaves the key empty, which would encode a nameless "?=value"
+	// param, so it is rejected the same way a missing "=" is.
+	t.Run("a query param with an empty key is rejected", func(t *testing.T) {
+		inputs := &apiCmdInputs{RawQueryParams: []string{"=name"}}
+		err := inputs.fromArgs([]string{"get", "clients"}, testDomain)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), `invalid query parameter "=name": expected key=value`)
 	})
 }
 
