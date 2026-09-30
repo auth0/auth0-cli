@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.37.0](https://github.com/auth0/auth0-cli/tree/v1.37.0) (September 30, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.36.0...v1.37.0)
+
+### Added
+- Add non-persistent env-based authentication mode (`AUTH0_CLI_AUTH_MODE=env`) for agents, CI, and sandboxes that cannot use the OS keychain; domain validation and a new `stored_token_unavailable` error for unreadable keychains [#1692]
+- Add `auth0 docs search` command to discover Auth0 documentation from the terminal, with `--json`, `--csv`, and `--open` support [#1686]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 logs list`, `auth0 domains`, `auth0 email templates update`, `auth0 universal-login update`, `auth0 universal-login prompts update`, and `auth0 acul config` commands [#1691]
+- Add `--organization-usage`, `--organization-require-behavior`, and `--organization-discovery-methods` flags to `auth0 apps create` and `auth0 apps update` [#1690]
+
+### Changed
+- Add `mfa` alias to `auth0 guardian` for easier discovery [#1687]
+- Show a wrong-verb hint in the JSON error envelope and interactive output when a `PATCH` request returns a generic 404, suggesting the caller try `PUT` [#1687]
+
+### Fixed
+- Fix `-q` flag in `auth0 api` to treat each value as a single query parameter, preserving comma-separated values like `fields=a,b,c` instead of splitting them [#1689]
+
 # [v1.36.0](https://github.com/auth0/auth0-cli/tree/v1.36.0) (September 18, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.35.0...v1.36.0)
