@@ -240,6 +240,21 @@ func TestFormatManageTenantURL(t *testing.T) {
 	assert.Equal(t, formatManageTenantURL(tenantDomain, &config.Config{Tenants: map[string]config.Tenant{tenantDomain: {Name: "some-tenant"}}}), "https://manage.auth0.com/dashboard/us/some-tenant/")
 }
 
+func TestOpenManageURLErrorsWhenTenantNotSaved(t *testing.T) {
+	// With no saved tenant metadata (as in env auth mode, which persists nothing)
+	// the dashboard URL cannot be built. The command must fail with a tagged error
+	// rather than exit 0 with no output, which is what agent mode would otherwise
+	// do since the old warning was suppressed there.
+	c := &cli{}
+
+	err := openManageURL(c, "tenant.us.auth0.com", "applications/app_example/settings")
+	assert.Error(t, err)
+
+	var authErr authError
+	assert.True(t, errors.As(err, &authErr))
+	assert.Equal(t, "dashboard_url_unavailable", authErr.reason)
+}
+
 func TestContainsStr(t *testing.T) {
 	assert.False(t, containsStr([]string{"string-1", "string-2"}, "string-3"))
 	assert.True(t, containsStr([]string{"string-1", "string-2"}, "string-1"))

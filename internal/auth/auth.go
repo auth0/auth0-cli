@@ -137,7 +137,7 @@ var RequiredScopes = []string{
 	"read:flows_executions",
 	"read:forms", "create:forms", "update:forms", "delete:forms",
 	"read:flows_vault_connections", "create:flows_vault_connections", "update:flows_vault_connections", "delete:flows_vault_connections",
-	"read:connections", "update:connections", "read:connections_options", "update:connections_options",
+	"create:connections", "read:connections", "update:connections", "delete:connections", "read:connections_options", "update:connections_options",
 	"read:client_keys", "read:logs", "read:tenant_settings", "update:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
@@ -153,6 +153,9 @@ var RequiredScopes = []string{
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
 	"read:sessions", "update:sessions", "delete:sessions",
 	"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
+	"read:guardian_factors", "update:guardian_factors",
+	"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
+	"read:mfa_policies", "update:mfa_policies",
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting
@@ -245,6 +248,16 @@ func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) 
 	u, err := url.Parse("https://" + args.Domain)
 	if err != nil {
 		return Result{}, err
+	}
+
+	// Guard against a domain that parses to a different host (for example
+	// "tenant.example@evil.example"), which would POST the client secret to that
+	// other host. Require it to be a bare host that parses back to itself.
+	if u.User != nil || u.Host != args.Domain || u.Path != "" {
+		return Result{}, fmt.Errorf(
+			"invalid tenant domain %q: expected a bare host such as tenant.us.auth0.com",
+			args.Domain,
+		)
 	}
 
 	credsConfig := &clientcredentials.Config{

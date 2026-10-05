@@ -23,6 +23,8 @@ auth0 logs tail [flags]
   auth0 logs tail --filter "ip:<ip>"
   auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
   auth0 logs tail -n 10
+  auth0 logs tail --json
+  auth0 logs tail --json-compact
 ```
 
 
@@ -30,6 +32,8 @@ auth0 logs tail [flags]
 
 ```
   -f, --filter string   Filter in Lucene query syntax. See https://auth0.com/docs/logs/log-search-query-syntax for more details.
+      --json            Tail logs as a stream of JSON, one indented object per event (newline-delimited compact objects in agent mode).
+      --json-compact    Tail logs as newline-delimited JSON, one compact object per event.
   -n, --number int      Number of log entries to show. Minimum 1, maximum 1000. (default 100)
 ```
 

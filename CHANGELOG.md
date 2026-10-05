@@ -8,6 +8,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.37.0](https://github.com/auth0/auth0-cli/tree/v1.37.0) (September 30, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.36.0...v1.37.0)
+
+### Added
+- Add non-persistent env-based authentication mode (`AUTH0_CLI_AUTH_MODE=env`) for agents, CI, and sandboxes that cannot use the OS keychain; domain validation and a new `stored_token_unavailable` error for unreadable keychains [#1692]
+- Add `auth0 docs search` command to discover Auth0 documentation from the terminal, with `--json`, `--csv`, and `--open` support [#1686]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 logs list`, `auth0 domains`, `auth0 email templates update`, `auth0 universal-login update`, `auth0 universal-login prompts update`, and `auth0 acul config` commands [#1691]
+- Add `--organization-usage`, `--organization-require-behavior`, and `--organization-discovery-methods` flags to `auth0 apps create` and `auth0 apps update` [#1690]
+
+### Changed
+- Add `mfa` alias to `auth0 guardian` for easier discovery [#1687]
+
+### Fixed
+- Fix `-q` flag in `auth0 api` to treat each value as a single query parameter, preserving comma-separated values like `fields=a,b,c` instead of splitting them [#1689]
+- Hint that `auth0 api` should retry with `PUT` when a `PATCH` request returns a generic 404 [#1687]
+
+# [v1.36.0](https://github.com/auth0/auth0-cli/tree/v1.36.0) (September 18, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.35.0...v1.36.0)
+
+### Added
+- Add native `auth0 connections` commands to manage connections and their enabled clients [#1662]
+- Add `auth0 guardian` commands to manage multi-factor authentication (MFA) policies, enrollments, and factors [#1646]
+- Add a machine-readable JSON error envelope with stable failure classes in JSON and agent mode [#1663]
+- Add field-level validation `details`, a `reason` field, and a `network` failure class to the JSON error envelope [#1670]
+- Add `--data` file and stdin sources and `--json`/`--json-compact` output to `auth0 api` [#1669]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 apps` commands [#1664]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 apis` commands [#1661]
+- Add `--schema` and `--data` flags to `auth0 users` commands [#1660]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 roles` commands [#1659]
+- Add `--version1` and `--version2` flags to `auth0 actions diff` [#1666]
+- Add a warning when `--data` is sent without local schema validation [#1673]
+
+### Changed
+- Emit fully machine-readable JSON output in agent mode, with newline-delimited streaming, a trailing newline on JSON stdout, clean stderr, and JSON help [#1665]
+- Emit machine-readable agent-mode output for interactive and browser-based commands, and fail fast instead of hanging when a TTY or browser is unavailable [#1681]
+- Honor `--json-compact` and signal pagination in `--query` list output [#1672]
+
+### Fixed
+- Harden agent input handling and reject unknown flags on command groups with a usage error [#1666]
+- Fix `--query` filter encoding to send arrays as repeated parameters and preserve numeric literals [#1671]
+- Classify local command failures and `409`/`410`/`415` API responses in the JSON error envelope instead of the generic `unknown` [#1680]
+- Fix `--json-compact` output for `auth0 event-streams` delivery and stream stats [#1677]
+- Fix `--data` validation to reject malformed JSON locally for operations without a request schema [#1674]
+- Fix `--data`, `--query`, and `--schema` being incorrectly rejected by required-flag validation [#1667]
+
+### Removed
+- Remove non-functional rule flags from `auth0 network-acl create` and `update` in favor of `--rule` [#1675]
+
 # [v1.35.0](https://github.com/auth0/auth0-cli/tree/v1.35.0) (September 10, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.34.0...v1.35.0)
@@ -806,7 +856,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.35.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.37.0...HEAD
+[#1692]: https://github.com/auth0/auth0-cli/pull/1692
+[#1691]: https://github.com/auth0/auth0-cli/pull/1691
+[#1690]: https://github.com/auth0/auth0-cli/pull/1690
+[#1689]: https://github.com/auth0/auth0-cli/pull/1689
+[#1687]: https://github.com/auth0/auth0-cli/pull/1687
+[#1686]: https://github.com/auth0/auth0-cli/pull/1686
+[#1681]: https://github.com/auth0/auth0-cli/pull/1681
+[#1680]: https://github.com/auth0/auth0-cli/pull/1680
+[#1677]: https://github.com/auth0/auth0-cli/pull/1677
+[#1675]: https://github.com/auth0/auth0-cli/pull/1675
+[#1674]: https://github.com/auth0/auth0-cli/pull/1674
+[#1673]: https://github.com/auth0/auth0-cli/pull/1673
+[#1672]: https://github.com/auth0/auth0-cli/pull/1672
+[#1671]: https://github.com/auth0/auth0-cli/pull/1671
+[#1670]: https://github.com/auth0/auth0-cli/pull/1670
+[#1669]: https://github.com/auth0/auth0-cli/pull/1669
+[#1667]: https://github.com/auth0/auth0-cli/pull/1667
+[#1666]: https://github.com/auth0/auth0-cli/pull/1666
+[#1665]: https://github.com/auth0/auth0-cli/pull/1665
+[#1664]: https://github.com/auth0/auth0-cli/pull/1664
+[#1663]: https://github.com/auth0/auth0-cli/pull/1663
+[#1662]: https://github.com/auth0/auth0-cli/pull/1662
+[#1661]: https://github.com/auth0/auth0-cli/pull/1661
+[#1660]: https://github.com/auth0/auth0-cli/pull/1660
+[#1659]: https://github.com/auth0/auth0-cli/pull/1659
+[#1646]: https://github.com/auth0/auth0-cli/pull/1646
 [#1653]: https://github.com/auth0/auth0-cli/pull/1653
 [#1652]: https://github.com/auth0/auth0-cli/pull/1652
 [#1648]: https://github.com/auth0/auth0-cli/pull/1648

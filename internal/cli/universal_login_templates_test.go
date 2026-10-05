@@ -24,6 +24,10 @@ func (m mockManagamentError) Status() int {
 	return m.status
 }
 
+func (m mockManagamentError) Code() string {
+	return ""
+}
+
 func TestEnsureCustomDomainIsEnabled(t *testing.T) {
 	tests := []struct {
 		name         string

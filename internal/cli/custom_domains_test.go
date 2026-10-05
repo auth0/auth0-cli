@@ -23,6 +23,10 @@ func (m mockManagementError) Status() int {
 	return m.statusCode
 }
 
+func (m mockManagementError) Code() string {
+	return ""
+}
+
 func TestAPIProvisioningTypeFor(t *testing.T) {
 	t.Run("maps the 'auth0' provisioning type", func(t *testing.T) {
 		provisioningType := "auth0"

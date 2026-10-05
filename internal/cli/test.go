@@ -278,7 +278,7 @@ func testTokenCmd(cli *cli) *cobra.Command {
 
 			var managementAPI = "https://" + cli.tenant + "/api/v2/"
 
-			if len(inputs.Scopes) == 0 && inputs.Audience != managementAPI {
+			if len(inputs.Scopes) == 0 && inputs.Audience != managementAPI && canPrompt(cmd) {
 				if err := cli.pickTokenScopes(cmd.Context(), &inputs); err != nil {
 					return err
 				}

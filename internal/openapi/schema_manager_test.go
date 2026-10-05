@@ -166,6 +166,71 @@ func TestFormatAsText(t *testing.T) {
 	assert.Contains(t, textOutput, "supported_triggers")
 }
 
+// arrayBodyFixtureDoc models an operation whose request body is a top-level array
+// of objects, like PATCH /connections/{id}/clients (an array of {client_id, status}).
+const arrayBodyFixtureDoc = `{
+  "openapi": "3.0.0",
+  "info": {"title": "fixture", "version": "1.0.0"},
+  "paths": {
+    "/connections/{id}/clients": {
+      "patch": {
+        "operationId": "patch_enabled_clients",
+        "summary": "Update enabled clients",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["client_id", "status"],
+                  "properties": {
+                    "client_id": {"type": "string"},
+                    "status": {"type": "boolean"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`
+
+func TestFormatAsText_TopLevelArrayBody(t *testing.T) {
+	doc, err := LoadDocFromData([]byte(arrayBodyFixtureDoc))
+	require.NoError(t, err)
+
+	opSchema, err := NewSchemaManagerFromDoc(doc).GetOperationSchema("PATCH", "/connections/{id}/clients")
+	require.NoError(t, err)
+
+	textOutput := opSchema.FormatAsText()
+
+	// A top-level array body must descend into its item schema so the fields
+	// surface, rather than stopping at a bare "Type: array".
+	assert.Contains(t, textOutput, "Request Payload:")
+	assert.Contains(t, textOutput, "Type: array")
+	assert.Contains(t, textOutput, "client_id")
+	assert.Contains(t, textOutput, "status")
+}
+
+func TestFormatAsJSON_TopLevelArrayBody(t *testing.T) {
+	doc, err := LoadDocFromData([]byte(arrayBodyFixtureDoc))
+	require.NoError(t, err)
+
+	opSchema, err := NewSchemaManagerFromDoc(doc).GetOperationSchema("PATCH", "/connections/{id}/clients")
+	require.NoError(t, err)
+
+	jsonOutput, err := opSchema.FormatAsJSON()
+	require.NoError(t, err)
+
+	assert.Contains(t, jsonOutput, "request_schema")
+	assert.Contains(t, jsonOutput, "client_id")
+	assert.Contains(t, jsonOutput, "status")
+}
+
 func TestValidateRequest(t *testing.T) {
 	manager, err := NewSchemaManager()
 	require.NoError(t, err)
@@ -212,13 +277,60 @@ func TestValidateRequest(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, result)
 
-			assert.Equal(t, tt.expectValid, result.Valid)
-
-			if !tt.expectValid {
+			if tt.expectValid {
+				assert.Equal(t, StatusValid, result.Status)
+			} else {
+				assert.Equal(t, StatusInvalid, result.Status)
 				assert.NotEmpty(t, result.Errors)
 			}
 		})
 	}
+}
+
+func TestValidateRequestReportsStatus(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	// An operation with a request schema: the payload is actually checked.
+	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{
+		"name": "my-action",
+		"supported_triggers": [{"id": "post-login", "version": "v3"}],
+		"code": "module.exports = () => {}"
+	}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusValid, result.Status, "an operation with a request schema whose payload passes is StatusValid")
+
+	// An operation that resolves but defines no request body schema: reported
+	// as StatusNoSchema (nothing to check against, sent as-is).
+	result, err = manager.ValidateRequest("DELETE", "/actions/actions/{id}", []byte(`{}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoSchema, result.Status, "an operation without a request schema is StatusNoSchema")
+}
+
+// TestValidateRequestChecksJSONWithoutSchema pins the fix for the case where a
+// schema-less operation skipped the JSON syntax check: malformed --data must fail
+// locally as StatusInvalid rather than being shipped to the API as opaque bytes.
+func TestValidateRequestChecksJSONWithoutSchema(t *testing.T) {
+	const doc = `{
+		"openapi": "3.0.0",
+		"info": {"title": "fixture", "version": "1.0.0"},
+		"paths": {"/deploy": {"post": {"operationId": "post_deploy"}}}
+	}`
+	parsed, err := LoadDocFromData([]byte(doc))
+	require.NoError(t, err)
+	manager := NewSchemaManagerFromDoc(parsed)
+
+	// Well-formed JSON against a schema-less op: nothing to check, sent as-is.
+	result, err := manager.ValidateRequest("POST", "/deploy", []byte(`{"anything": true}`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusNoSchema, result.Status)
+
+	// Malformed JSON against the same schema-less op: caught locally.
+	result, err = manager.ValidateRequest("POST", "/deploy", []byte(`{"broken":`))
+	require.NoError(t, err)
+	assert.Equal(t, StatusInvalid, result.Status, "malformed JSON must fail even without a schema")
+	require.NotEmpty(t, result.Errors)
+	assert.Contains(t, result.Errors[0], "Invalid JSON")
 }
 
 func TestValidateRequestActionUpdatePath(t *testing.T) {
@@ -231,7 +343,7 @@ func TestValidateRequestActionUpdatePath(t *testing.T) {
 	result, err := manager.ValidateRequest("PATCH", "/actions/actions/{id}", body)
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.True(t, result.Valid, "templated path should validate; errors: %v", result.Errors)
+	assert.Equal(t, StatusValid, result.Status, "templated path should validate; errors: %v", result.Errors)
 
 	// Concrete-ID path: the operation cannot be found, so ValidateRequest errors.
 	// This is exactly the trap that broke `auth0 actions update --data`.
@@ -269,7 +381,7 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(tt.body))
 			require.NoError(t, err)
-			require.False(t, result.Valid)
+			require.Equal(t, StatusInvalid, result.Status)
 			require.NotEmpty(t, result.Errors)
 
 			joined := strings.Join(result.Errors, "\n")
@@ -280,6 +392,51 @@ func TestValidateRequestErrorsAreResolved(t *testing.T) {
 			assert.Contains(t, joined, tt.wantContains)
 		})
 	}
+}
+
+func TestValidateRequestPopulatesStructuredFieldErrors(t *testing.T) {
+	manager, err := NewSchemaManager()
+	require.NoError(t, err)
+
+	t.Run("a schema violation carries a JSONPath field and a reason", func(t *testing.T) {
+		result, err := manager.ValidateRequest(
+			"POST", "/actions/actions",
+			[]byte(`{"name": "x", "supported_triggers": [{"id": "not-a-trigger", "version": "v3"}]}`),
+		)
+		require.NoError(t, err)
+		require.Equal(t, StatusInvalid, result.Status)
+		require.NotEmpty(t, result.FieldErrors)
+
+		// FieldErrors and the human-readable Errors describe the same failures.
+		require.Len(t, result.Errors, len(result.FieldErrors))
+		for i, fe := range result.FieldErrors {
+			assert.Equal(t, fe.String(), result.Errors[i])
+		}
+
+		var found bool
+		for _, fe := range result.FieldErrors {
+			if fe.Field == "supported_triggers[0].id" {
+				found = true
+				assert.NotEmpty(t, fe.Reason)
+				assert.NotContains(t, fe.Reason, "$ref")
+			}
+		}
+		assert.True(t, found, "expected a field error located at supported_triggers[0].id")
+	})
+
+	t.Run("malformed JSON yields a field error with no location", func(t *testing.T) {
+		result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{`))
+		require.NoError(t, err)
+		require.Equal(t, StatusInvalid, result.Status)
+		require.Len(t, result.FieldErrors, 1)
+		assert.Empty(t, result.FieldErrors[0].Field)
+		assert.Contains(t, result.FieldErrors[0].Reason, "Invalid JSON")
+	})
+}
+
+func TestFieldErrorString(t *testing.T) {
+	assert.Equal(t, "name: is required", FieldError{Field: "name", Reason: "is required"}.String())
+	assert.Equal(t, "Invalid JSON: x", FieldError{Reason: "Invalid JSON: x"}.String())
 }
 
 func TestJSONPath(t *testing.T) {
@@ -311,7 +468,7 @@ func TestValidateRequestReportsAllErrors(t *testing.T) {
 	// all of them, not stop at the first.
 	result, err := manager.ValidateRequest("POST", "/actions/actions", []byte(`{}`))
 	require.NoError(t, err)
-	require.False(t, result.Valid)
+	require.Equal(t, StatusInvalid, result.Status)
 
 	assert.GreaterOrEqual(t, len(result.Errors), 2)
 	joined := strings.Join(result.Errors, "\n")

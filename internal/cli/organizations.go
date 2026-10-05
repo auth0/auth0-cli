@@ -209,7 +209,7 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
   auth0 orgs ls -n 100`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			list, err := getWithPagination(
@@ -575,8 +575,7 @@ func openOrganizationCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatOrganizationDetailsPath(url.PathEscape(inputs.ID)))
-			return nil
+			return openManageURL(cli, cli.tenant, formatOrganizationDetailsPath(url.PathEscape(inputs.ID)))
 		},
 	}
 
@@ -616,7 +615,7 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs members ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if len(args) == 0 {
@@ -687,7 +686,7 @@ func listRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if len(args) == 0 {
@@ -763,7 +762,7 @@ func listMembersRolesOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs roles members ls <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if len(args) == 0 {
@@ -1117,7 +1116,7 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs invs ls --org-id <org-id> --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {

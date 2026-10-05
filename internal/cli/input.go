@@ -144,7 +144,7 @@ func isInputRequired(i commandInput, isUpdate bool) bool {
 
 func handleInputError(err error) error {
 	if err == terminal.InterruptErr {
-		os.Exit(0)
+		os.Exit(exitInterrupted)
 	}
 
 	return unexpectedError(err)

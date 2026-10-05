@@ -11,6 +11,9 @@ To update interactively, use `auth0 domains update` with no arguments.
 
 To update non-interactively, supply the domain name, type, policy and other information through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 domains update [flags]
@@ -25,17 +28,28 @@ auth0 domains update [flags]
   auth0 domains update <domain-id> --metadata '{"key1":"value1","key2":null}'
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json
   auth0 domains update <domain-id> -p compatible -i "cf-connecting-ip" --json-compact
+
+  # Discover the payload schema
+  auth0 domains update --schema
+  auth0 domains update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 domains update <domain-id> --data '{"tls_policy":"recommended"}'
+  auth0 domains update <domain-id> --data @domain.json
+  cat domain.json | auth0 domains update <domain-id>
 ```
 
 
 ## Flags
 
 ```
+      --data string        JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -i, --ip-header string   The HTTP header to fetch the client's IP address.
       --json               Output in json format.
       --json-compact       Output in compact json format.
   -m, --metadata string    The Custom Domain Metadata, formatted as JSON.
   -p, --policy string      The TLS version policy. Can be either 'compatible' or 'recommended'.
+      --schema             Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

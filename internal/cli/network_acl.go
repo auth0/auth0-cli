@@ -51,78 +51,6 @@ var (
 		Help:       "Network ACL rule configuration in JSON format (required for non-interactive mode).",
 		IsRequired: true,
 	}
-
-	networkACLRuleAction = Flag{
-		Name:     "Action",
-		LongForm: "action",
-		Help:     "Action for the rule (block, allow, log, redirect)",
-	}
-
-	networkACLRedirectURI = Flag{
-		Name:     "RedirectURI",
-		LongForm: "redirect-uri",
-		Help:     "URI to redirect to when action is redirect (Eg. \"https://example.com/blocked\")",
-	}
-
-	networkACLScope = Flag{
-		Name:     "Scope",
-		LongForm: "scope",
-		Help:     "Scope of the rule (management, authentication, tenant)",
-	}
-
-	networkACLASNs = Flag{
-		Name:     "ASNs",
-		LongForm: "asns",
-		Help:     "Comma-separated list of ASNs to match (Eg. 64496,64497,64498)",
-	}
-
-	networkACLCountryCodes = Flag{
-		Name:     "CountryCodes",
-		LongForm: "country-codes",
-		Help:     "Comma-separated list of country codes to match (Eg. US,CA,MX)",
-	}
-
-	networkACLSubdivisionCodes = Flag{
-		Name:     "SubdivisionCodes",
-		LongForm: "subdivision-codes",
-		Help:     "Comma-separated list of subdivision codes to match (Eg. US-NY,US-CA)",
-	}
-
-	networkACLIPv4CIDRs = Flag{
-		Name:     "IPv4CIDRs",
-		LongForm: "ipv4-cidrs",
-		Help:     "Comma-separated list of IPv4 CIDR ranges (Eg. 192.168.1.0/24,10.0.0.0/8)",
-	}
-
-	networkACLIPv6CIDRs = Flag{
-		Name:     "IPv6CIDRs",
-		LongForm: "ipv6-cidrs",
-		Help:     "Comma-separated list of IPv6 CIDR ranges (Eg. 2001:db8::/32,2001:db8:1234::/48)",
-	}
-
-	networkACLJA3Fingerprints = Flag{
-		Name:     "JA3Fingerprints",
-		LongForm: "ja3-fingerprints",
-		Help:     "Comma-separated list of JA3 fingerprints to match (Eg. deadbeef,cafebabe)",
-	}
-
-	networkACLJA4Fingerprints = Flag{
-		Name:     "JA4Fingerprints",
-		LongForm: "ja4-fingerprints",
-		Help:     "Comma-separated list of JA4 fingerprints to match (Eg. t13d1516h2_8daaf6152771)",
-	}
-
-	networkACLUserAgents = Flag{
-		Name:     "UserAgents",
-		LongForm: "user-agents",
-		Help:     "Comma-separated list of user agents to match (Eg. badbot/*,malicious/*)",
-	}
-
-	networkACLAuth0Managed = Flag{
-		Name:     "Auth0Managed",
-		LongForm: "auth0-managed",
-		Help:     "Comma-separated list of Auth0-curated blocklists to match (Eg. auth0.icloud_relay_proxy,auth0.low_reputation). (EA only).",
-	}
 )
 
 // networkACLBasicInputs holds the flag-driven fields shared by create and update.
@@ -138,10 +66,10 @@ type networkACLBasicInputs struct {
 // validateNetworkACLDescription ensures the description is non-empty and within the API length limit.
 func validateNetworkACLDescription(description string) error {
 	if len(description) == 0 {
-		return fmt.Errorf("description cannot be empty")
+		return validationError{err: fmt.Errorf("description cannot be empty"), reason: "invalid_flag_value"}
 	}
 	if len(description) > 255 {
-		return fmt.Errorf("description cannot exceed 255 characters")
+		return validationError{err: fmt.Errorf("description cannot exceed 255 characters"), reason: "invalid_flag_value"}
 	}
 	return nil
 }
@@ -158,7 +86,7 @@ func validateAndSetBasicFields(inputs *networkACLBasicInputs, patch *management.
 	if networkACLActive.IsSet(cmd) {
 		active, err := strconv.ParseBool(inputs.ActiveStr)
 		if err != nil {
-			return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+			return usageError{err: fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr), reason: "invalid_flag_value"}
 		}
 		inputs.Active = active
 		patch.Active = &inputs.Active
@@ -215,7 +143,7 @@ func selectNetworkACLParams() (map[string]bool, error) {
 	}
 
 	if len(selected) == 0 {
-		return nil, errors.New("at least one parameter must be selected")
+		return nil, usageError{err: errors.New("at least one parameter must be selected"), reason: "missing_required_flags"}
 	}
 
 	// Convert selected slice to map for easier lookup.
@@ -399,7 +327,7 @@ func promptForRuleDetails(cmd *cobra.Command, cli *cli, defaults *ruleDefaults, 
 			return nil, err
 		}
 		if inputs.RedirectURI == "" {
-			return nil, fmt.Errorf("redirect URI is required when action is redirect")
+			return nil, usageError{err: fmt.Errorf("redirect URI is required when action is redirect"), reason: "missing_required_flags"}
 		}
 	}
 
@@ -689,7 +617,7 @@ func buildNetworkACLRule(inputs *ruleInputs) (*management.NetworkACLRule, error)
 	}
 
 	if !matchProvided {
-		return nil, fmt.Errorf("at least one match criteria must be provided")
+		return nil, usageError{err: fmt.Errorf("at least one match criteria must be provided"), reason: "missing_required_flags"}
 	}
 
 	// Set match or notmatch based on user choice.
@@ -832,7 +760,7 @@ The --rule parameter is required and must contain a valid JSON object with actio
 			if networkACLActive.IsSet(cmd) {
 				active, err := strconv.ParseBool(inputs.ActiveStr)
 				if err != nil {
-					return fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr)
+					return usageError{err: fmt.Errorf("--active must be either 'true' or 'false', got %q", inputs.ActiveStr), reason: "invalid_flag_value"}
 				}
 				inputs.Active = active
 			}
@@ -887,7 +815,6 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	networkACLActive.RegisterString(cmd, &inputs.ActiveStr, "")
 	networkACLPriority.RegisterInt(cmd, &inputs.Priority, 0)
 	networkACLRule.RegisterString(cmd, &inputs.RuleJSON, "")
-	registerDeprecatedRuleFlags(cmd)
 
 	return cmd
 }
@@ -930,7 +857,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 				networkACLPriority.IsSet(cmd) || networkACLRule.IsSet(cmd)
 
 			if !canPrompt(cmd) && !flagsProvided {
-				return fmt.Errorf("in non-interactive mode, at least one field must be specified to update")
+				return usageError{err: fmt.Errorf("in non-interactive mode, at least one field must be specified to update"), reason: "missing_required_flags"}
 			}
 
 			// Build patch object with only the fields that should be updated.
@@ -999,7 +926,6 @@ To update non-interactively, supply the description, active, priority, and rule 
 	networkACLActive.RegisterStringU(cmd, &inputs.ActiveStr, "")
 	networkACLPriority.RegisterIntU(cmd, &inputs.Priority, 1)
 	networkACLRule.RegisterStringU(cmd, &inputs.RuleJSON, "")
-	registerDeprecatedRuleFlags(cmd)
 
 	return cmd
 }
@@ -1118,53 +1044,4 @@ func (c *cli) networkACLPickerOptions(ctx context.Context) (pickerOptions, error
 	}
 
 	return opts, nil
-}
-
-const deprecatedRuleFlagMessage = "use `--rule` flag to set the configuration as JSON."
-
-func registerDeprecatedRuleFlags(cmd *cobra.Command) {
-	var (
-		action       string
-		redirectURI  string
-		scope        string
-		asns         []int
-		countryCodes []string
-		subdivCodes  []string
-		ipv4CIDRs    []string
-		ipv6CIDRs    []string
-		ja3          []string
-		ja4          []string
-		userAgents   []string
-		auth0Managed []string
-	)
-
-	networkACLRuleAction.RegisterString(cmd, &action, "")
-	networkACLRedirectURI.RegisterString(cmd, &redirectURI, "")
-	networkACLScope.RegisterString(cmd, &scope, "")
-	networkACLASNs.RegisterIntSlice(cmd, &asns, nil)
-	networkACLCountryCodes.RegisterStringSlice(cmd, &countryCodes, nil)
-	networkACLSubdivisionCodes.RegisterStringSlice(cmd, &subdivCodes, nil)
-	networkACLIPv4CIDRs.RegisterStringSlice(cmd, &ipv4CIDRs, nil)
-	networkACLIPv6CIDRs.RegisterStringSlice(cmd, &ipv6CIDRs, nil)
-	networkACLJA3Fingerprints.RegisterStringSlice(cmd, &ja3, nil)
-	networkACLJA4Fingerprints.RegisterStringSlice(cmd, &ja4, nil)
-	networkACLUserAgents.RegisterStringSlice(cmd, &userAgents, nil)
-	networkACLAuth0Managed.RegisterStringSlice(cmd, &auth0Managed, nil)
-
-	for _, f := range []*Flag{
-		&networkACLRuleAction,
-		&networkACLRedirectURI,
-		&networkACLScope,
-		&networkACLASNs,
-		&networkACLCountryCodes,
-		&networkACLSubdivisionCodes,
-		&networkACLIPv4CIDRs,
-		&networkACLIPv6CIDRs,
-		&networkACLJA3Fingerprints,
-		&networkACLJA4Fingerprints,
-		&networkACLUserAgents,
-		&networkACLAuth0Managed,
-	} {
-		f.Deprecate(cmd, deprecatedRuleFlagMessage)
-	}
 }

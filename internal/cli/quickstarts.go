@@ -652,7 +652,7 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 			return fmt.Errorf("failed to enter port: %w", err)
 		}
 		if inputs.Port < 1024 || inputs.Port > 65535 {
-			return fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port)
+			return usageError{err: fmt.Errorf("invalid port number: %d (must be between 1024 and 65535)", inputs.Port), reason: "invalid_flag_value"}
 		}
 	}
 
@@ -689,7 +689,7 @@ func resolveSetupTargets(inputs *SetupInputs, canPromptFlag bool) error {
 		return nil
 	}
 	if !canPromptFlag {
-		return fmt.Errorf("in --no-input mode, specify at least one of --app or --api")
+		return usageError{err: fmt.Errorf("in --no-input mode, specify at least one of --app or --api"), reason: "missing_required_flags"}
 	}
 
 	const (
@@ -745,7 +745,7 @@ func resolveAPIAppLink(
 	}
 
 	if !canPromptFlag {
-		return fmt.Errorf("in --no-input mode with --api, specify --app to create a new app or --linked-app-id <client-id> to link an existing one")
+		return usageError{err: fmt.Errorf("in --no-input mode with --api, specify --app to create a new app or --linked-app-id <client-id> to link an existing one"), reason: "missing_required_flags"}
 	}
 
 	const (
@@ -787,7 +787,7 @@ func resolveAPIAppLink(
 func collectName(cmd *cobra.Command, inputs *SetupInputs) error {
 	if setupName.IsSet(cmd) {
 		if inputs.Name == "" {
-			return fmt.Errorf("application name cannot be empty")
+			return usageError{err: fmt.Errorf("application name cannot be empty"), reason: "invalid_flag_value"}
 		}
 		return nil
 	}
@@ -803,7 +803,7 @@ func collectName(cmd *cobra.Command, inputs *SetupInputs) error {
 			return fmt.Errorf("failed to enter application name: %w", err)
 		}
 		if inputs.Name == "" {
-			return fmt.Errorf("application name cannot be empty")
+			return usageError{err: fmt.Errorf("application name cannot be empty"), reason: "invalid_flag_value"}
 		}
 
 	case inputs.API && inputs.Name == "":
@@ -834,7 +834,7 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 		}
 	}
 	if inputs.Identifier == "" {
-		return fmt.Errorf("API identifier cannot be empty: use --identifier flag")
+		return usageError{err: fmt.Errorf("API identifier cannot be empty: use --identifier flag"), reason: "missing_required_flags"}
 	}
 	if err := validateAPIIdentifier(inputs.Identifier); err != nil {
 		return err
@@ -868,7 +868,7 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 		}
 	}
 	if alg := inputs.SigningAlg; alg != "RS256" && alg != "PS256" && alg != "HS256" {
-		return fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg)
+		return usageError{err: fmt.Errorf("invalid signing algorithm %q: must be RS256, PS256, or HS256", alg), reason: "invalid_flag_value"}
 	}
 
 	return nil
@@ -1017,12 +1017,15 @@ func validateNonInteractiveRequirements(inputs SetupInputs, canPromptFlag bool) 
 func printClientDetails(cli *cli, client *management.Client) {
 	cli.renderer.Successf("App %s has been created in the management console", ansi.Magenta(client.GetName()))
 	cli.renderer.Newline()
-	manageTenantURL := formatManageTenantURL(cli.Config.DefaultTenant, &cli.Config)
 
-	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAppSettingsPath(client.GetClientID()))
-	cli.renderer.Successf("You can manage your application %s(%s) from here:", client.GetName(), ansi.Magenta(client.GetClientID()))
-	cli.renderer.Detailf(ansi.Magenta(settingsURL))
-	cli.renderer.Newline()
+	// The dashboard link needs saved tenant metadata, absent in env auth mode. Only
+	// print it when it can be built, otherwise it would show a bare relative path.
+	if manageTenantURL := formatManageTenantURL(cli.tenant, &cli.Config); manageTenantURL != "" {
+		settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAppSettingsPath(client.GetClientID()))
+		cli.renderer.Successf("You can manage your application %s(%s) from here:", client.GetName(), ansi.Magenta(client.GetClientID()))
+		cli.renderer.Detailf(ansi.Magenta(settingsURL))
+		cli.renderer.Newline()
+	}
 
 	if len(client.GetCallbacks()) > 0 {
 		cli.renderer.Successf("Callback URLs registered in Auth0 Dashboard: %s", ansi.Magenta(strings.Join(client.GetCallbacks(), ", ")))
@@ -1040,11 +1043,13 @@ func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 	cli.renderer.Detailf("Identifier: %s", ansi.Magenta(rs.GetIdentifier()))
 	cli.renderer.Newline()
 
-	manageTenantURL := formatManageTenantURL(cli.Config.DefaultTenant, &cli.Config)
-	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAPISettingsPath(rs.GetID()))
-
-	cli.renderer.Successf("You can manage your API from here:")
-	cli.renderer.Detailf("%s", ansi.Magenta(settingsURL))
+	// Skip the dashboard link when no saved tenant metadata is available (env auth
+	// mode), otherwise it would print a relative path.
+	if manageTenantURL := formatManageTenantURL(cli.tenant, &cli.Config); manageTenantURL != "" {
+		settingsURL := fmt.Sprintf("%s%s", manageTenantURL, formatAPISettingsPath(rs.GetID()))
+		cli.renderer.Successf("You can manage your API from here:")
+		cli.renderer.Detailf("%s", ansi.Magenta(settingsURL))
+	}
 }
 
 // createQuickstartApp creates an Auth0 application client for the given quickstart config key,
@@ -1052,7 +1057,7 @@ func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsConfigKey string) (string, error) {
 	config, exists := auth0.QuickstartConfigs[qsConfigKey]
 	if !exists {
-		return "", fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes())
+		return "", usageError{err: fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes()), reason: "invalid_flag_value"}
 	}
 
 	expoScheme := readExpoScheme(inputs.Framework)
@@ -1417,10 +1422,10 @@ func defaultPortForFramework(framework string) int {
 func validateAPIIdentifier(identifier string) error {
 	u, err := url.ParseRequestURI(identifier)
 	if err != nil {
-		return fmt.Errorf("invalid API identifier %q: must be a valid URI (e.g. https://my-api)", identifier)
+		return validationError{err: fmt.Errorf("invalid API identifier %q: must be a valid URI (e.g. https://my-api)", identifier), reason: "invalid_flag_value"}
 	}
 	if u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("invalid API identifier %q: must include a scheme and host (e.g. https://my-api)", identifier)
+		return validationError{err: fmt.Errorf("invalid API identifier %q: must include a scheme and host (e.g. https://my-api)", identifier), reason: "invalid_flag_value"}
 	}
 	return nil
 }

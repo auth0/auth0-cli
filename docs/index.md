@@ -94,11 +94,14 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 - [auth0 client-grants](auth0_client-grants.md) - Manage client grants
 - [auth0 commands](auth0_commands.md) - Discover every CLI command in one place, for humans and AI agents
 - [auth0 completion](auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
+- [auth0 connections](auth0_connections.md) - Manage resources for connections
+- [auth0 docs](auth0_docs.md) - Search the Auth0 documentation
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers
 - [auth0 event-streams](auth0_event-streams.md) - Manage Event Stream
 - [auth0 flows](auth0_flows.md) - Manage Flows
 - [auth0 forms](auth0_forms.md) - Manage Forms
+- [auth0 guardian](auth0_guardian.md) - Manage multi-factor authentication (Guardian)
 - [auth0 login](auth0_login.md) - Authenticate the Auth0 CLI
 - [auth0 logout](auth0_logout.md) - Log out of a tenant's session
 - [auth0 logs](auth0_logs.md) - View tenant logs

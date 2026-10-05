@@ -7,7 +7,9 @@ has_toc: false
 Authenticates the Auth0 CLI using either personal credentials (user login) or client credentials (machine login).
 
 Use user login on personal machines or interactive environments (not supported for Private Cloud users).
-Use machine login for servers, CI, or any non-interactive environments — this is the recommended method for Private Cloud users.
+Use machine login for servers, CI, AI agents, or any non-interactive environments — this is the recommended method for Private Cloud users and for agent mode.
+
+In agent mode, machine login is preferred because it needs no browser. If you run user login in agent mode, the CLI emits the device verification URL and code as a JSON object on stdout so an agent can hand them to a human to finish in a browser. Agent-mode login also sets the newly authenticated tenant as the default automatically.
 
 
 

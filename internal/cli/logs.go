@@ -60,6 +60,8 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Filter string
 		Num    int
 		Picker bool
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -67,7 +69,10 @@ func listLogsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "Show the tenant logs",
-		Long:    "Display the tenant logs allowing to filter using Lucene query syntax.",
+		Long: `Display the tenant logs allowing to filter using Lucene query syntax.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 logs list
   auth0 logs list --filter "client_id:<client-id> --picker"
   auth0 logs list --filter "client_id:<client-id>"
@@ -79,10 +84,25 @@ func listLogsCmd(cli *cli) *cobra.Command {
   auth0 logs ls -n 250 -p
   auth0 logs ls --json
   auth0 logs ls --json-compact
-  auth0 logs ls --csv`,
+  auth0 logs ls --csv
+  auth0 logs list --schema
+  auth0 logs list --schema --json
+  auth0 logs list --query '{"per_page":5,"include_totals":true}'
+  auth0 logs list --query '{"per_page":5}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/logs")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "logs",
+					SchemaCmd: "auth0 logs list",
+				}, inputs.Query)
+			}
+
 			if inputs.Num < 1 || inputs.Num > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 			logs, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
@@ -121,6 +141,8 @@ func listLogsCmd(cli *cli) *cobra.Command {
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
 	logPicker.RegisterBool(cmd, &inputs.Picker, false)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
@@ -148,10 +170,12 @@ func tailLogsCmd(cli *cli) *cobra.Command {
   auth0 logs tail --filter "user_name:<user-name>"
   auth0 logs tail --filter "ip:<ip>"
   auth0 logs tail --filter "type:f" # See the full list of type codes at https://auth0.com/docs/logs/log-event-type-codes
-  auth0 logs tail -n 10`,
+  auth0 logs tail -n 10
+  auth0 logs tail --json
+  auth0 logs tail --json-compact`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Num < 1 || inputs.Num > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 			list, err := getLatestLogs(cmd.Context(), cli, inputs.Num, inputs.Filter)
 			if err != nil {
@@ -212,6 +236,10 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 
 	logsFilter.RegisterString(cmd, &inputs.Filter, "")
 	logsNum.RegisterInt(cmd, &inputs.Num, defaultPageSize)
+
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Tail logs as a stream of JSON, one indented object per event (newline-delimited compact objects in agent mode).")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Tail logs as newline-delimited JSON, one compact object per event.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	return cmd
 }

@@ -18,12 +18,17 @@ auth0 universal-login prompts update [flags]
   auth0 universal-login prompts update <prompt>
   auth0 universal-login prompts update <prompt> --language <language>
   auth0 ul prompts update signup -l es
+
+  # JSON input mode (for agents and automation)
+  auth0 ul prompts update signup -l es --data '{"signup":{"title":"Sign Up"}}'
+  auth0 ul prompts update signup -l es --data @signup.json
 ```
 
 
 ## Flags
 
 ```
+      --data string       JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -l, --language string   Language of the custom text. (default "en")
 ```
 

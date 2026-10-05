@@ -8,10 +8,18 @@ import (
 	"time"
 )
 
-// WaitForBrowserCallback lauches a new HTTP server listening on the provided
+// browserCallbackTimeout bounds how long WaitForBrowserCallback blocks waiting
+// for the browser redirect. Without it a caller that never completes the login
+// (for example an agent that emitted the URL but whose human walked away) would
+// hang forever. It is generous enough for a human to finish logging in.
+const browserCallbackTimeout = 5 * time.Minute
+
+// WaitForBrowserCallback launches a new HTTP server listening on the provided
 // address and waits for a request. Once received, the code is extracted from
-// the query string (if any), and returned it to the caller.
-func WaitForBrowserCallback(addr string) (code string, state string, err error) {
+// the query string (if any), and returned to the caller. The wait is bounded:
+// it aborts if ctx is cancelled or browserCallbackTimeout elapses first, so a
+// non-interactive caller never hangs indefinitely.
+func WaitForBrowserCallback(ctx context.Context, addr string) (code string, state string, err error) {
 	type callback struct {
 		code           string
 		state          string
@@ -19,8 +27,8 @@ func WaitForBrowserCallback(addr string) (code string, state string, err error) 
 		errDescription string
 	}
 
-	cbCh := make(chan *callback)
-	errCh := make(chan error)
+	cbCh := make(chan *callback, 1)
+	errCh := make(chan error, 1)
 
 	m := http.NewServeMux()
 	s := &http.Server{Addr: addr, Handler: m}
@@ -52,11 +60,20 @@ func WaitForBrowserCallback(addr string) (code string, state string, err error) 
 		}
 	}()
 
+	// Shutdown gives the server a brief window to close cleanly regardless of
+	// which branch below returns.
+	shutdown := func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = s.Shutdown(shutdownCtx)
+	}
+
+	timeout := time.NewTimer(browserCallbackTimeout)
+	defer timeout.Stop()
+
 	select {
 	case cb := <-cbCh:
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		defer func(c context.Context) { _ = s.Shutdown(ctx) }(ctx)
+		defer shutdown()
 
 		var err error
 		if cb.err != "" {
@@ -64,7 +81,14 @@ func WaitForBrowserCallback(addr string) (code string, state string, err error) 
 		}
 		return cb.code, cb.state, err
 	case err := <-errCh:
+		shutdown()
 		return "", "", err
+	case <-ctx.Done():
+		shutdown()
+		return "", "", ctx.Err()
+	case <-timeout.C:
+		shutdown()
+		return "", "", fmt.Errorf("timed out after %s waiting for the browser login callback", browserCallbackTimeout)
 	}
 }
 

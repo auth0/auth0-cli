@@ -31,6 +31,15 @@ auth0 email templates update [flags]
   auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
   auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json
   auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json-compact
+
+  # Discover the payload schema
+  auth0 email templates update --schema
+  auth0 email templates update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 email templates update welcome --data '{"body":"<html>Welcome!</html>","enabled":true}'
+  auth0 email templates update welcome --data @template.json
+  cat template.json | auth0 email templates update welcome
 ```
 
 
@@ -38,12 +47,14 @@ auth0 email templates update [flags]
 
 ```
   -b, --body string      Body of the email template.
+      --data string      JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -e, --enabled          Whether the template is enabled (true) or disabled (false). (default true)
       --force            Skip confirmation.
   -f, --from string      Sender's 'from' email address.
       --json             Output in json format.
       --json-compact     Output in compact json format.
   -l, --lifetime int     Lifetime in seconds that the link within the email will be valid for.
+      --schema           Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --subject string   Subject line of the email.
   -u, --url string       URL to redirect the user to after a successful action.
 ```

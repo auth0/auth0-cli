@@ -59,7 +59,7 @@ func listUserSessionsCmd(cli *cli) *cobra.Command {
 			}
 
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			sessions, err := collectV3Pages(cmd.Context(), inputs.Number,

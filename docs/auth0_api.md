@@ -20,6 +20,7 @@ auth0 api <method> <url-path> [flags]
 ```
   auth0 api get "tenants/settings"
   auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
+  auth0 api "clients" -q "fields=name,app_type,callbacks"
   auth0 api delete "actions/actions/<action-id>" --force
   auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
   cat data.json | auth0 api post clients
@@ -29,9 +30,11 @@ auth0 api <method> <url-path> [flags]
 ## Flags
 
 ```
-  -d, --data string            JSON data payload to send with the request. Data can be piped in as well instead of using this flag.
-      --force                  Skip confirmation when using the delete method.
-  -q, --query stringToString   Query params to send with the request. (default [])
+  -d, --data string         JSON data payload to send with the request. Pass inline JSON, @file to read from a file, or @- to read from stdin. Data can also be piped in instead of using this flag.
+      --force               Skip confirmation when using the delete method.
+      --json                Output in json format.
+      --json-compact        Output in compact json format.
+  -q, --query stringArray   Query params to send with the request. A comma-separated value is sent as a single param, for example -q "fields=a,b,c". Repeat the flag to send a param more than once, for example -q "fields=a" -q "fields=b".
 ```
 
 

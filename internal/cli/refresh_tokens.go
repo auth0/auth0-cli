@@ -234,7 +234,7 @@ func revokeRefreshTokenCmd(cli *cli) *cobra.Command {
 			switch {
 			case inputs.UserID != "":
 				if len(args) > 0 {
-					return fmt.Errorf("pass either a token id or --user-id, not both")
+					return usageError{err: fmt.Errorf("pass either a token id or --user-id, not both"), reason: "incompatible_flags"}
 				}
 				body.UserID = &inputs.UserID
 				target = fmt.Sprintf("all refresh tokens for user %q", inputs.UserID)

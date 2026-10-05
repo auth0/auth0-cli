@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -39,6 +40,13 @@ func WrappedAliases(cmd *cobra.Command) string {
 }
 
 func getLogin(cli *cli) string {
+	// This builds help text before env mode is selected in PersistentPreRunE, so
+	// guard it here: IsLoggedInWithTenant reads the keychain (which can hang on a
+	// locked one), and the login hint is irrelevant in env mode anyway.
+	if envAuthEnabled(os.Getenv) {
+		return ""
+	}
+
 	if !cli.Config.IsLoggedInWithTenant(cli.tenant) {
 		return ansi.Italic(`
 Before using the CLI, you'll need to login:
@@ -51,7 +59,7 @@ Before using the CLI, you'll need to login:
 }
 
 func namespaceUsageTemplate() string {
-	return fmt.Sprintf(`%s{{if .Runnable}}
+	return fmt.Sprintf(`%s{{if and .Runnable (not .HasAvailableSubCommands)}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} <resource> <operation> [parameters...] [flags]{{end}}{{if gt (len .Aliases) 0}}
 
@@ -87,7 +95,7 @@ Use "auth0 commands" for an overview of every command, and add --json to any --h
 }
 
 func resourceUsageTemplate() string {
-	return fmt.Sprintf(`%s{{if .Runnable}}
+	return fmt.Sprintf(`%s{{if and .Runnable (not .HasAvailableSubCommands)}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} <operation> [parameters...] [flags]{{end}}{{if gt (len .Aliases) 0}}
 

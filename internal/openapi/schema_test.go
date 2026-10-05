@@ -1,11 +1,70 @@
 package openapi
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const minimalOpenAPIDoc = `{"openapi":"3.0.0","info":{"title":"t","version":"1"},"paths":{}}`
+
+func TestFetchDocRetriesTransientFailures(t *testing.T) {
+	t.Run("succeeds after transient failures", func(t *testing.T) {
+		var calls int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			// Fail with a 404 for the first two attempts, then succeed, mirroring
+			// the flaky edge-cache behavior the retry is meant to absorb.
+			if atomic.AddInt32(&calls, 1) < 3 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			_, _ = w.Write([]byte(minimalOpenAPIDoc))
+		}))
+		defer srv.Close()
+
+		defer withSchemaTestOverrides(srv.URL)()
+
+		doc, err := fetchDoc()
+		require.NoError(t, err)
+		require.NotNil(t, doc)
+		assert.Equal(t, int32(3), atomic.LoadInt32(&calls))
+	})
+
+	t.Run("returns error after exhausting all attempts", func(t *testing.T) {
+		var calls int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			atomic.AddInt32(&calls, 1)
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer srv.Close()
+
+		defer withSchemaTestOverrides(srv.URL)()
+
+		doc, err := fetchDoc()
+		require.Error(t, err)
+		assert.Nil(t, doc)
+		assert.Contains(t, err.Error(), "unexpected status code: 404")
+		assert.Equal(t, int32(schemaFetchAttempts), atomic.LoadInt32(&calls))
+	})
+}
+
+// withSchemaTestOverrides points the fetcher at url and shrinks the backoff so the
+// retry test does not sleep for real. It returns a func that restores the globals.
+func withSchemaTestOverrides(url string) func() {
+	prevEndpoint := schemaEndpoint
+	prevBackoff := schemaFetchBackoff
+	schemaEndpoint = url
+	schemaFetchBackoff = time.Millisecond
+	return func() {
+		schemaEndpoint = prevEndpoint
+		schemaFetchBackoff = prevBackoff
+	}
+}
 
 func TestGetDoc(t *testing.T) {
 	doc, err := GetDoc()

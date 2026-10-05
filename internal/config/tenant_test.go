@@ -123,6 +123,12 @@ func TestTenant_GetAccessToken(t *testing.T) {
 }
 
 func TestTenant_CheckAuthenticationStatus(t *testing.T) {
+	// The mock keyring holds no access tokens, so every keyring read below returns
+	// ErrNotFound. That mirrors both a keychain that is locked/inaccessible and one
+	// with no stored token, which is exactly the ambiguity CheckAuthenticationStatus
+	// resolves using the config expiry.
+	keyring.MockInit()
+
 	var testCases = []struct {
 		name          string
 		givenTenant   Tenant
@@ -153,6 +159,42 @@ func TestTenant_CheckAuthenticationStatus(t *testing.T) {
 			expectedError: "token is invalid",
 		},
 		{
+			name: "it reports the stored token as unavailable for a user login whose expiry is still in the future",
+			givenTenant: Tenant{
+				Domain:    "unavailable-token.us.auth0.com",
+				Scopes:    auth.RequiredScopes,
+				ExpiresAt: time.Now().Add(10 * time.Minute),
+			},
+			expectedError: "stored access token is unavailable",
+		},
+		{
+			name: "it reports an expired user login as invalid rather than unavailable",
+			givenTenant: Tenant{
+				Domain:    "expired-token.us.auth0.com",
+				Scopes:    auth.RequiredScopes,
+				ExpiresAt: time.Now().Add(-time.Minute),
+			},
+			expectedError: "token is invalid",
+		},
+		{
+			name: "it does not report client-credential tenants as unavailable so they can regenerate",
+			givenTenant: Tenant{
+				Domain:    "client-creds.us.auth0.com",
+				ClientID:  "123",
+				ExpiresAt: time.Now().Add(10 * time.Minute),
+			},
+			expectedError: "token is invalid",
+		},
+		{
+			name: "it accepts a valid inline token when the keyring has none",
+			givenTenant: Tenant{
+				Domain:      "legacy-inline.us.auth0.com",
+				AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGgwLmF1dGgwLmNvbS8iLCJpYXQiOjE2ODExNDcwNjAsImV4cCI6OTY4MTgzMzQ2MH0.DsEpQkL0MIWcGJOIfEY8vr3MVS_E0GYsachNLQwBu5Q",
+				ExpiresAt:   time.Now().Add(10 * time.Minute),
+				ClientID:    "123",
+			},
+		},
+		{
 			name: "tenant has a valid token",
 			givenTenant: Tenant{
 				AccessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGgwLmF1dGgwLmNvbS8iLCJpYXQiOjE2ODExNDcwNjAsImV4cCI6OTY4MTgzMzQ2MH0.DsEpQkL0MIWcGJOIfEY8vr3MVS_E0GYsachNLQwBu5Q",
@@ -164,12 +206,17 @@ func TestTenant_CheckAuthenticationStatus(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := testCase.givenTenant.CheckAuthenticationStatus()
+			accessToken, err := testCase.givenTenant.CheckAuthenticationStatus()
 			if testCase.expectedError != "" {
 				assert.EqualError(t, err, testCase.expectedError)
+				assert.Empty(t, accessToken)
 				return
 			}
 			assert.NoError(t, err)
+			// On success the validated token is returned so the caller can reuse it
+			// without a second keyring read.
+			assert.Equal(t, testCase.givenTenant.GetAccessToken(), accessToken)
+			assert.NotEmpty(t, accessToken)
 		})
 	}
 }

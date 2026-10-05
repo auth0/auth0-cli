@@ -20,6 +20,8 @@ Customize your Universal Login Experience. Note that this requires a custom doma
 
   Closing the terminal editor will save the settings to your tenant.
 
+This command opens a browser or terminal editor, so it is not available in agent mode. Use `auth0 acul config` to manage advanced rendering configuration non-interactively.
+
 ## Usage
 ```
 auth0 universal-login customize [flags]

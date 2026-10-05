@@ -7,6 +7,8 @@ has_toc: false
 
 Update the custom template for the New Universal Login Experience.
 
+This opens an interactive terminal editor and a browser preview, so it is not available in agent mode. Set the template non-interactively with `auth0 api put branding/templates/universal-login`.
+
 ## Usage
 ```
 auth0 universal-login templates update [flags]

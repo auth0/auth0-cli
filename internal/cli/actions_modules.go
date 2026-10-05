@@ -109,7 +109,7 @@ func listActionModulesCmd(cli *cli) *cobra.Command {
   auth0 actions modules list --csv`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			modules, err := collectV3Pages(cmd.Context(), inputs.Number,
@@ -208,7 +208,7 @@ func createActionModuleCmd(cli *cli) *cobra.Command {
 			}
 
 			if !actionModuleNamePattern.MatchString(inputs.Name) {
-				return fmt.Errorf("invalid name %q: must start with a lowercase letter or digit and contain only lowercase letters, digits, underscores, and hyphens", inputs.Name)
+				return validationError{err: fmt.Errorf("invalid name %q: must start with a lowercase letter or digit and contain only lowercase letters, digits, underscores, and hyphens", inputs.Name), reason: "invalid_flag_value"}
 			}
 
 			if err := actionModuleCode.OpenEditor(
@@ -572,7 +572,7 @@ func listActionsUsingModuleCmd(cli *cli) *cobra.Command {
   auth0 actions modules actions list <module-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if len(args) == 0 {

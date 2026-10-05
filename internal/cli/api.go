@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/auth0/go-auth0/v3/management/core"
@@ -26,7 +28,7 @@ var apiFlags = apiCmdFlags{
 		Name:         "RawData",
 		LongForm:     "data",
 		ShortForm:    "d",
-		Help:         "JSON data payload to send with the request. Data can be piped in as well instead of using this flag.",
+		Help:         "JSON data payload to send with the request. Pass inline JSON, @file to read from a file, or @- to read from stdin. Data can also be piped in instead of using this flag.",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	},
@@ -34,7 +36,7 @@ var apiFlags = apiCmdFlags{
 		Name:         "QueryParams",
 		LongForm:     "query",
 		ShortForm:    "q",
-		Help:         "Query params to send with the request.",
+		Help:         "Query params to send with the request. A comma-separated value is sent as a single param, for example -q \"fields=a,b,c\". Repeat the flag to send a param more than once, for example -q \"fields=a\" -q \"fields=b\".",
 		IsRequired:   false,
 		AlwaysPrompt: false,
 	},
@@ -60,10 +62,10 @@ type (
 		RawMethod      string
 		RawURI         string
 		RawData        string
-		RawQueryParams map[string]string
+		RawQueryParams []string
 		Method         string
 		URL            *url.URL
-		Data           interface{}
+		Data           any
 	}
 )
 
@@ -86,6 +88,7 @@ Additional scopes may need to be requested during authentication step via the %s
 		),
 		Example: `  auth0 api get "tenants/settings"
   auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
+  auth0 api "clients" -q "fields=name,app_type,callbacks"
   auth0 api delete "actions/actions/<action-id>" --force
   auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
   cat data.json | auth0 api post clients`,
@@ -94,10 +97,39 @@ Additional scopes may need to be requested during authentication step via the %s
 
 	cmd.SetUsageTemplate(apiUsageTemplate())
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation when using the delete method.")
+	// The response is always JSON. --json keeps the pretty, colorized default and
+	// --json-compact emits a single dense line so an NDJSON reader gets one record
+	// per line. There is no --csv, since an arbitrary API response is not tabular.
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 	apiFlags.Data.RegisterString(cmd, &inputs.RawData, "")
-	apiFlags.QueryParams.RegisterStringMap(cmd, &inputs.RawQueryParams, nil)
+	apiFlags.QueryParams.RegisterStringArray(cmd, &inputs.RawQueryParams, nil)
 
 	return cmd
+}
+
+// formatAPIResponse renders a raw JSON response body for stdout. Under
+// --json-compact it emits a single dense line with no color so an NDJSON reader
+// gets one record per line; otherwise it returns a 2-space-indented, colorized
+// document for a human. The trailing newline is added by
+// renderer.OutputPreformattedJSON.
+func formatAPIResponse(format display.OutputFormat, rawBodyJSON []byte) (string, error) {
+	if format == display.OutputFormatJSONCompact {
+		var compactJSON bytes.Buffer
+		if err := json.Compact(&compactJSON, rawBodyJSON); err != nil {
+			return "", fmt.Errorf("failed to prepare json output: %w", err)
+		}
+
+		return compactJSON.String(), nil
+	}
+
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, rawBodyJSON, "", "  "); err != nil {
+		return "", fmt.Errorf("failed to prepare json output: %w", err)
+	}
+
+	return ansi.ColorizeJSON(prettyJSON.String()), nil
 }
 
 func apiUsageTemplate() string {
@@ -151,7 +183,7 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			}
 
 			if cli.debug {
-				cli.renderer.Infof("Sending the following request: %+v", map[string]interface{}{
+				cli.renderer.Infof("Sending the following request: %+v", map[string]any{
 					"method":  request.Method,
 					"url":     request.URL.String(),
 					"payload": inputs.Data,
@@ -167,17 +199,24 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			_ = response.Body.Close()
 		}()
 
-		if err := isInsufficientScopeError(response); err != nil {
-			return err
-		}
-
 		rawBodyJSON, err := io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
 
+		// Read the body once above, then classify from the bytes. Decoding the
+		// stream here would drain it, so a 403 that is not insufficient-scope would
+		// otherwise lose its real error body and fall back to bare "Forbidden".
+		if err := isInsufficientScopeError(response.StatusCode, rawBodyJSON); err != nil {
+			return err
+		}
+
 		if response.StatusCode >= http.StatusBadRequest {
-			return newAPIResponseError(response.StatusCode, response.Header, rawBodyJSON)
+			err := newAPIResponseError(response.StatusCode, response.Header, rawBodyJSON)
+			if isWrongMethod404(inputs.Method, response.StatusCode, rawBodyJSON) {
+				return apiResponseHintError{err: err, hint: apiWrongMethodHintText}
+			}
+			return err
 		}
 
 		if len(rawBodyJSON) == 0 {
@@ -187,12 +226,12 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 			return nil
 		}
 
-		var prettyJSON bytes.Buffer
-		if err := json.Indent(&prettyJSON, rawBodyJSON, "", "  "); err != nil {
-			return fmt.Errorf("failed to prepare json output: %w", err)
+		output, err := formatAPIResponse(cli.renderer.Format, rawBodyJSON)
+		if err != nil {
+			return err
 		}
 
-		cli.renderer.Output(ansi.ColorizeJSON(prettyJSON.String()))
+		cli.renderer.OutputPreformattedJSON(output)
 
 		return nil
 	}
@@ -213,18 +252,19 @@ func (i *apiCmdInputs) fromArgs(args []string, domain string) error {
 }
 
 func (i *apiCmdInputs) validateAndSetMethod() error {
-	for _, validMethod := range apiValidMethods {
-		if i.RawMethod == validMethod {
-			i.Method = i.RawMethod
-			return nil
-		}
+	if slices.Contains(apiValidMethods, i.RawMethod) {
+		i.Method = i.RawMethod
+		return nil
 	}
 
-	return fmt.Errorf(
-		"invalid method given: %s, accepting only %s",
-		i.RawMethod,
-		strings.Join(apiValidMethods, ", "),
-	)
+	return usageError{
+		err: fmt.Errorf(
+			"invalid method given: %s, accepting only %s",
+			i.RawMethod,
+			strings.Join(apiValidMethods, ", "),
+		),
+		reason: "invalid_flag_value",
+	}
 }
 
 func (i *apiCmdInputs) validateAndSetData() error {
@@ -232,40 +272,73 @@ func (i *apiCmdInputs) validateAndSetData() error {
 		return nil
 	}
 
-	var data []byte
-
-	pipedData := iostream.PipedInput()
-
-	if i.RawData != "" {
-		data = []byte(i.RawData)
-		if len(pipedData) > 0 {
-			i.renderer.Warnf(
-				"JSON data was provided via both the flag and piped input. " +
-					"The Auth0 CLI will use the data from the flag.",
-			)
-		}
-	} else if len(pipedData) > 0 {
-		data = pipedData
+	data, err := i.resolveData()
+	if err != nil {
+		return err
 	}
 
 	if len(data) > 0 {
 		if err := json.Unmarshal(data, &i.Data); err != nil {
-			return fmt.Errorf("invalid JSON data provided: %w", err)
+			return validationError{err: fmt.Errorf("invalid JSON data provided: %w", err), reason: "malformed_json"}
 		}
 	}
 
 	return nil
 }
 
+// resolveData returns the request body bytes. The --data flag takes precedence
+// and accepts inline JSON, @file to read from a file, or @- (or -) to read from
+// stdin. When --data is unset the body is read from a stdin pipe. A --data value
+// used as-is never blocks on an open, EOF-less pipe (the common agent/CI case),
+// because stdin is only touched for the explicit @-/- form.
+func (i *apiCmdInputs) resolveData() ([]byte, error) {
+	if i.RawData != "" {
+		switch {
+		case i.RawData == "@-" || i.RawData == "-":
+			data, err := iostream.PipedInput()
+			if err != nil {
+				return nil, err
+			}
+			if len(data) == 0 {
+				return nil, validationError{err: fmt.Errorf("no data received on stdin"), reason: "missing_input"}
+			}
+			return data, nil
+		case strings.HasPrefix(i.RawData, "@"):
+			path := i.RawData[1:]
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return nil, usageError{err: fmt.Errorf("failed to read data file %q: %w", path, err), reason: "invalid_flag_value"}
+			}
+			return data, nil
+		default:
+			return []byte(i.RawData), nil
+		}
+	}
+
+	return iostream.PipedInput()
+}
+
 func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	endpoint, err := url.Parse(fmt.Sprintf("https://%s/api/v2/%s", domain, strings.Trim(i.RawURI, "/")))
 	if err != nil {
-		return fmt.Errorf("invalid uri given: %w", err)
+		return usageError{err: fmt.Errorf("invalid uri given: %w", err), reason: "invalid_flag_value"}
 	}
 
 	params := endpoint.Query()
-	for key, value := range i.RawQueryParams {
-		params.Set(key, value)
+	for _, raw := range i.RawQueryParams {
+		// Each -q value is exactly one query param, split once on the first "=".
+		// Commas are kept literally as part of the value, so a comma-separated
+		// list is sent as a single param (-q "fields=a,b,c" → fields=a,b,c),
+		// which is how the Management API expects `fields`, `include_fields`, and
+		// similar. A value may itself contain "=" (-q "q=name=John,city=NY"), and
+		// repeating the flag sends multiple params (-q "from=1" -q "to=2").
+		key, value, found := strings.Cut(raw, "=")
+		if !found || key == "" {
+			return usageError{err: fmt.Errorf("invalid query parameter %q: expected key=value", raw), reason: "invalid_flag_value"}
+		}
+		// Add (not Set) so a repeated key sends every value instead of the last
+		// one overwriting the rest.
+		params.Add(key, value)
 	}
 	endpoint.RawQuery = params.Encode()
 
@@ -277,6 +350,10 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 func (i *apiCmdInputs) parseRaw(args []string) {
 	lenArgs := len(args)
 	if lenArgs == 1 {
+		// A bare single-argument call defaults to GET and never reads stdin, so an
+		// agent or CI run with an inherited, open, EOF-less stdin pipe cannot block.
+		// POST is inferred only from an explicit --data value; to send a piped body
+		// give a method (cat data.json | auth0 api post clients) or use --data @-.
 		i.RawMethod = http.MethodGet
 		if i.RawData != "" {
 			i.RawMethod = http.MethodPost
@@ -299,8 +376,63 @@ func newAPIResponseError(statusCode int, header http.Header, body []byte) error 
 	return core.NewAPIError(statusCode, header, fmt.Errorf("API request failed: %s", message))
 }
 
-func isInsufficientScopeError(r *http.Response) error {
-	if r.StatusCode != 403 {
+// isWrongMethod404 reports whether a PATCH likely used the wrong verb. Many
+// Management API endpoints accept PUT but reject PATCH with a bare "Not Found"
+// instead of a 405, so it is limited to PATCH and to the generic routing-miss
+// body (empty, or "Not Found" with no errorCode); a resource-specific 404 or any
+// other verb returns false.
+func isWrongMethod404(method string, statusCode int, rawBody []byte) bool {
+	if statusCode != http.StatusNotFound || method != http.MethodPatch {
+		return false
+	}
+
+	if len(bytes.TrimSpace(rawBody)) == 0 {
+		return true
+	}
+
+	var body struct {
+		Message   string `json:"message"`
+		ErrorCode string `json:"errorCode"`
+	}
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		return false
+	}
+
+	message := strings.TrimSpace(body.Message)
+	return body.ErrorCode == "" && (message == "" || strings.EqualFold(message, "Not Found"))
+}
+
+const apiWrongMethodHintText = "The endpoint returned a generic 404. If the path is correct, the HTTP method may " +
+	"not be supported there — many Auth0 Management API endpoints accept PUT but not PATCH. " +
+	"Verify both the path and the method."
+
+// apiResponseHintError attaches an actionable hint to a non-2xx `auth0 api`
+// response. Error() stays the terse API message so the JSON envelope's message
+// field is clean; the hint travels in the envelope's details via ErrorDetails and
+// is printed separately by renderErrorMessage. It unwraps to the underlying error
+// so status classification is unchanged.
+type apiResponseHintError struct {
+	err  error
+	hint string
+}
+
+func (e apiResponseHintError) Error() string { return e.err.Error() }
+
+func (e apiResponseHintError) Unwrap() error { return e.err }
+
+func (e apiResponseHintError) ErrorDetails() json.RawMessage {
+	raw, err := json.Marshal(struct {
+		Hint string `json:"hint"`
+	}{Hint: e.hint})
+	if err != nil {
+		return nil
+	}
+
+	return raw
+}
+
+func isInsufficientScopeError(statusCode int, rawBody []byte) error {
+	if statusCode != 403 {
 		return nil
 	}
 
@@ -310,7 +442,7 @@ func isInsufficientScopeError(r *http.Response) error {
 	}
 
 	var body ErrorBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := json.Unmarshal(rawBody, &body); err != nil {
 		return nil
 	}
 
@@ -332,11 +464,14 @@ func isInsufficientScopeError(r *http.Response) error {
 		}
 	}
 
-	return fmt.Errorf(
-		"request failed because access token lacks scope: %s.\n "+
-			"If authenticated via client credentials, add this scope to the designated client. "+
-			"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`",
-		recommendedScopeToAdd,
-		recommendedScopeToAdd,
-	)
+	return authError{
+		err: fmt.Errorf(
+			"request failed because access token lacks scope: %s.\n "+
+				"If authenticated via client credentials, add this scope to the designated client. "+
+				"If authenticated as a user, request this scope during login by running `auth0 login --scopes %s`",
+			recommendedScopeToAdd,
+			recommendedScopeToAdd,
+		),
+		reason: "insufficient_scope",
+	}
 }

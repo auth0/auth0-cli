@@ -11,6 +11,9 @@ To update interactively, use `auth0 apis update` with no arguments.
 
 To update non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 apis update [flags]
@@ -29,17 +32,28 @@ auth0 apis update [flags]
   auth0 apis update <api-id|api-audience> -n myapi -t 6100 -o false -s "letter:write,letter:read" --signing-alg "RS256" --json-compact
   auth0 apis update <api-id|api-audience> --subject-type-authorization '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}'
   auth0 apis update <api-id|api-audience> --enforce-policies=false --token-dialect rfc9068_profile_authz
+
+  # Discover the payload schema
+  auth0 apis update --schema
+  auth0 apis update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apis update <api-id|api-audience> --data '{"token_lifetime":7200}'
+  auth0 apis update <api-id|api-audience> --data @api.json
+  cat api.json | auth0 apis update <api-id|api-audience>
 ```
 
 
 ## Flags
 
 ```
+      --data string                         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --enforce-policies                    If true, authorization policies will be enforced for this API.
       --json                                Output in json format.
       --json-compact                        Output in compact json format.
   -n, --name string                         Name of the API.
   -o, --offline-access                      Whether Refresh Tokens can be issued for this API (true) or not (false).
+      --schema                              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --scopes strings                      Comma-separated list of scopes (permissions).
       --signing-alg string                  Algorithm used to sign JWTs. Can be HS256 or RS256. PS256 available via addon. (default "RS256")
       --subject-type-authorization string   JSON object defining access policies for user and client flows. Example: '{"user":{"policy":"require_client_grant"},"client":{"policy":"deny_all"}}' (default "{}")

@@ -41,11 +41,11 @@ var (
 	}
 
 	actionCode = Flag{
-		Name:       "Code",
-		LongForm:   "code",
-		ShortForm:  "c",
-		Help:       "Code content for the action.",
-		IsRequired: true,
+		Name:         "Code",
+		LongForm:     "code",
+		ShortForm:    "c",
+		Help:         "Code content for the action.",
+		AlwaysPrompt: true,
 	}
 
 	actionDependency = Flag{
@@ -74,13 +74,6 @@ var (
 		LongForm:  "module",
 		ShortForm: "m",
 		Help:      "Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.",
-	}
-
-	actionListQuery = Flag{
-		Name:      "Query",
-		LongForm:  "query",
-		ShortForm: "q",
-		Help:      "Filter actions with a JSON object of query parameters (e.g. '{\"triggerId\":\"post-login\"}'). Any API-supported parameter works immediately. Run '--schema' to see documented parameters.",
 	}
 
 	actionTemplates = map[string]string{
@@ -187,7 +180,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
-	actionListQuery.RegisterString(cmd, &inputs.Query, "")
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -733,9 +726,7 @@ func openActionCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
-
-			return nil
+			return openManageURL(cli, cli.tenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
 		},
 	}
 
@@ -755,7 +746,8 @@ func diffActionCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Long:  "Show code difference between two versions of an Actions",
 		Example: `auth0 actions diff
-  auth0 actions diff <action-id>`,
+  auth0 actions diff <action-id>
+  auth0 actions diff <action-id> --version1 2 --version2 3`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if len(args) == 0 {
@@ -790,10 +782,24 @@ func diffActionCmd(cli *cli) *cobra.Command {
 				page++
 			}
 
-			var err error
-			inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
-			if err != nil {
-				return err
+			version1Set := cmd.Flags().Changed("version1")
+			version2Set := cmd.Flags().Changed("version2")
+			switch {
+			case version1Set && version2Set:
+				// Use the versions supplied via flags as-is.
+			case version1Set != version2Set:
+				// Exactly one version was supplied. Require both or neither so an
+				// explicitly pinned version is never silently discarded (in
+				// interactive mode the picker would otherwise overwrite it).
+				return usageError{err: fmt.Errorf("provide both --version1 and --version2, or neither"), reason: "incompatible_flags"}
+			case canPrompt(cmd):
+				var err error
+				inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
+				if err != nil {
+					return err
+				}
+			default:
+				return usageError{err: fmt.Errorf("missing required flags in non-interactive mode: --version1 and --version2"), reason: "missing_required_flags"}
 			}
 
 			var code1, code2 string
@@ -821,6 +827,10 @@ func diffActionCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().IntVar(&inputs.version1, "version1", 0, "First version number (baseline) to compare.")
+	cmd.Flags().IntVar(&inputs.version2, "version2", 0, "Second version number to compare against.")
+
 	return cmd
 }
 
@@ -955,7 +965,7 @@ func inputModulesToActionModules(modules []string) (*[]management.ActionModules,
 			key = strings.TrimSpace(key)
 			value = strings.TrimSpace(value)
 			if !found || key == "" || value == "" {
-				return nil, fmt.Errorf("invalid --module value %q: expected comma-separated key=value pairs (e.g. \"module_id=<uuid>,module_version_id=<uuid>\")", raw)
+				return nil, usageError{err: fmt.Errorf("invalid --module value %q: expected comma-separated key=value pairs (e.g. \"module_id=<uuid>,module_version_id=<uuid>\")", raw), reason: "invalid_flag_value"}
 			}
 
 			switch key {
@@ -964,15 +974,15 @@ func inputModulesToActionModules(modules []string) (*[]management.ActionModules,
 			case "module_version_id":
 				module.ModuleVersionID = auth0.String(value)
 			default:
-				return nil, fmt.Errorf("invalid --module value %q: unknown key %q (supported keys: module_id, module_version_id)", raw, key)
+				return nil, usageError{err: fmt.Errorf("invalid --module value %q: unknown key %q (supported keys: module_id, module_version_id)", raw, key), reason: "invalid_flag_value"}
 			}
 		}
 
 		if module.ModuleID == nil {
-			return nil, fmt.Errorf("invalid --module value %q: module_id is required", raw)
+			return nil, usageError{err: fmt.Errorf("invalid --module value %q: module_id is required", raw), reason: "invalid_flag_value"}
 		}
 		if module.ModuleVersionID == nil {
-			return nil, fmt.Errorf("invalid --module value %q: module_version_id is required (the UUID of a specific module version)", raw)
+			return nil, usageError{err: fmt.Errorf("invalid --module value %q: module_version_id is required (the UUID of a specific module version)", raw), reason: "invalid_flag_value"}
 		}
 
 		actionModules = append(actionModules, module)

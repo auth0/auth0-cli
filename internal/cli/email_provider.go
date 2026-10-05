@@ -175,7 +175,7 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 			var credentials map[string]interface{}
 			if inputs.name == emailProviderCustom {
 				if len(inputs.credentials) > 0 {
-					return fmt.Errorf("credentials not supported for provider: %s", inputs.name)
+					return usageError{err: fmt.Errorf("credentials not supported for provider: %s", inputs.name), reason: "invalid_flag_value"}
 				}
 				credentials = make(map[string]interface{})
 			} else {
@@ -205,10 +205,10 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 				emailProviderMS365,
 				emailProviderCustom:
 				if len(inputs.settings) > 0 {
-					return fmt.Errorf("settings not supported for provider: %s", inputs.name)
+					return usageError{err: fmt.Errorf("settings not supported for provider: %s", inputs.name), reason: "invalid_flag_value"}
 				}
 			default:
-				return fmt.Errorf("unknown provider: %s", inputs.name)
+				return usageError{err: fmt.Errorf("unknown provider: %s", inputs.name), reason: "invalid_flag_value"}
 			}
 
 			emailProvider := &management.EmailProvider{
@@ -319,7 +319,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 				// If we are changing providers, we need new credentials and settings.
 				if inputs.name == emailProviderCustom {
 					if len(inputs.credentials) > 0 {
-						return fmt.Errorf("credentials not supported for provider: %s", inputs.name)
+						return usageError{err: fmt.Errorf("credentials not supported for provider: %s", inputs.name), reason: "invalid_flag_value"}
 					}
 					credentials = make(map[string]interface{})
 				} else {
@@ -348,10 +348,10 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 					emailProviderMS365,
 					emailProviderCustom:
 					if len(inputs.settings) > 0 {
-						return fmt.Errorf("settings not supported for provider: %s", inputs.name)
+						return usageError{err: fmt.Errorf("settings not supported for provider: %s", inputs.name), reason: "invalid_flag_value"}
 					}
 				default:
-					return fmt.Errorf("unknown provider: %s", inputs.name)
+					return usageError{err: fmt.Errorf("unknown provider: %s", inputs.name), reason: "invalid_flag_value"}
 				}
 			}
 

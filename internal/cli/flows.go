@@ -218,7 +218,7 @@ func createFlowCmd(cli *cli) *cobra.Command {
 				return err
 			}
 			if inputs.Name == "" {
-				return errors.New("a flow name is required; supply --name")
+				return usageError{err: errors.New("a flow name is required; supply --name"), reason: "missing_required_flags"}
 			}
 
 			var rawBody json.RawMessage
@@ -629,9 +629,7 @@ func openFlowCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openBuilderURL(cli, fmt.Sprintf("flows/%s/edit", inputs.ID))
-
-			return nil
+			return openBuilderURL(cli, fmt.Sprintf("flows/%s/edit", inputs.ID))
 		},
 	}
 

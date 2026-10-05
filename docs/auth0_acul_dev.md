@@ -26,6 +26,8 @@ CONNECTED MODE (--connected):
 
 ⚠️  Connected mode should only be used on stage/dev tenants, not production!
 
+This command runs an interactive local dev server and browser preview, so it is not available in agent mode.
+
 ## Usage
 ```
 auth0 acul dev [flags]

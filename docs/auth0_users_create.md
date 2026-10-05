@@ -11,6 +11,9 @@ To create interactively, use `auth0 users create` with no flags.
 
 To create non-interactively, supply the name and other information through the available flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 users create [flags]
@@ -19,8 +22,8 @@ auth0 users create [flags]
 ## Examples
 
 ```
-  auth0 users create 
-  auth0 users create --name "John Doe" 
+  auth0 users create
+  auth0 users create --name "John Doe"
   auth0 users create --name "John Doe" --email john@example.com
   auth0 users create --name "John Doe" --email john@example.com --connection-name "Username-Password-Authentication" --username "example"
   auth0 users create -n "John Doe" -e john@example.com -c "Username-Password-Authentication" -u "example" --json
@@ -30,6 +33,15 @@ auth0 users create [flags]
   auth0 users create --phone-number +916898989898 --connection-name "sms"
   auth0 users create -m +916898989898 -c "sms" --json
   auth0 users create -m +916898989898 -c "sms" --json-compact
+
+  # Discover the payload schema
+  auth0 users create --schema
+  auth0 users create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 users create --data '{"email":"john@example.com","password":"...","connection":"Username-Password-Authentication"}'
+  auth0 users create --data @user.json
+  cat user.json | auth0 users create
 ```
 
 
@@ -37,12 +49,14 @@ auth0 users create [flags]
 
 ```
   -c, --connection-name string   Name of the database connection this user should be created in.
+      --data string              JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -e, --email string             The user's email.
       --json                     Output in json format.
       --json-compact             Output in compact json format.
   -n, --name string              The user's full name.
   -p, --password string          Initial password for this user (mandatory for non-SMS connections).
   -m, --phone-number string      The user's phone number.
+      --schema                   Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -u, --username string          The user's username. Only valid if the connection requires a username.
 ```
 

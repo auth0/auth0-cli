@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -42,6 +43,7 @@ type cli struct {
 	// Set of flags which are user specified.
 	debug               bool
 	tenant              string
+	tenantExplicit      bool
 	json                bool
 	jsonCompact         bool
 	csv                 bool
@@ -59,8 +61,23 @@ type cli struct {
 // and regenerate its access token if needed. The access token will
 // then be used to configure an instance of the Auth0 Management SDK.
 func (c *cli) setupWithAuthentication(ctx context.Context) error {
+	// Opt-in, non-persistent env auth for agents, CI, and sandboxes without
+	// keychain access. Validate the mode first so a typo cannot fall through to the
+	// saved login while the caller expects env credentials.
+	if err := validateAuthMode(os.Getenv); err != nil {
+		return err
+	}
+	if envAuthEnabled(os.Getenv) {
+		return c.setupWithEnvAuthentication(ctx)
+	}
+
 	// Validate that we have at least one tenant that we can use.
 	if err := c.Config.Validate(); err != nil {
+		// No saved login but env credentials are present. For a non-interactive
+		// caller, point at enabling env auth mode so it can retry.
+		if _, kind := envCredentialsAvailable(os.Getenv); c.noInput && kind != envCredentialNone {
+			return fmt.Errorf("%w. %s", err, envAuthSetupHint(os.Getenv))
+		}
 		return err
 	}
 
@@ -76,27 +93,68 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		return err
 	}
 
-	// Check authentication status.
-	err = tenant.CheckAuthenticationStatus()
+	// Returns the validated token so the keyring is read only once; re-auth
+	// branches below refresh accessToken from the freshly stored token.
+	accessToken, err := tenant.CheckAuthenticationStatus()
 	var scopesErr config.ErrTokenMissingRequiredScopes
 	if errors.As(err, &scopesErr) {
-		c.renderer.Warnf("Required scopes have changed (missing: %s). Please log in to re-authorize the CLI.\n", strings.Join(scopesErr.MissingScopes, ", "))
+		missing := strings.Join(scopesErr.MissingScopes, ", ")
+		c.renderer.Warnf("Required scopes have changed (missing: %s). Please log in to re-authorize the CLI.\n", missing)
+
+		// In --no-input mode (which agent mode enables) the interactive
+		// device-code re-auth would block indefinitely waiting for a human to
+		// approve in a browser. Fail fast with a machine-readable scope error
+		// instead, so a non-interactive caller gets a parseable failure rather
+		// than a silent hang and can re-authorize explicitly.
+		if c.noInput {
+			return authError{
+				err: fmt.Errorf(
+					"missing required scopes (%s) and --no-input is set; "+
+						"run 'auth0 login --scopes %s' to re-authorize",
+					missing, strings.Join(scopesErr.MissingScopes, ","),
+				),
+				reason: "missing_scopes",
+			}
+		}
+
 		tenant, err = RunLoginAsUser(ctx, c, scopesErr.MissingScopes, "")
 		if err != nil {
-			return err
+			return authError{err: err, reason: "login_failed"}
 		}
+
+		// A fresh login just stored a new token; read it once for SDK setup.
+		accessToken = tenant.GetAccessToken()
 	}
 
-	if errors.Is(err, config.ErrInvalidToken) {
+	if errors.Is(err, config.ErrInvalidToken) || errors.Is(err, config.ErrStoredTokenUnavailable) {
+		storedTokenUnavailable := errors.Is(err, config.ErrStoredTokenUnavailable)
 		if tenant.IsAuthenticatedWithDeviceCodeFlow() {
-			c.renderer.Warnf("Your user login session has expired.")
+			if storedTokenUnavailable {
+				c.renderer.Warnf("The saved access token could not be read; your system keychain may be locked or inaccessible.")
+			} else {
+				c.renderer.Warnf("Your user login session has expired.")
+			}
 			c.renderer.Warnf("Please log in to re-authorize the CLI.\n")
 
 			// In --no-input mode, fail immediately instead of hanging on an interactive prompt.
 			if c.noInput {
-				return fmt.Errorf(
-					"auth token expired and --no-input is set; run 'auth0 login' to re-authenticate",
-				)
+				if storedTokenUnavailable {
+					return authError{
+						err: fmt.Errorf(
+							"the saved access token could not be read and --no-input is set; the system keychain "+
+								"may be locked or inaccessible; %s. Otherwise run 'auth0 login' with keychain access",
+							envAuthSetupHint(os.Getenv),
+						),
+						reason: "stored_token_unavailable",
+					}
+				}
+
+				return authError{
+					err: fmt.Errorf(
+						"auth token expired and --no-input is set; run 'auth0 login' to re-authenticate",
+					),
+					reason: "session_expired",
+				}
 			}
 
 			// Determine tenant domain for login.
@@ -109,7 +167,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 			tenant, err = RunLoginAsUser(ctx, c, tenant.GetExtraRequestedScopes(), tenantDomain)
 			if err != nil {
-				return err
+				return authError{err: err, reason: "login_failed"}
 			}
 		} else if err := tenant.RegenerateAccessToken(ctx); err != nil {
 			errorMessage := fmt.Errorf(
@@ -121,31 +179,40 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 				err,
 				ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
 			)
-			return errorMessage
+			return authError{err: errorMessage, reason: "credentials_refresh_failed"}
 		}
 
 		if err := c.Config.AddTenant(tenant); err != nil {
-			return err
+			return configPersistError(err)
 		}
+
+		// The device re-login or client-credential regeneration above stored a new
+		// token; read it once for SDK setup.
+		accessToken = tenant.GetAccessToken()
 	}
 
 	if errors.Is(err, config.ErrMalformedToken) {
-		return fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
-			ansi.Cyan("auth0 logout && auth0 login"),
-			ansi.Yellow("Note: Token handling was enhanced in v1.18.0+ to prevent malformed tokens."),
-		)
+		return authError{
+			err: fmt.Errorf("authentication token is corrupted, please run: %s\n\n%s",
+				ansi.Cyan("auth0 logout && auth0 login"),
+				ansi.Yellow("Note: Token handling was enhanced in v1.18.0+ to prevent malformed tokens."),
+			),
+			reason: "token_malformed",
+		}
 	}
 
 	invokerMetadata := c.invokerMetadataHeaderValue()
 
-	api, err := initializeManagementClient(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
+	// Reuse the token resolved above across both SDK clients so the keyring is not
+	// read again here.
+	api, err := initializeManagementClient(tenant.Domain, accessToken, invokerMetadata)
 	if err != nil {
-		return err
+		return authError{err: err, reason: "client_init_failed"}
 	}
 
-	apiv3, err := initializeManagementClientV3(tenant.Domain, tenant.GetAccessToken(), invokerMetadata)
+	apiv3, err := initializeManagementClientV3(tenant.Domain, accessToken, invokerMetadata)
 	if err != nil {
-		return err
+		return authError{err: err, reason: "client_init_failed"}
 	}
 
 	c.api = auth0.NewAPI(api)
@@ -155,6 +222,10 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 func (c *cli) configureRenderer() {
 	c.renderer.Tenant = c.tenant
+
+	// In agent mode stderr is machine-clean: human diagnostics are suppressed so
+	// the only thing an agent sees there is the JSON error envelope on failure.
+	c.renderer.AgentMode = c.agentMode
 
 	if c.json {
 		c.renderer.Format = display.OutputFormatJSON
@@ -198,7 +269,8 @@ func noLocalFlagSet(cmd *cobra.Command) bool {
 }
 
 func prepareInteractivity(cmd *cobra.Command) {
-	if canPrompt(cmd) || !iostream.IsInputTerminal() {
+	// A bypass flag carries the payload itself, so skip per-flag required validation.
+	if canPrompt(cmd) || !iostream.IsInputTerminal() || hasRequiredBypassFlag(cmd) {
 		cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 			_ = cmd.Flags().SetAnnotation(flag.Name, cobra.BashCompOneRequiredFlag, []string{"false"})
 		})
