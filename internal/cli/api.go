@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -322,6 +323,16 @@ func (i *apiCmdInputs) validateAndSetEndpoint(domain string) error {
 	endpoint, err := url.Parse(fmt.Sprintf("https://%s/api/v2/%s", domain, strings.Trim(i.RawURI, "/")))
 	if err != nil {
 		return usageError{err: fmt.Errorf("invalid uri given: %w", err), reason: "invalid_flag_value"}
+	}
+
+	// The server resolves "." and ".." segments (including percent-encoded ones,
+	// which endpoint.Path holds decoded), so "../../oauth/token" would send the
+	// Management API token outside /api/v2. Reject any URI that escapes it.
+	if cleaned := path.Clean(endpoint.Path); cleaned != "/api/v2" && !strings.HasPrefix(cleaned, "/api/v2/") {
+		return usageError{
+			err:    fmt.Errorf("invalid uri given: %q resolves outside of the Management API (/api/v2)", i.RawURI),
+			reason: "invalid_flag_value",
+		}
 	}
 
 	params := endpoint.Query()

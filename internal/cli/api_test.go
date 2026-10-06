@@ -80,6 +80,27 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			givenArgs:     []string{"get", "#$%^&*(#$%%^("},
 			expectedError: "invalid uri given: parse \"https://example.auth0.com/api/v2/#$%^&*(#$%%^(\": invalid URL escape \"%^&\"",
 		},
+		{
+			name:          "it fails when the uri escapes the management api path",
+			givenArgs:     []string{"get", "../../oauth/token"},
+			expectedError: "invalid uri given: \"../../oauth/token\" resolves outside of the Management API (/api/v2)",
+		},
+		{
+			name:          "it fails when a percent-encoded uri escapes the management api path",
+			givenArgs:     []string{"get", "%2e%2e/%2e%2e/.well-known/openid-configuration"},
+			expectedError: "invalid uri given: \"%2e%2e/%2e%2e/.well-known/openid-configuration\" resolves outside of the Management API (/api/v2)",
+		},
+		{
+			name:          "it fails when an encoded slash escapes the management api path",
+			givenArgs:     []string{"get", "..%2F..%2Fuserinfo"},
+			expectedError: "invalid uri given: \"..%2F..%2Fuserinfo\" resolves outside of the Management API (/api/v2)",
+		},
+		{
+			name:           "it allows dot segments that stay within the management api path",
+			givenArgs:      []string{"get", "users/../clients"},
+			expectedMethod: http.MethodGet,
+			expectedURL:    "https://" + testDomain + "/api/v2/users/../clients",
+		},
 	}
 
 	for _, testCase := range testCases {
