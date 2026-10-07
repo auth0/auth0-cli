@@ -154,6 +154,13 @@ func Execute() {
 	// flags parsed. The human help func is preserved for everyone else.
 	defaultHelpFunc := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		// `auth0 apps grants --help`: the token after a namespace is not a command,
+		// so report it (with suggestions) instead of printing the namespace's help.
+		if unknownCmd, ok := unknownSubcommandFromHelp(cmd); ok {
+			cli.helpErr = unknownCmd
+			return
+		}
+
 		if !cli.wantsJSONHelp() {
 			defaultHelpFunc(cmd, args)
 			return
@@ -174,6 +181,9 @@ func Execute() {
 
 	cancelCtx := contextWithCancel()
 	err := classifyRequiredFlagError(rootCmd.ExecuteContext(cancelCtx))
+	if err == nil && cli.helpErr != nil {
+		err = cli.helpErr
+	}
 	trackCommandOutcome(cli, err)
 
 	timeoutCtx, cancel := context.WithTimeout(cancelCtx, 3*time.Second)
@@ -190,6 +200,26 @@ func Execute() {
 		instrumentation.ReportException(err)
 		os.Exit(exitCodeForError(err)) // nolint:gocritic
 	}
+}
+
+// unknownSubcommandFromHelp detects a help request that carries an unknown
+// subcommand on a namespace. Cobra handles --help before it validates positional
+// args, so without this the mistyped token would be silently swallowed.
+func unknownSubcommandFromHelp(cmd *cobra.Command) (unknownCommandError, bool) {
+	if cmd.Annotations[unknownSubcommandAnnotation] != "true" {
+		return unknownCommandError{}, false
+	}
+
+	positionals := cmd.Flags().Args()
+	if len(positionals) == 0 {
+		return unknownCommandError{}, false
+	}
+
+	return unknownCommandError{
+		token:       positionals[0],
+		parent:      cmd.CommandPath(),
+		suggestions: commandSuggestions(cmd, positionals),
+	}, true
 }
 
 // wantsJSONError reports whether a failing command should emit the machine-readable
@@ -286,7 +316,12 @@ func classifyRequiredFlagError(err error) error {
 func wrapFlagError(cmd *cobra.Command, err error) error {
 	if cmd.HasSubCommands() {
 		if positionals := cmd.Flags().Args(); len(positionals) > 0 {
-			return usageError{err: fmt.Errorf("unknown command %q for %q (also: %s)", positionals[0], cmd.CommandPath(), err)}
+			return unknownCommandError{
+				token:       positionals[0],
+				parent:      cmd.CommandPath(),
+				suggestions: commandSuggestions(cmd, positionals),
+				also:        err,
+			}
 		}
 	}
 
@@ -319,6 +354,11 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 		return
 	}
 
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	cmd.Annotations[unknownSubcommandAnnotation] = "true"
+
 	cmd.Args = func(c *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return nil
@@ -326,7 +366,7 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 		return unknownCommandError{
 			token:       args[0],
 			parent:      c.CommandPath(),
-			suggestions: commandSuggestions(c, args[0]),
+			suggestions: commandSuggestions(c, args),
 		}
 	}
 	cmd.RunE = func(c *cobra.Command, _ []string) error {
@@ -334,34 +374,52 @@ func enforceUnknownSubcommand(cmd *cobra.Command) {
 	}
 }
 
-// commandSuggestions returns Cobra's "did you mean" candidates for a mistyped
-// token. Rejecting an unknown (sub)command as an error means Cobra's own
+// unknownSubcommandAnnotation marks a namespace whose unknown subcommands are
+// rejected as errors (see enforceUnknownSubcommand).
+const unknownSubcommandAnnotation = "unknown-subcommand-enforced"
+
+// commandSuggestions returns "did you mean" candidates for a mistyped command,
+// where args are the positionals left over after the parent, so args[0] is the
+// mistyped token. Rejecting an unknown (sub)command as an error means Cobra's own
 // suggestion output never runs, so we ask for the same candidates it would, using
-// the minimum edit distance of 2 that Cobra applies by default.
-func commandSuggestions(cmd *cobra.Command, token string) []string {
-	if cmd.DisableSuggestions {
+// the minimum edit distance of 2 that Cobra applies by default. Every candidate is
+// returned as a full command path.
+func commandSuggestions(cmd *cobra.Command, args []string) []string {
+	if cmd.DisableSuggestions || len(args) == 0 {
 		return nil
 	}
 	if cmd.SuggestionsMinimumDistance <= 0 {
 		cmd.SuggestionsMinimumDistance = 2
 	}
-	return appendTopLevelSuggestions(cmd, token, cmd.SuggestionsFor(token))
+
+	var suggestions []string
+	for _, name := range cmd.SuggestionsFor(args[0]) {
+		suggestions = append(suggestions, cmd.CommandPath()+" "+name)
+	}
+
+	return appendTopLevelSuggestions(cmd, args, suggestions)
 }
 
 // appendTopLevelSuggestions adds top-level commands that the mistyped token
-// names exactly, through their name, an alias, or the last word of a hyphenated
-// name. This catches a command looked for under the wrong parent, such as
-// `auth0 apps grants`, where the real command is `auth0 client-grants`. Cobra's
-// own suggestions only consider the parent's children, so they can never find it.
-func appendTopLevelSuggestions(cmd *cobra.Command, token string, suggestions []string) []string {
-	token = strings.ToLower(token)
+// deliberately points to, for a command looked for under the wrong parent such
+// as `auth0 apps grants`, where the real command is `auth0 client-grants`.
+// Cobra's own suggestions only consider the parent's children, so they can never
+// find it. If the remaining args also resolve under the suggested command (for
+// example `apps grants create`), the deeper command is suggested instead.
+func appendTopLevelSuggestions(cmd *cobra.Command, args []string, suggestions []string) []string {
+	root := cmd.Root()
+	token := strings.ToLower(args[0])
 
-	for _, top := range cmd.Root().Commands() {
+	for _, top := range root.Commands() {
 		if top.Hidden || top == cmd || !matchesCommandToken(top, token) {
 			continue
 		}
 
 		path := top.CommandPath()
+		if found, rest, err := root.Find(append([]string{top.Name()}, args[1:]...)); err == nil && len(rest) == 0 {
+			path = found.CommandPath()
+		}
+
 		if !slices.Contains(suggestions, path) {
 			suggestions = append(suggestions, path)
 		}
@@ -370,12 +428,15 @@ func appendTopLevelSuggestions(cmd *cobra.Command, token string, suggestions []s
 	return suggestions
 }
 
+// matchesCommandToken reports whether a top-level command should be suggested for
+// a token typed elsewhere. Only deliberate matches count: an alias, a name listed
+// in the command's SuggestFor, or a hyphenated command name typed in full (such
+// as client-grants). Plain words like login, help or users are left out, because
+// they are often meant for a different command and would make the hint noisy.
 func matchesCommandToken(cmd *cobra.Command, token string) bool {
-	if cmd.Name() == token || slices.Contains(cmd.Aliases, token) {
-		return true
-	}
-
-	return strings.HasSuffix(cmd.Name(), "-"+token)
+	return slices.Contains(cmd.Aliases, token) ||
+		slices.Contains(cmd.SuggestFor, token) ||
+		(cmd.Name() == token && strings.Contains(token, "-"))
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {
