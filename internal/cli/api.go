@@ -64,6 +64,7 @@ type (
 		RawURI         string
 		RawData        string
 		RawQueryParams []string
+		RevealSecrets  bool
 		Method         string
 		URL            *url.URL
 		Data           any
@@ -84,15 +85,19 @@ func apiCmd(cli *cli) *cobra.Command {
 
 Method argument is optional, defaults to %s for requests without data and %s for requests with data.
 
-Additional scopes may need to be requested during authentication step via the %s flag. For example: %s.`,
+Additional scopes may need to be requested during authentication step via the %s flag. For example: %s.
+
+Like the typed commands, secrets such as %s and %s are removed from the response unless you pass %s.`,
 			apiDocsURL, "`GET`", "`POST`", "`--scopes`", "`auth0 login --scopes read:client_grants`",
+			"`client_secret`", "`signing_keys`", "`--reveal-secrets`",
 		),
 		Example: `  auth0 api get "tenants/settings"
   auth0 api "stats/daily" -q "from=20221101" -q "to=20221118"
   auth0 api "clients" -q "fields=name,app_type,callbacks"
   auth0 api delete "actions/actions/<action-id>" --force
   auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
-  cat data.json | auth0 api post clients`,
+  cat data.json | auth0 api post clients
+  auth0 api get "clients/<client-id>" --reveal-secrets`,
 		RunE: apiCmdRun(cli, &inputs),
 	}
 
@@ -106,8 +111,78 @@ Additional scopes may need to be requested during authentication step via the %s
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 	apiFlags.Data.RegisterString(cmd, &inputs.RawData, "")
 	apiFlags.QueryParams.RegisterStringArray(cmd, &inputs.RawQueryParams, nil)
+	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 
 	return cmd
+}
+
+// apiSecretKeys are the response fields removed from `auth0 api` output unless
+// --reveal-secrets is set. They match what the typed `apps` commands hide.
+var apiSecretKeys = []string{"client_secret", "signing_keys"}
+
+// maskAPISecrets removes secret fields, at any depth, from a JSON response body.
+// A body without them is returned untouched, so key order and formatting only
+// change when something was actually removed.
+func maskAPISecrets(rawBodyJSON []byte) ([]byte, bool, error) {
+	found := false
+	for _, key := range apiSecretKeys {
+		if bytes.Contains(rawBodyJSON, []byte(`"`+key+`"`)) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return rawBodyJSON, false, nil
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(rawBodyJSON))
+	decoder.UseNumber()
+
+	var document any
+	if err := decoder.Decode(&document); err != nil {
+		// Not a JSON document we can walk (the caller prints it as is).
+		return rawBodyJSON, false, nil
+	}
+
+	if !removeAPISecretKeys(document) {
+		return rawBodyJSON, false, nil
+	}
+
+	var masked bytes.Buffer
+	encoder := json.NewEncoder(&masked)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(document); err != nil {
+		return nil, false, fmt.Errorf("failed to mask secrets in the response: %w", err)
+	}
+
+	return bytes.TrimSpace(masked.Bytes()), true, nil
+}
+
+func removeAPISecretKeys(value any) bool {
+	removed := false
+
+	switch typed := value.(type) {
+	case map[string]any:
+		for _, key := range apiSecretKeys {
+			if _, ok := typed[key]; ok {
+				delete(typed, key)
+				removed = true
+			}
+		}
+		for _, child := range typed {
+			if removeAPISecretKeys(child) {
+				removed = true
+			}
+		}
+	case []any:
+		for _, child := range typed {
+			if removeAPISecretKeys(child) {
+				removed = true
+			}
+		}
+	}
+
+	return removed
 }
 
 // formatAPIResponse renders a raw JSON response body for stdout. Under
@@ -225,6 +300,17 @@ func apiCmdRun(cli *cli, inputs *apiCmdInputs) func(cmd *cobra.Command, args []s
 				cli.renderer.Infof("Response body is empty.")
 			}
 			return nil
+		}
+
+		if !inputs.RevealSecrets {
+			masked, didMask, err := maskAPISecrets(rawBodyJSON)
+			if err != nil {
+				return err
+			}
+			if didMask {
+				rawBodyJSON = masked
+				cli.renderer.Infof("Secrets were removed from the response. Use --reveal-secrets to include them.")
+			}
 		}
 
 		output, err := formatAPIResponse(cli.renderer.Format, rawBodyJSON)
