@@ -11,6 +11,8 @@ To create interactively, use `auth0 apps create` with no arguments.
 
 To create non-interactively, supply at least the application name, and type through the flags.
 
+To let a machine to machine application call an API, run: `auth0 client-grants create`.
+
 Use '--schema' to print the request payload schema and exit.
 Use '--data' to supply the full JSON payload (validated against the schema before sending).
 
@@ -56,7 +58,7 @@ auth0 apps create [flags]
   -c, --callbacks strings                        After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
       --data string                              JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string                       Description of the application. Max character count is 140.
-  -g, --grants strings                           List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.
+  -g, --grants strings                           List of OAuth grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code. To authorize the application to call an API, use 'auth0 client-grants create' instead.
   -f, --is-first-party                           Whether the application is a first-party client (true) or third-party client (false). (default true)
       --json                                     Output in json format.
       --json-compact                             Output in compact json format.

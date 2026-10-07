@@ -7,6 +7,8 @@ has_toc: false
 
 Display the name, scopes, token lifetime, and other information about an API.
 
+To let an application call this API, run: `auth0 client-grants create`.
+
 ## Usage
 ```
 auth0 apis show [flags]

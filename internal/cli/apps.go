@@ -124,7 +124,7 @@ var (
 		Name:       "Grants",
 		LongForm:   "grants",
 		ShortForm:  "g",
-		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
+		Help:       "List of OAuth grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code. To authorize the application to call an API, use 'auth0 client-grants create' instead.",
 		IsRequired: false,
 	}
 	appResourceServerIdentifier = Flag{
@@ -581,6 +581,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Long: "Create a new application.\n\n" +
 			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
 			"To create non-interactively, supply at least the application name, and type through the flags.\n\n" +
+			"To let a machine to machine application call an API, run: `auth0 client-grants create`.\n\n" +
 			"Use '--schema' to print the request payload schema and exit.\n" +
 			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 apps create
