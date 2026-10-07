@@ -34,7 +34,7 @@ const userAgent = "Auth0 CLI"
 // 3. --tenant
 // 4. --debug.
 type cli struct {
-	// helpErr is set when a help request turns out to be an unknown subcommand,
+	// The error for a help request that turns out to be an unknown subcommand,
 	// so Execute can fail with it instead of printing help.
 	helpErr error
 
