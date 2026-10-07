@@ -468,3 +468,57 @@ func TestCommandSuggestions(t *testing.T) {
 		})
 	}
 }
+
+// TestUnknownSubcommandSuggestionsOnRealTree runs the actual command tree, so
+// renaming or re-aliasing client-grants fails here rather than silently
+// dropping the hint.
+func TestUnknownSubcommandSuggestionsOnRealTree(t *testing.T) {
+	testCLI := &cli{renderer: display.NewRenderer()}
+	root := buildRootCmd(testCLI)
+	addSubCommands(root, testCLI)
+	enforceUnknownSubcommand(root)
+
+	tests := []struct {
+		name    string
+		path    []string
+		token   string
+		want    []string
+		notWant []string
+	}{
+		{name: "apps grants", path: []string{"apps"}, token: "grants", want: []string{"auth0 client-grants"}},
+		{name: "apis grants", path: []string{"apis"}, token: "grants", want: []string{"auth0 client-grants"}},
+		{name: "apps client-grants", path: []string{"apps"}, token: "client-grants", want: []string{"auth0 client-grants"}},
+		{name: "apps typo keeps the sibling suggestion", path: []string{"apps"}, token: "lst", want: []string{"list"}, notWant: []string{"auth0 client-grants"}},
+		{name: "apps users points to the users command", path: []string{"apps"}, token: "users", want: []string{"auth0 users"}},
+		{name: "unrelated token suggests nothing", path: []string{"apps"}, token: "zzzzzz", notWant: []string{"auth0 client-grants"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd, _, err := root.Find(test.path)
+			require.NoError(t, err)
+			require.NotNil(t, cmd.Args, "namespace must reject unknown subcommands")
+
+			err = cmd.Args(cmd, []string{test.token})
+
+			var unknownCmd unknownCommandError
+			require.True(t, errors.As(err, &unknownCmd))
+
+			for _, want := range test.want {
+				assert.Contains(t, unknownCmd.suggestions, want)
+			}
+			for _, notWant := range test.notWant {
+				assert.NotContains(t, unknownCmd.suggestions, notWant)
+			}
+
+			// The suggestion must reach the agent-facing JSON envelope.
+			if len(test.want) > 0 {
+				envelope := buildErrorEnvelope(err)
+				require.NotNil(t, envelope.Error.Details)
+				for _, want := range test.want {
+					assert.Contains(t, string(envelope.Error.Details), want)
+				}
+			}
+		})
+	}
+}
