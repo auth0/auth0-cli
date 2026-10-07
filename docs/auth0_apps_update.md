@@ -65,7 +65,7 @@ auth0 apps update [flags]
       --organization-discovery-methods strings   Comma-separated list of methods for discovering organizations during the 'pre_login_prompt'. Possible values: 'email', 'organization_name'. Requires --organization-require-behavior=pre_login_prompt.
       --organization-require-behavior string     How to prompt for an organization at authentication: 'no_prompt', 'pre_login_prompt', or 'post_login_prompt'. 'post_login_prompt' requires an OIDC-conformant application.
       --organization-usage string                How the application handles organizations at authentication: 'deny', 'allow', or 'require'.
-  -o, --origins strings                          Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.
+  -o, --origins strings                          Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs. This sets allowed_origins; use --web-origins to set web_origins.
   -y, --redirection-policy string                Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false
   -z, --refresh-token string                     Refresh Token Config for the application, formatted as JSON.
   -r, --reveal-secrets                           Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
@@ -76,7 +76,7 @@ auth0 apps update [flags]
                                                  - spa (single page application): a JavaScript front-end app that uses an API.
                                                  - regular: Traditional web app using redirects.
                                                  - m2m (machine to machine): CLIs, daemons or services running on your backend.
-  -w, --web-origins strings                      Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.
+  -w, --web-origins strings                      Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode. This sets web_origins and is required for silent authentication in SPAs.
 ```
 
 
