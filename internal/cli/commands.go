@@ -46,8 +46,8 @@ type commandNode struct {
 // cover what it needs, instead of guessing.
 const rawAPIFallbackNote = "The flags above are everything this command supports. " +
 	"If a parameter or field you need is not listed, don't guess. First check whether a dedicated " +
-	"command already covers it, for example with `auth0 commands --flat` (or `auth0 commands <resource>`) " +
-	"and a grep for your keyword. If there is none, use `auth0 api` to make a raw " +
+	"command already covers it: `auth0 commands <resource>` lists the commands for one area, and " +
+	"`auth0 commands --flat` lists every command. If there is none, use `auth0 api` to make a raw " +
 	"Auth0 Management API request instead (for example `auth0 api get \"clients/{id}\"` or " +
 	"`auth0 api patch \"clients/{id}\" --data '{...}'`). Run `auth0 api --help` and see " +
 	"https://auth0.com/docs/api/management/v2 for the available endpoints and fields."

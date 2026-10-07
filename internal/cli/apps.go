@@ -124,7 +124,7 @@ var (
 		Name:       "Grants",
 		LongForm:   "grants",
 		ShortForm:  "g",
-		Help:       "List of OAuth grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code. To authorize the application to call an API, use 'auth0 client-grants create' instead.",
+		Help:       "List of OAuth grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code. A machine to machine application also needs a client grant to call an API: see 'auth0 client-grants create'.",
 		IsRequired: false,
 	}
 	appResourceServerIdentifier = Flag{
