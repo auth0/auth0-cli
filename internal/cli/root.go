@@ -397,7 +397,29 @@ func commandSuggestions(cmd *cobra.Command, args []string) []string {
 		suggestions = append(suggestions, cmd.CommandPath()+" "+name)
 	}
 
+	// Cobra only defines `help` on the root, so `auth0 apps help [command]` points
+	// to `auth0 help apps [command]`.
+	if strings.EqualFold(args[0], "help") {
+		suggestions = append(suggestions, helpSuggestion(cmd, args[1:]))
+	}
+
 	return appendTopLevelSuggestions(cmd, args, suggestions)
+}
+
+// helpSuggestion returns the root help command for cmd, or for the subcommand
+// named in rest when it resolves. An unresolved name is dropped, because
+// `auth0 help` silently falls back to the namespace's help for it.
+func helpSuggestion(cmd *cobra.Command, rest []string) string {
+	target := cmd
+	if len(rest) > 0 {
+		if found, remaining, err := cmd.Find(rest); err == nil && len(remaining) == 0 {
+			target = found
+		}
+	}
+
+	root := cmd.Root()
+
+	return root.Name() + " help " + strings.TrimPrefix(target.CommandPath(), root.CommandPath()+" ")
 }
 
 // appendTopLevelSuggestions adds top-level commands that the mistyped token
@@ -431,8 +453,9 @@ func appendTopLevelSuggestions(cmd *cobra.Command, args []string, suggestions []
 // matchesCommandToken reports whether a top-level command should be suggested for
 // a token typed elsewhere. Only deliberate matches count: an alias, a name listed
 // in the command's SuggestFor, or a hyphenated command name typed in full (such
-// as client-grants). Plain words like login, help or users are left out, because
-// they are often meant for a different command and would make the hint noisy.
+// as client-grants). Plain words like login or users are left out, because they are
+// often meant for a different command and would make the hint noisy. A mistyped
+// help is handled separately in commandSuggestions.
 func matchesCommandToken(cmd *cobra.Command, token string) bool {
 	return slices.Contains(cmd.Aliases, token) ||
 		slices.Contains(cmd.SuggestFor, token) ||

@@ -39,6 +39,10 @@ func TestCommandSuggestions(t *testing.T) {
 		{name: "no match", args: []string{"zzz"}, want: nil},
 		{name: "hidden commands are skipped", args: []string{"secret-grants"}, want: nil},
 		{name: "no args", args: nil, want: nil},
+		{name: "help points to the root help command", args: []string{"help"}, want: []string{"auth0 help apps"}},
+		{name: "help is case insensitive", args: []string{"HELP"}, want: []string{"auth0 help apps"}},
+		{name: "help keeps a subcommand that resolves", args: []string{"help", "list"}, want: []string{"auth0 help apps list"}},
+		{name: "help drops a subcommand that does not resolve", args: []string{"help", "bogus"}, want: []string{"auth0 help apps"}},
 	}
 
 	for _, test := range tests {
@@ -72,7 +76,9 @@ func TestUnknownSubcommandSuggestionsOnRealTree(t *testing.T) {
 		{name: "apps typo keeps the sibling suggestion", path: []string{"apps"}, args: []string{"lst"}, want: []string{"auth0 apps list"}, notWant: []string{"auth0 client-grants"}},
 		{name: "generic words are not suggested", path: []string{"apps"}, args: []string{"login"}, notWant: []string{"auth0 login", "auth0 universal-login"}},
 		{name: "settings is not tenant-settings", path: []string{"apps"}, args: []string{"settings"}, notWant: []string{"auth0 tenant-settings"}},
-		{name: "help is not suggested", path: []string{"apps"}, args: []string{"help"}, notWant: []string{"auth0 help"}},
+		{name: "help points to the root help command", path: []string{"apps"}, args: []string{"help"}, want: []string{"auth0 help apps"}, notWant: []string{"auth0 help", "auth0 login"}},
+		{name: "help keeps a subcommand", path: []string{"apps"}, args: []string{"help", "create"}, want: []string{"auth0 help apps create"}},
+		{name: "help on a nested namespace", path: []string{"actions", "modules"}, args: []string{"help", "create"}, want: []string{"auth0 help actions modules create"}},
 		{name: "unrelated token suggests nothing", path: []string{"apps"}, args: []string{"zzzzzz"}, notWant: []string{"auth0 client-grants"}},
 	}
 
@@ -134,6 +140,19 @@ func TestUnknownSubcommandWithFlagsAndHelp(t *testing.T) {
 		assert.Contains(t, unknownCmd.suggestions, "auth0 client-grants create")
 		assert.Contains(t, err.Error(), "unknown flag: --client-id")
 		assert.Contains(t, string(buildErrorEnvelope(err).Error.Details), "auth0 client-grants create")
+	})
+
+	t.Run("mistyped help with an unknown flag points to the root help command", func(t *testing.T) {
+		root, _ := newRoot()
+		root.SetArgs([]string{"apps", "help", "create", "--bogus"})
+
+		err := root.Execute()
+
+		var unknownCmd unknownCommandError
+		require.True(t, errors.As(err, &unknownCmd))
+		assert.Equal(t, "help", unknownCmd.token)
+		assert.Contains(t, unknownCmd.suggestions, "auth0 help apps create")
+		assert.Contains(t, err.Error(), "unknown flag: --bogus")
 	})
 
 	t.Run("help on an unknown subcommand is reported", func(t *testing.T) {
