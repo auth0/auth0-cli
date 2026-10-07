@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -344,7 +345,37 @@ func commandSuggestions(cmd *cobra.Command, token string) []string {
 	if cmd.SuggestionsMinimumDistance <= 0 {
 		cmd.SuggestionsMinimumDistance = 2
 	}
-	return cmd.SuggestionsFor(token)
+	return appendTopLevelSuggestions(cmd, token, cmd.SuggestionsFor(token))
+}
+
+// appendTopLevelSuggestions adds top-level commands that the mistyped token
+// names exactly, through their name, an alias, or the last word of a hyphenated
+// name. This catches a command looked for under the wrong parent, such as
+// `auth0 apps grants`, where the real command is `auth0 client-grants`. Cobra's
+// own suggestions only consider the parent's children, so they can never find it.
+func appendTopLevelSuggestions(cmd *cobra.Command, token string, suggestions []string) []string {
+	token = strings.ToLower(token)
+
+	for _, top := range cmd.Root().Commands() {
+		if top.Hidden || top == cmd || !matchesCommandToken(top, token) {
+			continue
+		}
+
+		path := top.CommandPath()
+		if !slices.Contains(suggestions, path) {
+			suggestions = append(suggestions, path)
+		}
+	}
+
+	return suggestions
+}
+
+func matchesCommandToken(cmd *cobra.Command, token string) bool {
+	if cmd.Name() == token || slices.Contains(cmd.Aliases, token) {
+		return true
+	}
+
+	return strings.HasSuffix(cmd.Name(), "-"+token)
 }
 
 func commandRequiresAuthentication(invokedCommandName string) bool {

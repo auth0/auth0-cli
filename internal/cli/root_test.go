@@ -439,3 +439,32 @@ func TestApplyAgentModeDefaults(t *testing.T) {
 		assert.False(t, c.json) // JSON not forced because --csv was explicit.
 	})
 }
+
+func TestCommandSuggestions(t *testing.T) {
+	root := &cobra.Command{Use: "auth0"}
+	apps := &cobra.Command{Use: "apps"}
+	apps.AddCommand(&cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }})
+	grants := &cobra.Command{Use: "client-grants", Aliases: []string{"grants"}}
+	hidden := &cobra.Command{Use: "secret-grants", Hidden: true}
+	root.AddCommand(apps, grants, hidden)
+
+	tests := []struct {
+		name  string
+		cmd   *cobra.Command
+		token string
+		want  []string
+	}{
+		{name: "alias under the wrong parent", cmd: apps, token: "grants", want: []string{"auth0 client-grants"}},
+		{name: "last word of a hyphenated name", cmd: apps, token: "GRANTS", want: []string{"auth0 client-grants"}},
+		{name: "exact top-level name", cmd: apps, token: "client-grants", want: []string{"auth0 client-grants"}},
+		{name: "typo keeps cobra suggestion only", cmd: apps, token: "lst", want: []string{"list"}},
+		{name: "no match", cmd: apps, token: "zzz", want: nil},
+		{name: "hidden commands are skipped", cmd: apps, token: "secret-grants", want: nil},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.ElementsMatch(t, test.want, commandSuggestions(test.cmd, test.token))
+		})
+	}
+}
