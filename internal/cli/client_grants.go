@@ -138,6 +138,8 @@ func clientGrantsCmd(cli *cli) *cobra.Command {
 		Short:   "Manage client grants",
 		Long:    "Manage client grants. A client grant authorizes an application (client) to request access tokens for an API (audience), optionally scoped to specific permissions or organizations.",
 		Aliases: []string{"grants"},
+		// Lets `auth0 apps grant` and similar mistakes suggest this command.
+		SuggestFor: []string{"grant", "client-grant", "clientgrants"},
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
