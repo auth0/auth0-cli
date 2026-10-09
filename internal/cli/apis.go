@@ -226,7 +226,8 @@ func showAPICmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an API",
-		Long:  "Display the name, scopes, token lifetime, and other information about an API.",
+		Long: "Display the name, scopes, token lifetime, and other information about an API.\n\n" +
+			"To authorize an application to request tokens for this API, run: `auth0 client-grants create`.",
 		Example: `  auth0 apis show
   auth0 apis show <api-id|api-audience>
   auth0 apis show <api-id|api-audience> --json
@@ -286,6 +287,8 @@ func createAPICmd(cli *cli) *cobra.Command {
 To create interactively, use ` + "`auth0 apis create`" + ` with no flags.
 
 To create non-interactively, supply the name, identifier, scopes, token lifetime and whether to allow offline access through the flags.
+
+To authorize an application to request tokens for this API, run: ` + "`auth0 client-grants create`" + `.
 
 Use '--schema' to print the request payload schema and exit.
 Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
