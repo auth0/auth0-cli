@@ -10,6 +10,8 @@ Method argument is optional, defaults to `GET` for requests without data and `PO
 
 Additional scopes may need to be requested during authentication step via the `--scopes` flag. For example: `auth0 login --scopes read:client_grants`.
 
+Like the typed commands, secrets such as `client_secret` and `signing_keys` are removed from the response unless you pass `--reveal-secrets`.
+
 ## Usage
 ```
 auth0 api <method> <url-path> [flags]
@@ -24,6 +26,7 @@ auth0 api <method> <url-path> [flags]
   auth0 api delete "actions/actions/<action-id>" --force
   auth0 api clients --data "{\"name\":\"ssoTest\",\"app_type\":\"sso_integration\"}"
   cat data.json | auth0 api post clients
+  auth0 api get "clients/<client-id>" --reveal-secrets
 ```
 
 
@@ -35,6 +38,7 @@ auth0 api <method> <url-path> [flags]
       --json                Output in json format.
       --json-compact        Output in compact json format.
   -q, --query stringArray   Query params to send with the request. A comma-separated value is sent as a single param, for example -q "fields=a,b,c". Repeat the flag to send a param more than once, for example -q "fields=a" -q "fields=b".
+  -r, --reveal-secrets      Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
 ```
 
 
