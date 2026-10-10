@@ -22,6 +22,51 @@ var listQueryFlag = Flag{
 	Help:      "Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add \"include_totals\":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).",
 }
 
+// searchQueryFlag is --query for search commands, whose endpoints are cursor-paginated.
+var searchQueryFlag = Flag{
+	Name:      "Query",
+	LongForm:  "query",
+	ShortForm: "q",
+	Help:      "Search with a JSON object of query parameters, sent as-is. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. Returns one page: set \"take\" (max 100) for the page size, and \"from\" to the previous response's \"next\" to fetch the next page.",
+}
+
+// runSearchSchemaOrQuery handles --schema, then --query, for a search command; resource names
+// it in errors (e.g. "APIs"). It reports handled=false when neither is set.
+func runSearchSchemaOrQuery(cli *cli, cmd *cobra.Command, spec jsonQuerySpec, resource string, schema bool, query string) (bool, error) {
+	if schema {
+		return true, printOperationSchema(cli, http.MethodGet, "/"+spec.Path)
+	}
+
+	if query == "" {
+		return false, nil
+	}
+
+	if f := cmd.Flags().Lookup("number"); f != nil && f.Changed {
+		cli.renderer.Warnf("--number is ignored with --query; set \"take\" (max 100) in the JSON instead.")
+	}
+
+	err := runJSONQuery(cli, cmd, spec, query)
+	if _, isAPIError := managementHTTPStatus(err); isAPIError {
+		return true, searchError(resource, err)
+	}
+
+	return true, err
+}
+
+// searchError adds guidance for the failure modes specific to search endpoints.
+func searchError(resource string, err error) error {
+	status, _ := managementHTTPStatus(err)
+
+	switch status {
+	case http.StatusGatewayTimeout:
+		return fmt.Errorf("failed to search %s: the search timed out, simplify your query and try again: %w", resource, err)
+	case http.StatusNotFound:
+		return fmt.Errorf("failed to search %s: the search endpoint is in Early Access and may not be enabled for this tenant: %w", resource, err)
+	default:
+		return fmt.Errorf("failed to search %s: %w", resource, err)
+	}
+}
+
 // jsonQuerySpec describes a list operation driven by a --query JSON payload.
 type jsonQuerySpec struct {
 	Path      string // API path segments (e.g. "actions/actions").

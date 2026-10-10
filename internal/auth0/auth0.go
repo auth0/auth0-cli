@@ -99,6 +99,7 @@ type APIV3 struct {
 	NetworkACLKey                NetworkACLKeyAPIV3
 	Connection                   ConnectionAPIV3
 	ConnectionEnabledClient      ConnectionEnabledClientAPIV3
+	ResourceServerV3             ResourceServerAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -128,6 +129,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		NetworkACLKey:                m.Keys.NetworkACLs,
 		Connection:                   m.Connections,
 		ConnectionEnabledClient:      m.Connections.Clients,
+		ResourceServerV3:             m.ResourceServers,
 	}
 }
 
