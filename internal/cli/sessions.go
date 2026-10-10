@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/spf13/cobra"
@@ -87,6 +88,8 @@ func updateSessionCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID       string
 		Metadata map[string]string
+		Data     string
+		Schema   bool
 	}
 
 	cmd := &cobra.Command{
@@ -98,14 +101,34 @@ func updateSessionCmd(cli *cli) *cobra.Command {
 			"passing no pairs clears it.",
 		Example: `  auth0 sessions update <session-id> --metadata key=value
   auth0 sessions update <session-id> -m key1=value1 -m key2=value2
-  auth0 sessions update <session-id> --metadata key=value --json`,
+  auth0 sessions update <session-id> --metadata key=value --json
+
+  # Discover the payload schema
+  auth0 sessions update --schema
+  auth0 sessions update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 sessions update <session-id> --data '{"session_metadata":{"key":"value"}}'
+  auth0 sessions update <session-id> --data @session.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/sessions/{id}")
+			}
+
 			if len(args) == 0 {
 				if err := sessionID.Ask(cmd, &inputs.ID); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateSessionFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			metadata := stringMapToAny(inputs.Metadata)
@@ -132,8 +155,28 @@ func updateSessionCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	sessionMetadata.RegisterStringMap(cmd, &inputs.Metadata, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func updateSessionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	session, err := runJSONWrite[managementv3.UpdateSessionResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/sessions/{id}",
+		URI:        cli.api.HTTPClient.URI("sessions", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 sessions update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update session with ID %q: %w", id, err)
+	}
+
+	cli.renderer.SessionUpdate(session)
+
+	return nil
 }
 
 func deleteSessionCmd(cli *cli) *cobra.Command {

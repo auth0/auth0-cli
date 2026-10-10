@@ -20,15 +20,25 @@ auth0 sessions update [flags]
   auth0 sessions update <session-id> --metadata key=value
   auth0 sessions update <session-id> -m key1=value1 -m key2=value2
   auth0 sessions update <session-id> --metadata key=value --json
+
+  # Discover the payload schema
+  auth0 sessions update --schema
+  auth0 sessions update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 sessions update <session-id> --data '{"session_metadata":{"key":"value"}}'
+  auth0 sessions update <session-id> --data @session.json
 ```
 
 
 ## Flags
 
 ```
+      --data string               JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                      Output in json format.
       --json-compact              Output in compact json format.
   -m, --metadata stringToString   Metadata key/value pairs to set on the session, e.g. --metadata key=value. Repeat the flag or comma-separate pairs for multiple values. Passing no pairs clears the metadata. (default [])
+      --schema                    Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

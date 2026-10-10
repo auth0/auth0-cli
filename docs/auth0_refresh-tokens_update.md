@@ -20,15 +20,25 @@ auth0 refresh-tokens update [flags]
   auth0 refresh-tokens update <token-id> --metadata key=value
   auth0 refresh-tokens update <token-id> -m key1=value1 -m key2=value2
   auth0 refresh-tokens update <token-id> --metadata key=value --json
+
+  # Discover the payload schema
+  auth0 refresh-tokens update --schema
+  auth0 refresh-tokens update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 refresh-tokens update <token-id> --data '{"refresh_token_metadata":{"key":"value"}}'
+  auth0 refresh-tokens update <token-id> --data @token.json
 ```
 
 
 ## Flags
 
 ```
+      --data string               JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                      Output in json format.
       --json-compact              Output in compact json format.
   -m, --metadata stringToString   Metadata key/value pairs to set on the refresh token, e.g. --metadata key=value. Repeat the flag or comma-separate pairs for multiple values. Passing no pairs clears the metadata. (default [])
+      --schema                    Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

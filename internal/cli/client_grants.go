@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -159,6 +160,8 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
 		SubjectType          string
 		DefaultFor           string
 		AllowAnyOrganization bool
+		Schema               bool
+		Query                string
 	}
 
 	cmd := &cobra.Command{
@@ -168,7 +171,9 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
 		Short:   "List your client grants",
 		Long: "List your existing client grants. To create one, run: `auth0 client-grants create`.\n\n" +
 			"Use the filter flags to narrow the results server-side by client, audience, subject type, " +
-			"default group or organization usage.",
+			"default group or organization usage.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 client-grants list
   auth0 client-grants ls
   auth0 client-grants ls --number 100
@@ -177,8 +182,23 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
   auth0 client-grants ls --default-for third_party_clients
   auth0 client-grants ls --allow-any-organization=true
   auth0 client-grants ls -n 100 --json
-  auth0 client-grants ls --csv`,
+  auth0 client-grants ls --csv
+  auth0 client-grants list --schema
+  auth0 client-grants list --schema --json
+  auth0 client-grants list --query '{"audience":"https://example.com/api"}'
+  auth0 client-grants list --query '{"client_id":"<client-id>","per_page":50}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/client-grants")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "client-grants",
+					SchemaCmd: "auth0 client-grants list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
@@ -250,6 +270,8 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
 	clientGrantFilterSubjectType.RegisterString(cmd, &inputs.SubjectType, "")
 	clientGrantFilterDefaultFor.RegisterString(cmd, &inputs.DefaultFor, "")
 	clientGrantFilterAllowAnyOrganization.RegisterBool(cmd, &inputs.AllowAnyOrganization, false)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	// The API rejects client_id and default_for together.
 	cmd.MarkFlagsMutuallyExclusive("client-id", "default-for")
@@ -318,6 +340,8 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 		AllowAnyOrganization      bool
 		SubjectType               string
 		AuthorizationDetailsTypes []string
+		Data                      string
+		Schema                    bool
 	}
 
 	cmd := &cobra.Command{
@@ -339,8 +363,29 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
   auth0 client-grants create --client-id <client-id> --audience <api-identifier> --authorization-details-types "payment,transfer"
   auth0 client-grants create -c <client-id> -a <api-identifier> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants create -c <client-id> -a <api-identifier> --subject-type user
-  auth0 client-grants create -c <client-id> -a <api-identifier> --json`,
+  auth0 client-grants create -c <client-id> -a <api-identifier> --json
+
+  # Discover the payload schema
+  auth0 client-grants create --schema
+  auth0 client-grants create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 client-grants create --data '{"client_id":"<client-id>","audience":"https://example.com/api","scope":["read:users"]}'
+  auth0 client-grants create --data @grant.json
+  cat grant.json | auth0 client-grants create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/client-grants")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createClientGrantFromJSON(cli, cmd, payload)
+			}
+
 			// A grant authorizes either a specific client or a default group,
 			// never both. When neither flag was passed and we can prompt, ask
 			// which the grant should target, then prompt for that target. When a
@@ -560,12 +605,15 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 	clientGrantAllowAnyOrganization.RegisterBool(cmd, &inputs.AllowAnyOrganization, false)
 	clientGrantSubjectType.RegisterString(cmd, &inputs.SubjectType, "")
 	clientGrantAuthorizationDetailsTypes.RegisterStringSlice(cmd, &inputs.AuthorizationDetailsTypes, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 
 	// A grant authorizes either specific scopes or all of them, never both.
 	cmd.MarkFlagsMutuallyExclusive("scopes", "allow-all-scopes")
 
 	// A grant targets either a specific client or a default group, never both.
 	cmd.MarkFlagsMutuallyExclusive("client-id", "default-for")
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -579,6 +627,8 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 		OrganizationUsage         string
 		AllowAnyOrganization      bool
 		AuthorizationDetailsTypes []string
+		Data                      string
+		Schema                    bool
 	}
 
 	cmd := &cobra.Command{
@@ -599,14 +649,34 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
   auth0 client-grants update <client-grant-id> --no-scopes
   auth0 client-grants update <client-grant-id> --authorization-details-types "payment,transfer"
   auth0 client-grants update <client-grant-id> -s "read:users" -o require --allow-any-organization=false
-  auth0 client-grants update <client-grant-id> --json`,
+  auth0 client-grants update <client-grant-id> --json
+
+  # Discover the payload schema
+  auth0 client-grants update --schema
+  auth0 client-grants update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 client-grants update <client-grant-id> --data '{"scope":["read:users","update:users"]}'
+  auth0 client-grants update <client-grant-id> --data @grant.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/client-grants/{id}")
+			}
+
 			if len(args) == 0 {
 				if err := clientGrantID.Pick(cmd, &inputs.ID, cli.mutableClientGrantPickerOptions); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateClientGrantFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			var current *managementv3.GetClientGrantResponseContent
@@ -767,11 +837,48 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 	clientGrantOrganizationUsage.RegisterStringU(cmd, &inputs.OrganizationUsage, "")
 	clientGrantAllowAnyOrganization.RegisterBoolU(cmd, &inputs.AllowAnyOrganization, false)
 	clientGrantAuthorizationDetailsTypes.RegisterStringSliceU(cmd, &inputs.AuthorizationDetailsTypes, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 
 	// A grant authorizes specific scopes, all of them, or none, never a mix.
 	cmd.MarkFlagsMutuallyExclusive("scopes", "allow-all-scopes", "no-scopes")
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createClientGrantFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	grant, err := runJSONWrite[managementv3.CreateClientGrantResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/client-grants",
+		URI:        cli.api.HTTPClient.URI("client-grants"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 client-grants create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create client grant: %w", err)
+	}
+
+	cli.renderer.ClientGrantCreate(grant)
+
+	return nil
+}
+
+func updateClientGrantFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	grant, err := runJSONWrite[managementv3.UpdateClientGrantResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/client-grants/{id}",
+		URI:        cli.api.HTTPClient.URI("client-grants", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 client-grants update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update client grant with ID %q: %w", id, err)
+	}
+
+	cli.renderer.ClientGrantUpdate(grant)
+
+	return nil
 }
 
 func deleteClientGrantCmd(cli *cli) *cobra.Command {

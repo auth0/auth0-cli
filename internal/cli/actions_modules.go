@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"regexp"
 	"sort"
 	"strings"
@@ -94,6 +95,8 @@ func actionsModulesCmd(cli *cli) *cobra.Command {
 func listActionModulesCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -101,13 +104,31 @@ func listActionModulesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your action modules",
-		Long:    "List the action modules in your tenant.",
+		Long: `List the action modules in your tenant.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 actions modules list
   auth0 actions modules ls
   auth0 actions modules list --number 100
   auth0 actions modules list -n 100 --json
-  auth0 actions modules list --csv`,
+  auth0 actions modules list --csv
+  auth0 actions modules list --schema
+  auth0 actions modules list --schema --json
+  auth0 actions modules list --query '{"per_page":50}'
+  auth0 actions modules list --query '{"page":1,"per_page":10}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/actions/modules")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "actions/modules",
+					SchemaCmd: "auth0 actions modules list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
@@ -132,6 +153,8 @@ func listActionModulesCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	actionModuleNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -187,6 +210,8 @@ func createActionModuleCmd(cli *cli) *cobra.Command {
 		Secrets      map[string]string
 		Publish      bool
 		APIVersion   string
+		Data         string
+		Schema       bool
 	}
 
 	cmd := &cobra.Command{
@@ -201,8 +226,29 @@ func createActionModuleCmd(cli *cli) *cobra.Command {
   auth0 actions modules create --name mymodule --code "$(cat path/to/module.js)" --publish
   auth0 actions modules create --name mymodule --code "$(cat path/to/module.js)" --dependency "lodash=4.0.0" --secret "API_KEY=value"
   auth0 actions modules create --name mymodule --code "$(cat path/to/module.js)" --api-version v1
-  auth0 actions modules create -n mymodule -c "$(cat path/to/module.js)" -d "lodash=4.0.0" -s "API_KEY=value" --json`,
+  auth0 actions modules create -n mymodule -c "$(cat path/to/module.js)" -d "lodash=4.0.0" -s "API_KEY=value" --json
+
+  # Discover the payload schema
+  auth0 actions modules create --schema
+  auth0 actions modules create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions modules create --data '{"name":"mymodule","code":"module.exports = {};"}'
+  auth0 actions modules create --data @module.json
+  cat module.json | auth0 actions modules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/actions/modules")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createActionModuleFromJSON(cli, cmd, payload)
+			}
+
 			if err := actionModuleName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -290,6 +336,9 @@ func createActionModuleCmd(cli *cli) *cobra.Command {
 	actionModuleSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
 	actionModulePublish.RegisterBool(cmd, &inputs.Publish, false)
 	actionModuleAPIVersion.RegisterString(cmd, &inputs.APIVersion, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -301,6 +350,8 @@ func updateActionModuleCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Publish      bool
+		Data         string
+		Schema       bool
 	}
 
 	cmd := &cobra.Command{
@@ -314,14 +365,34 @@ func updateActionModuleCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 actions modules update <module-id> --code "$(cat path/to/module.js)"
   auth0 actions modules update <module-id> --dependency "lodash=4.0.0" --secret "API_KEY=value"
   auth0 actions modules update <module-id> --code "$(cat path/to/module.js)" --publish
-  auth0 actions modules update <module-id> -c "$(cat path/to/module.js)" --json`,
+  auth0 actions modules update <module-id> -c "$(cat path/to/module.js)" --json
+
+  # Discover the payload schema
+  auth0 actions modules update --schema
+  auth0 actions modules update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions modules update <module-id> --data '{"code":"module.exports = {};"}'
+  auth0 actions modules update <module-id> --data @module.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/actions/modules/{id}")
+			}
+
 			if len(args) == 0 {
 				if err := actionModuleID.Pick(cmd, &inputs.ID, cli.actionModulePickerOptions); err != nil {
 					return err
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateActionModuleFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			module := &managementv3.UpdateActionModuleRequestContent{}
@@ -486,8 +557,45 @@ func updateActionModuleCmd(cli *cli) *cobra.Command {
 	actionModuleDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionModuleSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
 	actionModulePublish.RegisterBool(cmd, &inputs.Publish, false)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createActionModuleFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	module, err := runJSONWrite[managementv3.CreateActionModuleResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/actions/modules",
+		URI:        cli.api.HTTPClient.URI("actions", "modules"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 actions modules create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create action module: %w", err)
+	}
+
+	cli.renderer.ActionModuleCreate(module)
+
+	return nil
+}
+
+func updateActionModuleFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	module, err := runJSONWrite[managementv3.UpdateActionModuleResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/actions/modules/{id}",
+		URI:        cli.api.HTTPClient.URI("actions", "modules", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 actions modules update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update action module with ID %q: %w", id, err)
+	}
+
+	cli.renderer.ActionModuleUpdate(module)
+
+	return nil
 }
 
 func deleteActionModuleCmd(cli *cli) *cobra.Command {
