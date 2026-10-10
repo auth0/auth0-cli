@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 
@@ -123,17 +124,34 @@ func showBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 }
 
 func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
+	var schema bool
+	var query string
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List your Phone providers",
 		Long:    "List your existing Phone providers. Currently we can create a max of 1 phone Provider, If none are created, you can create one by running `auth0 phone provider create`.",
 		Example: `  auth0 phone provider list
-  auth0 phone provider ls 
+  auth0 phone provider ls
   auth0 phone provider ls --json
   auth0 phone provider ls --json-compact
-  auth0 phone provider ls --csv`,
+  auth0 phone provider ls --csv
+
+  # Discover the query schema
+  auth0 phone provider list --schema
+  auth0 phone provider list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 phone provider list --query '{"channel":"sms"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if schema {
+				return printOperationSchema(cli, "GET", "/branding/phone/providers")
+			}
+			if query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{Path: "branding/phone/providers", SchemaCmd: "auth0 phone provider list"}, query)
+			}
+
 			var list *management.BrandingPhoneProviderList
 			if err := ansi.Waiting(func() (err error) {
 				list, err = cli.api.Branding.ListPhoneProviders(cmd.Context())
@@ -150,6 +168,8 @@ func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &schema, false)
+	listQueryFlag.RegisterString(cmd, &query, "")
 
 	return cmd
 }
@@ -160,6 +180,8 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		credentials   string
 		configuration string
 		disabled      bool
+		Data          string
+		Schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -168,14 +190,35 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Long: "Create the phone provider.\n\n" +
 			"To create interactively, use `auth0 phone provider create` with no arguments.\n\n" +
 			"To create non-interactively, supply the provider name and other information " +
-			"through the flags.",
+			"through the flags.\n\n" +
+			"Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 phone provider create
   auth0 phone provider create --json
   auth0 phone provider create --json-compact
   auth0 phone provider create --provider twilio --disabled=false --credentials='{ "auth_token":"TheAuthToken" }' --configuration='{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text", "voice"] }'
   auth0 phone provider create --provider custom --disabled=true --configuration='{ "delivery_methods": ["text", "voice"] }'
-  auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text"] }'  `,
+  auth0 phone provider create -p twilio -d "false" -c '{ "auth_token":"TheAuthToken" }' -s '{ "default_from": "admin@example.com", "sid": "+1234567890", "delivery_methods": ["text"] }'
+
+  # Discover the payload schema
+  auth0 phone provider create --schema
+  auth0 phone provider create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 phone provider create --data '{"name":"twilio","credentials":{"auth_token":"TheAuthToken"},"configuration":{"default_from":"+1234567890","delivery_methods":["text"]}}'
+  auth0 phone provider create --data @provider.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/branding/phone/providers")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createPhoneProviderFromJSON(cli, cmd, payload)
+			}
+
 			if err := phoneProviderName.Select(cmd, &inputs.name, PhoneProviderNameOptions, nil); err != nil {
 				return err
 			}
@@ -236,6 +279,9 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	phoneProviderCredentials.RegisterString(cmd, &inputs.credentials, "")
 	phoneProviderConfiguration.RegisterString(cmd, &inputs.configuration, "")
 	phoneProviderDisabled.RegisterBool(cmd, &inputs.disabled, false)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -267,6 +313,8 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		credentials   string
 		configuration string
 		disabled      bool
+		Data          string
+		Schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -275,7 +323,8 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Long: "Update the phone provider.\n\n" +
 			"To update interactively, use `auth0 phone provider update` with no arguments.\n\n" +
 			"To update non-interactively, supply the provider name and other information " +
-			"through the flags.",
+			"through the flags.\n\n" +
+			"Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 phone provider update
   auth0 phone provider update --json
   auth0 phone provider update --json-compact
@@ -284,8 +333,20 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
   auth0 phone provider update --configuration='{ "delivery_methods": ["voice"] }'
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'
   auth0 phone provider update --provider twilio --disabled=false --credentials='{ "auth_token":"NewAuthToken" }' --configuration='{ "sid": "+1234567890", "default_from": "admin@example.com", "delivery_methods": ["voice", "text"] }'
-  auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }'`,
+  auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }'
+
+  # Discover the payload schema
+  auth0 phone provider update --schema
+  auth0 phone provider update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 phone provider update <id> --data '{"credentials":{"auth_token":"NewAuthToken"}}'
+  auth0 phone provider update <id> --data @provider.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/branding/phone/providers/{id}")
+			}
+
 			var (
 				existingProvider *management.BrandingPhoneProvider
 				credentials      *management.BrandingPhoneProviderCredential
@@ -299,6 +360,14 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.id = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updatePhoneProviderFromJSON(cli, cmd, inputs.id, payload)
 			}
 
 			if err := ansi.Waiting(func() (err error) {
@@ -372,6 +441,9 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 	phoneProviderCredentials.RegisterStringU(cmd, &inputs.credentials, "")
 	phoneProviderConfiguration.RegisterStringU(cmd, &inputs.configuration, "")
 	phoneProviderDisabled.RegisterBool(cmd, &inputs.disabled, false)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -424,4 +496,32 @@ auth0 phone provider rm --force`,
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
+}
+
+func createPhoneProviderFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	pp, err := runJSONWrite[management.BrandingPhoneProvider](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/branding/phone/providers",
+		URI:        cli.api.HTTPClient.URI("branding", "phone", "providers"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 phone provider create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create phone provider: %w", err)
+	}
+	return cli.renderer.PhoneProviderCreate(pp)
+}
+
+func updatePhoneProviderFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	pp, err := runJSONWrite[management.BrandingPhoneProvider](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/branding/phone/providers/{id}",
+		URI:        cli.api.HTTPClient.URI("branding", "phone", "providers", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 phone provider update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update phone provider with ID %q: %w", id, err)
+	}
+	return cli.renderer.PhoneProviderUpdate(pp)
 }

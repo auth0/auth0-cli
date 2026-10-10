@@ -11,6 +11,8 @@ To update interactively, use `auth0 phone provider update` with no arguments.
 
 To update non-interactively, supply the provider name and other information through the flags.
 
+Use `--schema` to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 phone provider update [flags]
@@ -28,6 +30,14 @@ auth0 phone provider update [flags]
   auth0 phone provider update --configuration='{ "default_from": admin@example.com }'
   auth0 phone provider update --provider twilio --disabled=false --credentials='{ "auth_token":"NewAuthToken" }' --configuration='{ "sid": "+1234567890", "default_from": "admin@example.com", "delivery_methods": ["voice", "text"] }'
   auth0 phone provider update --provider custom --disabled=false --configuration='{ "delivery_methods": ["voice", "text"] }'
+
+  # Discover the payload schema
+  auth0 phone provider update --schema
+  auth0 phone provider update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 phone provider update <id> --data '{"credentials":{"auth_token":"NewAuthToken"}}'
+  auth0 phone provider update <id> --data @provider.json
 ```
 
 
@@ -36,10 +46,12 @@ auth0 phone provider update [flags]
 ```
   -s, --configuration string   Configuration for the phone provider. formatted as JSON.
   -c, --credentials string     Credentials for the phone provider, formatted as JSON.
+      --data string            JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --disabled               Whether the provided is disabled (true) or enabled (false).
       --json                   Output in json format.
       --json-compact           Output in compact json format.
   -p, --provider string        Provider name. Can be 'twilio', or 'custom'
+      --schema                 Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

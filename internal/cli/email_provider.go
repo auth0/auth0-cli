@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -136,6 +137,8 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 		credentials        string
 		settings           string
 		enabled            bool
+		Data               string
+		Schema             bool
 	}
 
 	cmd := &cobra.Command{
@@ -145,7 +148,8 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 		Long: "Create the email provider.\n\n" +
 			"To create interactively, use `auth0 email provider create` with no arguments.\n\n" +
 			"To create non-interactively, supply the provider name and other information " +
-			"through the flags.",
+			"through the flags.\n\n" +
+			"Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 email provider create
   auth0 email provider create --json
   auth0 email provider create --json-compact
@@ -160,8 +164,28 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
   auth0 email provider create --provider smtp --credentials='{ "smtp_host":"smtp.example.com", "smtp_port":25, "smtp_user":"smtp", "smtp_pass":"TheSMTPPassword" }'
   auth0 email provider create --provider azure_cs --credentials='{ "connection_string":"TheConnectionString" }'
   auth0 email provider create --provider ms365 --credentials='{ "tenantId":"TheTenantId", "clientId":"TheClientID", "clientSecret":"TheClientSecret" }'
-  auth0 email provider create --provider custom --enabled=true --default-from-address="admin@example.com"`,
+  auth0 email provider create --provider custom --enabled=true --default-from-address="admin@example.com"
+
+  # Discover the payload schema
+  auth0 email provider create --schema
+  auth0 email provider create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 email provider create --data '{"name":"sendgrid","credentials":{"api_key":"TheAPIKey"},"enabled":true}'
+  auth0 email provider create --data @provider.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/emails/provider")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createEmailProviderFromJSON(cli, cmd, payload)
+			}
+
 			if err := emailProviderName.Select(cmd, &inputs.name, providerNameOptions, nil); err != nil {
 				return err
 			}
@@ -246,6 +270,9 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 	emailProviderCredentials.RegisterString(cmd, &inputs.credentials, "")
 	emailProviderSettings.RegisterString(cmd, &inputs.settings, "")
 	emailProviderEnabled.RegisterBool(cmd, &inputs.enabled, true)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -257,6 +284,8 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 		credentials        string
 		settings           string
 		enabled            bool
+		Data               string
+		Schema             bool
 	}
 
 	cmd := &cobra.Command{
@@ -266,7 +295,8 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 		Long: "Update the email provider.\n\n" +
 			"To update interactively, use `auth0 email provider update` with no arguments.\n\n" +
 			"To update non-interactively, supply the provider name and other information " +
-			"through the flags.",
+			"through the flags.\n\n" +
+			"Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 email provider update
   auth0 email provider update --json
   auth0 email provider update --json-compact
@@ -285,8 +315,28 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
   auth0 email provider update --provider smtp --credentials='{ "smtp_host":"smtp.example.com", "smtp_port":25, "smtp_user":"smtp", "smtp_pass":"TheSMTPPassword" }'
   auth0 email provider update --provider azure_cs --credentials='{ "connection_string":"TheConnectionString" }'
   auth0 email provider update --provider ms365 --credentials='{ "tenantId":"TheTenantId", "clientId":"TheClientID", "clientSecret":"TheClientSecret" }'
-  auth0 email provider update --provider custom --enabled=true --default-from-address="admin@example.com"`,
+  auth0 email provider update --provider custom --enabled=true --default-from-address="admin@example.com"
+
+  # Discover the payload schema
+  auth0 email provider update --schema
+  auth0 email provider update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 email provider update --data '{"credentials":{"api_key":"NewAPIKey"}}'
+  auth0 email provider update --data @provider.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/emails/provider")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateEmailProviderFromJSON(cli, cmd, payload)
+			}
+
 			var currentProvider *management.EmailProvider
 
 			if err := ansi.Waiting(func() (err error) {
@@ -390,6 +440,9 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 	emailProviderCredentials.RegisterString(cmd, &inputs.credentials, "")
 	emailProviderSettings.RegisterString(cmd, &inputs.settings, "")
 	emailProviderEnabled.RegisterBool(cmd, &inputs.enabled, true)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -432,4 +485,32 @@ func deleteEmailProviderCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
+}
+
+func createEmailProviderFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	ep, err := runJSONWrite[management.EmailProvider](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/emails/provider",
+		URI:        cli.api.HTTPClient.URI("emails", "provider"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 email provider create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create email provider: %w", err)
+	}
+	return cli.renderer.EmailProviderCreate(ep)
+}
+
+func updateEmailProviderFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	ep, err := runJSONWrite[management.EmailProvider](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/emails/provider",
+		URI:        cli.api.HTTPClient.URI("emails", "provider"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 email provider update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update email provider: %w", err)
+	}
+	return cli.renderer.EmailProviderUpdate(ep)
 }

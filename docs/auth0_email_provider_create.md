@@ -11,6 +11,8 @@ To create interactively, use `auth0 email provider create` with no arguments.
 
 To create non-interactively, supply the provider name and other information through the flags.
 
+Use `--schema` to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 email provider create [flags]
@@ -34,6 +36,14 @@ auth0 email provider create [flags]
   auth0 email provider create --provider azure_cs --credentials='{ "connection_string":"TheConnectionString" }'
   auth0 email provider create --provider ms365 --credentials='{ "tenantId":"TheTenantId", "clientId":"TheClientID", "clientSecret":"TheClientSecret" }'
   auth0 email provider create --provider custom --enabled=true --default-from-address="admin@example.com"
+
+  # Discover the payload schema
+  auth0 email provider create --schema
+  auth0 email provider create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 email provider create --data '{"name":"sendgrid","credentials":{"api_key":"TheAPIKey"},"enabled":true}'
+  auth0 email provider create --data @provider.json
 ```
 
 
@@ -41,11 +51,13 @@ auth0 email provider create [flags]
 
 ```
   -c, --credentials string            Credentials for the email provider, formatted as JSON.
+      --data string                   JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -f, --default-from-address string   Provider default FROM address if none is specified.
   -e, --enabled                       Whether the provided is enabled (true) or disabled (false). (default true)
       --json                          Output in json format.
       --json-compact                  Output in compact json format.
   -p, --provider string               Provider name. Can be 'mandrill', 'ses', 'sendgrid', 'sparkpost', 'mailgun', 'smtp', 'azure_cs', 'ms365', or 'custom'
+      --schema                        Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --settings string               Settings for the email provider. formatted as JSON.
 ```
 
