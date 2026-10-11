@@ -11,6 +11,8 @@ To create interactively, use `auth0 actions modules create` with no flags.
 
 To create non-interactively, supply the name and code (and optionally dependencies, secrets, and publish) through flags.
 
+Use '--schema' to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 actions modules create [flags]

@@ -98,7 +98,8 @@ func updateSessionCmd(cli *cli) *cobra.Command {
 		Short: "Update a session",
 		Long: "Update the metadata on a session.\n\n" +
 			"Metadata is the only writable field on a session. The pairs you pass replace the existing metadata; " +
-			"passing no pairs clears it.",
+			"passing no pairs clears it.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 sessions update <session-id> --metadata key=value
   auth0 sessions update <session-id> -m key1=value1 -m key2=value2
   auth0 sessions update <session-id> --metadata key=value --json

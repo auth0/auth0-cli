@@ -220,7 +220,8 @@ func createActionModuleCmd(cli *cli) *cobra.Command {
 		Short: "Create a new action module",
 		Long: "Create a new action module.\n\n" +
 			"To create interactively, use `auth0 actions modules create` with no flags.\n\n" +
-			"To create non-interactively, supply the name and code (and optionally dependencies, secrets, and publish) through flags.",
+			"To create non-interactively, supply the name and code (and optionally dependencies, secrets, and publish) through flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 actions modules create
   auth0 actions modules create --name mymodule --code "$(cat path/to/module.js)"
   auth0 actions modules create --name mymodule --code "$(cat path/to/module.js)" --publish
@@ -361,7 +362,8 @@ func updateActionModuleCmd(cli *cli) *cobra.Command {
 		Long: "Update an action module.\n\n" +
 			"The module name is immutable and cannot be changed. Only the fields you pass are updated; " +
 			"omitted fields keep their current values.\n\n" +
-			"Updates edit the module's draft. Pass `--publish` to also snapshot the draft as a new immutable version once the update succeeds.",
+			"Updates edit the module's draft. Pass `--publish` to also snapshot the draft as a new immutable version once the update succeeds.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 actions modules update <module-id> --code "$(cat path/to/module.js)"
   auth0 actions modules update <module-id> --dependency "lodash=4.0.0" --secret "API_KEY=value"
   auth0 actions modules update <module-id> --code "$(cat path/to/module.js)" --publish

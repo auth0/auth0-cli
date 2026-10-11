@@ -113,7 +113,8 @@ func updateRefreshTokenCmd(cli *cli) *cobra.Command {
 		Short: "Update a refresh token",
 		Long: "Update the metadata on a refresh token.\n\n" +
 			"Metadata is the only writable field on a refresh token. The pairs you pass replace the existing " +
-			"metadata; passing no pairs clears it.",
+			"metadata; passing no pairs clears it.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 refresh-tokens update <token-id> --metadata key=value
   auth0 refresh-tokens update <token-id> -m key1=value1 -m key2=value2
   auth0 refresh-tokens update <token-id> --metadata key=value --json

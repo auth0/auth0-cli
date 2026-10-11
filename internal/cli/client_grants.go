@@ -354,7 +354,8 @@ func createClientGrantCmd(cli *cli) *cobra.Command {
 			"or a default group (`--default-for`), which are mutually exclusive, along with any optional " +
 			"scopes or organization settings through the flags. A grant can authorize specific " +
 			"scopes (`--scopes`), every scope on the API (`--allow-all-scopes`), or no scopes at all.\n\n" +
-			managementAPIUserScopesNote,
+			managementAPIUserScopesNote + "\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 client-grants create
   auth0 client-grants create --client-id <client-id> --audience <api-identifier>
   auth0 client-grants create --default-for third_party_clients --audience <api-identifier>
@@ -641,7 +642,8 @@ func updateClientGrantCmd(cli *cli) *cobra.Command {
 			"supply the scopes or organization settings through the flags. Pass `--allow-all-scopes` " +
 			"to grant every scope on the API instead of a specific list, or `--no-scopes` to clear all " +
 			"scopes and authorize a token with no permissions.\n\n" +
-			managementAPIUserScopesNote,
+			managementAPIUserScopesNote + "\n\n" +
+			"Use '--schema' to print the request payload schema and exit.",
 		Example: `  auth0 client-grants update
   auth0 client-grants update <client-grant-id>
   auth0 client-grants update <client-grant-id> --scopes "read:users,update:users"

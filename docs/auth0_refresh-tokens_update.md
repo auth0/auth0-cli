@@ -9,6 +9,8 @@ Update the metadata on a refresh token.
 
 Metadata is the only writable field on a refresh token. The pairs you pass replace the existing metadata; passing no pairs clears it.
 
+Use '--schema' to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 refresh-tokens update [flags]

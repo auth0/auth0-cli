@@ -11,6 +11,8 @@ The module name is immutable and cannot be changed. Only the fields you pass are
 
 Updates edit the module's draft. Pass `--publish` to also snapshot the draft as a new immutable version once the update succeeds.
 
+Use '--schema' to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 actions modules update [flags]
