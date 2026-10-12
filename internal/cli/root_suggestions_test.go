@@ -43,11 +43,39 @@ func TestCommandSuggestions(t *testing.T) {
 		{name: "help is case insensitive", args: []string{"HELP"}, want: []string{"auth0 help apps"}},
 		{name: "help keeps a subcommand that resolves", args: []string{"help", "list"}, want: []string{"auth0 help apps list"}},
 		{name: "help drops a subcommand that does not resolve", args: []string{"help", "bogus"}, want: []string{"auth0 help apps"}},
+		{name: "help keeps a subcommand that resolves when an argument follows", args: []string{"help", "list", "abc123"}, want: []string{"auth0 help apps list"}},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			assert.ElementsMatch(t, test.want, commandSuggestions(apps, test.args))
+		})
+	}
+}
+
+// TestCommandSuggestionsAtRoot covers a mistyped token directly under the root,
+// where there is no parent path to trim and Cobra already suggests top-level commands.
+func TestCommandSuggestionsAtRoot(t *testing.T) {
+	root := &cobra.Command{Use: "auth0"}
+	apps := &cobra.Command{Use: "apps"}
+	grants := &cobra.Command{Use: "client-grants", Aliases: []string{"grants"}, SuggestFor: []string{"grant"}}
+	grants.AddCommand(&cobra.Command{Use: "create", RunE: func(*cobra.Command, []string) error { return nil }})
+	root.AddCommand(apps, grants)
+
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{name: "help is the root help command", args: []string{"HELP"}, want: []string{"auth0 help"}},
+		{name: "help keeps a subcommand that resolves", args: []string{"HELP", "apps"}, want: []string{"auth0 help apps"}},
+		{name: "deeper command replaces the top-level one", args: []string{"grant", "create"}, want: []string{"auth0 client-grants create"}},
+		{name: "top-level command is kept when nothing deeper resolves", args: []string{"grant"}, want: []string{"auth0 client-grants"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, commandSuggestions(root, test.args))
 		})
 	}
 }
@@ -79,6 +107,9 @@ func TestUnknownSubcommandSuggestionsOnRealTree(t *testing.T) {
 		{name: "help points to the root help command", path: []string{"apps"}, args: []string{"help"}, want: []string{"auth0 help apps"}, notWant: []string{"auth0 help", "auth0 login"}},
 		{name: "help keeps a subcommand", path: []string{"apps"}, args: []string{"help", "create"}, want: []string{"auth0 help apps create"}},
 		{name: "help on a nested namespace", path: []string{"actions", "modules"}, args: []string{"help", "create"}, want: []string{"auth0 help actions modules create"}},
+		{name: "help ignores arguments after a subcommand", path: []string{"apps"}, args: []string{"help", "show", "abc123"}, want: []string{"auth0 help apps show"}, notWant: []string{"auth0 help apps"}},
+		{name: "root help", path: nil, args: []string{"HELP"}, want: []string{"auth0 help"}, notWant: []string{"auth0 help auth0"}},
+		{name: "root deeper command is not doubled", path: nil, args: []string{"grant", "create"}, want: []string{"auth0 client-grants create"}, notWant: []string{"auth0 client-grants"}},
 		{name: "unrelated token suggests nothing", path: []string{"apps"}, args: []string{"zzzzzz"}, notWant: []string{"auth0 client-grants"}},
 	}
 

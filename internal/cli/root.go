@@ -407,19 +407,26 @@ func commandSuggestions(cmd *cobra.Command, args []string) []string {
 }
 
 // helpSuggestion returns the root help command for cmd, or for the subcommand
-// named in rest when it resolves. An unresolved name is dropped, because
+// named at the start of rest when it resolves. Arguments after a resolved
+// subcommand are ignored, and an unresolved name is dropped, because
 // `auth0 help` silently falls back to the namespace's help for it.
 func helpSuggestion(cmd *cobra.Command, rest []string) string {
 	target := cmd
 	if len(rest) > 0 {
-		if found, remaining, err := cmd.Find(rest); err == nil && len(remaining) == 0 {
+		if found, _, err := cmd.Find(rest); err == nil {
 			target = found
 		}
 	}
 
 	root := cmd.Root()
+	suggestion := root.Name() + " help"
 
-	return root.Name() + " help " + strings.TrimPrefix(target.CommandPath(), root.CommandPath()+" ")
+	// The root has no path below itself, so there is nothing more to add.
+	if path := strings.TrimSpace(strings.TrimPrefix(target.CommandPath(), root.CommandPath())); path != "" {
+		suggestion += " " + path
+	}
+
+	return suggestion
 }
 
 // appendTopLevelSuggestions adds top-level commands that the mistyped token
@@ -437,9 +444,16 @@ func appendTopLevelSuggestions(cmd *cobra.Command, args []string, suggestions []
 			continue
 		}
 
-		path := top.CommandPath()
+		topPath := top.CommandPath()
+		path := topPath
 		if found, rest, err := root.Find(append([]string{top.Name()}, args[1:]...)); err == nil && len(rest) == 0 {
 			path = found.CommandPath()
+		}
+
+		// The deeper command replaces the top-level one, which may already be
+		// there from Cobra's own suggestions at the root.
+		if path != topPath {
+			suggestions = slices.DeleteFunc(suggestions, func(s string) bool { return s == topPath })
 		}
 
 		if !slices.Contains(suggestions, path) {
@@ -451,11 +465,12 @@ func appendTopLevelSuggestions(cmd *cobra.Command, args []string, suggestions []
 }
 
 // matchesCommandToken reports whether a top-level command should be suggested for
-// a token typed elsewhere. Only deliberate matches count: an alias, a name listed
-// in the command's SuggestFor, or a hyphenated command name typed in full (such
-// as client-grants). Plain words like login or users are left out, because they are
-// often meant for a different command and would make the hint noisy. A mistyped
-// help is handled separately in commandSuggestions.
+// a token typed elsewhere. Only deliberate matches count: an alias the command
+// defines (even a plain word such as mfa or organizations), a name listed in the
+// command's SuggestFor, or a hyphenated command name typed in full (such as
+// client-grants). Other plain command names like login or users are left out,
+// because they are often meant for a different command and would make the hint
+// noisy. A mistyped help is handled separately in commandSuggestions.
 func matchesCommandToken(cmd *cobra.Command, token string) bool {
 	return slices.Contains(cmd.Aliases, token) ||
 		slices.Contains(cmd.SuggestFor, token) ||
