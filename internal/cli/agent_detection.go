@@ -242,6 +242,10 @@ var knownAgentClients = []string{
 	"antigravity",
 }
 
+// maxAgentClientNameLength caps an unrecognized AUTH0_CLI_CLIENT value before it
+// is prefixed with "client-".
+const maxAgentClientNameLength = 64
+
 // sanitizeAgentName restricts AUTH0_CLI_CLIENT to the allow-list; unknown values are prefixed with "client-".
 func sanitizeAgentName(raw string) string {
 	lower := strings.ToLower(strings.TrimSpace(raw))
@@ -250,6 +254,12 @@ func sanitizeAgentName(raw string) string {
 		if lower == name {
 			return name
 		}
+	}
+
+	// The name is sent in a header on every request, so cap it to keep an
+	// oversized AUTH0_CLI_CLIENT value from bloating or breaking requests.
+	if runes := []rune(lower); len(runes) > maxAgentClientNameLength {
+		lower = string(runes[:maxAgentClientNameLength])
 	}
 
 	return "client-" + lower

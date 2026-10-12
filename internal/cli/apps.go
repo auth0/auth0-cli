@@ -93,7 +93,7 @@ var (
 		Name:         "Allowed Origin URLs",
 		LongForm:     "origins",
 		ShortForm:    "o",
-		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.",
+		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs. This sets allowed_origins; use --web-origins to set web_origins.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
@@ -101,7 +101,7 @@ var (
 		Name:         "Allowed Web Origin URLs",
 		LongForm:     "web-origins",
 		ShortForm:    "w",
-		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.",
+		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode. This sets web_origins and is required for silent authentication in SPAs.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}

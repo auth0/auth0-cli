@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix `-q` flag in `auth0 api` to treat each value as a single query parameter, preserving comma-separated values like `fields=a,b,c` instead of splitting them [#1689]
+- Hint that `auth0 api` should retry with `PUT` when a `PATCH` request returns a generic 404 [#1687]
 
 # [v1.36.0](https://github.com/auth0/auth0-cli/tree/v1.36.0) (September 18, 2026)
 
@@ -855,13 +856,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.37.0...HEAD
-[#1692]: https://github.com/auth0/auth0-cli/pull/1692
-[#1691]: https://github.com/auth0/auth0-cli/pull/1691
-[#1690]: https://github.com/auth0/auth0-cli/pull/1690
-[#1689]: https://github.com/auth0/auth0-cli/pull/1689
-[#1687]: https://github.com/auth0/auth0-cli/pull/1687
-[#1686]: https://github.com/auth0/auth0-cli/pull/1686
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.36.0...HEAD
 [#1681]: https://github.com/auth0/auth0-cli/pull/1681
 [#1680]: https://github.com/auth0/auth0-cli/pull/1680
 [#1677]: https://github.com/auth0/auth0-cli/pull/1677

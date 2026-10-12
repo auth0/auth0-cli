@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -161,6 +162,50 @@ func TestResolveData(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, provided)
 			assert.Equal(t, `{"name":"from-pipe"}`, payload)
+		})
+	})
+
+	// The @file, @- and - forms belong to --data only. Piped content using them
+	// must be rejected rather than expanded, so piped input can never make the
+	// CLI read a local file into the request body.
+	t.Run("piped file reference is rejected", func(t *testing.T) {
+		secret := filepath.Join(t.TempDir(), "secret.json")
+		require.NoError(t, os.WriteFile(secret, []byte(`{"name":"secret"}`), 0600))
+
+		for _, content := range []string{"@" + secret, "@" + secret + "\n", "@-", "-"} {
+			cmd, _ := newDataCommand()
+			require.NoError(t, cmd.ParseFlags([]string{}))
+
+			withPipedStdin(t, content, func() {
+				payload, provided, err := ResolveData(cmd)
+				require.Error(t, err, "content: %q", content)
+				assert.False(t, provided)
+				assert.Empty(t, payload)
+				assert.Contains(t, err.Error(), "not a file reference")
+
+				var vErr validationError
+				require.ErrorAs(t, err, &vErr)
+				assert.Equal(t, "malformed_json", vErr.reason)
+			})
+		}
+	})
+
+	// --data @file keeps working; only the piped form is restricted.
+	t.Run("--data @file is still supported", func(t *testing.T) {
+		file := filepath.Join(t.TempDir(), "payload.json")
+		require.NoError(t, os.WriteFile(file, []byte(`{"name":"from-file"}`), 0600))
+
+		cmd, _ := newDataCommand()
+		require.NoError(t, cmd.ParseFlags([]string{"--data", "@" + file}))
+
+		withPipedStdin(t, "", func() {
+			payload, provided, err := ResolveData(cmd)
+			require.NoError(t, err)
+			assert.True(t, provided)
+
+			data, err := readJSONInput(payload)
+			require.NoError(t, err)
+			assert.JSONEq(t, `{"name":"from-file"}`, string(data))
 		})
 	})
 

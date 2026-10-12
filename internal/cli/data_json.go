@@ -185,6 +185,20 @@ func ResolveData(cmd *cobra.Command) (payload string, provided bool, err error) 
 		)
 	}
 
+	// The payload is passed on to readJSONInput, which expands "@file", "@-" and
+	// "-". Those forms are only meant for the --data flag; honoring them here
+	// would let piped content make the CLI read a local file into the request
+	// body. None of them is valid JSON, so rejecting them loses nothing.
+	if pipedPayload[0] == '@' || string(pipedPayload) == "-" {
+		return "", false, validationError{
+			err: fmt.Errorf(
+				"piped input must be a JSON payload, not a file reference; " +
+					"use --data @file to read the payload from a file",
+			),
+			reason: "malformed_json",
+		}
+	}
+
 	return string(pipedPayload), true, nil
 }
 
