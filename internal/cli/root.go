@@ -41,6 +41,8 @@ The Auth0 CLI now includes features for AI agents and automation:
     Example: auth0 actions create --data '{"name":"my-action",...}'
 
 See 'auth0 <resource> --help' for details on specific resources.
+To find a command without reading this whole help, run 'auth0 commands <resource>'
+to list the commands for one area, or 'auth0 commands --flat' to list every command.
 For agent integration guide, visit: https://github.com/auth0/auth0-cli`
 
 // agentModeHelp describes agent mode in one place. It is shown in the root help,

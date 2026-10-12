@@ -122,6 +122,12 @@ var clientGrantSubjectTypeOptions = []string{"client", "user", "anonymous_user"}
 
 var clientGrantDefaultForOptions = []string{"third_party_clients"}
 
+// clientGrantCreateCommand is the non-interactive form of `client-grants create`
+// that help text points to, so it can be run as written without prompts. The
+// scopes flag is included because a grant created without it has no scopes.
+const clientGrantCreateCommand = "auth0 client-grants create --client-id <client-id> --audience <api-identifier> " +
+	"--scopes \"<scope1,scope2>\""
+
 // managementAPIUserScopesNote explains that, for a user subject type against the
 // Auth0 Management API, the scopes are a fixed current_user set that the API
 // does not expose for dynamic discovery, so they have to be passed inline with
