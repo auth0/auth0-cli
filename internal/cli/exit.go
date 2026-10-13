@@ -48,9 +48,14 @@ type unknownCommandError struct {
 	token       string
 	parent      string
 	suggestions []string
+	also        error // A flag error that was found alongside the unknown command.
 }
 
 func (e unknownCommandError) Error() string {
+	if e.also != nil {
+		return fmt.Sprintf("unknown command %q for %q (also: %s)", e.token, e.parent, e.also)
+	}
+
 	return fmt.Sprintf("unknown command %q for %q", e.token, e.parent)
 }
 
