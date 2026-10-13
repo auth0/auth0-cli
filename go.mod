@@ -7,7 +7,7 @@ require (
 	github.com/PuerkitoBio/rehttp v1.4.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/auth0/go-auth0 v1.50.0
-	github.com/auth0/go-auth0/v3 v3.6.0
+	github.com/auth0/go-auth0/v3 v3.8.0
 	github.com/briandowns/spinner v1.23.2
 	github.com/charmbracelet/glamour v1.0.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
@@ -45,6 +45,11 @@ require (
 	golang.org/x/text v0.42.0
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+// Local go-auth0/v3 with the SegmentMatchExpression oneOf unmarshal fix
+// (MatchesObjectKeys variant discrimination) for Experiment Center. Remove once a
+// released v3 tag carries the fix.
+replace github.com/auth0/go-auth0/v3 => /Users/rajat.bajaj/Projects/go-auth0
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.1 // indirect

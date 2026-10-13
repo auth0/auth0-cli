@@ -493,6 +493,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(sessionsCmd(cli))
 	rootCmd.AddCommand(refreshTokensCmd(cli))
 	rootCmd.AddCommand(guardianCmd(cli))
+	rootCmd.AddCommand(experimentationCmd(cli))
 
 	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))

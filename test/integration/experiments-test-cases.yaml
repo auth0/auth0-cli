@@ -1,0 +1,266 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+
+  001 - it successfully lists all experiments with no data:
+    command: auth0 experimentation experiments list
+    exit-code: 0
+    stderr:
+      contains:
+        - "Use 'auth0 experimentation experiments create' to add one"
+
+  002 - it successfully lists all experiments with no data (json):
+    command: auth0 experimentation experiments list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - given prerequisites, it successfully creates a percentage experiment:
+    command: auth0 experimentation experiments create -n "integration-test-experiment1" -f $(./test/integration/scripts/get-experiment-flag-id.sh) -a "authentication" -s "percentage" --allocations "[{\"variation_id\":\"$(./test/integration/scripts/get-experiment-control-id.sh)\",\"weight\":50,\"is_control\":true},{\"variation_id\":\"$(./test/integration/scripts/get-experiment-treatment-id.sh)\",\"weight\":50,\"is_control\":false}]" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-experiment1
+        - draft
+
+  004 - it successfully creates an experiment and outputs in json:
+    command: auth0 experimentation experiments create -n "integration-test-experiment2" -f $(./test/integration/scripts/get-experiment-flag-id.sh) -a "authentication" -s "percentage" --allocations "[{\"variation_id\":\"$(./test/integration/scripts/get-experiment-control-id.sh)\",\"weight\":50,\"is_control\":true},{\"variation_id\":\"$(./test/integration/scripts/get-experiment-treatment-id.sh)\",\"weight\":50,\"is_control\":false}]" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment2"
+        status: "draft"
+        authentication_flow: "authentication"
+        allocation_strategy: "percentage"
+
+  005 - it successfully lists all experiments with data:
+    command: auth0 experimentation experiments list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - STATUS
+        - AUTH FLOW
+
+  006 - it successfully filters experiments by status:
+    command: auth0 experimentation experiments list --status draft
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - STATUS
+
+  007 - it successfully filters experiments by feature flag:
+    command: auth0 experimentation experiments list --feature-flag-id $(./test/integration/scripts/get-experiment-flag-id.sh)
+    exit-code: 0
+
+  008 - given a test experiment, it successfully shows the experiment details:
+    command: auth0 experimentation experiments show $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-experiment
+        - draft
+
+  009 - given a test experiment, it successfully shows the experiment details in json:
+    command: auth0 experimentation experiments show $(./test/integration/scripts/get-experiment-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment"
+        status: "draft"
+        authentication_flow: "authentication"
+        allocation_strategy: "percentage"
+
+  010 - given a test experiment, it successfully updates the name:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --name "integration-test-experiment-updated" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-experiment-updated
+        - draft
+
+  011 - given a test experiment, it successfully updates in json:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --name "integration-test-experiment-renamed" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment-renamed"
+
+  # ─── Validation errors (client-side; no live state needed) ─────────────────────
+
+  012 - it returns an error when --allocations is invalid json:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --allocations 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "JSON for --allocations"
+
+  013 - it returns an error when --allocations is empty:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --allocations '[]' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "--allocations must contain at least one variation"
+
+  014 - it returns an error when --allocations exceeds the maximum:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --allocations "[$(for i in $(seq 1 21); do printf '{"variation_id":"vid%s","weight":5,"is_control":false},' "$i"; done | sed 's/,$//')]" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "an experiment accepts at most 20"
+
+  015 - it returns an error when an --allocations weight is out of range:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --allocations '[{"variation_id":"vid","weight":150,"is_control":true}]' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "must be a whole number between 1 and 100"
+
+  016 - it returns an error when --default-config is invalid:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --default-config "bogus" --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "must be tenant or flag"
+
+  017 - it returns an error when --levels is not strictly increasing:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --levels "50,50,100" --allocations '[{"variation_id":"vid","is_control":true}]' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "strictly increasing"
+
+  018 - it returns an error when --levels is out of range:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --levels "10,150" --allocations '[{"variation_id":"vid","is_control":true}]' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "must be between 0 and 100"
+
+  019 - it returns an error when setting default-config on a customer-defined flag:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --default-config tenant --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "default_config"
+
+  # ─── Allocation control cardinality (server-side) ──────────────────────────────
+  # The control count is enforced by the API, not client-side, so these use real
+  # variations on the experiments-suite flag to reach the server check.
+
+  0191 - it returns an error when no allocation is the control:
+    command: auth0 experimentation experiments create -n "integration-test-no-control" -f $(./test/integration/scripts/get-experiment-flag-id.sh) -a "authentication" -s "percentage" --allocations "[{\"variation_id\":\"$(./test/integration/scripts/get-experiment-control-id.sh)\",\"weight\":50,\"is_control\":false},{\"variation_id\":\"$(./test/integration/scripts/get-experiment-treatment-id.sh)\",\"weight\":50,\"is_control\":false}]" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "experiment_missing_control"
+
+  0192 - it returns an error when multiple allocations are the control:
+    command: auth0 experimentation experiments create -n "integration-test-two-control" -f $(./test/integration/scripts/get-experiment-flag-id.sh) -a "authentication" -s "percentage" --allocations "[{\"variation_id\":\"$(./test/integration/scripts/get-experiment-control-id.sh)\",\"weight\":50,\"is_control\":true},{\"variation_id\":\"$(./test/integration/scripts/get-experiment-treatment-id.sh)\",\"weight\":50,\"is_control\":true}]" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "experiment_missing_control"
+
+  # ─── advance-ramp client-side validation ──────────────────────────────────────
+
+  020 - advance-ramp returns an error when --target-level is out of range:
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-experiment-id.sh) --target-level 150 --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "must be between 0 and 100"
+
+  021 - advance-ramp returns an error when --target-level is missing (non-interactive):
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-experiment-id.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "--target-level is required"
+
+  # ─── Validate + lifecycle ──────────────────────────────────────────────────────
+
+  022 - given a test experiment, it successfully validates the experiment:
+    command: auth0 experimentation experiments validate $(./test/integration/scripts/get-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - VALID
+
+  023 - given a valid experiment, it successfully starts the experiment:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --status active
+    exit-code: 0
+    stdout:
+      contains:
+        - active
+
+  024 - given a running experiment, it successfully pauses it:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --status paused
+    exit-code: 0
+    stdout:
+      contains:
+        - paused
+
+  025 - given a paused experiment, it successfully resumes it:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --status active
+    exit-code: 0
+    stdout:
+      contains:
+        - active
+
+  026 - given a running experiment, it successfully completes it:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --status completed
+    exit-code: 0
+    stdout:
+      contains:
+        - completed
+
+  027 - given a completed experiment, it successfully archives it:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-experiment-id.sh) --status archived
+    exit-code: 0
+    stdout:
+      contains:
+        - archived
+
+  # ─── Segment-strategy experiment ───────────────────────────────────────────────
+  # Routes traffic by segment membership instead of percentage weights. The
+  # allocation shape differs ({variation_id, segment_id, priority, is_fallback}),
+  # so this guards a parsing/validation path the percentage tests never exercise.
+  # Runs after the lifecycle tests, when the percentage experiment is archived, so
+  # there is no active experiment competing on the same authentication flow.
+
+  0271 - it successfully creates a segment-strategy experiment:
+    command: auth0 experimentation experiments create -n "integration-test-seg-experiment1" -f $(./test/integration/scripts/get-experiment-flag-id.sh) -a "authentication" -s "segment" --allocations "[{\"variation_id\":\"$(./test/integration/scripts/get-experiment-control-id.sh)\",\"is_control\":true,\"is_fallback\":true},{\"variation_id\":\"$(./test/integration/scripts/get-experiment-treatment-id.sh)\",\"segment_id\":\"$(./test/integration/scripts/get-experiment-segment-id.sh)\",\"priority\":1,\"is_control\":false}]" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-seg-experiment1
+        - draft
+
+  0272 - given a segment-strategy experiment, it successfully validates:
+    command: auth0 experimentation experiments validate $(./test/integration/scripts/get-segment-experiment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - VALID
+
+  # ─── Cleanup ──────────────────────────────────────────────────────────────────
+
+  028 - it successfully deletes the test experiment:
+    command: auth0 experimentation experiments delete $(./test/integration/scripts/get-experiment-id.sh) --force
+    exit-code: 0
+
+  029 - it returns an error when deleting a nonexistent experiment:
+    command: auth0 experimentation experiments delete exp_doesnotexist0000000000 --force
+    exit-code: 1
+    stderr:
+      contains:
+        - "experiment_not_found"
+
+  # The experiments created inline above (experiment1, experiment2,
+  # seg-experiment1), the helper-created segment experiment, the shared feature
+  # flag / variations, and the experiments-suite segment are removed by the shared
+  # cleanup (test-cleanup.sh).
