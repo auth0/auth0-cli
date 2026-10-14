@@ -59,16 +59,24 @@ func TestEmailProviderCreateCmdData(t *testing.T) {
 		assert.Contains(t, client.gotURI, "/emails/provider")
 	})
 
-	t.Run("surfaces a schema validation failure before calling the API", func(t *testing.T) {
+	t.Run("leaves schema validation to the API", func(t *testing.T) {
 		client := &emailProviderWriteClient{}
 		cmd := createEmailProviderCmd(newEmailProviderWriteCLI(client, &bytes.Buffer{}))
 		prepareInteractivity(cmd)
-		cmd.SetArgs([]string{"--data", `{"name":123}`})
+		cmd.SetArgs([]string{"--data", `{"name":"custom","enabled":true}`})
 
-		err := cmd.Execute()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "schema validation")
-		assert.Empty(t, client.gotMethod, "must not reach the API when validation fails")
+		require.NoError(t, cmd.Execute())
+		assert.Equal(t, http.MethodPost, client.gotMethod)
+	})
+
+	t.Run("rejects a payload that is not a JSON object", func(t *testing.T) {
+		client := &emailProviderWriteClient{}
+		cmd := createEmailProviderCmd(newEmailProviderWriteCLI(client, &bytes.Buffer{}))
+		prepareInteractivity(cmd)
+		cmd.SetArgs([]string{"--data", `["custom"]`})
+
+		assert.ErrorContains(t, cmd.Execute(), "must be a JSON object")
+		assert.Empty(t, client.gotMethod, "must not reach the API when the payload is not an object")
 	})
 }
 

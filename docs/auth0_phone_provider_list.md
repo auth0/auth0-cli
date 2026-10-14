@@ -26,7 +26,7 @@ auth0 phone provider list [flags]
   auth0 phone provider list --schema --json
 
   # JSON query (for agents and automation)
-  auth0 phone provider list --query '{"channel":"sms"}'
+  auth0 phone provider list --query '{"disabled":false}'
 ```
 
 

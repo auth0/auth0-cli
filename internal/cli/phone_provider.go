@@ -143,7 +143,7 @@ func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
   auth0 phone provider list --schema --json
 
   # JSON query (for agents and automation)
-  auth0 phone provider list --query '{"channel":"sms"}'`,
+  auth0 phone provider list --query '{"disabled":false}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if schema {
 				return printOperationSchema(cli, "GET", "/branding/phone/providers")

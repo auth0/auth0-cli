@@ -149,7 +149,7 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 email provider create` with no arguments.\n\n" +
 			"To create non-interactively, supply the provider name and other information " +
 			"through the flags.\n\n" +
-			"Use `--schema` to print the request payload schema and exit.",
+			"Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.",
 		Example: `  auth0 email provider create
   auth0 email provider create --json
   auth0 email provider create --json-compact
@@ -172,6 +172,7 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 
   # JSON input mode (for agents and automation)
   auth0 email provider create --data '{"name":"sendgrid","credentials":{"api_key":"TheAPIKey"},"enabled":true}'
+  auth0 email provider create --data '{"name":"custom","credentials":{},"enabled":true}'
   auth0 email provider create --data @provider.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
@@ -296,7 +297,7 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 email provider update` with no arguments.\n\n" +
 			"To update non-interactively, supply the provider name and other information " +
 			"through the flags.\n\n" +
-			"Use `--schema` to print the request payload schema and exit.",
+			"Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.",
 		Example: `  auth0 email provider update
   auth0 email provider update --json
   auth0 email provider update --json-compact
@@ -489,11 +490,12 @@ func deleteEmailProviderCmd(cli *cli) *cobra.Command {
 
 func createEmailProviderFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
 	ep, err := runJSONWrite[management.EmailProvider](cli, cmd, jsonWriteSpec{
-		Method:     http.MethodPost,
-		SchemaPath: "/emails/provider",
-		URI:        cli.api.HTTPClient.URI("emails", "provider"),
-		Data:       dataStr,
-		SchemaCmd:  "auth0 email provider create",
+		Method:         http.MethodPost,
+		SchemaPath:     "/emails/provider",
+		URI:            cli.api.HTTPClient.URI("emails", "provider"),
+		Data:           dataStr,
+		SchemaCmd:      "auth0 email provider create",
+		SkipValidation: true,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create email provider: %w", err)
@@ -503,11 +505,12 @@ func createEmailProviderFromJSON(cli *cli, cmd *cobra.Command, dataStr string) e
 
 func updateEmailProviderFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
 	ep, err := runJSONWrite[management.EmailProvider](cli, cmd, jsonWriteSpec{
-		Method:     http.MethodPatch,
-		SchemaPath: "/emails/provider",
-		URI:        cli.api.HTTPClient.URI("emails", "provider"),
-		Data:       dataStr,
-		SchemaCmd:  "auth0 email provider update",
+		Method:         http.MethodPatch,
+		SchemaPath:     "/emails/provider",
+		URI:            cli.api.HTTPClient.URI("emails", "provider"),
+		Data:           dataStr,
+		SchemaCmd:      "auth0 email provider update",
+		SkipValidation: true,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update email provider: %w", err)

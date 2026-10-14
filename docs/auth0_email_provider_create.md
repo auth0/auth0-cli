@@ -11,7 +11,7 @@ To create interactively, use `auth0 email provider create` with no arguments.
 
 To create non-interactively, supply the provider name and other information through the flags.
 
-Use `--schema` to print the request payload schema and exit.
+Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.
 
 ## Usage
 ```
@@ -43,6 +43,7 @@ auth0 email provider create [flags]
 
   # JSON input mode (for agents and automation)
   auth0 email provider create --data '{"name":"sendgrid","credentials":{"api_key":"TheAPIKey"},"enabled":true}'
+  auth0 email provider create --data '{"name":"custom","credentials":{},"enabled":true}'
   auth0 email provider create --data @provider.json
 ```
 

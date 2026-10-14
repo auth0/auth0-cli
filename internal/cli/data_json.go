@@ -116,6 +116,20 @@ func readAndValidateJSON(cli *cli, inputStr, method, path string) (json.RawMessa
 	return handler.ReadAndValidate(inputStr, method, path)
 }
 
+// readJSONObject reads a --data payload and checks only that it is a JSON object.
+func readJSONObject(input string) (json.RawMessage, error) {
+	data, err := readJSONInput(input)
+	if err != nil {
+		return nil, validationError{err: fmt.Errorf("failed to read JSON input: %w", err)}
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(data, &obj); err != nil || obj == nil {
+		return nil, validationError{err: fmt.Errorf("the payload must be a JSON object"), reason: "malformed_json"}
+	}
+	return data, nil
+}
+
 // readJSONInput reads JSON from various input sources.
 func readJSONInput(input string) ([]byte, error) {
 	if input == "" {
@@ -220,6 +234,10 @@ type jsonWriteSpec struct {
 	URI        string // Fully-qualified request URL.
 	Data       string // Raw --data value (inline JSON, @file, or piped payload).
 	SchemaCmd  string // Command to suggest in the "--schema" hint, e.g. "auth0 actions create".
+
+	// SkipValidation sends the payload after checking only that it is a JSON object,
+	// leaving validation to the API, for operations whose published schema is unreliable.
+	SkipValidation bool
 }
 
 // runJSONWrite validates a --data payload against the OpenAPI schema, sends it to
@@ -228,7 +246,16 @@ type jsonWriteSpec struct {
 // supplying their spec and the management type; the API's own semantics (e.g. PATCH
 // preserving unspecified fields) apply to the exact bytes sent.
 func runJSONWrite[T any](cli *cli, cmd *cobra.Command, spec jsonWriteSpec) (*T, error) {
-	payload, validated, err := readAndValidateJSON(cli, spec.Data, spec.Method, spec.SchemaPath)
+	var (
+		payload   json.RawMessage
+		validated = true
+		err       error
+	)
+	if spec.SkipValidation {
+		payload, err = readJSONObject(spec.Data)
+	} else {
+		payload, validated, err = readAndValidateJSON(cli, spec.Data, spec.Method, spec.SchemaPath)
+	}
 	if err != nil {
 		cli.renderer.Infof("Run '%s --schema' to see the expected schema.", spec.SchemaCmd)
 		return nil, err
@@ -251,7 +278,7 @@ func runJSONWrite[T any](cli *cli, cmd *cobra.Command, spec jsonWriteSpec) (*T, 
 		// validation via the 400 status and the schema stays discoverable through
 		// --schema. Keep the API's own error clean for machines and enrich it with
 		// the schema hint only for humans.
-		if cli.wantsJSONError() {
+		if cli.wantsJSONError() || spec.SkipValidation {
 			return nil, err
 		}
 		return nil, enhanceAPIError(err, spec.Method, spec.SchemaPath)
