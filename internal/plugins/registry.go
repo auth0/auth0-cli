@@ -14,11 +14,12 @@ import (
 
 // defaultRegistryBaseURL is where the signed registry index is fetched from.
 //
-// NOTE: this points at the public auth0/auth0-cli-plugins repo, which only
-// serves anonymous raw-main fetches once the repo is public. While the registry
-// lives in the private atko-cic repo, tests and local runs override the base URL
-// (and the trusted key) via NewRegistryWith.
-const defaultRegistryBaseURL = "https://raw.githubusercontent.com/auth0/auth0-cli-plugins/main"
+// NOTE: DEMO ONLY. This points at a temporary public mirror of the signed
+// registry so testers need no setup. Restore it to the public
+// auth0/auth0-cli-plugins repo
+// (https://raw.githubusercontent.com/auth0/auth0-cli-plugins/main) before this
+// branch merges. The signature is still verified against the embedded key.
+const defaultRegistryBaseURL = "https://raw.githubusercontent.com/developerkunal/auth0-cli-plugins/main"
 
 const (
 	indexFileName     = "index.json"
