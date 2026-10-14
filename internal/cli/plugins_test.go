@@ -118,3 +118,81 @@ func TestPluginsToUpdate(t *testing.T) {
 		assert.Equal(t, installed, got)
 	})
 }
+
+func TestPluginEnv(t *testing.T) {
+	tests := []struct {
+		name      string
+		base      []string
+		proxyEnv  []string
+		agentMode bool
+		want      []string
+	}{
+		{
+			name:     "agent mode off appends an explicit zero",
+			base:     []string{"PATH=/bin"},
+			proxyEnv: []string{"AUTH0_PROXY=1"},
+			want:     []string{"PATH=/bin", "AUTH0_PROXY=1", "AUTH0_AGENT_MODE=0"},
+		},
+		{
+			name:     "agent mode off replaces an inherited AUTH0_AGENT_MODE",
+			base:     []string{"AUTH0_AGENT_MODE=true", "PATH=/bin"},
+			proxyEnv: []string{"AUTH0_PROXY=1"},
+			want:     []string{"PATH=/bin", "AUTH0_PROXY=1", "AUTH0_AGENT_MODE=0"},
+		},
+		{
+			name:      "agent mode on appends the variable after base and proxy env",
+			base:      []string{"PATH=/bin"},
+			proxyEnv:  []string{"AUTH0_PROXY=1"},
+			agentMode: true,
+			want:      []string{"PATH=/bin", "AUTH0_PROXY=1", "AUTH0_AGENT_MODE=1"},
+		},
+		{
+			name:      "agent mode on drops pre-existing entries from base and proxy env",
+			base:      []string{"AUTH0_AGENT_MODE=false", "PATH=/bin"},
+			proxyEnv:  []string{"AUTH0_AGENT_MODE=0"},
+			agentMode: true,
+			want:      []string{"PATH=/bin", "AUTH0_AGENT_MODE=1"},
+		},
+		{
+			name:      "variable name match is case-insensitive",
+			base:      []string{"auth0_agent_mode=false", "PATH=/bin"},
+			agentMode: true,
+			want:      []string{"PATH=/bin", "AUTH0_AGENT_MODE=1"},
+		},
+		{
+			name:      "similarly named variables are kept",
+			base:      []string{"AUTH0_AGENT_MODE_EXTRA=x"},
+			agentMode: true,
+			want:      []string{"AUTH0_AGENT_MODE_EXTRA=x", "AUTH0_AGENT_MODE=1"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseCopy := append([]string(nil), tt.base...)
+			proxyCopy := append([]string(nil), tt.proxyEnv...)
+
+			got := pluginEnv(tt.base, tt.proxyEnv, tt.agentMode)
+
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, baseCopy, tt.base, "the base slice must not be modified")
+			assert.Equal(t, proxyCopy, tt.proxyEnv, "the proxy env slice must not be modified")
+		})
+	}
+}
+
+func TestScopeGapMessages(t *testing.T) {
+	missing := []string{"read:tenant_settings", "read:logs"}
+
+	assert.Equal(t,
+		"The checkmate plugin needs additional scopes (read:tenant_settings, read:logs). Re-authorizing.",
+		scopeGapWarning("checkmate", missing),
+	)
+
+	err := scopeGapNoInputError("checkmate", missing)
+	assert.EqualError(t, err,
+		"the checkmate plugin needs additional scopes (read:tenant_settings, read:logs) and --no-input is set; "+
+			"run `auth0 login --scopes read:tenant_settings,read:logs` first",
+	)
+	assert.NotContains(t, err.Error(), "npx")
+}

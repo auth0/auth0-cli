@@ -443,9 +443,11 @@ func pluginToRemove(cmd *cobra.Command, installed []plugins.InstalledPlugin, arg
 // runBehindProxy starts the auth-injecting proxy for the active tenant and runs
 // the given command with the proxy env contract injected. The first element of
 // argv is the command (resolved on PATH) and the rest are its arguments. The
-// declaredScopes argument bounds the plugin at the proxy and drives scope-gap
-// re-authorization. It backs every dynamically-registered plugin command.
-func runBehindProxy(cmd *cobra.Command, cli *cli, argv []string, declaredScopes []string) error {
+// pluginName is the plugin's registered name, used in user-facing messages
+// (argv[0] is the launcher, such as npx). The declaredScopes argument bounds the
+// plugin at the proxy and drives scope-gap re-authorization. It backs every
+// dynamically-registered plugin command.
+func runBehindProxy(cmd *cobra.Command, cli *cli, pluginName string, argv []string, declaredScopes []string) error {
 	if len(argv) == 0 {
 		return errors.New("no command to run")
 	}
@@ -461,12 +463,9 @@ func runBehindProxy(cmd *cobra.Command, cli *cli, argv []string, declaredScopes 
 	if tenant.IsAuthenticatedWithDeviceCodeFlow() {
 		if missing := missingScopes(tenant.Scopes, declaredScopes); len(missing) > 0 {
 			if cli.noInput {
-				return fmt.Errorf(
-					"the %s plugin needs additional scopes (%s) and --no-input is set; run `auth0 login --scopes %s` first",
-					argv[0], strings.Join(missing, ", "), strings.Join(missing, ","),
-				)
+				return scopeGapNoInputError(pluginName, missing)
 			}
-			cli.renderer.Warnf("The %s plugin needs additional scopes (%s). Re-authorizing.", argv[0], strings.Join(missing, ", "))
+			cli.renderer.Warnf("%s", scopeGapWarning(pluginName, missing))
 			tenant, err = RunLoginAsUser(cmd.Context(), cli, missing, tenant.Domain)
 			if err != nil {
 				return fmt.Errorf("failed to authorize the plugin's required scopes: %w", err)
@@ -492,7 +491,7 @@ func runBehindProxy(cmd *cobra.Command, cli *cli, argv []string, declaredScopes 
 
 	plugin := exec.CommandContext(cmd.Context(), binaryPath, argv[1:]...)
 	plugin.Stdin, plugin.Stdout, plugin.Stderr = os.Stdin, os.Stdout, os.Stderr
-	plugin.Env = append(os.Environ(), proxy.Env()...)
+	plugin.Env = pluginEnv(os.Environ(), proxy.Env(), cli.agentMode)
 
 	if err := plugin.Run(); err != nil {
 		return fmt.Errorf("plugin command failed: %w", err)
@@ -541,6 +540,51 @@ func (p *cliTokenProvider) Refresh(ctx context.Context) (string, error) {
 	}
 
 	return tenant.GetAccessToken(), nil
+}
+
+// scopeGapWarning is the message shown when a plugin needs scopes the active
+// user session lacks and the CLI is about to re-authorize.
+func scopeGapWarning(pluginName string, missing []string) string {
+	return fmt.Sprintf("The %s plugin needs additional scopes (%s). Re-authorizing.", pluginName, strings.Join(missing, ", "))
+}
+
+// scopeGapNoInputError is returned when a plugin needs more scopes but prompting
+// is disabled, so the user must run the login themselves.
+func scopeGapNoInputError(pluginName string, missing []string) error {
+	return fmt.Errorf(
+		"the %s plugin needs additional scopes (%s) and --no-input is set; run `auth0 login --scopes %s` first",
+		pluginName, strings.Join(missing, ", "), strings.Join(missing, ","),
+	)
+}
+
+// envEntryNamed reports whether an environment entry ("NAME=value") has the
+// given variable name. The name is compared case-insensitively so Windows
+// environments are handled too.
+func envEntryNamed(entry, name string) bool {
+	key, _, found := strings.Cut(entry, "=")
+	return found && strings.EqualFold(key, name)
+}
+
+// pluginEnv builds the plugin process environment from the base environment and
+// the proxy contract. Any inherited AUTH0_AGENT_MODE entry is dropped, and
+// AUTH0_AGENT_MODE=1 (agent mode on) or =0 (off) is appended, so the plugin sees
+// the variable exactly once with the CLI's decision. The inputs are never
+// modified.
+func pluginEnv(base, proxyEnv []string, agentMode bool) []string {
+	env := make([]string, 0, len(base)+len(proxyEnv)+1)
+
+	for _, entry := range slices.Concat(base, proxyEnv) {
+		if !envEntryNamed(entry, agentModeEnvVar) {
+			env = append(env, entry)
+		}
+	}
+
+	// Always state the CLI's decision so plugins that auto-detect agents respect it.
+	if agentMode {
+		return append(env, agentModeEnvVar+"=1")
+	}
+
+	return append(env, agentModeEnvVar+"=0")
 }
 
 // missingScopes returns the required scopes not present in the granted set,
@@ -607,7 +651,7 @@ func registerInstalledPlugins(rootCmd *cobra.Command, cli *cli) {
 				if wantsHelp(args) {
 					cli.renderer.Infof("Showing %s's own help (it is an Auth0 CLI plugin):", plugin.Name)
 				}
-				return runBehindProxy(cmd, cli, append(invocation, args...), plugin.RequiredScopes)
+				return runBehindProxy(cmd, cli, plugin.Name, append(invocation, args...), plugin.RequiredScopes)
 			},
 		})
 	}

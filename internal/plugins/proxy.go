@@ -15,6 +15,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -23,6 +24,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"slices"
 	"strings"
 	"sync"
@@ -80,6 +82,12 @@ type Proxy struct {
 // rejected with 403 before it is forwarded. Pass nil to forward every request
 // unbounded. Call Close when the plugin exits.
 func StartProxy(_ context.Context, tenantDomain string, provider TokenProvider, allowedScopes []string) (*Proxy, error) {
+	return startProxy(tenantDomain, provider, allowedScopes, newUpstreamTransport())
+}
+
+// startProxy is StartProxy with an injectable upstream transport so tests can
+// reach a local stand-in for the Management API.
+func startProxy(tenantDomain string, provider TokenProvider, allowedScopes []string, upstream http.RoundTripper) (*Proxy, error) {
 	secretBytes := make([]byte, 32)
 	if _, err := rand.Read(secretBytes); err != nil {
 		return nil, fmt.Errorf("failed to generate proxy secret: %w", err)
@@ -110,10 +118,17 @@ func StartProxy(_ context.Context, tenantDomain string, provider TokenProvider, 
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(target)
 			r.Out.Host = tenantDomain
+			// Forward exactly the canonical path the scope gate evaluated, never
+			// the raw escaped form, so the check and the forward cannot diverge.
+			r.Out.URL.Path = r.In.URL.Path
+			r.Out.URL.RawPath = ""
+			// Method-override headers would let a plugin turn a permitted
+			// request into a different verb upstream.
+			stripMethodOverrideHeaders(r.Out.Header)
 			// The real bearer token is injected (and refreshed on 401) by the
 			// authTransport, so the plugin's per-run secret never leaves here.
 		},
-		Transport: &authTransport{base: newUpstreamTransport(), provider: provider},
+		Transport: &authTransport{base: upstream, provider: provider},
 	}
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -123,8 +138,16 @@ func StartProxy(_ context.Context, tenantDomain string, provider TokenProvider, 
 			return
 		}
 
-		if scope, ok := requiredScopeFor(r.Method, r.URL.Path); ok && len(allowedScopes) > 0 && !slices.Contains(allowedScopes, scope) {
-			http.Error(w, fmt.Sprintf("forbidden: this plugin did not declare the %q scope required for %s %s", scope, r.Method, r.URL.Path), http.StatusForbidden)
+		// Canonicalize once, then check and forward the identical value.
+		canonical, err := canonicalRequestPath(r.URL)
+		if err != nil {
+			http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		r.URL.Path, r.URL.RawPath = canonical, ""
+
+		if status, msg := scopeDecision(r.Method, canonical, allowedScopes); status != 0 {
+			http.Error(w, msg, status)
 			return
 		}
 
@@ -255,24 +278,140 @@ func newUpstreamTransport() http.RoundTripper {
 	return http.DefaultTransport
 }
 
+// methodOverrideHeaders are stripped from forwarded requests so a plugin cannot
+// change the effective HTTP verb after the scope gate has evaluated it.
+var methodOverrideHeaders = []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override"}
+
+// stripMethodOverrideHeaders deletes every method-override header regardless of
+// case, also matching the underscore spelling some servers normalize to hyphens.
+func stripMethodOverrideHeaders(h http.Header) {
+	for name := range h {
+		normalized := strings.ReplaceAll(strings.ToLower(name), "_", "-")
+		if slices.ContainsFunc(methodOverrideHeaders, func(o string) bool { return strings.ToLower(o) == normalized }) {
+			delete(h, name)
+		}
+	}
+}
+
+// managementPrefix is the Management API v2 path root, matched case-insensitively.
+const managementPrefix = "/api/v2"
+
+// isManagementPath reports whether a canonical path is /api/v2 or under it.
+func isManagementPath(p string) bool {
+	n := len(managementPrefix)
+	return len(p) >= n && strings.EqualFold(p[:n], managementPrefix) && (len(p) == n || p[n] == '/')
+}
+
+// canonicalRequestPath returns the single path that is both scope-checked and
+// forwarded. It rejects anything that is not already canonical (dot segments,
+// double slashes, encoded slashes, dots or backslashes) rather than guessing,
+// and normalizes the case of the /api/v2 prefix.
+func canonicalRequestPath(u *url.URL) (string, error) {
+	if u.Opaque != "" {
+		return "", errors.New("unsupported request target")
+	}
+
+	escaped := strings.ToLower(u.EscapedPath())
+	for _, bad := range []string{"%2f", "%2e", "%5c", "%00", "%25"} {
+		if strings.Contains(escaped, bad) {
+			return "", errors.New("encoded separators, dots, nulls or percent signs are not allowed")
+		}
+	}
+
+	if strings.Contains(u.Path, ";") {
+		return "", errors.New("path parameters are not allowed")
+	}
+
+	p := u.Path
+	if p == "" || p[0] != '/' {
+		return "", errors.New("path must be absolute")
+	}
+
+	cleaned := path.Clean(p)
+	if strings.HasSuffix(p, "/") && cleaned != "/" {
+		cleaned += "/"
+	}
+	if cleaned != p {
+		return "", errors.New("path is not canonical")
+	}
+
+	if isManagementPath(p) {
+		p = managementPrefix + p[len(managementPrefix):]
+	}
+	return p, nil
+}
+
+// scopeDecision applies the scope gate to a canonical path. It returns a zero
+// status when the request may be forwarded. Empty allowedScopes means unbounded.
+// When scopes are declared the proxy only serves canonical /api/v2/... Paths:
+// every other path, including look-alikes such as /api/v2x, is rejected. Within
+// /api/v2 it fails closed: a path with no resource or a method with no scope
+// mapping is rejected rather than forwarded.
+func scopeDecision(method, p string, allowedScopes []string) (int, string) {
+	if len(allowedScopes) == 0 {
+		return 0, ""
+	}
+
+	if !isManagementPath(p) {
+		return http.StatusForbidden, fmt.Sprintf("forbidden: this plugin may only call the Management API under %s/", managementPrefix)
+	}
+
+	scope, ok := requiredScopeFor(method, p)
+	if !ok {
+		return http.StatusForbidden, fmt.Sprintf("forbidden: cannot determine the scope required for %s %s", method, p)
+	}
+	if !slices.Contains(allowedScopes, scope) {
+		return http.StatusForbidden, fmt.Sprintf("forbidden: this plugin did not declare the %q scope required for %s %s", scope, method, p)
+	}
+	return 0, ""
+}
+
+// scopeResourceOverrides maps Management API path prefixes (after /api/v2/) to
+// the resource name used in the scope, for endpoints whose scope is not named
+// after their first path segment. Prefixes match whole path segments, and the
+// longest matching prefix wins.
+var scopeResourceOverrides = map[string]string{
+	"tenants/settings":  "tenant_settings",
+	"emails/provider":   "email_provider",
+	"guardian/factors":  "guardian_factors",
+	"guardian/policies": "mfa_policies",
+	"anomaly/captchas":  "attack_protection",
+}
+
+// scopeResourceFor returns the scope resource name for a path relative to
+// /api/v2/. It applies the longest matching override and otherwise falls back to
+// the first path segment, with hyphens normalized to underscores to match
+// Auth0's scope naming. It returns an empty string when there is no resource.
+func scopeResourceFor(rest string) string {
+	best, bestLen := "", 0
+	for prefix, resource := range scopeResourceOverrides {
+		if len(prefix) > bestLen && (rest == prefix || strings.HasPrefix(rest, prefix+"/")) {
+			best, bestLen = resource, len(prefix)
+		}
+	}
+	if bestLen > 0 {
+		return best
+	}
+
+	if i := strings.IndexByte(rest, '/'); i >= 0 {
+		rest = rest[:i]
+	}
+	return strings.ReplaceAll(rest, "-", "_")
+}
+
 // requiredScopeFor derives the Management API scope a request needs from its
 // method and path, e.g. GET /api/v2/clients -> "read:clients", DELETE
 // /api/v2/roles/{id} -> "delete:roles". It reports false for paths outside the
 // Management API v2 surface (which are not scope-enforced). The mapping is
-// deliberately coarse: the resource is the first path segment (hyphens
-// normalized to underscores, matching Auth0's scope naming), and the verb comes
-// from the HTTP method.
-func requiredScopeFor(method, path string) (string, bool) {
-	const prefix = "/api/v2/"
-	if !strings.HasPrefix(path, prefix) {
+// deliberately coarse: the resource is the first path segment unless an explicit
+// override in scopeResourceOverrides applies, and the verb comes from the HTTP
+// method.
+func requiredScopeFor(method, reqPath string) (string, bool) {
+	if !isManagementPath(reqPath) || len(reqPath) == len(managementPrefix) {
 		return "", false
 	}
 
-	resource := strings.TrimPrefix(path, prefix)
-	if i := strings.IndexByte(resource, '/'); i >= 0 {
-		resource = resource[:i]
-	}
-	resource = strings.ReplaceAll(resource, "-", "_")
+	resource := scopeResourceFor(reqPath[len(managementPrefix)+1:])
 	if resource == "" {
 		return "", false
 	}
