@@ -34,6 +34,10 @@ const userAgent = "Auth0 CLI"
 // 3. --tenant
 // 4. --debug.
 type cli struct {
+	// The error for a help request that turns out to be an unknown subcommand,
+	// so Execute can fail with it instead of printing help.
+	helpErr error
+
 	// Core primitives exposed to command builders.
 	api      *auth0.API
 	apiv3    *auth0.APIV3

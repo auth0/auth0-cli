@@ -7,6 +7,7 @@
 [![Codecov](https://img.shields.io/codecov/c/github/auth0/auth0-cli?logo=codecov&style=flat-square)](https://codecov.io/gh/auth0/auth0-cli)
 [![License](https://img.shields.io/github/license/auth0/auth0-cli.svg?logo=fossa&style=flat-square)](https://github.com/auth0/auth0-cli/blob/main/LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/auth0/auth0-cli/go.yml?branch=main&style=flat-square&logo=github)](https://github.com/auth0/auth0-cli/actions?query=branch%3Amain)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/auth0/auth0-cli/badge?style=flat-square)](https://securityscorecards.dev/viewer/?uri=github.com/auth0/auth0-cli)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/auth0/auth0-cli)
 
 </div>

@@ -13,6 +13,8 @@ The client id and audience of a grant cannot be changed. To update non-interacti
 
 Note: for the Auth0 Management API with `--subject-type user`, scopes must be a subset of the fixed current_user set and cannot be listed dynamically, so pass them inline, for example: `--scopes "read:current_user,update:current_user_metadata,delete:current_user_metadata,create:current_user_metadata,create:current_user_device_credentials,delete:current_user_device_credentials,update:current_user_identities"`.
 
+Use '--schema' to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 client-grants update [flags]
@@ -29,6 +31,14 @@ auth0 client-grants update [flags]
   auth0 client-grants update <client-grant-id> --authorization-details-types "payment,transfer"
   auth0 client-grants update <client-grant-id> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants update <client-grant-id> --json
+
+  # Discover the payload schema
+  auth0 client-grants update --schema
+  auth0 client-grants update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 client-grants update <client-grant-id> --data '{"scope":["read:users","update:users"]}'
+  auth0 client-grants update <client-grant-id> --data @grant.json
 ```
 
 
@@ -38,10 +48,12 @@ auth0 client-grants update [flags]
       --allow-all-scopes                      Grant every scope configured on the API. Mutually exclusive with --scopes.
       --allow-any-organization                Whether any organization can be used with this grant (true) or only explicitly assigned organizations (false).
       --authorization-details-types strings   Comma-separated list of authorization_details types allowed for this grant (Rich Authorization Requests).
+      --data string                           JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                                  Output in json format.
       --json-compact                          Output in compact json format.
       --no-scopes                             Clear all scopes on the grant, authorizing a token with no permissions. Mutually exclusive with --scopes and --allow-all-scopes.
   -o, --organization-usage string             Whether organizations can be used with this grant. Possible values: deny, allow, require.
+      --schema                                Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --scopes strings                        Comma-separated list of scopes (permissions) to grant.
 ```
 
