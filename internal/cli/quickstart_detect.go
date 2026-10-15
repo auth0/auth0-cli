@@ -14,7 +14,7 @@ import (
 type DetectionResult struct {
 	Framework           string
 	Type                string   // "spa" | "regular" | "native".
-	BuildTool           string   // "vite" | "maven" | "gradle" | "composer" | "" (NA).
+	BuildTool           string   // "vite" | "webpack" | "maven" | "gradle" | "composer" | "" (NA).
 	BundleID            string   // Package/bundle ID for native apps (e.g. "com.example.myapp"); empty if not found.
 	Detected            bool     // True if any signal file matched.
 	AmbiguousFrameworks []string // Set when >1 package.json dep matched.
@@ -129,6 +129,14 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
+	// -- 7b. TanStack Start (@tanstack/react-start dep) — Before vite.config (TanStack Start uses Vite + react).
+	if hasDep(earlyDeps, "@tanstack/react-start") {
+		result.Framework = "tanstack-start"
+		result.Type = "regular"
+		result.Detected = true
+		return result
+	}
+
 	// -- 8. Vite.config.[ts|js] + package.json deps --.
 	if fileExistsAny(dir, "vite.config.ts", "vite.config.js") {
 		result.Type = "spa"
@@ -176,6 +184,19 @@ func DetectProject(dir string) DetectionResult {
 		result.Framework = "expo"
 		result.Type = "native"
 		result.Detected = true
+		return result
+	}
+
+	// -- 11b. Webpack.config.[js|ts|cjs|mjs] (no vite config — the vite rule ran first).
+	if fileExistsAny(dir, "webpack.config.js", "webpack.config.ts", "webpack.config.cjs", "webpack.config.mjs") {
+		result.Type = "spa"
+		result.BuildTool = "webpack"
+		result.Detected = true
+		if hasDep(earlyDeps, "react") {
+			result.Framework = "react"
+		} else {
+			result.Framework = "vanilla-javascript"
+		}
 		return result
 	}
 
@@ -334,19 +355,29 @@ func detectFromCsproj(content string) (framework, qsType string, found bool) {
 func detectJavaFramework(content string) string {
 	lower := strings.ToLower(content)
 	switch {
-	case strings.Contains(lower, "spring-boot") ||
-		strings.Contains(lower, "springframework.boot"):
+	case strings.Contains(lower, "mvc-auth-commons"):
+		return "java-mvc"
+	case containsAnyOf(lower, "spring-boot", "springframework.boot"):
 		return "spring-boot"
-	case strings.Contains(lower, "javax.ee") ||
-		strings.Contains(lower, "jakarta.ee") ||
-		strings.Contains(lower, "javax.servlet") ||
-		strings.Contains(lower, "jakarta.servlet") ||
-		// Jakarta.platform:jakarta.jakartaee-api is the standard BOM for Jakarta EE 9+.
-		strings.Contains(lower, "jakarta.platform"):
+	// Full Java EE / Jakarta EE platform or EE-only APIs (the Jakarta EE 9+ BOM is
+	// jakarta.platform:jakarta.jakartaee-api).
+	case containsAnyOf(lower, "javaee-api", "jakartaee-api", "jakarta.platform", "javax.ee", "jakarta.ee",
+		"security.enterprise", "microprofile"):
 		return "java-ee"
+	case containsAnyOf(lower, "javax.servlet", "jakarta.servlet"):
+		return "java-mvc"
 	default:
 		return "vanilla-java"
 	}
+}
+
+func containsAnyOf(s string, substrings ...string) bool {
+	for _, sub := range substrings {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
 }
 
 func isExpoProject(dir string) bool {

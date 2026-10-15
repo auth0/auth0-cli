@@ -277,6 +277,26 @@ func FrameworkBuildToolRequired(typeFramework string) bool {
 	return ok
 }
 
+// SupportedBuildTools returns the sorted, de-duplicated build-tool segment
+// ("type:framework:<tool>") of every key in QuickstartConfigs, including "none".
+func SupportedBuildTools() []string {
+	seen := make(map[string]struct{})
+	for k := range QuickstartConfigs {
+		parts := strings.SplitN(k, ":", 3)
+		if len(parts) != 3 {
+			continue
+		}
+		seen[parts[2]] = struct{}{}
+	}
+
+	tools := make([]string, 0, len(seen))
+	for tool := range seen {
+		tools = append(tools, tool)
+	}
+	sort.Strings(tools)
+	return tools
+}
+
 // FrameworkBundleIDRequired lists native frameworks that need a resolved
 // bundle/application ID (for example, "com.example.myapp") during project
 // detection. Keep in sync with DetectProject BundleID assignments.
@@ -376,6 +396,36 @@ var QuickstartConfigs = map[string]AppConfig{
 		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
 		AudienceVar: "VITE_AUTH0_AUDIENCE",
 	},
+	"spa:react:webpack": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":    DetectionSub,
+			"AUTH0_CLIENT_ID": DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DetectionSubAsBase},
+			AllowedLogoutURLs: []string{DetectionSub},
+			WebOrigins:        []string{DetectionSub},
+			Name:              DetectionSub,
+		},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "AUTH0_AUDIENCE",
+	},
+	"spa:vanilla-javascript:webpack": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":    DetectionSub,
+			"AUTH0_CLIENT_ID": DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "spa",
+			Callbacks:         []string{DetectionSubAsBase},
+			AllowedLogoutURLs: []string{DetectionSub},
+			WebOrigins:        []string{DetectionSub},
+			Name:              DetectionSub,
+		},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "AUTH0_AUDIENCE",
+	},
 	"spa:flutter-web:none": {
 		EnvValues: map[string]string{
 			"domain":   DetectionSub,
@@ -393,6 +443,24 @@ var QuickstartConfigs = map[string]AppConfig{
 
 	// Regular Web Applications.
 	"regular:nextjs:none": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DetectionSub,
+			"AUTH0_CLIENT_ID":     DetectionSub,
+			"AUTH0_CLIENT_SECRET": DetectionSub,
+			"AUTH0_SECRET":        DetectionSub,
+			"APP_BASE_URL":        DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
+			Name:              DetectionSub,
+			CallbackPath:      "/auth/callback",
+		},
+		Strategy:    FileOutputStrategy{Path: ".env", Format: "dotenv"},
+		AudienceVar: "AUTH0_AUDIENCE",
+	},
+	"regular:tanstack-start:none": {
 		EnvValues: map[string]string{
 			"AUTH0_DOMAIN":        DetectionSub,
 			"AUTH0_CLIENT_ID":     DetectionSub,
@@ -617,6 +685,36 @@ var QuickstartConfigs = map[string]AppConfig{
 			CallbackPath:      "/login/oauth2/code/okta",
 		},
 		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
+	},
+	"regular:java-mvc:maven": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DetectionSub,
+			"AUTH0_CLIENT_ID":     DetectionSub,
+			"AUTH0_CLIENT_SECRET": DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
+			Name:              DetectionSub,
+			CallbackPath:      "/callback",
+		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
+	},
+	"regular:java-mvc:gradle": {
+		EnvValues: map[string]string{
+			"AUTH0_DOMAIN":        DetectionSub,
+			"AUTH0_CLIENT_ID":     DetectionSub,
+			"AUTH0_CLIENT_SECRET": DetectionSub,
+		},
+		RequestParams: RequestParams{
+			AppType:           "regular_web",
+			Callbacks:         []string{DetectionSub},
+			AllowedLogoutURLs: []string{DetectionSub},
+			Name:              DetectionSub,
+			CallbackPath:      "/callback",
+		},
+		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
 	},
 	"regular:aspnet-mvc:none": {
 		EnvValues: map[string]string{

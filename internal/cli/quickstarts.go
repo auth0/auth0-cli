@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -449,7 +451,7 @@ var (
 	setupBuildTool = Flag{
 		Name:     "Build Tool",
 		LongForm: "build-tool",
-		Help:     "Build tool used by the project (vite, webpack, cra, none)",
+		Help:     "Build tool used by the project (" + strings.Join(auth0.SupportedBuildTools(), ", ") + ")",
 	}
 	setupPort = Flag{
 		Name:     "Port",
@@ -459,17 +461,17 @@ var (
 	setupCallbackURL = Flag{
 		Name:     "Callback URL",
 		LongForm: "callback-url",
-		Help:     "Override the allowed callback URL for the application",
+		Help:     "Override the allowed callback URLs for the application. Comma-separate or repeat the flag for multiple values; replaces the default list.",
 	}
 	setupLogoutURL = Flag{
 		Name:     "Logout URL",
 		LongForm: "logout-url",
-		Help:     "Override the allowed logout URL for the application",
+		Help:     "Override the allowed logout URLs for the application. Comma-separate or repeat the flag for multiple values; replaces the default list.",
 	}
 	setupWebOriginURL = Flag{
 		Name:     "Web Origin URL",
 		LongForm: "web-origin-url",
-		Help:     "Override the allowed web origin URL for the application",
+		Help:     "Override the allowed web origin URLs for the application. Comma-separate or repeat the flag for multiple values; replaces the default list.",
 	}
 	setupAPI = Flag{
 		Name:     "API",
@@ -490,7 +492,12 @@ var (
 	setupScopes = Flag{
 		Name:     "Scopes",
 		LongForm: "scopes",
-		Help:     "[API] Comma-separated list of permission scopes for the API",
+		Help:     "[API] Comma-separated permission scopes the API defines (e.g. read:data,write:data). The app created with --app or given with --linked-app-id is granted all of them unless --grant-scopes is set.",
+	}
+	setupGrantScopes = Flag{
+		Name:     "Grant Scopes",
+		LongForm: "grant-scopes",
+		Help:     "[API] Comma-separated subset of --scopes to grant the app created with --app or given with --linked-app-id (default: all --scopes). Every value must also be listed in --scopes.",
 	}
 	setupTokenLifetime = Flag{
 		Name:     "Token Lifetime",
@@ -518,13 +525,14 @@ type SetupInputs struct {
 	BuildTool     string
 	Port          int
 	BundleID      string // Package/bundle ID for native apps, populated from detection.
-	CallbackURL   string
-	LogoutURL     string
-	WebOriginURL  string
+	CallbackURLs  []string
+	LogoutURLs    []string
+	WebOriginURLs []string
 	API           bool
 	Identifier    string
 	SigningAlg    string
 	Scopes        string
+	GrantScopes   []string // Nil = default to Scopes; non-nil (even empty) = explicit.
 	TokenLifetime string
 	OfflineAccess bool
 	LinkedAppID   string // Client ID of an existing app to link to the API.
@@ -560,7 +568,10 @@ Workflows:
   auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api
 
   # API with custom settings:
-  auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api --scopes "read:data,write:data"`,
+  auth0 quickstarts setup --api --linked-app-id <client-id> --identifier https://my-api --scopes "read:data,write:data"
+
+  # API + new app, granting a subset of the API scopes, with a JSON result:
+  auth0 quickstarts setup --api --app --type regular --framework express --identifier https://my-api --scopes "read:data,write:data" --grant-scopes read:data --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSetupQuickstart(cmd, cli, &inputs)
 		},
@@ -568,6 +579,11 @@ Workflows:
 
 	// App flags.
 	registerSetupFlags(cmd, &inputs)
+
+	cmd.Flags().BoolVar(&cli.force, "force", false, "Replace an existing config file without prompting (a backup is written first). In agent mode or with --no-input, an existing .env is merged instead, and any other existing config file is only replaced with --force.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	cmd.MarkFlagsMutuallyExclusive("app", "linked-app-id")
 
@@ -583,15 +599,16 @@ func registerSetupFlags(cmd *cobra.Command, inputs *SetupInputs) {
 	setupFramework.RegisterString(cmd, &inputs.Framework, "")
 	setupBuildTool.RegisterString(cmd, &inputs.BuildTool, "none")
 	setupPort.RegisterInt(cmd, &inputs.Port, 0)
-	setupCallbackURL.RegisterString(cmd, &inputs.CallbackURL, "")
-	setupLogoutURL.RegisterString(cmd, &inputs.LogoutURL, "")
-	setupWebOriginURL.RegisterString(cmd, &inputs.WebOriginURL, "")
+	setupCallbackURL.RegisterStringSlice(cmd, &inputs.CallbackURLs, nil)
+	setupLogoutURL.RegisterStringSlice(cmd, &inputs.LogoutURLs, nil)
+	setupWebOriginURL.RegisterStringSlice(cmd, &inputs.WebOriginURLs, nil)
 
 	// API flags.
 	setupAPI.RegisterBool(cmd, &inputs.API, false)
 	setupIdentifier.RegisterString(cmd, &inputs.Identifier, "")
 	setupSigningAlg.RegisterString(cmd, &inputs.SigningAlg, "")
 	setupScopes.RegisterString(cmd, &inputs.Scopes, "")
+	setupGrantScopes.RegisterStringSlice(cmd, &inputs.GrantScopes, nil)
 	setupTokenLifetime.RegisterString(cmd, &inputs.TokenLifetime, "")
 	setupOfflineAccess.RegisterBool(cmd, &inputs.OfflineAccess, false)
 	setupLinkedAppID.RegisterString(cmd, &inputs.LinkedAppID, "")
@@ -599,18 +616,26 @@ func registerSetupFlags(cmd *cobra.Command, inputs *SetupInputs) {
 
 // runSetupQuickstart is the orchestration entry point for `quickstarts setup`.
 func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
-	ctx := cmd.Context()
-
-	if err := cli.setupWithAuthentication(ctx); err != nil {
+	if err := cli.setupWithAuthentication(cmd.Context()); err != nil {
 		return fmt.Errorf("authentication required: %w", err)
 	}
+	return executeSetupQuickstart(cmd, cli, inputs, canPrompt(cmd))
+}
+
+// executeSetupQuickstart runs every setup step after authentication.
+func executeSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs, canPromptFlag bool) error {
+	ctx := cmd.Context()
+	result := &display.QuickstartSetupResult{}
 
 	// Validate that --linked-app-id is only used with --api.
 	if inputs.LinkedAppID != "" && !inputs.API {
 		return fmt.Errorf("--linked-app-id requires --api")
 	}
 
-	canPromptFlag := canPrompt(cmd)
+	inputs.GrantScopes = normalizeScopeSlice(inputs.GrantScopes)
+	if err := validateGrantScopes(*inputs, setupGrantScopes.IsSet(cmd)); err != nil {
+		return err
+	}
 
 	// -- Step 1: Decide what to create (App / API) --.
 	if err := resolveSetupTargets(inputs, canPromptFlag); err != nil {
@@ -640,6 +665,19 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 		cli.renderer.Infof("Auto-selected build tool %q for %s/%s", inputs.BuildTool, inputs.Type, inputs.Framework)
 	}
 
+	// -- Step 4b: Check the config file before any API call, so a refusal never leaves an orphaned app.
+	var configPlan *qsConfigWritePlan
+	if inputs.App {
+		appConfig, err := lookupQuickstartConfig(qsConfigKey)
+		if err != nil {
+			return err
+		}
+		configPlan, err = planQuickstartConfigWrite(normalizeStrategy(&appConfig.Strategy), cli.force, canPromptFlag)
+		if err != nil {
+			return err
+		}
+	}
+
 	// -- Step 5: Collect application/API name --.
 	if err = collectName(cmd, inputs); err != nil {
 		return err
@@ -663,9 +701,14 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 		}
 	}
 
+	// -- Step 7b: Confirm replacing an existing config file (interactive only).
+	if configPlan != nil && configPlan.NeedsConfirm {
+		confirmQuickstartConfigOverwrite(configPlan)
+	}
+
 	// -- Step 8: Create the Auth0 application client --.
 	if inputs.App {
-		clientID, err := createQuickstartApp(cmd, cli, *inputs, qsConfigKey)
+		clientID, err := createQuickstartApp(cmd, cli, *inputs, qsConfigKey, configPlan, result)
 		if err != nil {
 			return err
 		}
@@ -675,11 +718,12 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 
 	// -- Step 9: Create the Auth0 API resource server --.
 	if inputs.API {
-		if err := createQuickstartAPI(ctx, cli, *inputs); err != nil {
+		if err := createQuickstartAPI(ctx, cli, *inputs, result); err != nil {
 			return err
 		}
 	}
 
+	cli.renderer.QuickstartSetup(result)
 	return nil
 }
 
@@ -975,7 +1019,7 @@ func renderClearDetectionSummary(cli *cli, detection DetectionResult) {
 	}
 
 	const labelWidth = 9
-	cli.renderer.Output("Detected in current directory:")
+	printDetectionHeader(cli)
 	cli.renderer.Detailf("%-*s : %s", labelWidth, "Framework", frameworkDisplay)
 	cli.renderer.Detailf("%-*s : %s", labelWidth, "App type", detectionFriendlyAppType(detection.Type))
 }
@@ -990,9 +1034,18 @@ func renderAmbiguousDetectionSummary(cli *cli, detection DetectionResult) {
 	}
 
 	const labelWidth = 19
-	cli.renderer.Output("Detected in current directory:")
+	printDetectionHeader(cli)
 	cli.renderer.Detailf("%-*s : %s", labelWidth, "Possible frameworks", strings.Join(candidates, ", "))
 	cli.renderer.Detailf("%-*s : %s", labelWidth, "App type", detectionFriendlyAppType(detection.Type))
+}
+
+// printDetectionHeader keeps stdout reserved for the JSON result in JSON / agent mode.
+func printDetectionHeader(cli *cli) {
+	if cli.renderer.Format == display.OutputFormatJSON || cli.renderer.Format == display.OutputFormatJSONCompact {
+		cli.renderer.Infof("Detected in current directory:") // Stderr; suppressed in agent mode.
+		return
+	}
+	cli.renderer.Output("Detected in current directory:") // Human output unchanged.
 }
 
 // validateNonInteractiveRequirements enforces flag requirements that apply only when prompts are disabled.
@@ -1053,11 +1106,11 @@ func printAPIDetails(cli *cli, rs *management.ResourceServer) {
 }
 
 // createQuickstartApp creates an Auth0 application client for the given quickstart config key,
-// writes the env config file, and prints setup guidance. It returns the newly created client ID.
-func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsConfigKey string) (string, error) {
-	config, exists := auth0.QuickstartConfigs[qsConfigKey]
-	if !exists {
-		return "", usageError{err: fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes()), reason: "invalid_flag_value"}
+// writes the config file, and prints setup guidance. It returns the newly created client ID.
+func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsConfigKey string, plan *qsConfigWritePlan, result *display.QuickstartSetupResult) (string, error) {
+	config, err := lookupQuickstartConfig(qsConfigKey)
+	if err != nil {
+		return "", err
 	}
 
 	expoScheme := readExpoScheme(inputs.Framework)
@@ -1094,12 +1147,32 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 		return "", err
 	}
 
-	if err := cli.WriteQuickstartConfig(cmd, resolvedEnv, &config.Strategy); err != nil {
+	cfgOut, err := cli.writeQuickstartConfig(cmd, resolvedEnv, &config.Strategy, plan)
+	if err != nil {
 		return "", fmt.Errorf("failed to generate config file: %w", err)
 	}
 
 	printClientDetails(cli, client)
-	printNativeGuidance(cli, inputs.Framework, expoScheme, nativeBundleID)
+	steps := printNativeGuidance(cli, inputs.Framework, expoScheme, nativeBundleID)
+
+	if result != nil {
+		result.App = &display.QuickstartSetupApp{
+			ClientID:   client.GetClientID(),
+			Name:       client.GetName(),
+			Type:       client.GetAppType(),
+			Callbacks:  client.GetCallbacks(),
+			LogoutURLs: client.GetAllowedLogoutURLs(),
+			WebOrigins: client.GetWebOrigins(),
+		}
+		result.ConfigFile = cfgOut
+		if cfgOut.Action == qsConfigSkipped {
+			result.NextSteps = append(result.NextSteps,
+				fmt.Sprintf("Create %s manually with your Auth0 configuration (it was not written)", cfgOut.Path))
+		} else {
+			result.KeysWritten = sortedKeys(resolvedEnv) // Names only, never values.
+		}
+		result.NextSteps = append(result.NextSteps, steps...)
+	}
 
 	return client.GetClientID(), nil
 }
@@ -1153,43 +1226,75 @@ func resolveNativeBundleID(inputs SetupInputs) string {
 	return ""
 }
 
-// printNativeGuidance prints post-setup callback URL guidance for native frameworks.
-func printNativeGuidance(cli *cli, framework, expoScheme, bundleID string) {
+type guidanceLine struct {
+	text string
+	warn bool
+}
+
+func nativeGuidance(framework, expoScheme, bundleID, tenant string) []guidanceLine {
 	switch framework {
 	case "expo":
 		if expoScheme != "" {
-			cli.renderer.Infof("Note: exp://localhost:19000 is registered for Expo Go development.")
-			cli.renderer.Infof("For EAS/production builds, add %s:// to Allowed Callback URLs in the Auth0 Dashboard.", expoScheme)
-		} else {
-			cli.renderer.Infof("Note: exp://localhost:19000 is for Expo Go development only.")
-			cli.renderer.Infof("For EAS/production builds, add your custom scheme URI (e.g., myapp://) to Allowed Callback URLs in the Auth0 Dashboard.")
+			return []guidanceLine{
+				{text: "Note: exp://localhost:19000 is registered for Expo Go development."},
+				{text: fmt.Sprintf("For EAS/production builds, add %s:// to Allowed Callback URLs in the Auth0 Dashboard.", expoScheme)},
+			}
+		}
+		return []guidanceLine{
+			{text: "Note: exp://localhost:19000 is for Expo Go development only."},
+			{text: "For EAS/production builds, add your custom scheme URI (e.g., myapp://) to Allowed Callback URLs in the Auth0 Dashboard."},
 		}
 	case "flutter", "react-native":
 		if bundleID != "" {
-			cli.renderer.Infof("Add these Allowed Callback URLs in the Auth0 Dashboard:")
-			cli.renderer.Infof("  Android: %s://%s/android/%s/callback", bundleID, cli.tenant, bundleID)
-			cli.renderer.Infof("  iOS:     %s://%s/ios/%s/callback", bundleID, cli.tenant, bundleID)
+			return []guidanceLine{
+				{text: "Add these Allowed Callback URLs in the Auth0 Dashboard:"},
+				{text: fmt.Sprintf("  Android: %s://%s/android/%s/callback", bundleID, tenant, bundleID)},
+				{text: fmt.Sprintf("  iOS:     %s://%s/ios/%s/callback", bundleID, tenant, bundleID)},
+			}
 		}
 	case "maui", "dotnet-mobile":
 		if bundleID != "" {
-			cli.renderer.Infof("Registered %s://callback as the Allowed Callback URL.", bundleID)
+			return []guidanceLine{
+				{text: fmt.Sprintf("Registered %s://callback as the Allowed Callback URL.", bundleID)},
+			}
 		}
 	case "ionic-angular", "ionic-react", "ionic-vue":
 		if bundleID != "" {
-			cli.renderer.Infof("Capacitor app ID: %s", bundleID)
-			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
-		} else {
-			cli.renderer.Warnf("Could not read Capacitor app ID. Ensure capacitor.config.json or capacitor.config.ts is present in your project root.")
-			cli.renderer.Infof("http://localhost is registered as the Allowed Callback URL (Capacitor WebView).")
+			return []guidanceLine{
+				{text: fmt.Sprintf("Capacitor app ID: %s", bundleID)},
+				{text: "http://localhost is registered as the Allowed Callback URL (Capacitor WebView)."},
+			}
+		}
+		return []guidanceLine{
+			{text: "Could not read Capacitor app ID. Ensure capacitor.config.json or capacitor.config.ts is present in your project root.", warn: true},
+			{text: "http://localhost is registered as the Allowed Callback URL (Capacitor WebView)."},
 		}
 	case "jhipster":
-		cli.renderer.Infof("Refer to JHipster documentation to complete the setup: https://www.jhipster.tech/security/#auth0")
+		return []guidanceLine{
+			{text: "Refer to JHipster documentation to complete the setup: https://www.jhipster.tech/security/#auth0"},
+		}
 	}
+	return nil
+}
+
+// printNativeGuidance prints post-setup callback URL guidance for native frameworks.
+func printNativeGuidance(cli *cli, framework, expoScheme, bundleID string) []string {
+	lines := nativeGuidance(framework, expoScheme, bundleID, cli.tenant)
+	steps := make([]string, 0, len(lines))
+	for _, l := range lines {
+		if l.warn {
+			cli.renderer.Warnf("%s", l.text)
+		} else {
+			cli.renderer.Infof("%s", l.text)
+		}
+		steps = append(steps, strings.TrimSpace(l.text))
+	}
+	return steps
 }
 
 // createQuickstartAPI creates an Auth0 API resource server and optionally links it to an
 // existing application client via a client grant.
-func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs) error {
+func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, result *display.QuickstartSetupResult) error {
 	// API name = "<app-name>-API", fallback to identifier.
 	apiName := inputs.Identifier
 	if inputs.Name != "" {
@@ -1212,16 +1317,9 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs) erro
 		AllowOfflineAccess: &inputs.OfflineAccess,
 	}
 
-	if inputs.Scopes != "" {
-		var scopeList []string
-		for _, s := range strings.Split(inputs.Scopes, ",") {
-			if s = strings.TrimSpace(s); s != "" {
-				scopeList = append(scopeList, s)
-			}
-		}
-		if len(scopeList) > 0 {
-			rs.Scopes = apiScopesFor(scopeList)
-		}
+	scopeList := parseScopeList(inputs.Scopes)
+	if len(scopeList) > 0 {
+		rs.Scopes = apiScopesFor(scopeList)
 	}
 
 	if err := ansi.Waiting(func() error {
@@ -1231,21 +1329,102 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs) erro
 	}
 	printAPIDetails(cli, rs)
 
-	// Link the app to the API via a client grant if an app was selected/created.
-	if inputs.LinkedAppID != "" {
-		grant := &managementv3.CreateClientGrantRequestContent{
-			ClientID: &inputs.LinkedAppID,
-			Audience: inputs.Identifier,
-			Scope:    []string{},
-		}
-		if grantErr := ansi.Waiting(func() error {
-			_, err := cli.apiv3.ClientGrant.Create(ctx, grant)
-			return err
-		}); grantErr != nil {
-			cli.renderer.Warnf("Failed to link application to API: %v", grantErr)
+	if result != nil {
+		result.API = &display.QuickstartSetupAPI{
+			Identifier: rs.GetIdentifier(),
+			Name:       rs.GetName(),
+			Scopes:     scopeList,
 		}
 	}
 
+	// Link the app to the API via a client grant if an app was selected/created.
+	if inputs.LinkedAppID != "" {
+		grantScopes := inputs.GrantScopes
+		if grantScopes == nil {
+			grantScopes = scopeList
+		}
+
+		grant := &managementv3.CreateClientGrantRequestContent{
+			ClientID: &inputs.LinkedAppID,
+			Audience: inputs.Identifier,
+		}
+		grant.SetScope(grantScopes) // Always explicit, even when empty: Scope is omitempty otherwise.
+
+		var resp *managementv3.CreateClientGrantResponseContent
+		if err := ansi.Waiting(func() (err error) {
+			resp, err = cli.apiv3.ClientGrant.Create(ctx, grant)
+			return err
+		}); err != nil {
+			return fmt.Errorf(
+				"created API %q but failed to link application %q to it with a client grant; create it manually with "+
+					"'auth0 client-grants create --client-id %s --audience %s --scopes %s': %w",
+				inputs.Identifier, inputs.LinkedAppID, inputs.LinkedAppID, inputs.Identifier, strings.Join(grantScopes, ","), err)
+		}
+
+		grantedDisplay := "(none)"
+		if len(grantScopes) > 0 {
+			grantedDisplay = strings.Join(grantScopes, ", ")
+		}
+		cli.renderer.Successf("Application %s linked to the API with scopes: %s", ansi.Magenta(inputs.LinkedAppID), grantedDisplay)
+
+		if result != nil {
+			result.ClientGrant = &display.QuickstartSetupClientGrant{
+				ID:       resp.GetID(),
+				ClientID: inputs.LinkedAppID,
+				Audience: inputs.Identifier,
+				Scopes:   grantScopes,
+			}
+		}
+	}
+
+	return nil
+}
+
+// parseScopeList never returns nil, so the client grant always sends an explicit scope list.
+func parseScopeList(s string) []string {
+	scopes := []string{}
+	for _, scope := range strings.Split(s, ",") {
+		if scope = strings.TrimSpace(scope); scope != "" {
+			scopes = append(scopes, scope)
+		}
+	}
+	return scopes
+}
+
+// normalizeScopeSlice keeps nil (flag unset, so the grant defaults to --scopes) distinct from empty.
+func normalizeScopeSlice(in []string) []string {
+	if in == nil {
+		return nil
+	}
+	out := []string{}
+	for _, scope := range in {
+		if scope = strings.TrimSpace(scope); scope != "" {
+			out = append(out, scope)
+		}
+	}
+	return out
+}
+
+func validateGrantScopes(inputs SetupInputs, grantScopesSet bool) error {
+	if !grantScopesSet && inputs.GrantScopes == nil {
+		return nil
+	}
+	if !inputs.API {
+		return usageError{err: fmt.Errorf("--grant-scopes requires --api"), reason: "invalid_flag_value"}
+	}
+
+	apiScopes := parseScopeList(inputs.Scopes)
+	for _, scope := range inputs.GrantScopes {
+		if !slices.Contains(apiScopes, scope) {
+			return usageError{
+				err: fmt.Errorf(
+					"--grant-scopes value %q is not one of the API scopes (--scopes: %q); every grant scope must also be in --scopes",
+					scope, strings.Join(apiScopes, ","),
+				),
+				reason: "invalid_flag_value",
+			}
+		}
+	}
 	return nil
 }
 
@@ -1335,12 +1514,6 @@ func resolveSetupInputs(cmd *cobra.Command, inputs *SetupInputs) (bool, error) {
 		}
 	}
 
-	// Resolve port from framework default before prompting.
-	// Port stays 0 for native apps (react-native, expo, flutter) - no port needed.
-	if inputs.Port == 0 {
-		inputs.Port = defaultPortForFramework(inputs.Framework)
-	}
-
 	// If no explicit build tool and the "none" variant doesn't exist, resolve the best
 	// supported build tool from the pre-built FrameworkBuildTools map.
 	wasAutoSelected := false
@@ -1355,6 +1528,11 @@ func resolveSetupInputs(cmd *cobra.Command, inputs *SetupInputs) (bool, error) {
 		} else {
 			inputs.BuildTool = "none"
 		}
+	}
+
+	// Runs after the build tool is resolved so webpack projects get 8080, not the Vite port.
+	if inputs.Port == 0 {
+		inputs.Port = defaultPortForSetup(inputs.Framework, inputs.BuildTool)
 	}
 
 	return wasAutoSelected, nil
@@ -1390,10 +1568,19 @@ func frameworkDisplayName(framework string) string {
 		return "Vanilla JS"
 	case "vanilla-java":
 		return "Java"
+	case "tanstack-start":
+		return "TanStack Start"
 	default:
 		titleCaser := cases.Title(language.English)
 		return titleCaser.String(framework)
 	}
+}
+
+func defaultPortForSetup(framework, buildTool string) int {
+	if buildTool == "webpack" {
+		return 8080 // Webpack-dev-server default.
+	}
+	return defaultPortForFramework(framework)
 }
 
 // defaultPortForFramework returns the conventional port for a given framework name.
@@ -1430,6 +1617,16 @@ func validateAPIIdentifier(identifier string) error {
 	return nil
 }
 
+func cleanURLList(in []string) []string {
+	var out []string
+	for _, u := range in {
+		if u = strings.TrimSpace(u); u != "" {
+			out = append(out, u)
+		}
+	}
+	return out
+}
+
 func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*management.Client, error) {
 	if input.Name == "" {
 		input.Name = "My App"
@@ -1443,15 +1640,15 @@ func generateClient(input SetupInputs, reqParams auth0.RequestParams) (*manageme
 
 	resolved := resolveRequestParams(reqParams, input.Name, input.Port)
 
-	// Override URL fields with explicit flag values when provided.
-	if input.CallbackURL != "" {
-		resolved.Callbacks = []string{input.CallbackURL}
+	// Each explicit URL list replaces the resolved default list.
+	if urls := cleanURLList(input.CallbackURLs); len(urls) > 0 {
+		resolved.Callbacks = urls
 	}
-	if input.LogoutURL != "" {
-		resolved.AllowedLogoutURLs = []string{input.LogoutURL}
+	if urls := cleanURLList(input.LogoutURLs); len(urls) > 0 {
+		resolved.AllowedLogoutURLs = urls
 	}
-	if input.WebOriginURL != "" {
-		resolved.WebOrigins = []string{input.WebOriginURL}
+	if urls := cleanURLList(input.WebOriginURLs); len(urls) > 0 {
+		resolved.WebOrigins = urls
 	}
 
 	algorithm := "RS256"
@@ -1657,24 +1854,212 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
-func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]string, strategy *auth0.FileOutputStrategy) error {
-	if strategy == nil {
-		strategy = &auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
+const (
+	qsConfigCreated     = "created"
+	qsConfigMerged      = "merged"
+	qsConfigOverwritten = "overwritten"
+	qsConfigSkipped     = "skipped"
+)
+
+const qsConfigBackupSuffix = ".auth0-backup"
+
+// qsConfigWritePlan is decided before any API call.
+type qsConfigWritePlan struct {
+	Path         string
+	Format       string
+	Perm         os.FileMode // Existing file's permission bits; 0600 for a new file.
+	Action       string      // One of the qsConfig* constants; "" while NeedsConfirm.
+	NeedsConfirm bool        // Non-dotenv file exists and the user can be prompted.
+}
+
+var qsConfirmOverwrite = prompt.Confirm
+
+var dotenvKeyRegexp = regexp.MustCompile(`^\s*(export\s+)?([A-Za-z_][A-Za-z0-9_.\-]*)\s*=`)
+
+func lookupQuickstartConfig(qsConfigKey string) (auth0.AppConfig, error) {
+	config, exists := auth0.QuickstartConfigs[qsConfigKey]
+	if !exists {
+		return auth0.AppConfig{}, usageError{err: fmt.Errorf("unsupported quickstart arguments: %s. Supported types: %v", qsConfigKey, getSupportedQuickstartTypes()), reason: "invalid_flag_value"}
+	}
+	return config, nil
+}
+
+func normalizeStrategy(strategy *auth0.FileOutputStrategy) auth0.FileOutputStrategy {
+	if strategy == nil || strategy.Path == "" {
+		return auth0.FileOutputStrategy{Path: ".env", Format: "dotenv"}
+	}
+	return *strategy
+}
+
+func planQuickstartConfigWrite(strategy auth0.FileOutputStrategy, force, canPromptFlag bool) (*qsConfigWritePlan, error) {
+	plan := &qsConfigWritePlan{Path: strategy.Path, Format: strategy.Format}
+
+	info, err := os.Stat(strategy.Path)
+	if os.IsNotExist(err) {
+		plan.Action = qsConfigCreated
+		plan.Perm = 0600
+		return plan, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to check %s: %w", strategy.Path, err)
+	}
+	if info.IsDir() {
+		return nil, validationError{err: fmt.Errorf("%s is a directory", strategy.Path), reason: "invalid_project_dir"}
 	}
 
-	dir := filepath.Dir(strategy.Path)
-	if dir != "." {
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+	plan.Perm = info.Mode().Perm()
+
+	// Non-interactive runs (agent mode, --no-input, no TTY) merge .env so unrelated keys survive;
+	// interactive runs keep the explicit overwrite prompt (with a backup) for every format.
+	switch {
+	case strategy.Format == "dotenv" && !canPromptFlag:
+		plan.Action = qsConfigMerged
+	case force:
+		plan.Action = qsConfigOverwritten
+	case !canPromptFlag:
+		return nil, usageError{
+			err: fmt.Errorf(
+				"%s already exists; re-run with --force to replace it (the current file will be backed up to %s)",
+				strategy.Path, strategy.Path+qsConfigBackupSuffix,
+			),
+			reason: "file_exists",
+		}
+	default:
+		plan.NeedsConfirm = true
+	}
+	return plan, nil
+}
+
+func confirmQuickstartConfigOverwrite(plan *qsConfigWritePlan) {
+	if plan == nil || !plan.NeedsConfirm {
+		return
+	}
+	message := fmt.Sprintf("Proceed to overwrite '%s' file? The current file will be backed up first.", ansi.Bold(plan.Path))
+	if qsConfirmOverwrite(message) {
+		plan.Action = qsConfigOverwritten
+	} else {
+		plan.Action = qsConfigSkipped
+	}
+	plan.NeedsConfirm = false
+}
+
+func dotenvLine(key, value string) string {
+	return fmt.Sprintf("%s=\"%s\"", key, value)
+}
+
+// mergeDotenv replaces the first assignment of each owned key in place (keeping `export `), drops
+// later duplicates, keeps every other line as is, and appends missing keys. Continuation lines of
+// a multi-line quoted value of an owned key are left in place.
+func mergeDotenv(existing []byte, values map[string]string) []byte {
+	var out strings.Builder
+
+	if len(existing) == 0 {
+		for _, key := range sortedKeys(values) {
+			out.WriteString(dotenvLine(key, values[key]))
+			out.WriteString("\n")
+		}
+		return []byte(out.String())
+	}
+
+	lines := strings.Split(string(existing), "\n")
+	if bytes.HasSuffix(existing, []byte("\n")) {
+		lines = lines[:len(lines)-1]
+	}
+
+	seen := make(map[string]bool, len(values))
+	merged := make([]string, 0, len(lines)+len(values))
+	for _, line := range lines {
+		m := dotenvKeyRegexp.FindStringSubmatch(line)
+		if m == nil {
+			merged = append(merged, line)
+			continue
+		}
+		key := m[2]
+		value, owned := values[key]
+		if !owned {
+			merged = append(merged, line)
+			continue
+		}
+		if seen[key] {
+			continue // Drop later duplicates of an owned key.
+		}
+		seen[key] = true
+		prefix := ""
+		if m[1] != "" {
+			prefix = "export "
+		}
+		merged = append(merged, prefix+dotenvLine(key, value))
+	}
+
+	for _, key := range sortedKeys(values) {
+		if !seen[key] {
+			merged = append(merged, dotenvLine(key, values[key]))
 		}
 	}
 
+	out.WriteString(strings.Join(merged, "\n"))
+	out.WriteString("\n")
+	return []byte(out.String())
+}
+
+// nextBackupPath returns <path>.auth0-backup, or the first free <path>.auth0-backup.N (N=1,2,…).
+func nextBackupPath(path string) (string, error) {
+	const maxBackups = 1000
+
+	candidate := path + qsConfigBackupSuffix
+	for n := 0; n <= maxBackups; n++ {
+		if n > 0 {
+			candidate = fmt.Sprintf("%s%s.%d", path, qsConfigBackupSuffix, n)
+		}
+		_, err := os.Lstat(candidate)
+		if os.IsNotExist(err) {
+			return candidate, nil
+		}
+		if err != nil {
+			return "", fmt.Errorf("failed to check backup path %s: %w", candidate, err)
+		}
+	}
+	return "", fmt.Errorf("failed to find a free backup path for %s after %d attempts", path, maxBackups)
+}
+
+// backupQuickstartConfigFile creates the backup exclusively, so an existing backup is never overwritten.
+func backupQuickstartConfigFile(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s for backup: %w", path, err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s for backup: %w", path, err)
+	}
+
+	backup, err := nextBackupPath(path)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := os.OpenFile(backup, os.O_WRONLY|os.O_CREATE|os.O_EXCL, info.Mode().Perm())
+	if err != nil {
+		return "", fmt.Errorf("failed to create backup %s: %w", backup, err)
+	}
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		return "", fmt.Errorf("failed to write backup %s: %w", backup, err)
+	}
+	if err := f.Close(); err != nil {
+		return "", fmt.Errorf("failed to write backup %s: %w", backup, err)
+	}
+	return backup, nil
+}
+
+func renderQuickstartConfigContent(resolvedEnv map[string]string, strategy auth0.FileOutputStrategy) ([]byte, error) {
 	var contentBuilder strings.Builder
 
 	switch strategy.Format {
 	case "dotenv":
 		for _, key := range sortedKeys(resolvedEnv) {
-			fmt.Fprintf(&contentBuilder, "%s=\"%s\"\n", key, resolvedEnv[key])
+			contentBuilder.WriteString(dotenvLine(key, resolvedEnv[key]))
+			contentBuilder.WriteString("\n")
 		}
 
 	case "properties":
@@ -1687,7 +2072,7 @@ func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		nested := buildNestedMap(resolvedEnv)
 		yamlBytes, err := yaml.Marshal(nested)
 		if err != nil {
-			return fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+			return nil, fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(yamlBytes)
 
@@ -1700,7 +2085,7 @@ func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		wrapped := map[string]interface{}{"development": devSection}
 		yamlBytes, err := yaml.Marshal(wrapped)
 		if err != nil {
-			return fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
+			return nil, fmt.Errorf("failed to marshal YAML for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(yamlBytes)
 
@@ -1735,7 +2120,7 @@ func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		auth0Section := make(map[string]string)
 		for key, val := range resolvedEnv {
 			if !strings.HasPrefix(key, "Auth0:") {
-				return fmt.Errorf("json formatter: key %q is missing required \"Auth0:\" prefix", key)
+				return nil, fmt.Errorf("json formatter: key %q is missing required \"Auth0:\" prefix", key)
 			}
 			cleanKey := strings.TrimPrefix(key, "Auth0:")
 			auth0Section[cleanKey] = val
@@ -1743,7 +2128,7 @@ func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		jsonBody := map[string]interface{}{"Auth0": auth0Section}
 		jsonBytes, err := json.MarshalIndent(jsonBody, "", "  ")
 		if err != nil {
-			return fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
+			return nil, fmt.Errorf("failed to marshal JSON for %s: %w", strategy.Path, err)
 		}
 		contentBuilder.Write(jsonBytes)
 
@@ -1799,28 +2184,132 @@ func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		}
 		contentBuilder.WriteString("</dict>\n")
 		contentBuilder.WriteString("</plist>\n")
+
+	default:
+		return nil, fmt.Errorf("unsupported config format %q for %s", strategy.Format, strategy.Path)
 	}
 
-	message := fmt.Sprintf("Proceed to overwrite '%s' file?", ansi.Bold(strategy.Path))
-	if shouldCancelOverwrite(c, cmd, strategy.Path, message) {
-		c.renderer.Warnf("Aborted creating %s. Please create it manually using the following content:", ansi.Cyan(strategy.Path))
+	return []byte(contentBuilder.String()), nil
+}
+
+func (c *cli) WriteQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]string, strategy *auth0.FileOutputStrategy) error {
+	_, err := c.writeQuickstartConfig(cmd, resolvedEnv, strategy, nil)
+	return err
+}
+
+func (c *cli) writeQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]string, strategy *auth0.FileOutputStrategy, plan *qsConfigWritePlan) (*display.QuickstartSetupConfigFile, error) {
+	s := normalizeStrategy(strategy)
+
+	if plan == nil {
+		var err error
+		plan, err = planQuickstartConfigWrite(s, c.force, canPrompt(cmd))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if plan.NeedsConfirm {
+		confirmQuickstartConfigOverwrite(plan)
+	}
+
+	content, err := renderQuickstartConfigContent(resolvedEnv, s)
+	if err != nil {
+		return nil, err
+	}
+
+	outcome := &display.QuickstartSetupConfigFile{Path: s.Path, Format: s.Format, Action: plan.Action}
+
+	switch plan.Action {
+	case qsConfigSkipped:
+		c.renderer.Warnf("Aborted creating %s. Please create it manually using the following content:", ansi.Cyan(s.Path))
 		c.renderer.Newline()
 
 		const border = "─────────────────────────────────────────────────────────────"
 		c.renderer.Detailf("%s", border)
-		for _, line := range strings.Split(strings.TrimRight(contentBuilder.String(), "\n"), "\n") {
+		for _, line := range strings.Split(strings.TrimRight(string(content), "\n"), "\n") {
 			c.renderer.Detailf("%s", line)
 		}
 		c.renderer.Detailf("%s", border)
 		c.renderer.Newline()
-	} else {
-		if err := os.WriteFile(strategy.Path, []byte(contentBuilder.String()), 0600); err != nil {
-			return fmt.Errorf("failed to write .env file: %w", err)
-		}
+		return outcome, nil
 
+	case qsConfigMerged:
+		action, err := c.mergeQuickstartDotenv(s.Path, resolvedEnv, plan.Perm, content)
+		if err != nil {
+			return nil, err
+		}
+		outcome.Action = action
+		return outcome, nil
+
+	case qsConfigOverwritten:
+		backup, err := backupQuickstartConfigFile(s.Path)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.WriteFile(s.Path, content, plan.Perm); err != nil {
+			return nil, fmt.Errorf("failed to write %s: %w", s.Path, err)
+		}
 		c.renderer.Newline()
-		c.renderer.Successf("%s file created successfully with your Auth0 configuration", ansi.Cyan(strategy.Path))
+		c.renderer.Successf("%s file overwritten with your Auth0 configuration", ansi.Cyan(s.Path))
+		c.renderer.Detailf("Backup of the previous file written to %s", ansi.Cyan(backup))
+		outcome.Backup = &backup
+		return outcome, nil
+
+	case qsConfigCreated:
+		if dir := filepath.Dir(s.Path); dir != "." {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return nil, fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+			}
+		}
+		// The file may have appeared since the pre-flight; never clobber a dotenv file.
+		if info, err := os.Stat(s.Path); err == nil && s.Format == "dotenv" {
+			action, err := c.mergeQuickstartDotenv(s.Path, resolvedEnv, info.Mode().Perm(), content)
+			if err != nil {
+				return nil, err
+			}
+			outcome.Action = action
+			return outcome, nil
+		}
+		if err := c.createQuickstartConfigFile(s.Path, content); err != nil {
+			return nil, err
+		}
+		return outcome, nil
+
+	default:
+		return nil, fmt.Errorf("unexpected config write action %q for %s", plan.Action, s.Path)
+	}
+}
+
+func (c *cli) createQuickstartConfigFile(path string, content []byte) error {
+	if err := os.WriteFile(path, content, 0600); err != nil {
+		return fmt.Errorf("failed to write %s: %w", path, err)
+	}
+	c.renderer.Newline()
+	c.renderer.Successf("%s file created successfully with your Auth0 configuration", ansi.Cyan(path))
+	return nil
+}
+
+// mergeQuickstartDotenv creates the file from content if it vanished since the pre-flight.
+func (c *cli) mergeQuickstartDotenv(path string, resolvedEnv map[string]string, perm os.FileMode, content []byte) (string, error) {
+	existing, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		if dir := filepath.Dir(path); dir != "." {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+			}
+		}
+		if err := c.createQuickstartConfigFile(path, content); err != nil {
+			return "", err
+		}
+		return qsConfigCreated, nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	return nil
+	if err := os.WriteFile(path, mergeDotenv(existing, resolvedEnv), perm); err != nil {
+		return "", fmt.Errorf("failed to write %s: %w", path, err)
+	}
+	c.renderer.Newline()
+	c.renderer.Successf("%s updated: merged your Auth0 configuration into the existing file", ansi.Cyan(path))
+	return qsConfigMerged, nil
 }
