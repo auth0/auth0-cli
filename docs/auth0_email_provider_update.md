@@ -11,7 +11,7 @@ To update interactively, use `auth0 email provider update` with no arguments.
 
 To update non-interactively, supply the provider name and other information through the flags.
 
-Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.
+Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is sent as-is and validated by the API. Use `--schema` to print the request payload schema and exit.
 
 ## Usage
 ```

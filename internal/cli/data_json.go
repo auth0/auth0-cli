@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -124,8 +125,11 @@ func readJSONObject(input string) (json.RawMessage, error) {
 	}
 
 	var obj map[string]json.RawMessage
-	if err := json.Unmarshal(data, &obj); err != nil || obj == nil {
-		return nil, validationError{err: fmt.Errorf("the payload must be a JSON object"), reason: "malformed_json"}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return nil, validationError{err: fmt.Errorf("invalid JSON: the payload must be a JSON object: %w", err), reason: "malformed_json"}
+	}
+	if obj == nil {
+		return nil, validationError{err: errors.New("the payload must be a JSON object"), reason: "malformed_json"}
 	}
 	return data, nil
 }

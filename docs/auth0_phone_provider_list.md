@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing Phone providers. Currently we can create a max of 1 phone Provider, If none are created, you can create one by running `auth0 phone provider create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 phone provider list [flags]

@@ -1,92 +1,113 @@
 package cli
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"io"
+	"errors"
 	"net/http"
 	"testing"
 
-	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/auth0/auth0-cli/internal/auth0"
-	"github.com/auth0/auth0-cli/internal/display"
 )
 
-// emailProviderWriteClient captures the method and URI runJSONWrite sends, so a
-// --data test can assert the command built the right resource path.
-type emailProviderWriteClient struct {
-	rawHTTPClientStub
-	gotMethod string
-	gotURI    string
-}
-
-// Request records the method and URI, writing a minimal email-provider response
-// into the payload pointer so runJSONWrite can decode it for rendering.
-func (c *emailProviderWriteClient) Request(_ context.Context, method, uri string, payload interface{}, _ ...management.RequestOption) error {
-	c.gotMethod = method
-	c.gotURI = uri
-	if raw, ok := payload.(*json.RawMessage); ok {
-		*raw = json.RawMessage(`{"name":"sendgrid","enabled":true}`)
-	}
-	return nil
-}
-
-func newEmailProviderWriteCLI(client *emailProviderWriteClient, stdout *bytes.Buffer) *cli {
-	return &cli{
-		api: &auth0.API{HTTPClient: client},
-		renderer: &display.Renderer{
-			MessageWriter: io.Discard,
-			ResultWriter:  stdout,
-		},
-	}
-}
+const emailProviderResponse = `{"name":"sendgrid","enabled":true}`
 
 func TestEmailProviderCreateCmdData(t *testing.T) {
-	t.Run("sends the validated payload to POST /emails/provider", func(t *testing.T) {
-		client := &emailProviderWriteClient{}
-		cmd := createEmailProviderCmd(newEmailProviderWriteCLI(client, &bytes.Buffer{}))
+	t.Run("sends the payload to POST /emails/provider", func(t *testing.T) {
+		stub := &jsonWriteStub{response: emailProviderResponse}
+		cmd := createEmailProviderCmd(newJSONWriteCLI(stub))
 		// The leaf command runs without the root PreRun, so clear the required-flag
 		// annotations here (stdin is non-TTY under test) to reach RunE with only --data.
 		prepareInteractivity(cmd)
 		cmd.SetArgs([]string{"--data", `{"name":"sendgrid","credentials":{"api_key":"key"},"enabled":true}`})
 
 		require.NoError(t, cmd.Execute())
-		assert.Equal(t, http.MethodPost, client.gotMethod)
-		assert.Contains(t, client.gotURI, "/emails/provider")
+		assert.Equal(t, http.MethodPost, stub.gotMethod)
+		assert.Contains(t, stub.gotURI, "/emails/provider")
 	})
 
-	t.Run("leaves schema validation to the API", func(t *testing.T) {
-		client := &emailProviderWriteClient{}
-		cmd := createEmailProviderCmd(newEmailProviderWriteCLI(client, &bytes.Buffer{}))
+	for name, data := range map[string]string{
+		"custom with an empty credentials object":  `{"name":"custom","credentials":{},"enabled":true}`,
+		"custom without credentials (API decides)": `{"name":"custom","enabled":true}`,
+	} {
+		t.Run("sends "+name+" as-is", func(t *testing.T) {
+			stub := &jsonWriteStub{response: emailProviderResponse}
+			cmd := createEmailProviderCmd(newJSONWriteCLI(stub))
+			prepareInteractivity(cmd)
+			cmd.SetArgs([]string{"--data", data})
+
+			require.NoError(t, cmd.Execute())
+			assert.Equal(t, data, stub.gotBody)
+		})
+	}
+
+	t.Run("passes the API error through without a schema dump", func(t *testing.T) {
+		stub := &jsonWriteStub{err: errors.New("400 Bad Request: Payload validation error: 'Missing required property: credentials'")}
+		cmd := createEmailProviderCmd(newJSONWriteCLI(stub))
 		prepareInteractivity(cmd)
 		cmd.SetArgs([]string{"--data", `{"name":"custom","enabled":true}`})
 
-		require.NoError(t, cmd.Execute())
-		assert.Equal(t, http.MethodPost, client.gotMethod)
-	})
-
-	t.Run("rejects a payload that is not a JSON object", func(t *testing.T) {
-		client := &emailProviderWriteClient{}
-		cmd := createEmailProviderCmd(newEmailProviderWriteCLI(client, &bytes.Buffer{}))
-		prepareInteractivity(cmd)
-		cmd.SetArgs([]string{"--data", `["custom"]`})
-
-		assert.ErrorContains(t, cmd.Execute(), "must be a JSON object")
-		assert.Empty(t, client.gotMethod, "must not reach the API when the payload is not an object")
+		err := cmd.Execute()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "Missing required property: credentials")
+		assert.NotContains(t, err.Error(), "Expected Request Schema")
 	})
 }
 
 func TestEmailProviderUpdateCmdData(t *testing.T) {
-	client := &emailProviderWriteClient{}
-	cmd := updateEmailProviderCmd(newEmailProviderWriteCLI(client, &bytes.Buffer{}))
+	stub := &jsonWriteStub{response: emailProviderResponse}
+	cmd := updateEmailProviderCmd(newJSONWriteCLI(stub))
 	prepareInteractivity(cmd)
 	cmd.SetArgs([]string{"--data", `{"credentials":{"api_key":"NewKey"}}`})
 
 	require.NoError(t, cmd.Execute())
-	assert.Equal(t, http.MethodPatch, client.gotMethod)
-	assert.Contains(t, client.gotURI, "/emails/provider")
+	assert.Equal(t, http.MethodPatch, stub.gotMethod)
+	assert.Contains(t, stub.gotURI, "/emails/provider")
+	assert.Equal(t, `{"credentials":{"api_key":"NewKey"}}`, stub.gotBody)
+}
+
+func TestEmailProviderDataRejectsBadPayload(t *testing.T) {
+	commands := map[string]func(*cli) *cobra.Command{
+		"create": createEmailProviderCmd,
+		"update": updateEmailProviderCmd,
+	}
+	payloads := map[string]struct{ data, wantErr string }{
+		"syntax error keeps the parse detail": {`{"name":"sendgrid",`, "unexpected end of JSON input"},
+		"array is not an object":              {`["custom"]`, "must be a JSON object"},
+		"null is not an object":               {`null`, "must be a JSON object"},
+		"empty --data":                        {``, "no input provided"},
+	}
+
+	for cmdName, newCmd := range commands {
+		for name, tc := range payloads {
+			t.Run(cmdName+" rejects "+name, func(t *testing.T) {
+				stub := &jsonWriteStub{}
+				cmd := newCmd(newJSONWriteCLI(stub))
+				prepareInteractivity(cmd)
+				cmd.SetArgs([]string{"--data", tc.data})
+
+				assert.ErrorContains(t, cmd.Execute(), tc.wantErr)
+				assert.Empty(t, stub.gotMethod, "must not reach the API on a bad payload")
+			})
+		}
+	}
+}
+
+func TestEmailProviderDataConflictsWithFlags(t *testing.T) {
+	commands := map[string]func(*cli) *cobra.Command{
+		"create": createEmailProviderCmd,
+		"update": updateEmailProviderCmd,
+	}
+
+	for name, newCmd := range commands {
+		t.Run(name, func(t *testing.T) {
+			stub := &jsonWriteStub{}
+			cmd := newCmd(newJSONWriteCLI(stub))
+			prepareInteractivity(cmd)
+			cmd.SetArgs([]string{"--data", `{"name":"sendgrid","credentials":{}}`, "--provider", "sendgrid"})
+
+			assert.ErrorContains(t, cmd.Execute(), "none of the others can be")
+			assert.Empty(t, stub.gotMethod, "must not reach the API when flags conflict")
+		})
+	}
 }

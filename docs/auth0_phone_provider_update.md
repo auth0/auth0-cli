@@ -11,7 +11,7 @@ To update interactively, use `auth0 phone provider update` with no arguments.
 
 To update non-interactively, supply the provider name and other information through the flags.
 
-Use `--schema` to print the request payload schema and exit.
+Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is validated against the OpenAPI schema before it is sent. Use `--schema` to print the request payload schema and exit.
 
 ## Usage
 ```

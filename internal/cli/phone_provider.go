@@ -131,7 +131,9 @@ func listBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List your Phone providers",
-		Long:    "List your existing Phone providers. Currently we can create a max of 1 phone Provider, If none are created, you can create one by running `auth0 phone provider create`.",
+		Long: "List your existing Phone providers. Currently we can create a max of 1 phone Provider, If none are created, you can create one by running `auth0 phone provider create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 phone provider list
   auth0 phone provider ls
   auth0 phone provider ls --json
@@ -191,7 +193,7 @@ func createBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 phone provider create` with no arguments.\n\n" +
 			"To create non-interactively, supply the provider name and other information " +
 			"through the flags.\n\n" +
-			"Use `--schema` to print the request payload schema and exit.",
+			"Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is validated against the OpenAPI schema before it is sent. Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 phone provider create
   auth0 phone provider create --json
   auth0 phone provider create --json-compact
@@ -324,7 +326,7 @@ func updateBrandingPhoneProviderCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 phone provider update` with no arguments.\n\n" +
 			"To update non-interactively, supply the provider name and other information " +
 			"through the flags.\n\n" +
-			"Use `--schema` to print the request payload schema and exit.",
+			"Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is validated against the OpenAPI schema before it is sent. Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 phone provider update
   auth0 phone provider update --json
   auth0 phone provider update --json-compact

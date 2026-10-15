@@ -149,7 +149,8 @@ func createEmailProviderCmd(cli *cli) *cobra.Command {
 			"To create interactively, use `auth0 email provider create` with no arguments.\n\n" +
 			"To create non-interactively, supply the provider name and other information " +
 			"through the flags.\n\n" +
-			"Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.",
+			"Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is sent as-is and validated by the API. Use `--schema` to print the request payload schema and exit.\n\n" +
+			"For a `custom` provider, `--data` must include `\"credentials\":{}`; the API rejects the request without it.",
 		Example: `  auth0 email provider create
   auth0 email provider create --json
   auth0 email provider create --json-compact
@@ -297,7 +298,8 @@ func updateEmailProviderCmd(cli *cli) *cobra.Command {
 			"To update interactively, use `auth0 email provider update` with no arguments.\n\n" +
 			"To update non-interactively, supply the provider name and other information " +
 			"through the flags.\n\n" +
-			"Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.",
+			"Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin)." +
+			" It is sent as-is and validated by the API. Use `--schema` to print the request payload schema and exit.",
 		Example: `  auth0 email provider update
   auth0 email provider update --json
   auth0 email provider update --json-compact

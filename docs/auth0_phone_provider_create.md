@@ -11,7 +11,7 @@ To create interactively, use `auth0 phone provider create` with no arguments.
 
 To create non-interactively, supply the provider name and other information through the flags.
 
-Use `--schema` to print the request payload schema and exit.
+Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is validated against the OpenAPI schema before it is sent. Use `--schema` to print the request payload schema and exit.
 
 ## Usage
 ```

@@ -11,7 +11,9 @@ To create interactively, use `auth0 email provider create` with no arguments.
 
 To create non-interactively, supply the provider name and other information through the flags.
 
-Use `--schema` to print the request payload schema and exit. A `--data` payload is sent as-is and validated by the API.
+Use `--data` to supply the whole payload as JSON (inline, `@file.json`, or piped via stdin). It is sent as-is and validated by the API. Use `--schema` to print the request payload schema and exit.
+
+For a `custom` provider, `--data` must include `"credentials":{}`; the API rejects the request without it.
 
 ## Usage
 ```
