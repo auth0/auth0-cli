@@ -57,6 +57,28 @@ func withPipedStdin(t *testing.T, content string, fn func()) {
 	require.NoError(t, r.Close())
 }
 
+func TestReadJSONObject(t *testing.T) {
+	for name, tc := range map[string]struct{ data, wantErr string }{
+		"object":                           {`{"name":"x"}`, ""},
+		"empty object":                     {`{}`, ""},
+		"truncated keeps the parse detail": {`{"name":"x",`, "unexpected end of JSON input"},
+		"empty input":                      {``, "no input provided"},
+		"array":                            {`["x"]`, "must be a JSON object"},
+		"string":                           {`"x"`, "must be a JSON object"},
+		"null":                             {`null`, "must be a JSON object"},
+		"number":                           {`5`, "must be a JSON object"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := readJSONObject(tc.data)
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			assert.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
 func TestReadJSONInput(t *testing.T) {
 	t.Run("inline JSON is returned verbatim", func(t *testing.T) {
 		data, err := readJSONInput(`{"name":"x"}`)
