@@ -738,17 +738,26 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 }
 
 func commandTrackingProperties(cli *cli) map[string]string {
-	interactive := iostream.IsInputTerminal() && iostream.IsOutputTerminal()
-
-	return map[string]string{
-		"interactive":   boolString(interactive),
-		"ci":            boolString(isCIEnvironment(os.Getenv)),
+	return mergeProperties(contextTrackingProperties(cli), map[string]string{
 		"no_input":      boolString(cli.noInput),
 		"output_format": outputFormatForTracking(cli.renderer),
 		"forced":        boolString(cli.force),
-		"agent_client":  cli.agentClientName(),
 		"is_api":        boolString(isAPICommand(cli.executedCommandPath)),
 		"tenant":        cli.tenant,
+	})
+}
+
+// loginTrackingProperties attributes a login to its tenant, CI and agent context.
+func loginTrackingProperties(cli *cli, domain string) map[string]string {
+	return mergeProperties(contextTrackingProperties(cli), map[string]string{"tenant": domain})
+}
+
+// contextTrackingProperties reports how the CLI was invoked, shared by command-run and login events.
+func contextTrackingProperties(cli *cli) map[string]string {
+	return map[string]string{
+		"interactive":  boolString(iostream.IsInputTerminal() && iostream.IsOutputTerminal()),
+		"ci":           boolString(isCIEnvironment(os.Getenv)),
+		"agent_client": cli.agentClientName(),
 	}
 }
 
