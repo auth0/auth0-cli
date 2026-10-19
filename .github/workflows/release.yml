@@ -58,6 +58,30 @@ jobs:
           overwrite: true
           retention-days: 5
 
+  # Scan every published archive. Nothing depends on this job, so a failed scan fails
+  # its own run but does not block the release or the Homebrew and Scoop updates.
+  rl-scan:
+    name: RL Scan
+    needs: goreleaser
+    strategy:
+      fail-fast: false
+      matrix:
+        asset-suffix:
+          - Darwin_arm64.tar.gz
+          - Darwin_x86_64.tar.gz
+          - Linux_arm64.tar.gz
+          - Linux_x86_64.tar.gz
+          - Windows_arm64.zip
+          - Windows_x86_64.zip
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/rl.yml
+    with:
+      tag: ${{ github.ref_name }}
+      asset-suffix: ${{ matrix.asset-suffix }}
+    secrets: inherit
+
   homebrew:
     name: Homebrew Tap
     needs: goreleaser
