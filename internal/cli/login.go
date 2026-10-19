@@ -377,7 +377,7 @@ func RunLoginAsUser(ctx context.Context, cli *cli, additionalScopes []string, do
 	}
 	cli.renderer.Newline()
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-User")
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-User", loginTrackingProperties(cli, result.Domain))
 
 	if cli.renderer.AgentMode {
 		// The "Successfully logged in" lines above are suppressed in agent mode, so
@@ -487,7 +487,7 @@ func RunLoginAsMachineSecret(ctx context.Context, inputs LoginInputs, cli *cli, 
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s", inputs.Domain)
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine")
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine", loginTrackingProperties(cli, inputs.Domain))
 
 	return nil
 }
@@ -553,7 +553,7 @@ func RunLoginAsMachineJWT(ctx context.Context, inputs LoginInputs, cli *cli, cmd
 	cli.renderer.Infof("Successfully logged in.")
 	cli.renderer.Infof("Tenant: %s", inputs.Domain)
 
-	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine")
+	cli.tracker.TrackFirstLogin(cli.Config.InstallID, "As-Machine", loginTrackingProperties(cli, inputs.Domain))
 
 	return nil
 }

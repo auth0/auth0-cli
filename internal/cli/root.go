@@ -752,6 +752,16 @@ func commandTrackingProperties(cli *cli) map[string]string {
 	}
 }
 
+// loginTrackingProperties attributes a login to its tenant, CI and agent context.
+func loginTrackingProperties(cli *cli, domain string) map[string]string {
+	return map[string]string{
+		"tenant":       domain,
+		"ci":           boolString(isCIEnvironment(os.Getenv)),
+		"agent_client": cli.agentClientName(),
+		"interactive":  boolString(iostream.IsInputTerminal() && iostream.IsOutputTerminal()),
+	}
+}
+
 // isAPICommand reports whether the executed command is the raw
 // `auth0 api` Management API passthrough command.
 func isAPICommand(commandPath string) bool {

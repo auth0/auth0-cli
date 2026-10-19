@@ -374,6 +374,34 @@ func TestCommandTrackingProperties(t *testing.T) {
 	})
 }
 
+func TestLoginTrackingProperties(t *testing.T) {
+	tests := []struct {
+		name   string
+		ciEnv  string
+		wantCI string
+	}{
+		{"outside CI", "", "false"},
+		{"inside CI", "true", "true"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, envVar := range ciEnvironmentVariables {
+				t.Setenv(envVar, "")
+			}
+			t.Setenv("CI", test.ciEnv)
+
+			props := loginTrackingProperties(&cli{}, "example.us.auth0.com")
+
+			assert.Equal(t, "example.us.auth0.com", props["tenant"])
+			assert.Equal(t, test.wantCI, props["ci"])
+			assert.Contains(t, props, "agent_client")
+			assert.Equal(t, "false", props["interactive"])
+			assert.Len(t, props, 4)
+		})
+	}
+}
+
 func TestMergeProperties(t *testing.T) {
 	base := map[string]string{"interactive": "true", "success": "true"}
 	override := map[string]string{"success": "false", "error_class": "auth"}
