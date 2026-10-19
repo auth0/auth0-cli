@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 type testManagementError struct {
@@ -390,16 +392,42 @@ func TestLoginTrackingProperties(t *testing.T) {
 				t.Setenv(envVar, "")
 			}
 			t.Setenv("CI", test.ciEnv)
+			setNonTerminalIO(t)
 
-			props := loginTrackingProperties(&cli{}, "example.us.auth0.com")
+			props := loginTrackingProperties(&cli{detectedAgent: "claude-code"}, "example.us.auth0.com")
 
-			assert.Equal(t, "example.us.auth0.com", props["tenant"])
-			assert.Equal(t, test.wantCI, props["ci"])
-			assert.Contains(t, props, "agent_client")
-			assert.Equal(t, "false", props["interactive"])
-			assert.Len(t, props, 4)
+			assert.Equal(t, map[string]string{
+				"tenant":       "example.us.auth0.com",
+				"ci":           test.wantCI,
+				"agent_client": "claude-code",
+				"interactive":  "false",
+			}, props)
 		})
 	}
+}
+
+func TestLoginAndCommandTrackingPropertiesShareContext(t *testing.T) {
+	setNonTerminalIO(t)
+	c := &cli{detectedAgent: "cursor", tenant: "example.us.auth0.com", renderer: &display.Renderer{}}
+
+	login := loginTrackingProperties(c, "example.us.auth0.com")
+	command := commandTrackingProperties(c)
+
+	for _, key := range []string{"interactive", "ci", "agent_client", "tenant"} {
+		assert.Equal(t, command[key], login[key], key)
+	}
+}
+
+// setNonTerminalIO points stdin/stdout at regular files so interactive is "false" regardless of the test runner's TTY.
+func setNonTerminalIO(t *testing.T) {
+	t.Helper()
+	input, output := iostream.Input, iostream.Output
+	t.Cleanup(func() { iostream.Input, iostream.Output = input, output })
+
+	file, err := os.CreateTemp(t.TempDir(), "io")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = file.Close() })
+	iostream.Input, iostream.Output = file, file
 }
 
 func TestMergeProperties(t *testing.T) {
