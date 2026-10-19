@@ -84,8 +84,30 @@ func TestRenderer_QuickstartSetup_JSON_FullShape(t *testing.T) {
 	assert.JSONEq(t, `[]`, string(grant["scopes"]))
 	assert.JSONEq(t, `"cgr_1"`, string(grant["id"]))
 	assert.JSONEq(t, `"`+backup+`"`, string(cfg["backup"]))
+	assert.JSONEq(t, `[]`, string(cfg["keys_replaced"]), "nil keys_replaced normalizes to []")
+	assert.NotContains(t, cfg, "notes", "notes feed next_steps and are not part of config_file")
+	assert.NotContains(t, cfg, "Notes")
 	assert.JSONEq(t, `["clientId","domain"]`, string(doc["keys_written"]))
 	assert.JSONEq(t, `["do x"]`, string(doc["next_steps"]))
+}
+
+func TestRenderer_QuickstartSetup_KeysReplacedAndNotes(t *testing.T) {
+	stdout := &bytes.Buffer{}
+	r := &Renderer{ResultWriter: stdout, MessageWriter: &bytes.Buffer{}, Format: OutputFormatJSON}
+
+	r.QuickstartSetup(&QuickstartSetupResult{
+		ConfigFile: &QuickstartSetupConfigFile{
+			Path: ".env", Format: "dotenv", Action: "merged",
+			KeysReplaced: []string{"AUTH0_DOMAIN"}, Notes: []string{"hidden note"},
+		},
+	})
+
+	var doc map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &doc))
+	var cfg map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(doc["config_file"], &cfg))
+	assert.JSONEq(t, `["AUTH0_DOMAIN"]`, string(cfg["keys_replaced"]))
+	assert.NotContains(t, stdout.String(), "hidden note")
 }
 
 func TestRenderer_QuickstartSetup_JSONCompact(t *testing.T) {

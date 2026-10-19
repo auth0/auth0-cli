@@ -187,19 +187,6 @@ func DetectProject(dir string) DetectionResult {
 		return result
 	}
 
-	// -- 11b. Webpack.config.[js|ts|cjs|mjs] (no vite config — the vite rule ran first).
-	if fileExistsAny(dir, "webpack.config.js", "webpack.config.ts", "webpack.config.cjs", "webpack.config.mjs") {
-		result.Type = "spa"
-		result.BuildTool = "webpack"
-		result.Detected = true
-		if hasDep(earlyDeps, "react") {
-			result.Framework = "react"
-		} else {
-			result.Framework = "vanilla-javascript"
-		}
-		return result
-	}
-
 	// -- 12. .csproj --.
 	if content, ok := findCsprojContent(dir); ok {
 		if fw, qsType, found := detectFromCsproj(content); found {
@@ -305,7 +292,33 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
+	// -- 20. Webpack.config.[js|ts|cjs|mjs] — last, because many non-SPA projects ship a webpack config.
+	if !result.Detected && fileExistsAny(dir, "webpack.config.js", "webpack.config.ts", "webpack.config.cjs", "webpack.config.mjs") {
+		if framework, ok := detectWebpackFramework(earlyDeps); ok {
+			result.Framework = framework
+			result.Type = "spa"
+			result.BuildTool = "webpack"
+			result.Detected = true
+		}
+	}
+
 	return result
+}
+
+// detectWebpackFramework maps client-side dependencies to a webpack SPA framework. A webpack
+// config alone is not enough: other frameworks (Vue, Svelte, Angular) have no webpack quickstart,
+// and server bundles also use webpack.
+func detectWebpackFramework(deps map[string]bool) (string, bool) {
+	switch {
+	case hasDep(deps, "react"):
+		return "react", true
+	case hasDep(deps, "vue"), hasDep(deps, "svelte"), hasDep(deps, "@angular/core"):
+		return "", false
+	case hasDep(deps, "webpack-dev-server"):
+		return "vanilla-javascript", true
+	default:
+		return "", false
+	}
 }
 
 // collectPackageJSONCandidates returns framework candidates from package.json deps.

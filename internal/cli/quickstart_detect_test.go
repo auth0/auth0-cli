@@ -3199,13 +3199,102 @@ func TestDetectProject_ReactWebpack(t *testing.T) {
 func TestDetectProject_VanillaJavaScriptWebpack(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "webpack.config.js", "")
-	writeTestFile(t, dir, "package.json", `{"name":"my-app","devDependencies":{"webpack":"^5"}}`)
+	writeTestFile(t, dir, "package.json", `{"name":"my-app","devDependencies":{"webpack":"^5","webpack-dev-server":"^5"}}`)
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
 	assert.Equal(t, "spa", got.Type)
 	assert.Equal(t, "vanilla-javascript", got.Framework)
 	assert.Equal(t, "webpack", got.BuildTool)
+}
+
+// A webpack config alone is not an SPA signal: it needs react or webpack-dev-server, and the
+// framework-specific rules that run earlier keep their projects.
+func TestDetectProject_WebpackConfigDoesNotOverrideOtherFrameworks(t *testing.T) {
+	tests := []struct {
+		name      string
+		files     map[string]string
+		wantFw    string
+		wantFound bool
+	}{
+		{
+			name: "aspnet csproj",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"app.csproj":        `<Project Sdk="Microsoft.NET.Sdk.Web"><ItemGroup><PackageReference Include="Microsoft.AspNetCore.Mvc"/></ItemGroup></Project>`,
+			},
+			wantFw: "aspnet-mvc", wantFound: true,
+		},
+		{
+			name: "spring boot pom",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"pom.xml":           `<project><parent><artifactId>spring-boot-starter-parent</artifactId></parent></project>`,
+			},
+			wantFw: "spring-boot", wantFound: true,
+		},
+		{
+			name: "node server bundle with express",
+			files: map[string]string{
+				"webpack.config.js": "module.exports = { target: 'node' };",
+				"package.json":      `{"dependencies":{"express":"^4"},"devDependencies":{"webpack":"^5","webpack-dev-server":"^5"}}`,
+			},
+			wantFw: "express", wantFound: true,
+		},
+		{
+			name: "go module",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"go.mod":            "module example.com/app\n",
+			},
+			wantFw: "vanilla-go", wantFound: true,
+		},
+		{
+			name: "vue has no webpack quickstart",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"package.json":      `{"dependencies":{"vue":"^3"},"devDependencies":{"webpack-dev-server":"^5"}}`,
+			},
+			wantFound: false,
+		},
+		{
+			name: "angular has no webpack quickstart",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"package.json":      `{"dependencies":{"@angular/core":"^17"},"devDependencies":{"webpack-dev-server":"^5"}}`,
+			},
+			wantFound: false,
+		},
+		{
+			name: "config with no client-side dependency",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"package.json":      `{"devDependencies":{"webpack":"^5"}}`,
+			},
+			wantFound: false,
+		},
+		{
+			name:      "config with no package.json",
+			files:     map[string]string{"webpack.config.js": ""},
+			wantFound: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for name, content := range tc.files {
+				writeTestFile(t, dir, name, content)
+			}
+
+			got := DetectProject(dir)
+			assert.Equal(t, tc.wantFound, got.Detected)
+			assert.NotEqual(t, "webpack", got.BuildTool)
+			if tc.wantFound {
+				assert.Equal(t, tc.wantFw, got.Framework)
+			}
+		})
+	}
 }
 
 // The vite.config rule runs before the webpack rule.

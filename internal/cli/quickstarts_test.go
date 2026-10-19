@@ -1115,6 +1115,19 @@ func fileMode(t *testing.T, path string) os.FileMode {
 
 // -- #9 config write: mergeDotenv --.
 
+func TestMergeDotenv_ReportsReplacedKeys(t *testing.T) {
+	t.Parallel()
+
+	_, replaced := mergeDotenv(
+		[]byte("FOO=bar\nAUTH0_DOMAIN=old\nexport AUTH0_CLIENT_ID=old\nAUTH0_DOMAIN=dup\n"),
+		map[string]string{"AUTH0_DOMAIN": "d", "AUTH0_CLIENT_ID": "c", "AUTH0_SECRET": "s"},
+	)
+	assert.Equal(t, []string{"AUTH0_CLIENT_ID", "AUTH0_DOMAIN"}, replaced, "only keys that were already present, sorted, once each")
+
+	_, none := mergeDotenv([]byte("FOO=bar\n"), map[string]string{"AUTH0_DOMAIN": "d"})
+	assert.Empty(t, none)
+}
+
 func TestMergeDotenv(t *testing.T) {
 	t.Parallel()
 
@@ -1177,7 +1190,51 @@ func TestMergeDotenv(t *testing.T) {
 			name:     "unrelated CRLF lines are preserved byte-for-byte",
 			existing: "FOO=bar\r\nBAZ=qux\r\n",
 			values:   map[string]string{"A": "1"},
-			want:     "FOO=bar\r\nBAZ=qux\r\nA=\"1\"\n",
+			want:     "FOO=bar\r\nBAZ=qux\r\nA=\"1\"\r\n",
+		},
+		{
+			name:     "CRLF file: replaced and appended lines use CRLF too",
+			existing: "FOO=bar\r\nAUTH0_DOMAIN=old\r\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new", "AUTH0_CLIENT_ID": "cid"},
+			want:     "FOO=bar\r\nAUTH0_DOMAIN=\"new\"\r\nAUTH0_CLIENT_ID=\"cid\"\r\n",
+		},
+		{
+			// An owned-looking line inside another key's multi-line value is part of that value.
+			name:     "owned key text inside another key's multi-line value is untouched and the real key is appended",
+			existing: "PRIVATE_KEY=\"-----BEGIN-----\nAUTH0_SECRET=inside-the-key\n-----END-----\"\nFOO=bar\n",
+			values:   map[string]string{"AUTH0_SECRET": "real"},
+			want:     "PRIVATE_KEY=\"-----BEGIN-----\nAUTH0_SECRET=inside-the-key\n-----END-----\"\nFOO=bar\nAUTH0_SECRET=\"real\"\n",
+		},
+		{
+			name:     "replacing an owned multi-line value removes its continuation lines",
+			existing: "AUTH0_SECRET=\"line one\nline two\"\nFOO=bar\n",
+			values:   map[string]string{"AUTH0_SECRET": "new"},
+			want:     "AUTH0_SECRET=\"new\"\nFOO=bar\n",
+		},
+		{
+			name:     "owned multi-line single-quoted value is replaced as a whole",
+			existing: "A=1\nAUTH0_CLIENT_SECRET='first\nsecond'\nB=2\n",
+			values:   map[string]string{"AUTH0_CLIENT_SECRET": "new"},
+			want:     "A=1\nAUTH0_CLIENT_SECRET=\"new\"\nB=2\n",
+		},
+		{
+			name:     "escaped quote does not end a double-quoted value",
+			existing: "NOTE=\"say \\\"hi\\\"\nAUTH0_DOMAIN=still-inside\"\nZ=1\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new"},
+			want:     "NOTE=\"say \\\"hi\\\"\nAUTH0_DOMAIN=still-inside\"\nZ=1\nAUTH0_DOMAIN=\"new\"\n",
+		},
+		{
+			name:     "quote that never closes is treated as a single-line value",
+			existing: "BROKEN='oops\nAUTH0_DOMAIN=old\nFOO=bar\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new"},
+			want:     "BROKEN='oops\nAUTH0_DOMAIN=\"new\"\nFOO=bar\n",
+		},
+		{
+			// Documented limitation: a replaced line is regenerated, so its inline comment is dropped.
+			name:     "inline comment on a replaced line is dropped but full-line comments stay",
+			existing: "# keep me\nAUTH0_DOMAIN=old # my tenant\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new"},
+			want:     "# keep me\nAUTH0_DOMAIN=\"new\"\n",
 		},
 		{
 			name:     "owned key with spaces around = is matched",
@@ -1191,7 +1248,7 @@ func TestMergeDotenv(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := mergeDotenv([]byte(tc.existing), tc.values)
+			got, _ := mergeDotenv([]byte(tc.existing), tc.values)
 			assert.Equal(t, tc.want, string(got))
 		})
 	}
@@ -1622,10 +1679,12 @@ func TestExecuteSetupQuickstart_DotenvMergeNoForceInNoInput(t *testing.T) {
 	assert.Equal(t, ".env", cfg.Path)
 	assert.Equal(t, "dotenv", cfg.Format)
 	assert.Nil(t, cfg.Backup)
+	assert.Equal(t, []string{"VITE_AUTH0_DOMAIN"}, cfg.KeysReplaced, "only the key that was already in the file")
 
 	var steps []string
 	require.NoError(t, json.Unmarshal(doc["next_steps"], &steps))
 	assert.NotContains(t, strings.ToLower(strings.Join(steps, "\n")), "backup", "a merge writes no backup")
+	assert.NotContains(t, strings.Join(steps, "\n"), "tightened", "no secret key was written, so the mode stays")
 }
 
 // -- #10 JSON result --.
@@ -2058,6 +2117,237 @@ func TestCreateQuickstartApp_ConfigWriteFailureNamesCreatedApp(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "app-cid", "the error must name the application that now exists")
 	assert.Contains(t, err.Error(), "failed to generate config file")
+}
+
+// -- failures after something was created --.
+
+func createdFromEnvelope(t *testing.T, err error) (code string, created map[string]json.RawMessage) {
+	t.Helper()
+	env := buildErrorEnvelope(err)
+	require.NotEmpty(t, env.Error.Details, "the error envelope must carry the created resources")
+	var details map[string]map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(env.Error.Details, &details))
+	require.Contains(t, details, "created")
+	return env.Error.Code, details["created"]
+}
+
+func TestExecuteSetupQuickstart_APIFailureReportsCreatedApp(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	ctrl := gomock.NewController(t)
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	expectClientCreate(clientAPI, "app-cid", "")
+	boom := errors.New("boom")
+	rsAPI := mock.NewMockResourceServerAPI(ctrl)
+	rsAPI.EXPECT().Read(gomock.Any(), gomock.Any()).Return(nil, errors.New("404 Not Found"))
+	rsAPI.EXPECT().Create(gomock.Any(), gomock.Any()).Return(boom)
+
+	c, stdout, _ := newQSTestCLI(display.OutputFormatJSON, true,
+		&auth0.API{Client: clientAPI, ResourceServer: rsAPI}, &auth0.APIV3{ClientGrant: mock.NewMockClientGrantAPIV3(ctrl)})
+	cmd := newQSSetupCmd(t, c, "--app", "--api", "--name", "My SPA", "--type", "spa", "--framework", "react",
+		"--build-tool", "vite", "--port", "5173", "--identifier", "https://my-api")
+	inputs := &SetupInputs{
+		App: true, API: true, Name: "My SPA", Type: "spa", Framework: "react", BuildTool: "vite", Port: 5173,
+		Identifier: "https://my-api", SigningAlg: "RS256", TokenLifetime: "86400",
+	}
+
+	err := executeSetupQuickstart(cmd, c, inputs, false)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, boom)
+	assert.Empty(t, stdout.String(), "stdout stays empty on failure")
+
+	_, created := createdFromEnvelope(t, err)
+	var app display.QuickstartSetupApp
+	require.NoError(t, json.Unmarshal(created["app"], &app))
+	assert.Equal(t, "app-cid", app.ClientID)
+	assert.Equal(t, "null", string(created["api"]), "the API was not created")
+
+	var cfg display.QuickstartSetupConfigFile
+	require.NoError(t, json.Unmarshal(created["config_file"], &cfg))
+	assert.Equal(t, ".env", cfg.Path, "the app's config file was already written")
+}
+
+func TestExecuteSetupQuickstart_GrantFailureReportsAppAndAPI(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	ctrl := gomock.NewController(t)
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	expectClientCreate(clientAPI, "app-cid", "")
+	rsAPI := mock.NewMockResourceServerAPI(ctrl)
+	rsAPI.EXPECT().Read(gomock.Any(), gomock.Any()).Return(nil, errors.New("404 Not Found"))
+	rsAPI.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+	grantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+	grantAPI.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, errors.New("grant refused"))
+
+	c, _, _ := newQSTestCLI(display.OutputFormatJSON, true,
+		&auth0.API{Client: clientAPI, ResourceServer: rsAPI}, &auth0.APIV3{ClientGrant: grantAPI})
+	cmd := newQSSetupCmd(t, c, "--app", "--api", "--name", "My SPA", "--type", "spa", "--framework", "react",
+		"--build-tool", "vite", "--port", "5173", "--identifier", "https://my-api")
+	inputs := &SetupInputs{
+		App: true, API: true, Name: "My SPA", Type: "spa", Framework: "react", BuildTool: "vite", Port: 5173,
+		Identifier: "https://my-api", SigningAlg: "RS256", TokenLifetime: "86400",
+	}
+
+	err := executeSetupQuickstart(cmd, c, inputs, false)
+	require.Error(t, err)
+
+	_, created := createdFromEnvelope(t, err)
+	var app display.QuickstartSetupApp
+	require.NoError(t, json.Unmarshal(created["app"], &app))
+	assert.Equal(t, "app-cid", app.ClientID)
+	var api display.QuickstartSetupAPI
+	require.NoError(t, json.Unmarshal(created["api"], &api))
+	assert.Equal(t, "https://my-api", api.Identifier)
+	assert.Equal(t, "null", string(created["client_grant"]), "no grant was created")
+}
+
+func TestCreateQuickstartApp_ConfigWriteFailureRecordsAppInResult(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	require.NoError(t, os.Mkdir(".env", 0755)) // The write fails after the pre-flight passed.
+
+	ctrl := gomock.NewController(t)
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	expectClientCreate(clientAPI, "app-cid", "")
+	c, _, _ := newQSTestCLI("", false, &auth0.API{Client: clientAPI}, nil)
+
+	result := &display.QuickstartSetupResult{}
+	plan := &qsConfigWritePlan{Path: ".env", Format: "dotenv", Action: qsConfigCreated, Perm: 0600}
+	inputs := SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "vite", Name: "My App", Port: 5173}
+	_, err := createQuickstartApp(&cobra.Command{}, c, inputs, "spa:react:vite", plan, result)
+	require.Error(t, err)
+
+	_, created := createdFromEnvelope(t, withCreatedResources(err, result))
+	var app display.QuickstartSetupApp
+	require.NoError(t, json.Unmarshal(created["app"], &app))
+	assert.Equal(t, "app-cid", app.ClientID)
+}
+
+func TestWithCreatedResources(t *testing.T) {
+	t.Parallel()
+
+	boom := errors.New("boom")
+
+	t.Run("nothing created leaves the error unchanged", func(t *testing.T) {
+		t.Parallel()
+		assert.Equal(t, boom, withCreatedResources(boom, nil))
+		assert.Equal(t, boom, withCreatedResources(boom, &display.QuickstartSetupResult{}))
+	})
+
+	t.Run("keeps the original error and its classification", func(t *testing.T) {
+		t.Parallel()
+		inner := usageError{err: boom, reason: "invalid_flag_value"}
+		err := withCreatedResources(inner, &display.QuickstartSetupResult{App: &display.QuickstartSetupApp{ClientID: "cid"}})
+		assert.ErrorIs(t, err, boom)
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, "invalid_flag_value", errorReason(err))
+		assert.Equal(t, boom.Error(), err.Error())
+	})
+}
+
+func TestExecuteSetupQuickstart_APIAlreadyExistsIsClassified(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	ctrl := gomock.NewController(t)
+	rsAPI := mock.NewMockResourceServerAPI(ctrl)
+	rsAPI.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&management.ResourceServer{}, nil)
+
+	c, _, _ := newQSTestCLI(display.OutputFormatJSON, true, &auth0.API{ResourceServer: rsAPI}, nil)
+	cmd := newQSSetupCmd(t, c, "--api", "--linked-app-id", "linked-cid", "--name", "My API", "--identifier", "https://my-api")
+	inputs := &SetupInputs{
+		API: true, LinkedAppID: "linked-cid", Name: "My API", Identifier: "https://my-api",
+		SigningAlg: "RS256", TokenLifetime: "86400",
+	}
+
+	err := executeSetupQuickstart(cmd, c, inputs, false)
+	require.Error(t, err)
+	assert.Equal(t, "usage", errorClass(err))
+	assert.Equal(t, "api_exists", errorReason(err))
+	assert.Contains(t, err.Error(), "https://my-api")
+}
+
+// -- permissions of files that now hold a secret --.
+
+func TestSecretFilePerm(t *testing.T) {
+	t.Parallel()
+
+	secret := map[string]string{"AUTH0_CLIENT_ID": "x", "AUTH0_CLIENT_SECRET": "y"}
+	noSecret := map[string]string{"VITE_AUTH0_DOMAIN": "x", "VITE_AUTH0_CLIENT_ID": "y"}
+
+	tests := []struct {
+		name        string
+		env         map[string]string
+		perm        os.FileMode
+		wantPerm    os.FileMode
+		wantChanged bool
+	}{
+		{"world-readable file gets 0600", secret, 0644, 0600, true},
+		{"group-writable file gets 0600", secret, 0664, 0600, true},
+		{"already private file is left alone", secret, 0600, 0600, false},
+		{"owner-only executable bit is kept", secret, 0700, 0700, false},
+		{"no secret key: mode is left alone", noSecret, 0644, 0644, false},
+		{"secret detected case-insensitively in dotted keys", map[string]string{"okta.oauth2.client-secret": "y"}, 0644, 0600, true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, changed := secretFilePerm(tc.env, tc.perm)
+			assert.Equal(t, tc.wantPerm, got)
+			assert.Equal(t, tc.wantChanged, changed)
+		})
+	}
+}
+
+func TestExecuteSetupQuickstart_MergeTightensPermissionsWhenWritingSecret(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	writeQSFile(t, ".env", "KEEP=1\nAUTH0_DOMAIN=old\n", 0644)
+
+	ctrl := gomock.NewController(t)
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	expectClientCreate(clientAPI, "app-cid", "the-secret")
+
+	c, stdout, _ := newQSTestCLI(display.OutputFormatJSON, true, &auth0.API{Client: clientAPI}, nil)
+	cmd := newQSSetupCmd(t, c, "--app", "--type", "regular", "--framework", "nextjs", "--port", "3000")
+	inputs := &SetupInputs{App: true, Type: "regular", Framework: "nextjs", Port: 3000}
+
+	require.NoError(t, executeSetupQuickstart(cmd, c, inputs, false))
+
+	assert.Equal(t, os.FileMode(0600), fileMode(t, ".env"), "a file that now holds a client secret must not stay world-readable")
+	content, err := os.ReadFile(".env")
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "KEEP=1")
+	assert.Contains(t, string(content), "the-secret")
+
+	var res display.QuickstartSetupResult
+	require.NoError(t, json.Unmarshal(stdout.Bytes(), &res))
+	assert.Equal(t, []string{"AUTH0_DOMAIN"}, res.ConfigFile.KeysReplaced)
+	assert.Contains(t, strings.Join(res.NextSteps, "\n"), "tightened from 0644 to 0600")
+	assert.NotContains(t, stdout.String(), "the-secret", "secrets must never reach stdout")
+}
+
+func TestWriteQuickstartConfig_OverwriteTightensPermissionsWhenWritingSecret(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	path := filepath.Join("src", "main", "resources", "application.yml")
+	writeQSFile(t, path, "old: true\n", 0644)
+
+	c, _, _ := newQSTestCLI("", false, nil, nil)
+	strategy := &auth0.FileOutputStrategy{Path: path, Format: "yaml"}
+	env := map[string]string{"okta.oauth2.client-id": "cid", "okta.oauth2.client-secret": "shh"}
+	plan := &qsConfigWritePlan{Path: path, Format: "yaml", Action: qsConfigOverwritten, Perm: 0644}
+
+	out, err := c.writeQuickstartConfig(&cobra.Command{}, env, strategy, plan)
+	require.NoError(t, err)
+
+	assert.Equal(t, os.FileMode(0600), fileMode(t, path))
+	require.NotNil(t, out.Backup)
+	assert.Equal(t, os.FileMode(0644), fileMode(t, *out.Backup), "the backup keeps the original mode")
+	require.Len(t, out.Notes, 1)
+	assert.Contains(t, out.Notes[0], "0644 to 0600")
 }
 
 func TestCreateQuickstartAPI_FillsResult(t *testing.T) {

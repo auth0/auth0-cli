@@ -497,7 +497,7 @@ var (
 	setupGrantScopes = Flag{
 		Name:     "Grant Scopes",
 		LongForm: "grant-scopes",
-		Help:     "[API] Comma-separated subset of --scopes to grant the app created with --app or given with --linked-app-id (default: all --scopes). Every value must also be listed in --scopes.",
+		Help:     "[API] Comma-separated subset of --scopes to grant the app created with --app or given with --linked-app-id (default: all --scopes). Every value must also be listed in --scopes. An empty value grants no scopes.",
 	}
 	setupTokenLifetime = Flag{
 		Name:     "Token Lifetime",
@@ -622,6 +622,35 @@ func runSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error
 	return executeSetupQuickstart(cmd, cli, inputs, canPrompt(cmd))
 }
 
+// qsCreatedResourcesError carries what a failed setup had already created into the JSON error
+// envelope's "details", so an agent can find the app or API without parsing the message.
+type qsCreatedResourcesError struct {
+	err    error
+	result *display.QuickstartSetupResult
+}
+
+func (e qsCreatedResourcesError) Error() string { return e.err.Error() }
+
+func (e qsCreatedResourcesError) Unwrap() error { return e.err }
+
+func (e qsCreatedResourcesError) ErrorDetails() json.RawMessage {
+	e.result.Normalize()
+	raw, err := json.Marshal(map[string]interface{}{"created": e.result})
+	if err != nil {
+		return nil
+	}
+	return raw
+}
+
+// withCreatedResources wraps err when the setup already created an app or API; otherwise it
+// returns err unchanged.
+func withCreatedResources(err error, result *display.QuickstartSetupResult) error {
+	if result == nil || (result.App == nil && result.API == nil) {
+		return err
+	}
+	return qsCreatedResourcesError{err: err, result: result}
+}
+
 // executeSetupQuickstart runs every setup step after authentication.
 func executeSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs, canPromptFlag bool) error {
 	ctx := cmd.Context()
@@ -710,7 +739,7 @@ func executeSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs, c
 	if inputs.App {
 		clientID, err := createQuickstartApp(cmd, cli, *inputs, qsConfigKey, configPlan, result)
 		if err != nil {
-			return err
+			return withCreatedResources(err, result)
 		}
 		// Store the new client ID so Step 9 can link it to the API via a client grant.
 		inputs.LinkedAppID = clientID
@@ -719,7 +748,7 @@ func executeSetupQuickstart(cmd *cobra.Command, cli *cli, inputs *SetupInputs, c
 	// -- Step 9: Create the Auth0 API resource server --.
 	if inputs.API {
 		if err := createQuickstartAPI(ctx, cli, *inputs, result); err != nil {
-			return err
+			return withCreatedResources(err, result)
 		}
 	}
 
@@ -886,7 +915,10 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 
 	// Fail fast if the (possibly user-overridden) identifier is already taken — avoids creating an orphaned app.
 	if _, err := cli.api.ResourceServer.Read(cmd.Context(), url.PathEscape(inputs.Identifier)); err == nil {
-		return fmt.Errorf("an API with identifier %q already exists; use a different identifier or delete the existing API first", inputs.Identifier)
+		return usageError{
+			err:    fmt.Errorf("an API with identifier %q already exists; use a different identifier or delete the existing API first", inputs.Identifier),
+			reason: "api_exists",
+		}
 	}
 
 	// Token lifetime.
@@ -1132,6 +1164,17 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 		return "", fmt.Errorf("failed to create application: %w", err)
 	}
 
+	if result != nil {
+		result.App = &display.QuickstartSetupApp{
+			ClientID:   client.GetClientID(),
+			Name:       client.GetName(),
+			Type:       client.GetAppType(),
+			Callbacks:  client.GetCallbacks(),
+			LogoutURLs: client.GetAllowedLogoutURLs(),
+			WebOrigins: client.GetWebOrigins(),
+		}
+	}
+
 	// Inject the audience variable when an API is also being created.
 	envValues := config.EnvValues
 	if inputs.API && inputs.Identifier != "" && config.AudienceVar != "" {
@@ -1157,14 +1200,6 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 	steps := printNativeGuidance(cli, inputs.Framework, expoScheme, nativeBundleID)
 
 	if result != nil {
-		result.App = &display.QuickstartSetupApp{
-			ClientID:   client.GetClientID(),
-			Name:       client.GetName(),
-			Type:       client.GetAppType(),
-			Callbacks:  client.GetCallbacks(),
-			LogoutURLs: client.GetAllowedLogoutURLs(),
-			WebOrigins: client.GetWebOrigins(),
-		}
 		result.ConfigFile = cfgOut
 		if cfgOut.Action == qsConfigSkipped {
 			result.NextSteps = append(result.NextSteps,
@@ -1177,6 +1212,7 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 				"Review the backup %s, then delete it or add it to .gitignore: it is a copy of the previous file and may contain secrets",
 				*cfgOut.Backup))
 		}
+		result.NextSteps = append(result.NextSteps, cfgOut.Notes...)
 		result.NextSteps = append(result.NextSteps, steps...)
 	}
 
@@ -1958,17 +1994,23 @@ func dotenvLine(key, value string) string {
 }
 
 // mergeDotenv replaces the first assignment of each owned key in place (keeping `export `), drops
-// later duplicates, keeps every other line as is, and appends missing keys. Continuation lines of
-// a multi-line quoted value of an owned key are left in place.
-func mergeDotenv(existing []byte, values map[string]string) []byte {
-	var out strings.Builder
+// later duplicates, keeps every other line as is, and appends missing keys. An assignment owns
+// all the lines of its value, so lines inside a multi-line quoted value are never matched against
+// the owned keys. Replaced and appended lines use the file's line ending (CRLF or LF). It also
+// returns the sorted names of the owned keys that were already present.
+func mergeDotenv(existing []byte, values map[string]string) (merged []byte, replaced []string) {
+	eol := ""
+	if bytes.Contains(existing, []byte("\r\n")) {
+		eol = "\r"
+	}
 
 	if len(existing) == 0 {
+		var out strings.Builder
 		for _, key := range sortedKeys(values) {
 			out.WriteString(dotenvLine(key, values[key]))
 			out.WriteString("\n")
 		}
-		return []byte(out.String())
+		return []byte(out.String()), nil
 	}
 
 	lines := strings.Split(string(existing), "\n")
@@ -1977,39 +2019,85 @@ func mergeDotenv(existing []byte, values map[string]string) []byte {
 	}
 
 	seen := make(map[string]bool, len(values))
-	merged := make([]string, 0, len(lines)+len(values))
-	for _, line := range lines {
-		m := dotenvKeyRegexp.FindStringSubmatch(line)
-		if m == nil {
-			merged = append(merged, line)
+	out := make([]string, 0, len(lines)+len(values))
+	for i := 0; i < len(lines); {
+		loc := dotenvKeyRegexp.FindStringSubmatchIndex(lines[i])
+		if loc == nil {
+			out = append(out, lines[i])
+			i++
 			continue
 		}
-		key := m[2]
+
+		key := lines[i][loc[4]:loc[5]]
+		last := dotenvValueEnd(lines, i, loc[1])
 		value, owned := values[key]
 		if !owned {
-			merged = append(merged, line)
+			out = append(out, lines[i:last+1]...)
+			i = last + 1
 			continue
 		}
-		if seen[key] {
-			continue // Drop later duplicates of an owned key.
+
+		if !seen[key] { // Later duplicates of an owned key are dropped.
+			seen[key] = true
+			prefix := ""
+			if loc[2] >= 0 {
+				prefix = "export "
+			}
+			out = append(out, prefix+dotenvLine(key, value)+eol)
 		}
-		seen[key] = true
-		prefix := ""
-		if m[1] != "" {
-			prefix = "export "
-		}
-		merged = append(merged, prefix+dotenvLine(key, value))
+		i = last + 1
 	}
 
 	for _, key := range sortedKeys(values) {
 		if !seen[key] {
-			merged = append(merged, dotenvLine(key, values[key]))
+			out = append(out, dotenvLine(key, values[key])+eol)
 		}
 	}
 
-	out.WriteString(strings.Join(merged, "\n"))
-	out.WriteString("\n")
-	return []byte(out.String())
+	for key := range seen {
+		replaced = append(replaced, key)
+	}
+	sort.Strings(replaced)
+
+	return []byte(strings.Join(out, "\n") + "\n"), replaced
+}
+
+// dotenvValueEnd returns the index of the last line of the value assigned on lines[i]; offset is
+// where the value starts in that line. A quoted value that does not close on its own line runs
+// to the line holding the closing quote. If it never closes, it is treated as a single line.
+func dotenvValueEnd(lines []string, i, offset int) int {
+	line := strings.TrimSuffix(lines[i], "\r")
+	if offset > len(line) {
+		return i
+	}
+	rest := strings.TrimLeft(line[offset:], " \t")
+	if rest == "" || (rest[0] != '"' && rest[0] != '\'' && rest[0] != '`') {
+		return i
+	}
+
+	quote := rest[0]
+	if indexClosingQuote(rest[1:], quote) >= 0 {
+		return i
+	}
+	for j := i + 1; j < len(lines); j++ {
+		if indexClosingQuote(lines[j], quote) >= 0 {
+			return j
+		}
+	}
+	return i
+}
+
+// indexClosingQuote returns the index of the first unescaped quote in s, or -1.
+func indexClosingQuote(s string, quote byte) int {
+	for k := 0; k < len(s); k++ {
+		switch {
+		case quote == '"' && s[k] == '\\':
+			k++
+		case s[k] == quote:
+			return k
+		}
+	}
+	return -1
 }
 
 // nextBackupPath returns <path>.auth0-backup, or the first free <path>.auth0-backup.N (N=1,2,…).
@@ -2243,11 +2331,9 @@ func (c *cli) writeQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		return outcome, nil
 
 	case qsConfigMerged:
-		action, err := c.mergeQuickstartDotenv(s.Path, resolvedEnv, plan.Perm, content)
-		if err != nil {
+		if err := c.mergeQuickstartDotenv(s.Path, resolvedEnv, plan.Perm, content, outcome); err != nil {
 			return nil, err
 		}
-		outcome.Action = action
 		return outcome, nil
 
 	case qsConfigOverwritten:
@@ -2262,6 +2348,7 @@ func (c *cli) writeQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		c.renderer.Successf("%s file overwritten with your Auth0 configuration", ansi.Cyan(s.Path))
 		c.renderer.Detailf("Backup of the previous file written to %s", ansi.Cyan(backup))
 		outcome.Backup = &backup
+		c.tightenSecretFile(s.Path, resolvedEnv, plan.Perm, outcome)
 		return outcome, nil
 
 	case qsConfigCreated:
@@ -2272,11 +2359,9 @@ func (c *cli) writeQuickstartConfig(cmd *cobra.Command, resolvedEnv map[string]s
 		}
 		// The file may have appeared since the pre-flight; never clobber a dotenv file.
 		if info, err := os.Stat(s.Path); err == nil && s.Format == "dotenv" {
-			action, err := c.mergeQuickstartDotenv(s.Path, resolvedEnv, info.Mode().Perm(), content)
-			if err != nil {
+			if err := c.mergeQuickstartDotenv(s.Path, resolvedEnv, info.Mode().Perm(), content, outcome); err != nil {
 				return nil, err
 			}
-			outcome.Action = action
 			return outcome, nil
 		}
 		if err := c.createQuickstartConfigFile(s.Path, content); err != nil {
@@ -2298,28 +2383,62 @@ func (c *cli) createQuickstartConfigFile(path string, content []byte) error {
 	return nil
 }
 
+// secretFilePerm drops the group and other bits when the values include a secret and the file is
+// readable beyond its owner. It returns the new mode and whether it changed.
+func secretFilePerm(resolvedEnv map[string]string, perm os.FileMode) (os.FileMode, bool) {
+	if perm&0o077 == 0 {
+		return perm, false
+	}
+	for key := range resolvedEnv {
+		if strings.Contains(strings.ToLower(key), "secret") {
+			return perm &^ 0o077, true
+		}
+	}
+	return perm, false
+}
+
+// tightenSecretFile applies secretFilePerm to an existing file and records a note when it changed.
+func (c *cli) tightenSecretFile(path string, resolvedEnv map[string]string, perm os.FileMode, outcome *display.QuickstartSetupConfigFile) {
+	tightened, changed := secretFilePerm(resolvedEnv, perm)
+	if !changed || os.Chmod(path, tightened) != nil {
+		return
+	}
+	note := fmt.Sprintf("Permissions of %s were tightened from %04o to %04o because it now holds a client secret", path, perm, tightened)
+	c.renderer.Detailf("%s", note)
+	outcome.Notes = append(outcome.Notes, note)
+}
+
 // mergeQuickstartDotenv creates the file from content if it vanished since the pre-flight.
-func (c *cli) mergeQuickstartDotenv(path string, resolvedEnv map[string]string, perm os.FileMode, content []byte) (string, error) {
+func (c *cli) mergeQuickstartDotenv(path string, resolvedEnv map[string]string, perm os.FileMode, content []byte, outcome *display.QuickstartSetupConfigFile) error {
 	existing, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		if dir := filepath.Dir(path); dir != "." {
 			if err := os.MkdirAll(dir, 0755); err != nil {
-				return "", fmt.Errorf("failed to create directory structure %s: %w", dir, err)
+				return fmt.Errorf("failed to create directory structure %s: %w", dir, err)
 			}
 		}
 		if err := c.createQuickstartConfigFile(path, content); err != nil {
-			return "", err
+			return err
 		}
-		return qsConfigCreated, nil
+		outcome.Action = qsConfigCreated
+		return nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("failed to read %s: %w", path, err)
+		return fmt.Errorf("failed to read %s: %w", path, err)
 	}
 
-	if err := os.WriteFile(path, mergeDotenv(existing, resolvedEnv), perm); err != nil {
-		return "", fmt.Errorf("failed to write %s: %w", path, err)
+	merged, replaced := mergeDotenv(existing, resolvedEnv)
+	if err := os.WriteFile(path, merged, perm); err != nil {
+		return fmt.Errorf("failed to write %s: %w", path, err)
 	}
 	c.renderer.Newline()
 	c.renderer.Successf("%s updated: merged your Auth0 configuration into the existing file", ansi.Cyan(path))
-	return qsConfigMerged, nil
+	if len(replaced) > 0 {
+		c.renderer.Detailf("Replaced existing values for: %s", strings.Join(replaced, ", "))
+	}
+	c.tightenSecretFile(path, resolvedEnv, perm, outcome)
+
+	outcome.Action = qsConfigMerged
+	outcome.KeysReplaced = replaced
+	return nil
 }

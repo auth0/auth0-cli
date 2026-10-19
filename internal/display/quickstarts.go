@@ -105,6 +105,12 @@ type QuickstartSetupConfigFile struct {
 	Format string  `json:"format"`
 	Action string  `json:"action"` // Created | merged | overwritten | skipped.
 	Backup *string `json:"backup"` // Null unless overwritten.
+
+	// KeysReplaced lists the keys (names only) whose existing values a merge replaced.
+	KeysReplaced []string `json:"keys_replaced"`
+
+	// Notes become next_steps; they are not part of the config_file JSON.
+	Notes []string `json:"-"`
 }
 
 // QuickstartSetup is a no-op in the human format, whose output is already printed.
@@ -116,6 +122,17 @@ func (r *Renderer) QuickstartSetup(res *QuickstartSetupResult) {
 		return
 	}
 
+	res.Normalize()
+
+	if r.Format == OutputFormatJSONCompact {
+		r.JSONCompactResult(res)
+		return
+	}
+	r.JSONResult(res)
+}
+
+// Normalize turns nil list fields into empty slices so they render as [] instead of null.
+func (res *QuickstartSetupResult) Normalize() {
 	res.KeysWritten = nonNilStrings(res.KeysWritten)
 	res.NextSteps = nonNilStrings(res.NextSteps)
 	if res.App != nil {
@@ -129,12 +146,9 @@ func (r *Renderer) QuickstartSetup(res *QuickstartSetupResult) {
 	if res.ClientGrant != nil {
 		res.ClientGrant.Scopes = nonNilStrings(res.ClientGrant.Scopes)
 	}
-
-	if r.Format == OutputFormatJSONCompact {
-		r.JSONCompactResult(res)
-		return
+	if res.ConfigFile != nil {
+		res.ConfigFile.KeysReplaced = nonNilStrings(res.ConfigFile.KeysReplaced)
 	}
-	r.JSONResult(res)
 }
 
 // nonNilStrings keeps JSON list fields as [] instead of null.

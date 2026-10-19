@@ -53,7 +53,7 @@ auth0 quickstarts setup [flags]
       --callback-url strings     Override the allowed callback URLs for the application. Comma-separate or repeat the flag for multiple values; replaces the default list.
       --force                    Replace an existing config file without prompting (a backup is written first). In agent mode or with --no-input, an existing .env is merged instead, and any other existing config file is only replaced with --force.
       --framework string         Framework to configure (e.g., react, nextjs, vue, express)
-      --grant-scopes strings     [API] Comma-separated subset of --scopes to grant the app created with --app or given with --linked-app-id (default: all --scopes). Every value must also be listed in --scopes.
+      --grant-scopes strings     [API] Comma-separated subset of --scopes to grant the app created with --app or given with --linked-app-id (default: all --scopes). Every value must also be listed in --scopes. An empty value grants no scopes.
       --identifier string        Unique URL identifier for the API (audience), e.g. https://my-api
       --json                     Output in json format.
       --json-compact             Output in compact json format.
