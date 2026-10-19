@@ -3,9 +3,10 @@ run-name: rl-scan ${{ inputs.asset-suffix }}
 
 # Reusable malware-scan workflow for the release pipeline. It downloads one
 # published release archive and scans it with the ReversingLabs rl-scan action from
-# auth0/devsecops-tooling. The caller runs it once per archive.
+# auth0/devsecops-tooling. It scans one archive per call, so release.yml calls it
+# from a matrix with one entry for each OS and architecture.
 #
-# Caller pattern:
+# Caller pattern (single archive; release.yml uses a matrix of all six):
 #   jobs:
 #     rl-scan:
 #       needs: goreleaser
