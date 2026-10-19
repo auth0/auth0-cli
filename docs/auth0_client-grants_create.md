@@ -13,6 +13,8 @@ To create non-interactively, supply the audience and either a client id (`--clie
 
 Note: for the Auth0 Management API with `--subject-type user`, scopes must be a subset of the fixed current_user set and cannot be listed dynamically, so pass them inline, for example: `--scopes "read:current_user,update:current_user_metadata,delete:current_user_metadata,create:current_user_metadata,create:current_user_device_credentials,delete:current_user_device_credentials,update:current_user_identities"`.
 
+Use '--schema' to print the request payload schema and exit.
+
 ## Usage
 ```
 auth0 client-grants create [flags]
@@ -30,6 +32,15 @@ auth0 client-grants create [flags]
   auth0 client-grants create -c <client-id> -a <api-identifier> -s "read:users" -o require --allow-any-organization=false
   auth0 client-grants create -c <client-id> -a <api-identifier> --subject-type user
   auth0 client-grants create -c <client-id> -a <api-identifier> --json
+
+  # Discover the payload schema
+  auth0 client-grants create --schema
+  auth0 client-grants create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 client-grants create --data '{"client_id":"<client-id>","audience":"https://example.com/api","scope":["read:users"]}'
+  auth0 client-grants create --data @grant.json
+  cat grant.json | auth0 client-grants create
 ```
 
 
@@ -41,10 +52,12 @@ auth0 client-grants create [flags]
   -a, --audience string                       Audience (API identifier) of the client grant. Cannot be changed once set.
       --authorization-details-types strings   Comma-separated list of authorization_details types allowed for this grant (Rich Authorization Requests).
   -c, --client-id string                      Client ID of the application to authorize. Cannot be changed once set. Mutually exclusive with --default-for.
+      --data string                           JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --default-for string                    Make this the default grant for a group of clients instead of authorizing a specific client. Mutually exclusive with --client-id. Possible value: third_party_clients.
       --json                                  Output in json format.
       --json-compact                          Output in compact json format.
   -o, --organization-usage string             Whether organizations can be used with this grant. Possible values: deny, allow, require.
+      --schema                                Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --scopes strings                        Comma-separated list of scopes (permissions) to grant.
       --subject-type string                   Subject type of the grant. Cannot be changed once set. Possible values: client, user, anonymous_user.
 ```
