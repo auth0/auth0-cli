@@ -1149,7 +1149,8 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 
 	cfgOut, err := cli.writeQuickstartConfig(cmd, resolvedEnv, &config.Strategy, plan)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate config file: %w", err)
+		return "", fmt.Errorf("created application %q (client ID %s) but failed to generate config file: %w",
+			client.GetName(), client.GetClientID(), err)
 	}
 
 	printClientDetails(cli, client)
@@ -1170,6 +1171,11 @@ func createQuickstartApp(cmd *cobra.Command, cli *cli, inputs SetupInputs, qsCon
 				fmt.Sprintf("Create %s manually with your Auth0 configuration (it was not written)", cfgOut.Path))
 		} else {
 			result.KeysWritten = sortedKeys(resolvedEnv) // Names only, never values.
+		}
+		if cfgOut.Backup != nil {
+			result.NextSteps = append(result.NextSteps, fmt.Sprintf(
+				"Review the backup %s, then delete it or add it to .gitignore: it is a copy of the previous file and may contain secrets",
+				*cfgOut.Backup))
 		}
 		result.NextSteps = append(result.NextSteps, steps...)
 	}
@@ -1325,6 +1331,10 @@ func createQuickstartAPI(ctx context.Context, cli *cli, inputs SetupInputs, resu
 	if err := ansi.Waiting(func() error {
 		return cli.api.ResourceServer.Create(ctx, rs)
 	}); err != nil {
+		if inputs.App && inputs.LinkedAppID != "" {
+			return fmt.Errorf("failed to create API with name %q and identifier %q (application %s was already created): %w",
+				apiName, inputs.Identifier, inputs.LinkedAppID, err)
+		}
 		return fmt.Errorf("failed to create API with name %q and identifier %q: %w", apiName, inputs.Identifier, err)
 	}
 	printAPIDetails(cli, rs)

@@ -1553,6 +1553,10 @@ func TestExecuteSetupQuickstart_ForceOverwritesWithBackup(t *testing.T) {
 	assert.Equal(t, qsConfigOverwritten, cfg.Action)
 	require.NotNil(t, cfg.Backup)
 	assert.Equal(t, envPath+".auth0-backup", *cfg.Backup)
+
+	var steps []string
+	require.NoError(t, json.Unmarshal(doc["next_steps"], &steps))
+	assert.Contains(t, strings.Join(steps, "\n"), envPath+".auth0-backup", "next_steps must point at the backup")
 }
 
 func TestExecuteSetupQuickstart_InteractiveDeclineSkips(t *testing.T) {
@@ -1617,6 +1621,11 @@ func TestExecuteSetupQuickstart_DotenvMergeNoForceInNoInput(t *testing.T) {
 	assert.Equal(t, qsConfigMerged, cfg.Action)
 	assert.Equal(t, ".env", cfg.Path)
 	assert.Equal(t, "dotenv", cfg.Format)
+	assert.Nil(t, cfg.Backup)
+
+	var steps []string
+	require.NoError(t, json.Unmarshal(doc["next_steps"], &steps))
+	assert.NotContains(t, strings.ToLower(strings.Join(steps, "\n")), "backup", "a merge writes no backup")
 }
 
 // -- #10 JSON result --.
@@ -1996,6 +2005,59 @@ func TestCreateQuickstartAPI_GrantFailureIsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "boom")
 	assert.ErrorIs(t, err, boom)
 	assert.Nil(t, result.ClientGrant, "no grant section on failure")
+}
+
+func TestCreateQuickstartAPI_APICreateFailureNamesCreatedApp(t *testing.T) {
+	t.Parallel()
+
+	boom := errors.New("boom")
+	run := func(t *testing.T, appCreatedInThisRun bool) error {
+		ctrl := gomock.NewController(t)
+		rsAPI := mock.NewMockResourceServerAPI(ctrl)
+		rsAPI.EXPECT().Create(gomock.Any(), gomock.Any()).Return(boom)
+
+		c, _, _ := newQSTestCLI("", false, &auth0.API{ResourceServer: rsAPI}, &auth0.APIV3{ClientGrant: mock.NewMockClientGrantAPIV3(ctrl)})
+		inputs := grantTestInputs()
+		inputs.App = appCreatedInThisRun
+		return createQuickstartAPI(context.Background(), c, inputs, nil)
+	}
+
+	t.Run("app created in this run is named in the error", func(t *testing.T) {
+		t.Parallel()
+		err := run(t, true)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "linked-app-client-id")
+		assert.Contains(t, err.Error(), "already created")
+		assert.ErrorIs(t, err, boom)
+	})
+
+	t.Run("linking an existing app does not claim it was created", func(t *testing.T) {
+		t.Parallel()
+		err := run(t, false)
+		require.Error(t, err)
+		assert.NotContains(t, err.Error(), "already created")
+		assert.ErrorIs(t, err, boom)
+	})
+}
+
+func TestCreateQuickstartApp_ConfigWriteFailureNamesCreatedApp(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	// A directory where the config file should go: the write fails after the pre-flight passed.
+	require.NoError(t, os.Mkdir(".env", 0755))
+
+	ctrl := gomock.NewController(t)
+	clientAPI := mock.NewMockClientAPI(ctrl)
+	expectClientCreate(clientAPI, "app-cid", "")
+	c, _, _ := newQSTestCLI("", false, &auth0.API{Client: clientAPI}, nil)
+
+	plan := &qsConfigWritePlan{Path: ".env", Format: "dotenv", Action: qsConfigCreated, Perm: 0600}
+	inputs := SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "vite", Name: "My App", Port: 5173}
+	_, err := createQuickstartApp(&cobra.Command{}, c, inputs, "spa:react:vite", plan, nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "app-cid", "the error must name the application that now exists")
+	assert.Contains(t, err.Error(), "failed to generate config file")
 }
 
 func TestCreateQuickstartAPI_FillsResult(t *testing.T) {
