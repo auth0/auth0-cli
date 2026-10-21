@@ -347,7 +347,21 @@ tests:
       contains:
         - "experiment_not_found"
 
-  # The experiments created inline above (experiment1, experiment2,
-  # experiment-data, seg-experiment1), the helper-created segment and ramp
-  # experiments, the shared feature flag / variations, and the experiments-suite
-  # segment are removed by the shared cleanup (test-cleanup.sh).
+  # The segments suite runs after this one and expects an empty segment list, so
+  # the experiments-suite segment is deleted here, after the two experiments that
+  # use it.
+  030 - it successfully deletes the segment-strategy experiment:
+    command: auth0 experimentation experiments delete $(./test/integration/scripts/get-segment-experiment-id.sh) --force
+    exit-code: 0
+
+  031 - it successfully deletes the inline segment-strategy experiment:
+    command: auth0 experimentation experiments delete $(auth0 experimentation experiments list --json --no-input | jq -r '.[] | select(.name == "integration-test-seg-experiment1") | .id') --force
+    exit-code: 0
+
+  032 - it successfully deletes the experiments-suite segment:
+    command: auth0 experimentation segments delete $(./test/integration/scripts/get-experiment-segment-id.sh) --force
+    exit-code: 0
+
+  # The other experiments created inline above (experiment1, experiment2,
+  # experiment-data), the ramp experiment, and the shared feature flag /
+  # variations are removed by the shared cleanup (test-cleanup.sh).

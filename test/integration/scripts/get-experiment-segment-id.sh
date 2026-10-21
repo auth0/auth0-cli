@@ -1,8 +1,8 @@
 #! /bin/bash
 
 # Dedicated segment for the experiments suite's segment-strategy experiment.
-# Kept separate from get-segment-id.sh so the segments suite's empty-list
-# assertion is unaffected by resources this suite creates.
+# Kept separate from get-segment-id.sh, and deleted at the end of the
+# experiments suite so the segments suite still starts with an empty list.
 FILE=./test/integration/identifiers/experiment-segment-id
 if [ -f "$FILE" ]; then
     cat $FILE

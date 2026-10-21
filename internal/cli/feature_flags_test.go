@@ -980,8 +980,8 @@ func TestVariationsDeleteCmd(t *testing.T) {
 		name          string
 		args          []string
 		agentMode     bool
-		gets          map[string]error // variation ID -> Get result
-		deletes       map[string]error // variation ID -> Delete result
+		gets          map[string]error // Variation ID -> Get result.
+		deletes       map[string]error // Variation ID -> Delete result.
 		expectedError []string
 	}{
 		{
