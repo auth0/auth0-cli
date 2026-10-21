@@ -93,7 +93,7 @@ var (
 		Name:         "Allowed Origin URLs",
 		LongForm:     "origins",
 		ShortForm:    "o",
-		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.",
+		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs. This sets allowed_origins; use --web-origins to set web_origins.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
@@ -101,7 +101,7 @@ var (
 		Name:         "Allowed Web Origin URLs",
 		LongForm:     "web-origins",
 		ShortForm:    "w",
-		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.",
+		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode. This sets web_origins and is required for silent authentication in SPAs.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
@@ -124,7 +124,7 @@ var (
 		Name:       "Grants",
 		LongForm:   "grants",
 		ShortForm:  "g",
-		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
+		Help:       "List of OAuth grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code. A machine to machine application also needs a client grant to call an API: see '" + clientGrantCreateCommand + "'.",
 		IsRequired: false,
 	}
 	appResourceServerIdentifier = Flag{
@@ -581,6 +581,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Long: "Create a new application.\n\n" +
 			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
 			"To create non-interactively, supply at least the application name, and type through the flags.\n\n" +
+			"To let a machine to machine application call an API, run: `" + clientGrantCreateCommand + "`.\n\n" +
 			"Use '--schema' to print the request payload schema and exit.\n" +
 			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 apps create

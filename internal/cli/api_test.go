@@ -80,6 +80,27 @@ func TestAPICmdInputs_FromArgs(t *testing.T) {
 			givenArgs:     []string{"get", "#$%^&*(#$%%^("},
 			expectedError: "invalid uri given: parse \"https://example.auth0.com/api/v2/#$%^&*(#$%%^(\": invalid URL escape \"%^&\"",
 		},
+		{
+			name:          "it fails when the uri escapes the management api path",
+			givenArgs:     []string{"get", "../../oauth/token"},
+			expectedError: "invalid uri given: \"../../oauth/token\" resolves outside of the Management API (/api/v2)",
+		},
+		{
+			name:          "it fails when a percent-encoded uri escapes the management api path",
+			givenArgs:     []string{"get", "%2e%2e/%2e%2e/.well-known/openid-configuration"},
+			expectedError: "invalid uri given: \"%2e%2e/%2e%2e/.well-known/openid-configuration\" resolves outside of the Management API (/api/v2)",
+		},
+		{
+			name:          "it fails when an encoded slash escapes the management api path",
+			givenArgs:     []string{"get", "..%2F..%2Fuserinfo"},
+			expectedError: "invalid uri given: \"..%2F..%2Fuserinfo\" resolves outside of the Management API (/api/v2)",
+		},
+		{
+			name:           "it allows dot segments that stay within the management api path",
+			givenArgs:      []string{"get", "users/../clients"},
+			expectedMethod: http.MethodGet,
+			expectedURL:    "https://" + testDomain + "/api/v2/users/../clients",
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -541,4 +562,77 @@ func TestAPICmd_IsInsufficientScopeError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMaskAPISecrets(t *testing.T) {
+	tests := []struct {
+		name       string
+		body       string
+		want       string
+		wantMasked bool
+	}{
+		{
+			name: "body without secrets is returned untouched",
+			body: `{"name":"b","app_type":"spa"}`,
+			want: `{"name":"b","app_type":"spa"}`,
+		},
+		{
+			name:       "client_secret and signing_keys are removed",
+			body:       `{"name":"a","client_secret":"s3cret","signing_keys":[{"cert":"x"}]}`,
+			want:       `{"name":"a"}`,
+			wantMasked: true,
+		},
+		{
+			name:       "secrets are removed from a list of clients",
+			body:       `[{"client_id":"1","client_secret":"a"},{"client_id":"2","client_secret":"b"}]`,
+			want:       `[{"client_id":"1"},{"client_id":"2"}]`,
+			wantMasked: true,
+		},
+		{
+			name:       "nested secrets are removed",
+			body:       `{"options":{"client_secret":"a","client_id":"1"}}`,
+			want:       `{"options":{"client_id":"1"}}`,
+			wantMasked: true,
+		},
+		{
+			name: "a secret key mentioned only inside a value is not a field",
+			body: `{"note":"the \"client_secret\" is hidden"}`,
+			want: `{"note":"the \"client_secret\" is hidden"}`,
+		},
+		{
+			name:       "numbers and html characters are preserved",
+			body:       `{"a":12345678901234567890,"b":"<x>&","client_secret":"s"}`,
+			want:       `{"a":12345678901234567890,"b":"<x>&"}`,
+			wantMasked: true,
+		},
+		{
+			name: "invalid json is returned untouched",
+			body: `{"client_secret":`,
+			want: `{"client_secret":`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, masked, err := maskAPISecrets([]byte(test.body))
+
+			require.NoError(t, err)
+			assert.Equal(t, test.wantMasked, masked)
+			if test.wantMasked {
+				assert.JSONEq(t, test.want, string(got))
+				assert.NotContains(t, string(got), "s3cret")
+			} else {
+				assert.Equal(t, test.want, string(got))
+			}
+		})
+	}
+}
+
+func TestAPICmd_RegistersRevealSecretsFlag(t *testing.T) {
+	cmd := apiCmd(&cli{renderer: display.NewRenderer()})
+
+	flag := cmd.Flags().Lookup("reveal-secrets")
+	require.NotNil(t, flag)
+	assert.Equal(t, "false", flag.DefValue)
+	assert.Equal(t, "r", flag.Shorthand)
 }

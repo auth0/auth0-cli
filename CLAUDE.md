@@ -12,7 +12,7 @@ You are a Go CLI engineer maintaining the Auth0 CLI — a Cobra-based tool (`int
 
 **auth0-cli** is the official command-line interface for Auth0, used to build, manage, and test Auth0 integrations from the terminal.
 
-- **Language:** Go 1.25.8
+- **Language:** Go 1.26.0
 - **Package Manager:** Go modules (vendored). Run `go mod tidy && go mod vendor` after dependency changes.
 - **Command Framework:** Cobra (`spf13/cobra`) with `pflag`
 - **Auth0 APIs:** `go-auth0` Management SDK (v1 and v3)
@@ -64,11 +64,13 @@ auth0-cli/
 ### ✅ Always Do
 
 - Run `make lint` and `make test-unit` before committing.
+- Before diagnosing unexpected CLI behavior, run `make build` and use `./out/auth0`, not a stale binary. Check flag names with `--help` first (the agent flag is `--agent-mode`).
 - Follow the existing Cobra command patterns and naming (see [references/code-style.md](references/code-style.md)).
 - Add table-driven unit tests for new functionality; regenerate mocks with `make test-mocks` when an interface changes.
 - **Regenerate command docs with `make docs` whenever you add/change a command, flag, or help text.** CI runs `make check-docs` and fails if `docs/` is out of sync.
 - Update `README.md` in the same PR when a change touches what it documents — installation, config/auth, the top-level command list, deprecations, or supported workflows (per-flag and per-command detail lives in the generated `docs/`, via `make docs`, not the README). Update `CUSTOMIZATION_GUIDE.md` for Universal Login/branding changes and `MIGRATION_GUIDE.md` for breaking changes.
 - After changing dependencies, run `go mod tidy && go mod vendor` — the `vendor/` directory is committed and must stay in sync.
+- Pin GitHub Actions to a full commit SHA with the release tag in a trailing comment (`uses: owner/repo@<sha> # vX.Y.Z`). Confirm the SHA is the tag's commit (dereference annotated tags) before committing.
 - Route new usage tracking through the existing `analytics.Tracker` (`internal/analytics`) and preserve the `AUTH0_CLI_ANALYTICS=false` opt-out; do not hand-roll a new tracking client.
 
 ### ⚠️ Ask First

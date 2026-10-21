@@ -43,12 +43,12 @@ func NewTracker() *Tracker {
 	return &Tracker{}
 }
 
-func (t *Tracker) TrackFirstLogin(id string, loginType string) {
+func (t *Tracker) TrackFirstLogin(id string, loginType string, properties map[string]string) {
 	eventName := fmt.Sprintf("%s - Auth0 - First Login", eventNamePrefix)
-	t.track(eventName, id, nil)
+	t.track(eventName, id, properties)
 
 	eventName = fmt.Sprintf("%s - Auth0 - First Login - %s", eventNamePrefix, loginType)
-	t.track(eventName, id, nil)
+	t.track(eventName, id, properties)
 }
 
 func (t *Tracker) TrackCommandRun(commandPath string, id string, properties map[string]string) {

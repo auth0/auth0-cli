@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -317,4 +318,15 @@ func TestSanitizeAgentName_KnownNames(t *testing.T) {
 	} {
 		assert.Equal(t, want, sanitizeAgentName(input), "input: %s", input)
 	}
+}
+
+func TestSanitizeAgentName_CapsUnknownNameLength(t *testing.T) {
+	assert.Equal(t, "client-my-tool", sanitizeAgentName("My-Tool"))
+
+	long := strings.Repeat("a", 10000)
+	assert.Equal(t, "client-"+long[:maxAgentClientNameLength], sanitizeAgentName(long))
+
+	// Truncation counts runes, so a multi-byte character is never split.
+	multiByte := strings.Repeat("é", maxAgentClientNameLength+10)
+	assert.Equal(t, "client-"+strings.Repeat("é", maxAgentClientNameLength), sanitizeAgentName(multiByte))
 }
