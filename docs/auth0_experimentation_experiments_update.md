@@ -43,7 +43,7 @@ auth0 experimentation experiments update [flags]
 ## Flags
 
 ```
-  -A, --allocations string           JSON array of allocation items ({variation_id, weight, is_control} for percentage, where weight is an integer percentage from 1 to 100; {variation_id, segment_id, priority, is_control, is_fallback} for segment).
+  -A, --allocations string           JSON array of allocation items ({variation_id, weight, is_control} for percentage, where weight is an integer percentage from 0 to 100; {variation_id, segment_id, priority, is_control, is_fallback} for segment).
   -a, --authentication-flow string   Authentication flow this experiment applies to: authentication, mfa_enrollment, mfa_challenge, password_reset, passkey_enrollment, or all.
       --data string                  JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --default-config string        For Auth0-managed flags only: where non-overridden config keys resolve from — 'tenant' (inherit the tenant's live config) or 'flag' (use the flag's frozen defaults). Rejected for customer-defined flags.

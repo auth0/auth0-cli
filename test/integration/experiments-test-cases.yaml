@@ -35,6 +35,27 @@ tests:
         authentication_flow: "authentication"
         allocation_strategy: "percentage"
 
+  0041 - it successfully creates a draft experiment from --data:
+    command: auth0 experimentation experiments create --data "{\"name\":\"integration-test-experiment-data\",\"feature_flag_id\":\"$(./test/integration/scripts/get-experiment-flag-id.sh)\",\"authentication_flow\":\"authentication\",\"allocation_strategy\":\"percentage\"}" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-experiment-data"
+        status: "draft"
+        allocation_strategy: "percentage"
+
+  # The name pattern uses a lookahead, which RE2 can't compile. Check it's still
+  # enforced locally.
+  0042 - it rejects a --data name that breaks the name pattern before calling the API:
+    command: auth0 experimentation experiments create --data "{\"name\":\" integration-test-padded\",\"feature_flag_id\":\"$(./test/integration/scripts/get-experiment-flag-id.sh)\",\"authentication_flow\":\"authentication\",\"allocation_strategy\":\"percentage\"}" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "schema validation failed"
+        - "doesn't match the regular expression"
+      not-contains:
+        - "cannot compile pattern"
+
   005 - it successfully lists all experiments with data:
     command: auth0 experimentation experiments list
     exit-code: 0
@@ -117,7 +138,14 @@ tests:
     exit-code: 1
     stderr:
       contains:
-        - "must be a whole number between 1 and 100"
+        - "must be a whole number between 0 and 100"
+
+  0151 - it returns an error when --allocation-strategy is missing:
+    command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "--allocation-strategy is required"
 
   016 - it returns an error when --default-config is invalid:
     command: auth0 experimentation experiments create -n "bad-experiment" -f $(./test/integration/scripts/get-feature-flag-id.sh) -a "authentication" -s "percentage" --default-config "bogus" --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]' --no-input
@@ -180,6 +208,21 @@ tests:
     stderr:
       contains:
         - "--target-level is required"
+
+  0211 - advance-ramp prints its request schema:
+    command: auth0 experimentation experiments advance-ramp --schema
+    exit-code: 0
+    stdout:
+      contains:
+        - target_level
+
+  0212 - advance-ramp rejects an out-of-range --data target_level before calling the API:
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-experiment-id.sh) --data '{"target_level":150}' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "schema validation failed"
+        - "target_level"
 
   # ─── Validate + lifecycle ──────────────────────────────────────────────────────
 
@@ -261,6 +304,6 @@ tests:
         - "experiment_not_found"
 
   # The experiments created inline above (experiment1, experiment2,
-  # seg-experiment1), the helper-created segment experiment, the shared feature
-  # flag / variations, and the experiments-suite segment are removed by the shared
-  # cleanup (test-cleanup.sh).
+  # experiment-data, seg-experiment1), the helper-created segment experiment, the
+  # shared feature flag / variations, and the experiments-suite segment are removed
+  # by the shared cleanup (test-cleanup.sh).

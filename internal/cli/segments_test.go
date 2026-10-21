@@ -447,17 +447,25 @@ func TestSegmentsDeleteCmd(t *testing.T) {
 
 	tests := []struct {
 		name          string
+		getErr        error
 		deleteErr     error
+		expectDelete  bool
 		expectedError string
 	}{
 		{
-			// The API also returns 204 for an unknown segment, so the CLI
-			// deletes without looking it up first.
-			name: "it successfully deletes a segment",
+			name:         "it successfully deletes a segment",
+			expectDelete: true,
+		},
+		{
+			// Delete returns 204 for an unknown ID, so the 404 comes from the lookup.
+			name:          "it returns the not-found error for an unknown segment",
+			getErr:        errors.New("404 Not Found: segment_not_found"),
+			expectedError: `failed to delete segment "seg_abc123": 404 Not Found: segment_not_found`,
 		},
 		{
 			name:          "it returns an error if the delete call fails",
 			deleteErr:     errors.New("500 Internal Server Error"),
+			expectDelete:  true,
 			expectedError: `failed to delete segment "seg_abc123": 500 Internal Server Error`,
 		},
 	}
@@ -468,7 +476,10 @@ func TestSegmentsDeleteCmd(t *testing.T) {
 			defer ctrl.Finish()
 
 			segmentsAPI := mock.NewMockSegmentsAPI(ctrl)
-			segmentsAPI.EXPECT().Delete(gomock.Any(), segID).Return(test.deleteErr)
+			segmentsAPI.EXPECT().Get(gomock.Any(), segID).Return(&management.GetSegmentResponseContent{}, test.getErr)
+			if test.expectDelete {
+				segmentsAPI.EXPECT().Delete(gomock.Any(), segID).Return(test.deleteErr)
+			}
 
 			cli := &cli{
 				renderer: &display.Renderer{

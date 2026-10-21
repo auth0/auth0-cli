@@ -1,6 +1,10 @@
 package cli
 
 import (
+	"context"
+	"errors"
+
+	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +27,24 @@ func markQueryExclusive(cmd *cobra.Command, filterFlags ...string) {
 	for _, name := range filterFlags {
 		cmd.MarkFlagsMutuallyExclusive(listQueryFlag.LongForm, name)
 	}
+}
+
+// collectPages returns the results of page and all the pages that follow it.
+func collectPages[C comparable, T, R any](ctx context.Context, page *managementcore.Page[C, T, R]) ([]T, error) {
+	var out []T
+	for page != nil {
+		out = append(out, page.Results...)
+
+		next, err := page.GetNextPage(ctx)
+		if errors.Is(err, managementcore.ErrNoPages) {
+			break
+		}
+		if err != nil {
+			return out, err
+		}
+		page = next
+	}
+	return out, nil
 }
 
 // experimentationCmd groups the Experiment Center resources (feature flags,

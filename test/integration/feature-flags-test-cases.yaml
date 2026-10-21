@@ -35,6 +35,26 @@ tests:
         - integration-test-flag2
         - draft
 
+  0031 - it successfully creates a feature flag from --data:
+    command: auth0 experimentation feature-flags create --data '{"name":"integration-test-flag-data","parameters":{"enabled":{"type":"boolean","value":false}}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flag-data"
+        status: "draft"
+
+  # The name pattern uses a lookahead, which RE2 can't compile. Check it's still
+  # enforced locally.
+  0032 - it rejects a --data name that breaks the name pattern before calling the API:
+    command: auth0 experimentation feature-flags create --data '{"name":" integration-test-padded","parameters":{"enabled":{"type":"boolean","value":false}}}' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "schema validation failed"
+        - "doesn't match the regular expression"
+      not-contains:
+        - "cannot compile pattern"
+
   004 - it successfully lists all feature flags with data:
     command: auth0 experimentation feature-flags list
     exit-code: 0
@@ -124,6 +144,13 @@ tests:
     stdout:
       contains:
         - integration-test-treatment
+
+  0221 - it successfully creates a variation from --data:
+    command: auth0 experimentation feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) --data '{"name":"integration-test-variation-data","overrides":{"color":"green"}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-variation-data"
 
   023 - it successfully lists variations with data:
     command: auth0 experimentation feature-flags variations list $(./test/integration/scripts/get-feature-flag-id.sh)

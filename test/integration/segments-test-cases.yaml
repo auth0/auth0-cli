@@ -34,6 +34,26 @@ tests:
         name: "integration-test-segment2"
         type: "self"
 
+  0041 - it successfully creates a segment from --data:
+    command: auth0 experimentation segments create --data '{"name":"integration-test-segment-data","rules":[{"match":{"country":["US"]}}]}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment-data"
+        type: "self"
+
+  # The name pattern uses a lookahead, which RE2 can't compile. Check it's still
+  # enforced locally.
+  0042 - it rejects a --data name that breaks the name pattern before calling the API:
+    command: auth0 experimentation segments create --data '{"name":"integration-test-padded ","rules":[{"match":{"country":["US"]}}]}' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "schema validation failed"
+        - "doesn't match the regular expression"
+      not-contains:
+        - "cannot compile pattern"
+
   005 - it successfully lists all segments with data:
     command: auth0 experimentation segments list
     exit-code: 0
@@ -100,5 +120,5 @@ tests:
       contains:
         - "segment_not_found"
 
-  # The segments created inline above (segment1, segment2) are removed by the
-  # shared cleanup step (test-cleanup.sh).
+  # The segments created inline above (segment1, segment2, segment-data) are
+  # removed by the shared cleanup step (test-cleanup.sh).

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/v3/management"
-	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -156,19 +155,8 @@ func listFeatureFlagsCmd(cli *cli) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				allFlags = append(allFlags, page.Results...)
-				for {
-					next, err := page.GetNextPage(cmd.Context())
-					if errors.Is(err, managementcore.ErrNoPages) {
-						break
-					}
-					if err != nil {
-						return err
-					}
-					allFlags = append(allFlags, next.Results...)
-					page = next
-				}
-				return nil
+				allFlags, err = collectPages(cmd.Context(), page)
+				return err
 			}); err != nil {
 				return fmt.Errorf("failed to list feature flags: %w", err)
 			}
@@ -568,6 +556,11 @@ func deleteFeatureFlagCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting feature flag(s)", ids, func(_ int, id string) error {
 				if id != "" {
+					// Delete returns 204 for an unknown ID, so check that it exists first.
+					if _, err := cli.apiv3.FeatureFlags.Get(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete feature flag %q: %w", id, err)
+					}
+
 					if err := cli.apiv3.FeatureFlags.Delete(cmd.Context(), id); err != nil {
 						return fmt.Errorf("failed to delete feature flag %q: %w", id, err)
 					}
@@ -1061,6 +1054,11 @@ func deleteVariationCmd(cli *cli) *cobra.Command {
 			// (e.g. the last one on a non-archived flag) doesn't block the rest.
 			if err := ansi.ProgressBar("Deleting variation(s)", inputs.VariationIDs, func(_ int, id string) error {
 				if id != "" {
+					// Delete returns 204 for an unknown ID, so check that it exists first.
+					if _, err := cli.apiv3.Variations.Get(cmd.Context(), inputs.FeatureFlagID, id); err != nil {
+						return fmt.Errorf("failed to delete variation %q: %w", id, err)
+					}
+
 					if err := cli.apiv3.Variations.Delete(cmd.Context(), inputs.FeatureFlagID, id); err != nil {
 						return fmt.Errorf("failed to delete variation %q: %w", id, err)
 					}
@@ -1091,9 +1089,13 @@ func (c *cli) featureFlagPickerOptions(ctx context.Context) (pickerOptions, erro
 	if err != nil {
 		return nil, err
 	}
+	all, err := collectPages(ctx, page)
+	if err != nil {
+		return nil, err
+	}
 
 	var opts pickerOptions
-	for _, ff := range page.Results {
+	for _, ff := range all {
 		label := fmt.Sprintf("%s %s", ff.GetName(), ansi.Faint("("+ff.GetID()+")"))
 		opts = append(opts, pickerOption{value: ff.GetID(), label: label})
 	}

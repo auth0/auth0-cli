@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/v3/management"
-	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -169,19 +168,8 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				allSegments = append(allSegments, page.Results...)
-				for {
-					next, err := page.GetNextPage(cmd.Context())
-					if errors.Is(err, managementcore.ErrNoPages) {
-						break
-					}
-					if err != nil {
-						return err
-					}
-					allSegments = append(allSegments, next.Results...)
-					page = next
-				}
-				return nil
+				allSegments, err = collectPages(cmd.Context(), page)
+				return err
 			}); err != nil {
 				return fmt.Errorf("failed to list segments: %w", err)
 			}
@@ -589,6 +577,11 @@ func deleteSegmentCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting segment(s)", ids, func(_ int, id string) error {
 				if id != "" {
+					// Delete returns 204 for an unknown ID, so check that it exists first.
+					if _, err := cli.apiv3.Segments.Get(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete segment %q: %w", id, err)
+					}
+
 					if err := cli.apiv3.Segments.Delete(cmd.Context(), id); err != nil {
 						return fmt.Errorf("failed to delete segment %q: %w", id, err)
 					}
@@ -608,9 +601,13 @@ func (c *cli) segmentPickerOptions(ctx context.Context) (pickerOptions, error) {
 	if err != nil {
 		return nil, err
 	}
+	all, err := collectPages(ctx, page)
+	if err != nil {
+		return nil, err
+	}
 
 	var opts pickerOptions
-	for _, s := range page.Results {
+	for _, s := range all {
 		label := fmt.Sprintf("%s %s", s.GetName(), ansi.Faint("("+s.GetID()+")"))
 		opts = append(opts, pickerOption{value: s.GetID(), label: label})
 	}

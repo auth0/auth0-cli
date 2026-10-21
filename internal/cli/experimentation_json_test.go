@@ -29,11 +29,12 @@ const experimentationFixtureSchemaDoc = `{
         "operationId": "post_experiment",
         "requestBody": {"content": {"application/json": {"schema": {
           "type": "object",
-          "required": ["name", "feature_flag_id", "authentication_flow"],
+          "required": ["name", "feature_flag_id", "authentication_flow", "allocation_strategy"],
           "properties": {
             "name": {"type": "string"},
             "feature_flag_id": {"type": "string"},
-            "authentication_flow": {"type": "string"}
+            "authentication_flow": {"type": "string"},
+            "allocation_strategy": {"type": "string", "enum": ["percentage", "segment"]}
           }
         }}}}
       }
@@ -44,6 +45,16 @@ const experimentationFixtureSchemaDoc = `{
         "requestBody": {"content": {"application/json": {"schema": {
           "type": "object",
           "properties": {"name": {"type": "string"}, "status": {"type": "string"}}
+        }}}}
+      }
+    },
+    "/experimentation/experiments/{id}/advance-ramp": {
+      "post": {
+        "operationId": "post_advance_ramp",
+        "requestBody": {"content": {"application/json": {"schema": {
+          "type": "object",
+          "required": ["target_level"],
+          "properties": {"target_level": {"type": "integer", "minimum": 0, "maximum": 100}}
         }}}}
       }
     },
@@ -163,8 +174,8 @@ func TestExperimentationWriteCmdsData(t *testing.T) {
 		{
 			name:       "experiments create",
 			newCmd:     createExperimentCmd,
-			validData:  `{"name":"exp","feature_flag_id":"flg_1","authentication_flow":"authentication"}`,
-			badData:    `{"name":"exp"}`,
+			validData:  `{"name":"exp","feature_flag_id":"flg_1","authentication_flow":"authentication","allocation_strategy":"percentage"}`,
+			badData:    `{"name":"exp","feature_flag_id":"flg_1","authentication_flow":"authentication"}`,
 			wantMethod: http.MethodPost,
 			wantURI:    "/experimentation/experiments",
 		},
@@ -176,6 +187,15 @@ func TestExperimentationWriteCmdsData(t *testing.T) {
 			badData:    `{"name":123}`,
 			wantMethod: http.MethodPatch,
 			wantURI:    "/experimentation/experiments/exp_1",
+		},
+		{
+			name:       "experiments advance-ramp",
+			newCmd:     advanceRampExperimentCmd,
+			args:       []string{"exp_1"},
+			validData:  `{"target_level":25}`,
+			badData:    `{"target_level":150}`,
+			wantMethod: http.MethodPost,
+			wantURI:    "/experimentation/experiments/exp_1/advance-ramp",
 		},
 		{
 			name:       "feature-flags create",

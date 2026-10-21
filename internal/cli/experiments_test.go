@@ -242,25 +242,13 @@ func TestExperimentsCreateCmd(t *testing.T) {
 			expectedError: `required flag(s) "authentication-flow" not set`,
 		},
 		{
-			name: "it successfully creates a draft without an allocation strategy or allocations",
+			name: "it returns an error when --allocation-strategy is missing",
 			args: []string{
 				"--name", "draft-test",
 				"--feature-flag-id", "ff_001",
 				"--authentication-flow", "authentication",
 			},
-			apiResponse: &management.CreateExperimentResponseContent{
-				ID:            "exp_draft",
-				Name:          "draft-test",
-				Status:        management.ExperimentStatusEnumDraft,
-				FeatureFlagID: "ff_001",
-			},
-			assertOutput: func(t testing.TB, out string) {
-				assert.Contains(t, out, "exp_draft")
-			},
-			assertRequest: func(t testing.TB, req *management.CreateExperimentRequestContent) {
-				assert.Nil(t, req.AllocationStrategy)
-				assert.Empty(t, req.Allocations)
-			},
+			expectedError: `required flag(s) "allocation-strategy" not set`,
 		},
 		{
 			name: "it successfully creates a draft with an allocation strategy but no allocations",
@@ -280,9 +268,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				assert.Contains(t, out, "exp_draft")
 			},
 			assertRequest: func(t testing.TB, req *management.CreateExperimentRequestContent) {
-				if assert.NotNil(t, req.AllocationStrategy) {
-					assert.Equal(t, management.AllocationStrategyEnumPercentage, *req.AllocationStrategy)
-				}
+				assert.Equal(t, management.AllocationStrategyEnumPercentage, req.AllocationStrategy)
 				assert.Empty(t, req.Allocations)
 			},
 		},
@@ -294,7 +280,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--authentication-flow", "authentication",
 				"--allocations", `[{"variation_id":"vid_001","weight":100,"is_control":true}]`,
 			},
-			expectedError: "--allocations requires --allocation-strategy",
+			expectedError: `required flag(s) "allocation-strategy" not set`,
 		},
 		{
 			name: "it returns an error when --levels is set without --allocation-strategy",
@@ -304,7 +290,7 @@ func TestExperimentsCreateCmd(t *testing.T) {
 				"--authentication-flow", "authentication",
 				"--levels", "10,50,100",
 			},
-			expectedError: "ramp levels require --allocation-strategy percentage",
+			expectedError: `required flag(s) "allocation-strategy" not set`,
 		},
 		{
 			name: "it returns an error when --default-config is invalid",
@@ -715,55 +701,66 @@ func TestExperimentsUpdateCmdRendersFullResponse(t *testing.T) {
 func TestExperimentsDeleteCmd(t *testing.T) {
 	const expID = "exp_abc123"
 
-	t.Run("it successfully deletes an experiment with --force", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+	tests := []struct {
+		name          string
+		getErr        error
+		deleteErr     error
+		expectDelete  bool
+		expectedError string
+	}{
+		{
+			name:         "it successfully deletes an experiment with --force",
+			expectDelete: true,
+		},
+		{
+			// Delete returns 204 for an unknown ID, so the 404 comes from the lookup.
+			name:          "it returns the not-found error for an unknown experiment",
+			getErr:        errors.New("404 Not Found: experiment_not_found"),
+			expectedError: `failed to delete experiment "exp_abc123": 404 Not Found: experiment_not_found`,
+		},
+		{
+			name:          "it returns an error if the delete call fails",
+			deleteErr:     errors.New("500 Internal Server Error"),
+			expectDelete:  true,
+			expectedError: `failed to delete experiment "exp_abc123": 500 Internal Server Error`,
+		},
+	}
 
-		experimentAPI := mock.NewMockExperimentsAPI(ctrl)
-		experimentAPI.EXPECT().
-			Delete(gomock.Any(), expID).
-			Return(nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{Experiments: experimentAPI},
-			force: true,
-		}
+			experimentAPI := mock.NewMockExperimentsAPI(ctrl)
+			experimentAPI.EXPECT().
+				Get(gomock.Any(), expID).
+				Return(&management.GetExperimentResponseContent{ID: expID}, test.getErr)
+			if test.expectDelete {
+				experimentAPI.EXPECT().
+					Delete(gomock.Any(), expID).
+					Return(test.deleteErr)
+			}
 
-		cmd := deleteExperimentCmd(cli)
-		cmd.SetArgs([]string{expID})
-		err := cmd.Execute()
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				apiv3: &auth0.APIV3{Experiments: experimentAPI},
+				force: true,
+			}
 
-		assert.NoError(t, err)
-	})
+			cmd := deleteExperimentCmd(cli)
+			cmd.SetArgs([]string{expID})
+			err := cmd.Execute()
 
-	t.Run("it returns an error if the API call fails", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		experimentAPI := mock.NewMockExperimentsAPI(ctrl)
-		experimentAPI.EXPECT().
-			Delete(gomock.Any(), expID).
-			Return(errors.New("500 Internal Server Error"))
-
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{Experiments: experimentAPI},
-			force: true,
-		}
-
-		cmd := deleteExperimentCmd(cli)
-		cmd.SetArgs([]string{expID})
-		err := cmd.Execute()
-
-		assert.EqualError(t, err, `failed to delete experiment "exp_abc123": 500 Internal Server Error`)
-	})
+			if test.expectedError != "" {
+				assert.EqualError(t, err, test.expectedError)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestExperimentsValidateCmd(t *testing.T) {

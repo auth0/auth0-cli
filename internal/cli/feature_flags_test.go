@@ -457,55 +457,66 @@ func TestFeatureFlagsUpdateCmdClearsDescription(t *testing.T) {
 func TestFeatureFlagsDeleteCmd(t *testing.T) {
 	const flagID = "ff_abc123"
 
-	t.Run("it successfully deletes a feature flag with --force", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+	tests := []struct {
+		name          string
+		getErr        error
+		deleteErr     error
+		expectDelete  bool
+		expectedError string
+	}{
+		{
+			name:         "it successfully deletes a feature flag with --force",
+			expectDelete: true,
+		},
+		{
+			// Delete returns 204 for an unknown ID, so the 404 comes from the lookup.
+			name:          "it returns the not-found error for an unknown feature flag",
+			getErr:        errors.New("404 Not Found: feature_flag_not_found"),
+			expectedError: `failed to delete feature flag "ff_abc123": 404 Not Found: feature_flag_not_found`,
+		},
+		{
+			name:          "it returns an error if the delete call fails",
+			deleteErr:     errors.New("500 Internal Server Error"),
+			expectDelete:  true,
+			expectedError: `failed to delete feature flag "ff_abc123": 500 Internal Server Error`,
+		},
+	}
 
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			Delete(gomock.Any(), flagID).
-			Return(nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-			force: true,
-		}
+			featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+			featureFlagAPI.EXPECT().
+				Get(gomock.Any(), flagID).
+				Return(&management.GetFeatureFlagResponseContent{}, test.getErr)
+			if test.expectDelete {
+				featureFlagAPI.EXPECT().
+					Delete(gomock.Any(), flagID).
+					Return(test.deleteErr)
+			}
 
-		cmd := deleteFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID})
-		err := cmd.Execute()
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
+				force: true,
+			}
 
-		assert.NoError(t, err)
-	})
+			cmd := deleteFeatureFlagCmd(cli)
+			cmd.SetArgs([]string{flagID})
+			err := cmd.Execute()
 
-	t.Run("it returns an error if the API call fails", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			Delete(gomock.Any(), flagID).
-			Return(errors.New("500 Internal Server Error"))
-
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-			force: true,
-		}
-
-		cmd := deleteFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID})
-		err := cmd.Execute()
-
-		assert.EqualError(t, err, `failed to delete feature flag "ff_abc123": 500 Internal Server Error`)
-	})
+			if test.expectedError != "" {
+				assert.EqualError(t, err, test.expectedError)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestFeatureFlagPickerOptions(t *testing.T) {
@@ -969,6 +980,7 @@ func TestVariationsDeleteCmd(t *testing.T) {
 		name          string
 		args          []string
 		agentMode     bool
+		gets          map[string]error // variation ID -> Get result
 		deletes       map[string]error // variation ID -> Delete result
 		expectedError []string
 	}{
@@ -993,17 +1005,27 @@ func TestVariationsDeleteCmd(t *testing.T) {
 			expectedError: []string{`failed to delete variation "var_2"`, "500 Internal Server Error"},
 		},
 		{
-			// The API returns 204 for an unknown variation, so the CLI does too.
-			name:    "it succeeds for an unknown variation, as the API does",
-			args:    []string{flagID, "var_missing", "--force"},
-			deletes: map[string]error{"var_missing": nil},
+			// Delete returns 204 for an unknown ID, so the 404 comes from the lookup.
+			name:          "it returns the not-found error for an unknown variation",
+			args:          []string{flagID, "var_missing", "--force"},
+			gets:          map[string]error{"var_missing": errors.New("404 Not Found: variation_not_found")},
+			expectedError: []string{`failed to delete variation "var_missing"`, "variation_not_found"},
 		},
 		{
-			// The API returns 404 when the feature flag itself doesn't exist.
+			name: "it deletes the known variations and reports the unknown ones",
+			args: []string{flagID, "var_1", "var_missing", "--force"},
+			gets: map[string]error{
+				"var_1":       nil,
+				"var_missing": errors.New("404 Not Found: variation_not_found"),
+			},
+			deletes:       map[string]error{"var_1": nil},
+			expectedError: []string{`failed to delete variation "var_missing"`, "variation_not_found"},
+		},
+		{
 			name:          "it reports the API's not-found error for an unknown feature flag",
 			args:          []string{flagID, "var_1", "--force"},
-			deletes:       map[string]error{"var_1": errors.New("404 Not Found: Feature flag not found")},
-			expectedError: []string{`failed to delete variation "var_1"`, "404 Not Found"},
+			gets:          map[string]error{"var_1": errors.New("404 Not Found: feature_flag_not_found")},
+			expectedError: []string{`failed to delete variation "var_1"`, "feature_flag_not_found"},
 		},
 		{
 			name:          "it requires --force in agent mode",
@@ -1031,7 +1053,13 @@ func TestVariationsDeleteCmd(t *testing.T) {
 
 			variationsAPI := mock.NewMockVariationsAPI(ctrl)
 			for id, err := range test.deletes {
+				if _, ok := test.gets[id]; !ok {
+					variationsAPI.EXPECT().Get(gomock.Any(), flagID, id).Return(&management.GetVariationResponseContent{}, nil)
+				}
 				variationsAPI.EXPECT().Delete(gomock.Any(), flagID, id).Return(err)
+			}
+			for id, err := range test.gets {
+				variationsAPI.EXPECT().Get(gomock.Any(), flagID, id).Return(&management.GetVariationResponseContent{}, err)
 			}
 
 			cli := &cli{

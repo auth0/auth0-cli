@@ -9,6 +9,9 @@ Advance a ramp experiment to the next exposure level in its schedule.
 
 The target level must be the immediate next level configured on the experiment. Configure ramp levels with `auth0 experimentation experiments create --levels` (or `update --levels`).
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 experimentation experiments advance-ramp [flags]
@@ -19,14 +22,23 @@ auth0 experimentation experiments advance-ramp [flags]
 ```
   auth0 experimentation experiments advance-ramp
   auth0 experimentation experiments advance-ramp <experiment-id> --target-level 25
+
+  # Discover the payload schema
+  auth0 experimentation experiments advance-ramp --schema
+  auth0 experimentation experiments advance-ramp --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 experimentation experiments advance-ramp <experiment-id> --data '{"target_level":25}'
 ```
 
 
 ## Flags
 
 ```
+      --data string        JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json               Output in json format.
       --json-compact       Output in compact json format.
+      --schema             Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
       --target-level int   The target percentage level to advance to. Must be the immediate next level in the schedule.
 ```
 
