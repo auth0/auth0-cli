@@ -290,6 +290,50 @@ tests:
       contains:
         - VALID
 
+  # ─── Ramp experiment ───────────────────────────────────────────────────────────
+  # Walks a 10 -> 50 -> 100 schedule with advance-ramp. The level rules (next
+  # level only, upward only) are enforced by the API.
+
+  0273 - given a ramp experiment, it successfully activates it at the first level:
+    command: auth0 experimentation experiments update $(./test/integration/scripts/get-ramp-experiment-id.sh) --status active --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        status: "active"
+        current_level: "10"
+
+  0274 - advance-ramp returns an error when the target skips a scheduled level:
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-ramp-experiment-id.sh) --target-level 100 --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "experiment_advance_skip_not_allowed"
+
+  0275 - given an active ramp experiment, it successfully advances to the next level:
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-ramp-experiment-id.sh) --target-level 50 --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        from_level: "10"
+        to_level: "50"
+        current_level: "50"
+
+  0276 - advance-ramp returns an error when the target is below the current level:
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-ramp-experiment-id.sh) --target-level 10 --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "experiment_ramp_up_only"
+
+  0277 - given an active ramp experiment, it successfully advances from --data:
+    command: auth0 experimentation experiments advance-ramp $(./test/integration/scripts/get-ramp-experiment-id.sh) --data '{"target_level":100}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        from_level: "50"
+        to_level: "100"
+        current_level: "100"
+
   # ─── Cleanup ──────────────────────────────────────────────────────────────────
 
   028 - it successfully deletes the test experiment:
@@ -304,6 +348,6 @@ tests:
         - "experiment_not_found"
 
   # The experiments created inline above (experiment1, experiment2,
-  # experiment-data, seg-experiment1), the helper-created segment experiment, the
-  # shared feature flag / variations, and the experiments-suite segment are removed
-  # by the shared cleanup (test-cleanup.sh).
+  # experiment-data, seg-experiment1), the helper-created segment and ramp
+  # experiments, the shared feature flag / variations, and the experiments-suite
+  # segment are removed by the shared cleanup (test-cleanup.sh).
