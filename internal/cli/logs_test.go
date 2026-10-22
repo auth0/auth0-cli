@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -56,7 +57,7 @@ func TestTailLogsCommand(t *testing.T) {
 			)
 
 		logsAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(
 				[]*management.Log{
 					{
@@ -74,7 +75,7 @@ func TestTailLogsCommand(t *testing.T) {
 			)
 
 		logsAPI.EXPECT().
-			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(nil, fmt.Errorf("generic error"))
 
 		expectedResult := `TYPE                       DESCRIPTION                                               DATE                    CONNECTION              CLIENT                  
@@ -102,6 +103,51 @@ API Operation              Update branding settings                             
 		assert.Contains(t, message.String(), "Failed to get latest logs: generic error")
 		assert.Equal(t, expectedResult, result.String())
 	})
+
+	t.Run("it keeps the log ID cursor when polling with a filter", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		logsAPI := mock.NewMockLogAPI(ctrl)
+		logsAPI.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*management.Log{{LogID: auth0.String("354234")}}, nil)
+
+		var pollOptions []management.RequestOption
+		logsAPI.EXPECT().
+			List(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, opts ...management.RequestOption) ([]*management.Log, error) {
+				pollOptions = opts
+				return nil, fmt.Errorf("generic error")
+			})
+
+		cli := &cli{
+			renderer: &display.Renderer{
+				MessageWriter: &bytes.Buffer{},
+				ResultWriter:  &bytes.Buffer{},
+			},
+			api: &auth0.API{Log: logsAPI},
+		}
+
+		cmd := tailLogsCmd(cli)
+		cmd.SetArgs([]string{"--number", "90", "--filter", "type:f"})
+		err := cmd.Execute()
+		assert.NoError(t, err)
+
+		api, err := management.New("example.auth0.com", management.WithStaticToken("token"))
+		assert.NoError(t, err)
+		request, err := api.NewRequest(context.Background(), "GET", api.URI("logs"), nil, pollOptions...)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "log_id:[354234 TO *] AND (type:f)", request.URL.Query().Get("q"))
+	})
+}
+
+func TestTailLogsQuery(t *testing.T) {
+	assert.Equal(t, "", tailLogsQuery("", ""))
+	assert.Equal(t, "type:f", tailLogsQuery("", "type:f"))
+	assert.Equal(t, "log_id:[354234 TO *]", tailLogsQuery("354234", ""))
+	assert.Equal(t, "log_id:[354234 TO *] AND (type:f)", tailLogsQuery("354234", "type:f"))
 }
 
 func TestDedupeLogs(t *testing.T) {
