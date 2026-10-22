@@ -203,12 +203,8 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 						management.Parameter("sort", "date:-1"),
 					}
 
-					if lastLogID != "" {
-						queryParams = append(queryParams, management.Query(fmt.Sprintf("log_id:[%s TO *]", lastLogID)))
-					}
-
-					if inputs.Filter != "" {
-						queryParams = append(queryParams, management.Query(inputs.Filter))
+					if query := tailLogsQuery(lastLogID, inputs.Filter); query != "" {
+						queryParams = append(queryParams, management.Query(query))
 					}
 
 					list, err := cli.api.Log.List(cmd.Context(), queryParams...)
@@ -242,6 +238,20 @@ func tailLogsCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	return cmd
+}
+
+// tailLogsQuery builds the search query for a tail poll. Only one query can be
+// sent per request, so the cursor and the user's filter are combined into a single
+// expression instead of one replacing the other.
+func tailLogsQuery(lastLogID, filter string) string {
+	switch {
+	case lastLogID != "" && filter != "":
+		return fmt.Sprintf("log_id:[%s TO *] AND (%s)", lastLogID, filter)
+	case lastLogID != "":
+		return fmt.Sprintf("log_id:[%s TO *]", lastLogID)
+	default:
+		return filter
+	}
 }
 
 func getLatestLogs(ctx context.Context, cli *cli, numRequested int, filter string) ([]*management.Log, error) {
