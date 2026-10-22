@@ -31,9 +31,16 @@ type Config struct {
 
 	path string
 
-	InstallID     string  `json:"install_id,omitempty"`
-	DefaultTenant string  `json:"default_tenant"`
-	Tenants       Tenants `json:"tenants"`
+	InstallID     string           `json:"install_id,omitempty"`
+	DefaultTenant string           `json:"default_tenant"`
+	Tenants       Tenants          `json:"tenants"`
+	Registries    []RegistryConfig `json:"registries,omitempty"`
+}
+
+// RegistryConfig configures a plugin registry.
+type RegistryConfig struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 // Initialize will load the config settings into memory.

@@ -1,0 +1,15 @@
+The trusted registry root
+
+The file root.json in this directory is the TUF root metadata that this build of
+the CLI trusts as the start of the chain of trust of the plugin registry. It is
+embedded in the CLI. Every later root, and every key that signs the index, is
+verified against it, so nothing at runtime can add to it or replace it: no
+environment variable, config entry or flag.
+
+The root is the first version of the root metadata of the registry. A client
+that embeds it walks forward to the current root by itself, so root keys and the
+keys of the other roles can be rotated without a new CLI release, as long as
+each new root is signed by a threshold of the keys of the root before it.
+
+No production root is embedded yet, see the TODO in ../root.go. Until then every
+verification fails with ErrNoTrustedKeys, which is the safe default.
