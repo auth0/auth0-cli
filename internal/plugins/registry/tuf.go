@@ -16,6 +16,8 @@ import (
 	"github.com/theupdateframework/go-tuf/v2/metadata/config"
 	"github.com/theupdateframework/go-tuf/v2/metadata/trustedmetadata"
 	"github.com/theupdateframework/go-tuf/v2/metadata/updater"
+
+	"github.com/auth0/auth0-cli/internal/plugins"
 )
 
 // fetchMetadata runs the TUF client workflow against the registry, starting from
@@ -277,7 +279,7 @@ func (f *fetcher) DownloadFile(urlPath string, maxLength int64, _ time.Duration)
 	target.RawQuery = f.query
 
 	data, err := f.client.download(f.ctx, target.String(), limit)
-	if errors.Is(err, errTooLarge) {
+	if errors.Is(err, plugins.ErrTooLarge) {
 		return nil, &metadata.ErrDownloadLengthMismatch{Msg: fmt.Sprintf("download failed for %s, the body is larger than the allowed %d bytes", urlPath, limit)}
 	}
 
