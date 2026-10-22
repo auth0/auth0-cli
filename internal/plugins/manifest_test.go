@@ -215,8 +215,17 @@ func TestPlatform(t *testing.T) {
 			assert.Equal(t, test.os, test.platform.OS())
 			assert.Equal(t, test.arch, test.platform.Arch())
 			assert.Equal(t, test.libc, test.platform.Libc())
+
+			found, ok := PlatformFor(test.os, test.arch, test.libc)
+			assert.Equal(t, test.os != "", ok)
+			assert.Equal(t, test.platform == found, ok)
 		})
 	}
+
+	t.Run("finds no platform for a Linux build without a C library", func(t *testing.T) {
+		_, ok := PlatformFor("linux", "x64", "")
+		assert.False(t, ok)
+	})
 
 	t.Run("lists all seven platforms in manifest order", func(t *testing.T) {
 		assert.Len(t, AllPlatforms(), 7)
@@ -579,6 +588,9 @@ func TestParseManifest_Invalid(t *testing.T) {
 		{name: "a carriage return", value: "a\rb"},
 		{name: "a null character", value: "a\x00b"},
 		{name: "a delete character", value: "a\u007fb"},
+		{name: "a C1 control", value: "a\u0080b"},
+		{name: "an 8-bit CSI escape", value: "a\u009bb"},
+		{name: "the last C1 control", value: "a\u009fb"},
 		{name: "a line separator", value: "a\u2028b"},
 		{name: "a paragraph separator", value: "a\u2029b"},
 	}
@@ -652,6 +664,19 @@ func TestValidationError(t *testing.T) {
 		err := &ValidationError{Errors: []string{"a: bad", "b: worse"}}
 		assert.Equal(t, "a: bad\nb: worse", err.Error())
 	})
+}
+
+func TestCheckTimeout(t *testing.T) {
+	for _, valid := range []string{"30s", "10m", "1h30m", "1ms"} {
+		assert.NoError(t, CheckTimeout(valid), valid)
+	}
+
+	for _, invalid := range []string{"soon", "0s", "-5s", "10", "1d"} {
+		err := CheckTimeout(invalid)
+
+		require.Error(t, err, invalid)
+		assert.Equal(t, `"`+invalid+`" must be a Go duration greater than zero, for example "30s" or "10m"`, err.Error())
+	}
 }
 
 func TestItemPath(t *testing.T) {

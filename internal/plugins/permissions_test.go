@@ -310,6 +310,7 @@ var trickyStrings = []string{
 	"backspace\bform\ffeed",
 	"control\x00\x01\x1f",
 	"delete\x7f",
+	"c1 controls\u0080\u009b\u009f",
 	"unicode é世界😀",
 	"separators\u2028\u2029",
 	"invalid utf8 \xff\xfe end",

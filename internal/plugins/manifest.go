@@ -7,12 +7,10 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -81,6 +79,20 @@ func AllPlatforms() []Platform {
 	}
 
 	return platforms
+}
+
+// PlatformFor returns the platform with the given operating system, CPU
+// architecture and C library, written the way the manifest names them. The C
+// library is empty for every platform that is not a Linux one. It reports false
+// when there is no such platform.
+func PlatformFor(os, arch, libc string) (Platform, bool) {
+	for _, info := range knownPlatforms {
+		if info.os == os && info.arch == arch && info.libc == libc {
+			return info.platform, true
+		}
+	}
+
+	return "", false
 }
 
 // info returns the parts of the platform, or the zero value for an unknown one.
@@ -249,11 +261,15 @@ var compileSchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
 })
 
 // decodeDocument decodes data into generic values, with numbers kept as
-// json.Number, or reports that data is not valid JSON.
+// json.Number, or reports that data is not valid JSON or has a duplicate key.
 func decodeDocument(data []byte) (any, error) {
 	document, err := jsonschema.UnmarshalJSON(bytes.NewReader(data))
 	if err != nil {
 		return nil, &ValidationError{Errors: []string{fmt.Sprintf("manifest is not valid JSON: %v", err)}}
+	}
+
+	if err := RejectDuplicateKeys(data); err != nil {
+		return nil, &ValidationError{Errors: []string{err.Error()}}
 	}
 
 	return document, nil
@@ -283,11 +299,11 @@ func ParseManifest(data []byte) (*Manifest, error) {
 	}
 
 	if err := schema.Validate(instance); err != nil {
-		var schemaErr *jsonschema.ValidationError
-		if !errors.As(err, &schemaErr) {
-			return nil, err
+		if problems := SchemaProblems(err); problems != nil {
+			return nil, &ValidationError{Errors: problems}
 		}
-		return nil, &ValidationError{Errors: collectSchemaErrors(schemaErr)}
+
+		return nil, err
 	}
 
 	var manifest Manifest
@@ -329,19 +345,18 @@ func (m *Manifest) Name() string {
 
 // semanticErrors runs the checks that JSON Schema cannot express.
 func (m *Manifest) semanticErrors() []string {
-	var found problemList
+	var found ProblemList
 
 	commandNames := make(map[string]string, len(m.Commands))
 
 	for i, command := range m.Commands {
 		commandPath := itemPath("", "commands", i)
 
-		found.checkUnique(commandNames, command.Name, commandPath, "name", "command name")
+		found.CheckUnique(commandNames, command.Name, commandPath, "name", "command name")
 
 		if command.Timeout != "" {
-			timeout, err := time.ParseDuration(command.Timeout)
-			if err != nil || timeout <= 0 {
-				found.addf("%s.timeout: %q must be a Go duration greater than zero, for example \"30s\" or \"10m\"", commandPath, command.Timeout)
+			if err := CheckTimeout(command.Timeout); err != nil {
+				found.Addf("%s.timeout: %v", commandPath, err)
 			}
 		}
 
@@ -352,18 +367,18 @@ func (m *Manifest) semanticErrors() []string {
 			flagPath := itemPath(commandPath, "flags", j)
 
 			if slices.Contains(reservedFlagNames, flag.Name) {
-				found.addf("%s.name: flag %q collides with a flag owned by the CLI", flagPath, flag.Name)
+				found.Addf("%s.name: flag %q collides with a flag owned by the CLI", flagPath, flag.Name)
 			}
-			found.checkUnique(flagNames, flag.Name, flagPath, "name", "flag name")
+			found.CheckUnique(flagNames, flag.Name, flagPath, "name", "flag name")
 
 			if flag.Shorthand == "" {
 				continue
 			}
 
 			if slices.Contains(reservedFlagShorthands, flag.Shorthand) {
-				found.addf("%s.shorthand: shorthand %q collides with a shorthand owned by the CLI", flagPath, flag.Shorthand)
+				found.Addf("%s.shorthand: shorthand %q collides with a shorthand owned by the CLI", flagPath, flag.Shorthand)
 			}
-			found.checkUnique(flagShorthands, flag.Shorthand, flagPath, "shorthand", "shorthand")
+			found.CheckUnique(flagShorthands, flag.Shorthand, flagPath, "shorthand", "shorthand")
 		}
 
 		if command.Permissions == nil {
@@ -375,7 +390,7 @@ func (m *Manifest) semanticErrors() []string {
 				return strings.HasPrefix(env.Name, prefix)
 			})
 			if reserved {
-				found.addf("%s.name: %q uses a prefix reserved by the CLI (%s)",
+				found.Addf("%s.name: %q uses a prefix reserved by the CLI (%s)",
 					itemPath(commandPath+".permissions", "env", j), env.Name, strings.Join(reservedEnvPrefixes, ", "))
 			}
 		}
