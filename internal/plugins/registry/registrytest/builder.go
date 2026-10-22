@@ -1,8 +1,6 @@
 package registrytest
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -16,7 +14,7 @@ import (
 // NewVersion returns a valid record for the given version, with one command, no
 // permissions, and an artifact for macOS on Apple silicon and for Linux on x64.
 func NewVersion(version string) registry.VersionRecord {
-	sum := sha256.Sum256([]byte(version))
+	sum := SHA256Hex([]byte(version))
 
 	return Seal(registry.VersionRecord{
 		Version:   version,
@@ -32,12 +30,12 @@ func NewVersion(version string) registry.VersionRecord {
 			{
 				OS: "darwin", Arch: "arm64",
 				URL:    "https://downloads.example.com/" + version + "/plugin-darwin-arm64",
-				SHA256: hex.EncodeToString(sum[:]), Size: 1024, Format: registry.ArtifactFormatRaw, Bin: "plugin",
+				SHA256: sum, Size: 1024, Format: registry.ArtifactFormatRaw, Bin: "plugin",
 			},
 			{
 				OS: "linux", Arch: "x64", Libc: "glibc",
 				URL:    "https://downloads.example.com/" + version + "/plugin-linux-x64.tar.gz",
-				SHA256: hex.EncodeToString(sum[:]), Size: 2048, Format: registry.ArtifactFormatTarGz, Bin: "plugin",
+				SHA256: sum, Size: 2048, Format: registry.ArtifactFormatTarGz, Bin: "plugin",
 			},
 		},
 	})
@@ -133,9 +131,8 @@ func (b *IndexBuilder) AddRefPlugin(plugin registry.Plugin) *IndexBuilder {
 	filePath := path.Join("plugins", name+".json")
 	b.files[filePath] = file
 
-	sum := sha256.Sum256(file)
 	plugin.Versions = nil
-	plugin.Ref = &registry.Ref{Path: filePath, SHA256: hex.EncodeToString(sum[:])}
+	plugin.Ref = &registry.Ref{Path: filePath, SHA256: SHA256Hex(file)}
 
 	return b.AddPlugin(plugin)
 }

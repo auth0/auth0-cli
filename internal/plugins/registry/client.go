@@ -13,6 +13,9 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/auth0/auth0-cli/internal/plugins"
+	"github.com/auth0/auth0-cli/internal/plugins/filelock"
 )
 
 // The limits on what the client reads, so that a misbehaving registry cannot
@@ -22,6 +25,10 @@ const (
 	maxSignatureBytes = 16 << 10
 	maxStateBytes     = 16 << 10
 )
+
+// lockFileName is the name of the file in the cache directory that processes
+// lock while they refresh the registry.
+const lockFileName = ".lock"
 
 const (
 	// The timeout of a single request of the default HTTP client.
@@ -186,6 +193,17 @@ func (c *Client) lock(ctx context.Context) (release func(), err error) {
 	}
 
 	return acquireLock(ctx, filepath.Join(c.Dir, lockFileName))
+}
+
+// acquireLock takes the lock at path, and reports a lock that stays busy as
+// ErrBusy, wrapping the error of the context when that is what ended the wait.
+func acquireLock(ctx context.Context, path string) (release func(), err error) {
+	release, err = filelock.Acquire(ctx, path, ErrBusy)
+	if err != nil && !errors.Is(err, ErrBusy) {
+		return nil, fmt.Errorf("failed to lock the registry cache: %w", err)
+	}
+
+	return release, err
 }
 
 // fetchVerified downloads the index and its signature, verifies them, parses
@@ -539,9 +557,9 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 		return nil, fmt.Errorf("%w at %s: the server answered %s", ErrOffline, rawURL, response.Status)
 	}
 
-	data, err := readCapped(response.Body, limit)
+	data, err := plugins.ReadCapped(response.Body, limit)
 	switch {
-	case errors.Is(err, errTooLarge):
+	case errors.Is(err, plugins.ErrTooLarge):
 		return nil, newInvalidError(rawURL, []string{fmt.Sprintf("(root): larger than the allowed %d bytes", limit)})
 	case err != nil:
 		return nil, fmt.Errorf("%w at %s: %w", ErrOffline, rawURL, err)

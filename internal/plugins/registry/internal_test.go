@@ -14,11 +14,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/auth0/auth0-cli/internal/plugins"
 )
 
 // StageTempFile is the function that stores the files of the cache, so that a
 // test can wrap it.
-var StageTempFile = stageTempFile
+var StageTempFile = plugins.StageTempFile
 
 // SetStageFile replaces the function that writes a file of the cache to a
 // temporary file, and returns a function that puts the original back.

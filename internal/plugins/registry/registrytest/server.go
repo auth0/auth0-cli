@@ -1,7 +1,10 @@
 package registrytest
 
 import (
+	"context"
 	"crypto/ed25519"
+	"crypto/tls"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -167,4 +170,20 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 	default:
 		_, _ = w.Write(answer.body)
 	}
+}
+
+// AnyHostClient returns an HTTP client that sends every request to this server,
+// whatever host the URL names, and accepts the certificate of the server for any
+// host name. A test can then use the real download hosts in artifact URLs and
+// in redirects, so that the code under test applies its host rules unchanged.
+func (s *Server) AnyHostClient() *http.Client {
+	address := s.server.Listener.Addr().String()
+
+	return &http.Client{Transport: &http.Transport{
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, network, address)
+		},
+		// The server presents a throwaway certificate for example.com and 127.0.0.1.
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec // Only for tests that talk to the test server.
+	}}
 }

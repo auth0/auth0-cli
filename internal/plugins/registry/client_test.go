@@ -464,7 +464,7 @@ func TestClient_Versions(t *testing.T) {
 
 				plugin := refPlugin()
 				plugin.Versions = nil
-				plugin.Ref = &registry.Ref{Path: "plugins/checkmate.json", SHA256: sha256Hex(file)}
+				plugin.Ref = &registry.Ref{Path: "plugins/checkmate.json", SHA256: registrytest.SHA256Hex(file)}
 				f.publish(registrytest.NewIndexBuilder().AddPlugin(plugin))
 				f.server.Set("/plugins/checkmate.json", file)
 
