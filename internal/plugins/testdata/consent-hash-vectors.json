@@ -1,0 +1,151 @@
+{
+  "description": "Test vectors for the consent hash returned by Manifest.PermissionsHash. Each vector lists the commands of a manifest (name, interactive and permissions) and the expected hash. The hash is the SHA-256 of the canonical JSON described in the PermissionsHash documentation. This file is shared with the plugin catalog so that both implementations produce the same hashes.",
+  "vectors": [
+    {
+      "name": "example manifest from valid-manifest.json",
+      "commands": [
+        {
+          "name": "checkmate",
+          "interactive": false,
+          "permissions": {
+            "scopes": [
+              "read:tenant_settings",
+              "read:clients",
+              "read:connections"
+            ],
+            "hosts": [
+              {
+                "host": "api.github.com",
+                "reason": "Check SDK versions against GitHub advisories"
+              }
+            ],
+            "files": [
+              {
+                "path": "$CWD",
+                "access": "write",
+                "reason": "Save the audit report"
+              }
+            ],
+            "env": [
+              {
+                "name": "AWS_PROFILE",
+                "reason": "Use the caller's AWS profile"
+              }
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:4051f9072e71ee6925a0e05870c9345bb1f8534b216f86a3969b8750a6350b07"
+    },
+    {
+      "name": "command without permissions",
+      "commands": [
+        {
+          "name": "plain",
+          "interactive": false
+        }
+      ],
+      "hash": "sha256:9bc7b698c01b0679b7f3e630a03feb4e6fe19869921900f11eb5f69c4456d6cf"
+    },
+    {
+      "name": "unicode text in reasons and paths",
+      "commands": [
+        {
+          "name": "audit",
+          "interactive": false,
+          "permissions": {
+            "scopes": [
+              "read:clients"
+            ],
+            "hosts": [
+              {
+                "host": "api.github.com",
+                "reason": "Prüfe SDK-Versionen"
+              }
+            ],
+            "files": [
+              {
+                "path": "$CWD/Berichte",
+                "access": "read",
+                "reason": "Lese vorhandene Berichte für den Vergleich"
+              }
+            ],
+            "env": [
+              {
+                "name": "HOME",
+                "reason": "Finde die Konfiguration im Benutzerverzeichnis"
+              }
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:65147705407a2d292fc0c928f6983360687a9d175ac60c24f74bd1ebc5c4562e"
+    },
+    {
+      "name": "quotes and a backslash in a reason",
+      "commands": [
+        {
+          "name": "export",
+          "interactive": false,
+          "permissions": {
+            "hosts": [
+              {
+                "host": "example.com",
+                "reason": "Send the \"final\" report to C:\\reports"
+              }
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:00408b6989c33e7f22be91047f922f1351001b12a0c9eb67ceccbc5b9e8fca61"
+    },
+    {
+      "name": "two commands where both are not interactive",
+      "commands": [
+        {
+          "name": "alpha",
+          "interactive": false,
+          "permissions": {
+            "scopes": [
+              "read:users"
+            ]
+          }
+        },
+        {
+          "name": "beta",
+          "interactive": false,
+          "permissions": {
+            "scopes": [
+              "read:users"
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:3f79deb8c7d73da839243fe1161c7ee16451af6fe03b488e8b92c15a803563c3"
+    },
+    {
+      "name": "two commands where only interactive differs",
+      "commands": [
+        {
+          "name": "alpha",
+          "interactive": false,
+          "permissions": {
+            "scopes": [
+              "read:users"
+            ]
+          }
+        },
+        {
+          "name": "beta",
+          "interactive": true,
+          "permissions": {
+            "scopes": [
+              "read:users"
+            ]
+          }
+        }
+      ],
+      "hash": "sha256:0402f9096ff091e79d7975ff8f3e8cb39261e219e6795a2483a688af04f17ec5"
+    }
+  ]
+}
