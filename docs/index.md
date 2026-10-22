@@ -99,6 +99,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers
 - [auth0 event-streams](auth0_event-streams.md) - Manage Event Stream
+- [auth0 experimentation](auth0_experimentation.md) - Manage Experiment Center resources
 - [auth0 flows](auth0_flows.md) - Manage Flows
 - [auth0 forms](auth0_forms.md) - Manage Forms
 - [auth0 guardian](auth0_guardian.md) - Manage multi-factor authentication (Guardian)

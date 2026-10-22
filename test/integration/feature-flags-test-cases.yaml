@@ -1,0 +1,263 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  # ─── Feature Flags ────────────────────────────────────────────────────────────
+  # Note: the Management API auto-provisions Auth0-managed feature flags, so the
+  # feature-flags list is never empty on a live tenant — assert on headers/data
+  # rather than an empty result.
+
+  001 - it successfully lists all feature flags:
+    command: auth0 experimentation feature-flags list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - TYPE
+        - STATUS
+        - UPDATED
+
+  002 - it successfully creates a feature flag and outputs in json:
+    command: auth0 experimentation feature-flags create -n "integration-test-flag1" -p '{"color":{"type":"string","value":"blue"}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flag1"
+        type: "self"
+        status: "draft"
+
+  003 - it successfully creates a second feature flag:
+    command: auth0 experimentation feature-flags create -n "integration-test-flag2" -p '{"enabled":{"type":"boolean","value":false}}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-flag2
+        - draft
+
+  0031 - it successfully creates a feature flag from --data:
+    command: auth0 experimentation feature-flags create --data '{"name":"integration-test-flag-data","parameters":{"enabled":{"type":"boolean","value":false}}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-flag-data"
+        status: "draft"
+
+  # The name pattern uses a lookahead, which RE2 can't compile. Check it's still
+  # enforced locally.
+  0032 - it rejects a --data name that breaks the name pattern before calling the API:
+    command: auth0 experimentation feature-flags create --data '{"name":" integration-test-padded","parameters":{"enabled":{"type":"boolean","value":false}}}' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "schema validation failed"
+        - "doesn't match the regular expression"
+      not-contains:
+        - "cannot compile pattern"
+
+  004 - it successfully lists all feature flags with data:
+    command: auth0 experimentation feature-flags list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - TYPE
+        - STATUS
+        - UPDATED
+
+  005 - given a test feature flag, it successfully shows the feature flag details in json:
+    command: auth0 experimentation feature-flags show $(./test/integration/scripts/get-feature-flag-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-ff-flag"
+        type: "self"
+        status: "draft"
+
+  006 - given a test feature flag, it successfully shows the feature flag details:
+    command: auth0 experimentation feature-flags show $(./test/integration/scripts/get-feature-flag-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-ff-flag
+        - self
+        - draft
+
+  007 - given a test feature flag, it successfully updates the name in json:
+    command: auth0 experimentation feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --name "integration-test-ff-flag-updated" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-ff-flag-updated"
+
+  008 - given a test feature flag, it successfully updates the description in json:
+    command: auth0 experimentation feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --description "updated description" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        description: "updated description"
+
+  009 - given a test feature flag, it successfully updates the name:
+    command: auth0 experimentation feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --name "integration-test-ff-flag-renamed" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-ff-flag-renamed
+        - draft
+
+  010 - it returns an error when --parameters is invalid json:
+    command: auth0 experimentation feature-flags create -n "integration-test-bad" -p 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "JSON for --parameters"
+
+  011 - it returns an error when nothing to update is provided:
+    command: auth0 experimentation feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "to update"
+
+  # ─── Variations ───────────────────────────────────────────────────────────────
+  # Override values map each parameter name DIRECTLY to its value ({"color":"red"}),
+  # not the wrapped {"color":{"value":"red"}} form. An empty {} is the baseline
+  # (control) variation, and an override value must differ from the flag default.
+
+  020 - it successfully lists variations with no data:
+    command: auth0 experimentation feature-flags variations list $(./test/integration/scripts/get-feature-flag-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - "Use 'auth0 experimentation feature-flags variations create"
+
+  021 - it successfully creates a control (baseline) variation in json:
+    command: auth0 experimentation feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) -n "integration-test-control" -o '{}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control"
+
+  022 - it successfully creates a treatment variation:
+    command: auth0 experimentation feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) -n "integration-test-treatment" -o '{"color":"red"}' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-treatment
+
+  0221 - it successfully creates a variation from --data:
+    command: auth0 experimentation feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) --data '{"name":"integration-test-variation-data","overrides":{"color":"green"}}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-variation-data"
+
+  023 - it successfully lists variations with data:
+    command: auth0 experimentation feature-flags variations list $(./test/integration/scripts/get-feature-flag-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - OVERRIDES
+        - UPDATED
+
+  024 - given a test variation, it successfully shows the variation details in json:
+    command: auth0 experimentation feature-flags variations show $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control"
+
+  025 - given a test variation, it successfully shows the variation details:
+    command: auth0 experimentation feature-flags variations show $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-control
+
+  026 - given a test variation, it successfully updates the name in json:
+    command: auth0 experimentation feature-flags variations update $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --name "integration-test-control-updated" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-control-updated"
+
+  027 - it returns an error when --overrides is invalid json:
+    command: auth0 experimentation feature-flags variations create $(./test/integration/scripts/get-feature-flag-id.sh) -n "bad-variation" -o 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "JSON for --overrides"
+
+  028 - it returns an error when nothing to update is provided for a variation:
+    command: auth0 experimentation feature-flags variations update $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "to update"
+
+  # ─── Feature flag status ──────────────────────────────────────────────────────
+  # Activation requires the flag to have at least 2 variations, so it runs while
+  # both the control and treatment variations still exist (before the delete below).
+
+  029 - given a test feature flag with two variations, it successfully activates it:
+    command: auth0 experimentation feature-flags update $(./test/integration/scripts/get-feature-flag-id.sh) --status active
+    exit-code: 0
+    stdout:
+      contains:
+        - active
+
+  030 - given a test variation, it successfully deletes the variation:
+    command: auth0 experimentation feature-flags variations delete $(./test/integration/scripts/get-feature-flag-id.sh) $(./test/integration/scripts/get-variation-id.sh) --force
+    exit-code: 0
+
+  # ─── Deleting every variation ──────────────────────────────────────────────────
+  # The API lets a flag in any status drop to zero variations (only activation
+  # needs two), so a multi-ID delete removes them all from an active flag.
+
+  031 - given a delete-all flag with three variations, it successfully activates it:
+    command: auth0 experimentation feature-flags update $(./test/integration/scripts/get-delete-all-flag-id.sh) --status active
+    exit-code: 0
+    stdout:
+      contains:
+        - active
+
+  032 - given an active flag, it successfully deletes all of its variations:
+    command: auth0 experimentation feature-flags variations delete $(./test/integration/scripts/get-delete-all-flag-id.sh) $(./test/integration/scripts/get-delete-all-variation-ids.sh) --force
+    exit-code: 0
+    stderr:
+      contains:
+        - "3 variations deleted"
+
+  033 - given an active flag with its variations deleted, it lists none:
+    command: auth0 experimentation feature-flags variations list $(./test/integration/scripts/get-delete-all-flag-id.sh) --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  034 - given an active flag with its variations deleted, it stays active:
+    command: auth0 experimentation feature-flags show $(./test/integration/scripts/get-delete-all-flag-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        status: "active"
+
+  # ─── Deleting unknown resources ────────────────────────────────────────────────
+  # The API's delete succeeds for unknown IDs; the CLI reads first so these fail.
+
+  035 - it returns an error when deleting a nonexistent variation:
+    command: auth0 experimentation feature-flags variations delete $(./test/integration/scripts/get-feature-flag-id.sh) var_doesnotexist0000000000 --force
+    exit-code: 1
+    stderr:
+      contains:
+        - "variation_not_found"
+
+  036 - it returns an error when deleting a nonexistent feature flag:
+    command: auth0 experimentation feature-flags delete flg_doesnotexist0000000000 --force
+    exit-code: 1
+    stderr:
+      contains:
+        - "feature_flag_not_found"
+
+  # The feature flag is deleted by the shared cleanup step (test-cleanup.sh),
+  # which removes every resource named "integration-test-*".

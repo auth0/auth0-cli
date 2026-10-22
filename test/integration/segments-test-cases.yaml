@@ -1,0 +1,124 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  # ─── Segments ─────────────────────────────────────────────────────────────────
+
+  001 - it successfully lists all segments with no data:
+    command: auth0 experimentation segments list
+    exit-code: 0
+    stderr:
+      contains:
+        - "Use 'auth0 experimentation segments create' to add one"
+
+  002 - it successfully lists all segments with no data (json):
+    command: auth0 experimentation segments list --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - it successfully creates a segment:
+    command: auth0 experimentation segments create -n "integration-test-segment1" -r '[{"match":{"country":["US","CA"]}}]' --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-segment1
+        - self
+
+  004 - it successfully creates a segment and outputs in json:
+    command: auth0 experimentation segments create -n "integration-test-segment2" -r '[{"match":{"browser":["chrome"]}}]' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment2"
+        type: "self"
+
+  0041 - it successfully creates a segment from --data:
+    command: auth0 experimentation segments create --data '{"name":"integration-test-segment-data","rules":[{"match":{"country":["US"]}}]}' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment-data"
+        type: "self"
+
+  # The name pattern uses a lookahead, which RE2 can't compile. Check it's still
+  # enforced locally.
+  0042 - it rejects a --data name that breaks the name pattern before calling the API:
+    command: auth0 experimentation segments create --data '{"name":"integration-test-padded ","rules":[{"match":{"country":["US"]}}]}' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "schema validation failed"
+        - "doesn't match the regular expression"
+      not-contains:
+        - "cannot compile pattern"
+
+  005 - it successfully lists all segments with data:
+    command: auth0 experimentation segments list
+    exit-code: 0
+    stdout:
+      contains:
+        - NAME
+        - RULES
+        - UPDATED
+
+  006 - given a test segment, it successfully shows the segment details:
+    command: auth0 experimentation segments show $(./test/integration/scripts/get-segment-id.sh)
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-segment
+        - self
+
+  007 - given a test segment, it successfully shows the segment details in json:
+    command: auth0 experimentation segments show $(./test/integration/scripts/get-segment-id.sh) --json
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment"
+
+  008 - given a test segment, it successfully updates the name:
+    command: auth0 experimentation segments update $(./test/integration/scripts/get-segment-id.sh) --name "integration-test-segment-updated" --no-input
+    exit-code: 0
+    stdout:
+      contains:
+        - integration-test-segment-updated
+        - self
+
+  009 - given a test segment, it successfully updates in json:
+    command: auth0 experimentation segments update $(./test/integration/scripts/get-segment-id.sh) --name "integration-test-segment-updated-again" --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment-updated-again"
+
+  010 - given a test segment, it successfully updates the rules in json:
+    command: auth0 experimentation segments update $(./test/integration/scripts/get-segment-id.sh) --rules '[{"match":{"country":["GB"]}},{"not_match":{"browser":["safari"]}}]' --json --no-input
+    exit-code: 0
+    stdout:
+      json:
+        name: "integration-test-segment-updated-again"
+
+  011 - it returns an error when --rules is invalid json:
+    command: auth0 experimentation segments create -n "integration-test-bad" -r 'not-json' --no-input
+    exit-code: 1
+    stderr:
+      contains:
+        - "JSON for --rules"
+
+  # ─── Cleanup ──────────────────────────────────────────────────────────────────
+
+  020 - it successfully deletes the test segment:
+    command: auth0 experimentation segments delete $(./test/integration/scripts/get-segment-id.sh) --force
+    exit-code: 0
+
+  021 - it returns an error when deleting a nonexistent segment:
+    command: auth0 experimentation segments delete seg_doesnotexist0000000000 --force
+    exit-code: 1
+    stderr:
+      contains:
+        - "segment_not_found"
+
+  # The segments created inline above (segment1, segment2, segment-data) are
+  # removed by the shared cleanup step (test-cleanup.sh).
