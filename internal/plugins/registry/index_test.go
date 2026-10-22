@@ -424,16 +424,171 @@ func TestParseIndex_Format(t *testing.T) {
 		assert.Equal(t, 12, index.Policy.CheckIntervalHours)
 	})
 
-	t.Run("keeps the scope table and the secret fields as they are", func(t *testing.T) {
-		index, err := parseMutated(t, func(index map[string]any) {
-			index["scopeTable"] = map[string]any{"checkmate": []any{"read:clients"}}
-			index["secretFields"] = []any{"client_secret"}
-		})
+	t.Run("round trips the scope table and the secret fields", func(t *testing.T) {
+		table := registry.ScopeTable{FormatVersion: 1, Rules: []registry.ScopeRule{
+			{Method: "GET", Path: "/api/v2/clients/{id}", AnyOf: []string{"read:clients", "read:client_keys"}},
+		}}
+		fields := registry.SecretFields{FormatVersion: 1, Names: []string{"client_secret"}}
+
+		index, err := registry.ParseIndex(testBuilder().SetScopeTable(table).SetSecretFields(fields).Build())
 
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"checkmate":["read:clients"]}`, string(index.ScopeTable))
-		assert.JSONEq(t, `["client_secret"]`, string(index.SecretFields))
+		assert.Equal(t, table, index.ScopeTable)
+		assert.Equal(t, fields, index.SecretFields)
 	})
+
+	t.Run("leaves the scope table and the secret fields zero when the index has none", func(t *testing.T) {
+		index, err := registry.ParseIndex(testBuilder().Build())
+
+		require.NoError(t, err)
+		assert.Zero(t, index.ScopeTable)
+		assert.Zero(t, index.SecretFields)
+	})
+}
+
+func TestParseIndex_ScopeTableAndSecretFields(t *testing.T) {
+	rule := func(method, path string, anyOf ...any) map[string]any {
+		return map[string]any{"method": method, "path": path, "anyOf": anyOf}
+	}
+	table := func(rules ...any) map[string]any {
+		return map[string]any{"formatVersion": 1, "rules": append([]any{}, rules...)}
+	}
+	fields := func(names ...any) map[string]any {
+		return map[string]any{"formatVersion": 1, "names": names}
+	}
+	segments := func(n int) string { return "/api/v2" + strings.Repeat("/a", n) }
+	generate := func(n int, item func(i string) any) []any {
+		list := make([]any, 0, n)
+		for i := range n {
+			list = append(list, item(strconv.Itoa(i)))
+		}
+
+		return list
+	}
+	scopes := func(n int) []any { return generate(n, func(i string) any { return "read:s" + i }) }
+	names := func(n int) []any { return generate(n, func(i string) any { return "n" + i }) }
+	many := func(n int) []any {
+		return generate(n, func(i string) any { return rule("GET", "/api/v2/r"+i, "read:clients") })
+	}
+
+	valid := []struct {
+		name   string
+		mutate func(index map[string]any)
+	}{
+		{name: "a parameter in camel case", mutate: setValue(table(rule("GET", "/api/v2/actions/actions/{actionId}/versions/{id}", "read:actions")), "scopeTable")},
+		{name: "a rule with a parameter", mutate: setValue(table(rule("GET", "/api/v2/clients/{id}", "read:clients")), "scopeTable")},
+		{name: "every method", mutate: setValue(table(
+			rule("GET", "/api/v2/a", "read:a"), rule("POST", "/api/v2/a", "create:a"), rule("PUT", "/api/v2/a", "update:a"),
+			rule("PATCH", "/api/v2/a", "update:a"), rule("DELETE", "/api/v2/a", "delete:a"),
+		), "scopeTable")},
+		{name: "16 segments", mutate: setValue(table(rule("GET", segments(16), "read:a")), "scopeTable")},
+		{name: "8 alternatives", mutate: setValue(table(rule("GET", "/api/v2/a", scopes(8)...)), "scopeTable")},
+		{name: "5000 rules", mutate: setValue(table(many(5000)...), "scopeTable")},
+		{name: "a table without rules", mutate: setValue(table(), "scopeTable")},
+		{name: "a name of 64 characters", mutate: setValue(fields(strings.Repeat("a", 64)), "secretFields")},
+		{name: "500 names", mutate: setValue(fields(names(500)...), "secretFields")},
+	}
+
+	for _, test := range valid {
+		t.Run("accepts "+test.name, func(t *testing.T) {
+			_, err := parseMutated(t, test.mutate)
+			assert.NoError(t, err)
+		})
+	}
+
+	tests := []struct {
+		name     string
+		mutate   func(index map[string]any)
+		wantErrs []string
+	}{
+		{name: "a newer scope table format", mutate: setValue(map[string]any{"formatVersion": 2, "rules": []any{}}, "scopeTable"), wantErrs: []string{"scopeTable.formatVersion:"}},
+		{name: "a scope table without rules", mutate: setValue(map[string]any{"formatVersion": 1}, "scopeTable"), wantErrs: []string{"scopeTable.rules: required field is missing"}},
+		{name: "an unknown field in the scope table", mutate: setValue(map[string]any{"formatVersion": 1, "rules": []any{}, "extra": 1}, "scopeTable"), wantErrs: []string{"scopeTable.extra: unknown field"}},
+		{name: "an unknown field in a rule", mutate: setValue(table(map[string]any{"method": "GET", "path": "/api/v2/a", "anyOf": []any{"read:a"}, "extra": 1}), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].extra: unknown field"}},
+		{name: "a rule field written in another case", mutate: setValue(table(map[string]any{"Method": "GET", "method": "GET", "path": "/api/v2/a", "anyOf": []any{"read:a"}}), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].Method: unknown field"}},
+		{name: "a method in lowercase", mutate: setValue(table(rule("get", "/api/v2/a", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].method:"}},
+		{name: "a method that is not allowed", mutate: setValue(table(rule("HEAD", "/api/v2/a", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].method:"}},
+		{name: "a path outside the Management API", mutate: setValue(table(rule("GET", "/oauth/token", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "the prefix in another case", mutate: setValue(table(rule("GET", "/API/v2/a", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a path with no resource", mutate: setValue(table(rule("GET", "/api/v2", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a trailing slash", mutate: setValue(table(rule("GET", "/api/v2/a/", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "an empty segment", mutate: setValue(table(rule("GET", "/api/v2/a//b", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "17 segments", mutate: setValue(table(rule("GET", segments(17), "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a dot segment", mutate: setValue(table(rule("GET", "/api/v2/a/./b", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path: segment 2 must not be"}},
+		{name: "a dot dot segment", mutate: setValue(table(rule("GET", "/api/v2/a/../b", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path: segment 2 must not be"}},
+		{name: "an encoded segment", mutate: setValue(table(rule("GET", "/api/v2/a%2fb", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a parameter that starts with a digit", mutate: setValue(table(rule("GET", "/api/v2/a/{1id}", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a parameter with a dash", mutate: setValue(table(rule("GET", "/api/v2/a/{client-id}", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a parameter mixed with text", mutate: setValue(table(rule("GET", "/api/v2/a/x{id}", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].path:"}},
+		{name: "a rule without alternatives", mutate: setValue(table(rule("GET", "/api/v2/a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].anyOf:"}},
+		{name: "a rule with an empty list of alternatives", mutate: setValue(table(map[string]any{"method": "GET", "path": "/api/v2/a", "anyOf": []any{}}), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].anyOf:"}},
+		{name: "9 alternatives", mutate: setValue(table(rule("GET", "/api/v2/a", scopes(9)...)), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].anyOf:"}},
+		{name: "a scope that is not a scope", mutate: setValue(table(rule("GET", "/api/v2/a", "read-clients")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].anyOf[0]:"}},
+		{name: "the same alternative twice", mutate: setValue(table(rule("GET", "/api/v2/a", "read:a", "read:a")), "scopeTable"), wantErrs: []string{"scopeTable.rules[0].anyOf:"}},
+		{name: "5001 rules", mutate: setValue(table(many(5001)...), "scopeTable"), wantErrs: []string{"scopeTable.rules:"}},
+		{
+			name:     "the same rule twice",
+			mutate:   setValue(table(rule("GET", "/api/v2/a/{id}", "read:a"), rule("GET", "/api/v2/a/{id}", "read:b")), "scopeTable"),
+			wantErrs: []string{"scopeTable.rules[1]: duplicate rule for GET /api/v2/a/{id}, already defined by scopeTable.rules[0]"},
+		},
+		{
+			name:     "rules that only differ in the name of a parameter",
+			mutate:   setValue(table(rule("GET", "/api/v2/a/{id}", "read:a"), rule("GET", "/api/v2/a/{client_id}", "read:b")), "scopeTable"),
+			wantErrs: []string{"scopeTable.rules[1]: duplicate rule"},
+		},
+		{name: "secret fields without names", mutate: setValue(map[string]any{"formatVersion": 1}, "secretFields"), wantErrs: []string{"secretFields.names: required field is missing"}},
+		{name: "an empty list of names", mutate: setValue(fields(), "secretFields"), wantErrs: []string{"secretFields.names:"}},
+		{name: "a newer secret fields format", mutate: setValue(map[string]any{"formatVersion": 2, "names": []any{"a"}}, "secretFields"), wantErrs: []string{"secretFields.formatVersion:"}},
+		{name: "an unknown field in the secret fields", mutate: setValue(map[string]any{"formatVersion": 1, "names": []any{"a"}, "extra": 1}, "secretFields"), wantErrs: []string{"secretFields.extra: unknown field"}},
+		{name: "a name of 65 characters", mutate: setValue(fields(strings.Repeat("a", 65)), "secretFields"), wantErrs: []string{"secretFields.names[0]:"}},
+		{name: "an empty name", mutate: setValue(fields(""), "secretFields"), wantErrs: []string{"secretFields.names[0]:"}},
+		{name: "a name with a dot, which no single key can match", mutate: setValue(fields("options.client_secret"), "secretFields"), wantErrs: []string{"secretFields.names[0]:"}},
+		{name: "a name with a space", mutate: setValue(fields("client secret"), "secretFields"), wantErrs: []string{"secretFields.names[0]:"}},
+		{name: "501 names", mutate: setValue(fields(names(501)...), "secretFields"), wantErrs: []string{"secretFields.names:"}},
+		{name: "names that only differ in case", mutate: setValue(fields("client_secret", "Client_Secret"), "secretFields"), wantErrs: []string{`secretFields.names[1]: duplicate name "Client_Secret", already used by secretFields.names[0]`}},
+		{name: "names that only differ in case, the capitalized one first", mutate: setValue(fields("Client_Secret", "client_secret"), "secretFields"), wantErrs: []string{`secretFields.names[1]: duplicate name "client_secret", already used by secretFields.names[0]`}},
+		{name: "a null scope table", mutate: setValue(nil, "scopeTable"), wantErrs: []string{"scopeTable:"}},
+	}
+
+	for _, test := range tests {
+		t.Run("rejects "+test.name, func(t *testing.T) {
+			index, err := parseMutated(t, test.mutate)
+
+			assert.Nil(t, index)
+			requireInvalid(t, err, test.wantErrs...)
+		})
+	}
+}
+
+func TestValidate_ScopeTableAndSecretFields(t *testing.T) {
+	good := registry.ScopeRule{Method: "GET", Path: "/api/v2/clients/{clientId}", AnyOf: []string{"read:clients"}}
+	table := func(rules ...registry.ScopeRule) registry.ScopeTable {
+		return registry.ScopeTable{FormatVersion: 1, Rules: rules}
+	}
+
+	assert.NoError(t, table(good).Validate())
+	assert.NoError(t, registry.SecretFields{FormatVersion: 1, Names: []string{"client_secret", "private_key"}}.Validate())
+
+	tests := []struct {
+		name     string
+		err      error
+		wantPart string
+	}{
+		{name: "an empty scope", err: table(registry.ScopeRule{Method: "GET", Path: "/api/v2/a", AnyOf: []string{""}}).Validate(), wantPart: "scopeTable.rules[0].anyOf[0]:"},
+		{name: "no scope", err: table(registry.ScopeRule{Method: "GET", Path: "/api/v2/a"}).Validate(), wantPart: "scopeTable.rules[0].anyOf:"},
+		{name: "the same rule twice", err: table(good, good).Validate(), wantPart: "scopeTable.rules[1]: duplicate rule"},
+		{name: "a dot dot segment", err: table(registry.ScopeRule{Method: "GET", Path: "/api/v2/a/../b", AnyOf: []string{"read:a"}}).Validate(), wantPart: "scopeTable.rules[0].path: segment 2 must not be"},
+		{name: "a table of another format", err: registry.ScopeTable{FormatVersion: 2, Rules: []registry.ScopeRule{good}}.Validate(), wantPart: "scopeTable.formatVersion:"},
+		{name: "a name with a dot", err: registry.SecretFields{FormatVersion: 1, Names: []string{"a.b"}}.Validate(), wantPart: "secretFields.names[0]:"},
+		{name: "names that differ in case", err: registry.SecretFields{FormatVersion: 1, Names: []string{"a", "A"}}.Validate(), wantPart: "secretFields.names[1]: duplicate name"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.ErrorIs(t, test.err, registry.ErrInvalidIndex)
+			assert.Contains(t, test.err.Error(), test.wantPart)
+		})
+	}
 }
 
 func TestParseIndex_SemanticFailures(t *testing.T) {
