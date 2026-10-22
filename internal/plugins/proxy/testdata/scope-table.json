@@ -1,0 +1,24 @@
+{
+  "scopeTable": {
+    "formatVersion": 1,
+    "rules": [
+      { "method": "GET", "path": "/api/v2/clients", "anyOf": ["read:clients"] },
+      { "method": "POST", "path": "/api/v2/clients", "anyOf": ["create:clients"] },
+      { "method": "GET", "path": "/api/v2/clients/{id}", "anyOf": ["read:clients", "read:client_keys", "read:client_credentials", "read:client_summary"] },
+      { "method": "PATCH", "path": "/api/v2/clients/{id}", "anyOf": ["update:clients"] },
+      { "method": "DELETE", "path": "/api/v2/clients/{id}", "anyOf": ["delete:clients"] },
+      { "method": "GET", "path": "/api/v2/actions/actions/{actionId}/versions/{id}", "anyOf": ["read:actions"] },
+      { "method": "GET", "path": "/api/v2/connections", "anyOf": ["read:connections"] },
+      { "method": "GET", "path": "/api/v2/connections/{id}", "anyOf": ["read:connections"] },
+      { "method": "GET", "path": "/api/v2/users", "anyOf": ["read:users"] },
+      { "method": "GET", "path": "/api/v2/users/{id}", "anyOf": ["read:users"] },
+      { "method": "GET", "path": "/api/v2/users/{id}/roles", "anyOf": ["read:roles"] },
+      { "method": "GET", "path": "/api/v2/tenants/settings", "anyOf": ["read:tenant_settings"] },
+      { "method": "GET", "path": "/api/v2/stats/active-users", "anyOf": ["read:stats"] }
+    ]
+  },
+  "secretFields": {
+    "formatVersion": 1,
+    "names": ["client_secret", "signing_keys", "encryption_key", "private_key"]
+  }
+}

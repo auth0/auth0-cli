@@ -110,6 +110,20 @@ func (b *IndexBuilder) SetPolicy(policy registry.Policy) *IndexBuilder {
 	return b
 }
 
+// SetScopeTable sets the scope table of the index.
+func (b *IndexBuilder) SetScopeTable(table registry.ScopeTable) *IndexBuilder {
+	b.index.ScopeTable = table
+
+	return b
+}
+
+// SetSecretFields sets the secret fields of the index.
+func (b *IndexBuilder) SetSecretFields(fields registry.SecretFields) *IndexBuilder {
+	b.index.SecretFields = fields
+
+	return b
+}
+
 // AddPlugin adds a plugin whose versions are listed in the index.
 func (b *IndexBuilder) AddPlugin(plugin registry.Plugin) *IndexBuilder {
 	b.index.Plugins = append(b.index.Plugins, plugin)
