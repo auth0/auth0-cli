@@ -156,7 +156,7 @@ var RequiredScopes = []string{
 	"read:guardian_factors", "update:guardian_factors",
 	"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
 	"read:mfa_policies", "update:mfa_policies",
-	// "read:experimentation", "create:experimentation", "update:experimentation", "delete:experimentation",
+	// "read:experimentation", "create:experimentation", "update:experimentation", "delete:experimentation",.
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting
