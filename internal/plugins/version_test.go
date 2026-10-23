@@ -71,6 +71,36 @@ func TestVersion_Compare(t *testing.T) {
 	}
 }
 
+func TestIsPrereleaseAndFeatureEnabled(t *testing.T) {
+	tests := []struct {
+		version    string
+		prerelease bool
+		enabled    bool
+	}{
+		{"", false, true},
+		{"dev", false, true},
+		{"1.39.0", false, false},
+		{"v1.39.0", false, false},
+		{"1.39.0-beta.1", true, true},
+		{"v1.39.0-beta.1", true, true},
+		{"1.39.0-rc.2+build", true, true},
+		{"1.39.0+build", false, false},
+		{"1.39.0-", false, false},
+		{"1.39.0-+build", false, false},
+		{"1.39-beta.1", false, false},
+		{"-beta.1", false, false},
+		{"Dev", false, false},
+		{"garbage", false, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.version, func(t *testing.T) {
+			assert.Equal(t, test.prerelease, isPrerelease(test.version))
+			assert.Equal(t, test.enabled, FeatureEnabled(test.version))
+		})
+	}
+}
+
 func TestEnginesSatisfied(t *testing.T) {
 	tests := []struct {
 		name       string

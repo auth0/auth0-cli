@@ -15,6 +15,11 @@ import (
 const (
 	docsPath = "./docs/"
 
+	// The annotation with this key, set to "true" on a command, keeps the command
+	// and everything below it out of the generated docs and out of the links to
+	// them.
+	skipDocsAnnotation = "skipDocs"
+
 	associatedCommandsFragment = `{{range .AssociatedCommands}}- [{{.CommandPath}}]({{ link .CommandPath }}) - {{.Short}}
 {{end}}`
 
@@ -219,11 +224,11 @@ func GenMarkdownTree(cmd *cobra.Command, dir string) error {
 }
 
 // documentedCommands returns the subcommands that get a docs page, skipping hidden and deprecated
-// ones, so page links only point at pages that exist.
+// ones and those marked with skipDocsAnnotation, so page links only point at pages that exist.
 func documentedCommands(cmd *cobra.Command) []*cobra.Command {
 	var cmds []*cobra.Command
 	for _, c := range cmd.Commands() {
-		if c.IsAvailableCommand() && !c.IsAdditionalHelpTopicCommand() {
+		if c.IsAvailableCommand() && !c.IsAdditionalHelpTopicCommand() && c.Annotations[skipDocsAnnotation] != "true" {
 			cmds = append(cmds, c)
 		}
 	}
