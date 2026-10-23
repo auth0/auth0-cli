@@ -62,6 +62,17 @@ type cli struct {
 	detectedAgent       string
 	executedCommandPath string
 
+	// The access token and tenant domain of the session that
+	// setupWithAuthentication opened, kept in memory only, so that a plugin run
+	// can hand the token to its proxy without reading the keyring again. They are
+	// empty until a session was set up. The token must never be printed.
+	accessToken   string
+	sessionDomain string
+
+	// The names of the installed plugins that a core command shadows, with the
+	// plugin ID, see registerPluginCommands.
+	shadowedPlugins map[string]string
+
 	Config config.Config
 }
 
@@ -225,6 +236,8 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 	c.api = auth0.NewAPI(api)
 	c.apiv3 = auth0.NewAPIV3(apiv3)
+	c.accessToken = accessToken
+	c.sessionDomain = tenant.Domain
 	return nil
 }
 
