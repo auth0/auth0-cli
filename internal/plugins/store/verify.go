@@ -143,6 +143,28 @@ func (s *Store) readManifest(id string, e *entry, version string) (*plugins.Mani
 	return manifest, nil
 }
 
+// Manifest returns the parsed plugin.json of the active version of a plugin,
+// after checking it against the hash that the lockfile recorded at install time.
+//
+// It is for help and for registering commands only, and its result must never be
+// used to decide whether a plugin may run: that is Verify. Manifest does not hash
+// the executable, does not look at the other entries of the version directory,
+// and does not check who can write to the directories above it, so a plugin whose
+// files were replaced can still be listed here.
+func (s *Store) Manifest(id string) (*plugins.Manifest, error) {
+	e, err := s.lookup(id)
+	if err != nil {
+		return nil, err
+	}
+
+	manifest, err := s.readManifest(id, e, e.Active)
+	if err != nil {
+		return nil, &VerificationError{ID: id, Reason: err.Error()}
+	}
+
+	return manifest, nil
+}
+
 // verifyVersion is Verify for one version of an entry that came out of a
 // validated lockfile.
 func (s *Store) verifyVersion(id string, e *entry, version string) (Verified, error) {
