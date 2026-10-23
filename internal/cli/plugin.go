@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1234,6 +1235,16 @@ type pluginService struct {
 	// Confirmer asks the person a yes or no question. When it is nil, the prompt
 	// of the CLI is used. Tests set it for the same reason.
 	confirmer func(message string) bool
+
+	// Login opens the session that a plugin runs with. When it is nil, the
+	// authentication of the CLI is used. Tests set it, because they have no tenant
+	// to log in to.
+	login func(ctx context.Context, c *cli) error
+
+	// Transport carries the calls that the proxy of a plugin makes to the tenant.
+	// When it is nil, the default transport is used. Tests set it, because they
+	// have no tenant.
+	transport http.RoundTripper
 }
 
 // canPrompt reports whether a person can answer at the terminal of the command.
@@ -1462,6 +1473,12 @@ func checkPluginNameAvailable(root *cobra.Command, name string) error {
 	reserved := name == "help" || name == "completion"
 
 	for _, command := range root.Commands() {
+		// The commands of installed plugins do not count: a plugin can be installed
+		// again, and an update replaces it.
+		if command.Annotations[pluginCommandAnnotation] == "true" {
+			continue
+		}
+
 		if command.Name() == name || slices.Contains(command.Aliases, name) {
 			reserved = true
 		}

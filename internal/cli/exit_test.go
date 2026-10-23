@@ -44,6 +44,8 @@ func TestErrorClass(t *testing.T) {
 		{name: "wrapped auth error", err: authError{err: fmt.Errorf("wrap: %w", errors.New("token expired"))}, expected: "auth"},
 		{name: "local validation error", err: validationError{err: errors.New("schema validation failed")}, expected: "validation"},
 		{name: "wrapped validation error", err: fmt.Errorf("wrap: %w", validationError{err: errors.New("bad json")}), expected: "validation"},
+		{name: "plugin error", err: pluginError{err: errors.New("exited"), reason: "plugin_exit"}, expected: "plugin"},
+		{name: "wrapped plugin error", err: fmt.Errorf("wrap: %w", pluginError{err: errors.New("slow"), reason: "plugin_timeout"}), expected: "plugin"},
 		{name: "missing scopes", err: config.ErrTokenMissingRequiredScopes{MissingScopes: []string{"read:users"}}, expected: "auth"},
 		{name: "401 unauthorized", err: fakeManagementError{status: 401}, expected: "auth"},
 		{name: "403 forbidden", err: fakeManagementError{status: 403}, expected: "auth"},
@@ -109,6 +111,9 @@ func TestErrorReason(t *testing.T) {
 		{name: "malformed token sentinel", err: config.ErrMalformedToken, expected: "token_malformed"},
 		{name: "missing scopes", err: config.ErrTokenMissingRequiredScopes{MissingScopes: []string{"read:users"}}, expected: "missing_scopes"},
 		{name: "validation default", err: validationError{err: errors.New("bad json")}, expected: "local_validation"},
+		{name: "plugin exited", err: pluginError{err: errors.New("exited"), reason: "plugin_exit"}, expected: "plugin_exit"},
+		{name: "plugin timed out", err: pluginError{err: errors.New("slow"), reason: "plugin_timeout"}, expected: "plugin_timeout"},
+		{name: "plugin interrupted", err: pluginError{err: errors.New("stopped"), reason: "plugin_interrupted"}, expected: "plugin_interrupted"},
 		{name: "401 unauthorized", err: fakeManagementError{status: 401}, expected: "unauthorized"},
 		{name: "403 forbidden", err: fakeManagementError{status: 403}, expected: "forbidden"},
 		{name: "400 invalid request", err: fakeManagementError{status: 400}, expected: "invalid_request"},
@@ -145,6 +150,7 @@ func TestExitCodeForError(t *testing.T) {
 		{name: "auth error", err: config.ErrInvalidToken, expected: exitGeneric},
 		{name: "server validation error", err: fakeManagementError{status: 400}, expected: exitGeneric},
 		{name: "local validation error", err: validationError{err: errors.New("bad payload")}, expected: exitGeneric},
+		{name: "plugin error", err: pluginError{err: errors.New("exited"), reason: "plugin_exit", exitCode: 7}, expected: exitGeneric},
 		{name: "not found error", err: fakeManagementError{status: 404}, expected: exitGeneric},
 		{name: "rate limit error", err: fakeManagementError{status: 429}, expected: exitGeneric},
 		{name: "api error", err: fakeManagementError{status: 500}, expected: exitGeneric},
@@ -169,6 +175,10 @@ func TestAgentModeHelpMatchesExitCodes(t *testing.T) {
 
 	assert.Contains(t, agentModeHelp, "exits 1", "help should state the coarse failure exit code")
 	assert.Contains(t, agentModeHelp, `"code" field`, "help should point the failure class at the JSON envelope")
+
+	for _, class := range []string{"usage", "auth", "validation", "not_found", "conflict", "rate_limit", "api", "plugin"} {
+		assert.Contains(t, agentModeHelp, class, "help should list every failure class of the envelope")
+	}
 }
 
 func TestBuildErrorEnvelope(t *testing.T) {
@@ -225,6 +235,17 @@ func TestBuildErrorEnvelope(t *testing.T) {
 		assert.Equal(t, "usage", envelope.Error.Code)
 		assert.Equal(t, `unknown command "appps" for "auth0"`, envelope.Error.Message)
 		assert.JSONEq(t, `{"suggestions":["apps","apis"]}`, string(envelope.Error.Details))
+	})
+
+	t.Run("carries the plugin and its exit code as details", func(t *testing.T) {
+		envelope := buildErrorEnvelope(pluginError{
+			err: errors.New("checkmate 1.0.0 exited with code 7"), reason: "plugin_exit",
+			pluginID: "auth0/checkmate", version: "1.0.0", exitCode: 7,
+		})
+
+		assert.Equal(t, "plugin", envelope.Error.Code)
+		assert.Equal(t, "plugin_exit", envelope.Error.Reason)
+		assert.JSONEq(t, `{"pluginId":"auth0/checkmate","version":"1.0.0","exitCode":7}`, string(envelope.Error.Details))
 	})
 
 	t.Run("omits details when the unknown command has no suggestions", func(t *testing.T) {

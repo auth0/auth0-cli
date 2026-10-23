@@ -94,6 +94,40 @@ func (e validationError) Unwrap() error { return e.err }
 
 func (e validationError) ErrorDetails() json.RawMessage { return e.details }
 
+// pluginError is a failure of a plugin run: the plugin exited with a non-zero
+// code, ran out of time, was interrupted, or could not be started. It classifies
+// as "plugin" in the JSON error envelope and carries which plugin it was and the
+// exit code of the plugin in the envelope's "details", so a script can tell the
+// failure of a plugin from a failure of the CLI. The process itself exits with the
+// generic code, see exitCodeForError.
+type pluginError struct {
+	err      error
+	reason   string
+	pluginID string
+	version  string
+
+	// ExitCode is the code the plugin exited with, or zero when it did not exit by
+	// itself.
+	exitCode int
+}
+
+func (e pluginError) Error() string { return e.err.Error() }
+
+func (e pluginError) Unwrap() error { return e.err }
+
+func (e pluginError) ErrorDetails() json.RawMessage {
+	details, err := json.Marshal(struct {
+		PluginID string `json:"pluginId"`
+		Version  string `json:"version"`
+		ExitCode int    `json:"exitCode,omitempty"`
+	}{e.pluginID, e.version, e.exitCode})
+	if err != nil {
+		return nil
+	}
+
+	return details
+}
+
 // errorClass returns a stable, machine-readable classification for an error. It
 // is the single source of truth shared by exit-code mapping, the JSON error
 // envelope, and analytics tracking.
@@ -115,6 +149,11 @@ func errorClass(err error) string {
 	var validationErr validationError
 	if errors.As(err, &validationErr) {
 		return "validation"
+	}
+
+	var pluginErr pluginError
+	if errors.As(err, &pluginErr) {
+		return "plugin"
 	}
 
 	if errors.Is(err, config.ErrInvalidToken) ||
@@ -199,6 +238,11 @@ func errorReason(err error) string {
 			return validationErr.reason
 		}
 		return "local_validation"
+	}
+
+	var pluginErr pluginError
+	if errors.As(err, &pluginErr) {
+		return pluginErr.reason
 	}
 
 	if status, ok := managementHTTPStatus(err); ok {

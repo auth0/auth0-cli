@@ -79,6 +79,57 @@ func (s *Store) Verify(id string) (Verified, error) {
 	return s.verifyVersion(id, e, e.Active)
 }
 
+// Manifest returns the parsed plugin.json of the active version of a plugin,
+// after checking it against the hash that the lockfile recorded at install time.
+//
+// It is for help and for registering commands only, and its result must never be
+// used to decide whether a plugin may run: that is Verify. Manifest does not hash
+// the executable, does not look at the other entries of the version directory,
+// and does not check who can write to the directories above it, so a plugin whose
+// files were replaced can still be listed here.
+func (s *Store) Manifest(id string) (*plugins.Manifest, error) {
+	if _, err := s.pluginPath(id); err != nil {
+		return nil, err
+	}
+
+	current, err := s.readLockfile()
+	if err != nil {
+		return nil, err
+	}
+
+	e := current.Plugins[id]
+	if e == nil {
+		return nil, &NotInstalledError{ID: id}
+	}
+
+	installed := e.Versions[e.Active]
+	manifestPath := filepath.Join(s.versionPath(id, e.Active), manifestFileName)
+
+	fail := func(format string, args ...any) (*plugins.Manifest, error) {
+		return nil, &VerificationError{ID: id, Reason: fmt.Sprintf(format, args...)}
+	}
+
+	data, err := readRegularFile(manifestPath, maxManifestBytes)
+	if err != nil {
+		return fail("%v", err)
+	}
+
+	if sum := sha256.Sum256(data); hex.EncodeToString(sum[:]) != installed.ManifestSHA256 {
+		return fail("the hash of %s changed", manifestFileName)
+	}
+
+	manifest, err := plugins.ParseInstalledManifest(data)
+	if err != nil {
+		return fail("%s is not valid: %v", manifestFileName, err)
+	}
+
+	if manifest.ID != id || manifest.Version != e.Active {
+		return fail("%s is for %s %s", manifestFileName, manifest.ID, manifest.Version)
+	}
+
+	return manifest, nil
+}
+
 // verifyVersion is Verify for one version of an entry that came out of a
 // validated lockfile.
 func (s *Store) verifyVersion(id string, e *entry, version string) (Verified, error) {

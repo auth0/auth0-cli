@@ -72,7 +72,7 @@ In agent mode the CLI:
     approves it in a browser.
   • Exits 0 on success and 130 when interrupted; every other failure exits 1, so
     scripts that treat any non-zero exit as failure keep working. The specific
-    failure class (usage, auth, validation, not_found, conflict, rate_limit, api) is carried
+    failure class (usage, auth, validation, not_found, conflict, rate_limit, api, plugin) is carried
     by the JSON error envelope's "code" field, not by the exit code.`
 
 const panicMessage = `
@@ -183,6 +183,12 @@ func Execute() {
 
 	cancelCtx := contextWithCancel()
 	err := classifyRequiredFlagError(rootCmd.ExecuteContext(cancelCtx))
+
+	// A command that held the interrupt has stopped what it started by now.
+	if interrupted(cancelCtx) {
+		os.Exit(exitInterrupted) // nolint:gocritic
+	}
+
 	if err == nil && cli.helpErr != nil {
 		err = cli.helpErr
 	}
@@ -259,11 +265,13 @@ func buildRootCmd(cli *cli) *cobra.Command {
 			ansi.Initialize(cli.noColor)
 			prepareInteractivity(cmd)
 			cli.configureRenderer()
+			cli.warnShadowedPlugin(cmd)
 
 			// Namespace commands (e.g. `auth0 actions`) never call the API
 			// themselves; they only print help or reject an unknown
-			// subcommand, so they must not force authentication.
-			if cmd.HasSubCommands() || !commandRequiresAuthentication(cmd.CommandPath()) {
+			// subcommand, so they must not force authentication. A plugin command
+			// logs in itself, once it knows that the plugin may run.
+			if cmd.HasSubCommands() || !commandRequiresAuthentication(cmd.CommandPath()) || cmd.Annotations[skipAuthAnnotation] == "true" {
 				return nil
 			}
 
@@ -538,8 +546,13 @@ func applyAgentModeDefaults(cli *cli, cmd *cobra.Command) {
 const agentModeEnvVar = "AUTH0_AGENT_MODE"
 
 // resolveAgentMode reports agent mode: an explicit --agent-mode flag wins, then AUTH0_AGENT_MODE (true/false), then a detected agent client.
+// The arguments after a bare "--" are not read, as they belong to a plugin.
 func resolveAgentMode(agentClient string, args []string) bool {
 	for _, arg := range args {
+		if arg == "--" {
+			break
+		}
+
 		if arg == "--agent-mode" {
 			return true
 		}
@@ -634,27 +647,40 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(guardianCmd(cli))
 	registerPluginCmd(rootCmd, cli, buildinfo.Version)
 
-	rootCmd.AddCommand(docsCmd(cli))
-	rootCmd.AddCommand(commandsCmd(cli))
-	rootCmd.AddCommand(agentCmd(cli))
+	// The commands below are added after the installed plugins, so the plugins
+	// are given them to find out which names a core command owns.
+	trailing := []*cobra.Command{docsCmd(cli), commandsCmd(cli), agentCmd(cli)}
 
 	// Keep completion at the bottom.
-	rootCmd.AddCommand(completionCmd(cli))
+	trailing = append(trailing, completionCmd(cli))
+
+	registerPluginCommands(rootCmd, cli, buildinfo.Version, trailing)
+	rootCmd.AddCommand(trailing...)
 }
 
 func contextWithCancel() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
+	guard := &interruptGuard{}
 
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 
 	go func() {
 		<-ch
+
+		// A command that started other processes, such as a plugin, stops them when
+		// the context ends, and Execute exits afterwards. A second interrupt does not
+		// wait for that.
+		if guard.interrupt() {
+			cancel()
+			<-ch
+		}
+
 		defer cancel()
 		os.Exit(exitInterrupted)
 	}()
 
-	return ctx
+	return withInterruptGuard(ctx, guard)
 }
 
 func overrideHelpAndVersionFlagText(cmd *cobra.Command) {

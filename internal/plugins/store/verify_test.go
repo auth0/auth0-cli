@@ -267,3 +267,138 @@ func TestVerify(t *testing.T) {
 		assert.Equal(t, "2.0.0", verified.Version)
 	})
 }
+
+func TestManifest(t *testing.T) {
+	install := func(t *testing.T) *fixture {
+		t.Helper()
+
+		f := newFixture(t)
+		f.install(f.index(f.release("1.0.0")), "1.0.0")
+
+		return f
+	}
+
+	t.Run("returns the manifest of the active version", func(t *testing.T) {
+		f := install(t)
+
+		manifest, err := f.store.Manifest(testID)
+
+		require.NoError(t, err)
+		require.NotNil(t, manifest)
+		assert.Equal(t, testID, manifest.ID)
+		assert.Equal(t, "1.0.0", manifest.Version)
+	})
+
+	t.Run("reads the active version and not another one", func(t *testing.T) {
+		f := newFixture(t)
+		index := f.index(f.release("1.0.0"), f.release("2.0.0"))
+		f.install(index, "1.0.0")
+		f.install(index, "2.0.0")
+
+		manifest, err := f.store.Manifest(testID)
+
+		require.NoError(t, err)
+		assert.Equal(t, "2.0.0", manifest.Version)
+	})
+
+	t.Run("does not hash the executable", func(t *testing.T) {
+		f := install(t)
+
+		require.NoError(t, os.WriteFile(filepath.Join(f.versionDir("1.0.0"), testBin), []byte("tampered"), 0o755))
+
+		_, verifyErr := f.store.Verify(testID)
+		manifest, err := f.store.Manifest(testID)
+
+		require.Error(t, verifyErr)
+		require.NoError(t, err)
+		assert.Equal(t, testID, manifest.ID)
+	})
+
+	t.Run("fails for a plugin that is not installed", func(t *testing.T) {
+		f := install(t)
+
+		_, err := f.store.Manifest("auth0/other")
+
+		var notInstalled *store.NotInstalledError
+		require.ErrorAs(t, err, &notInstalled)
+	})
+
+	t.Run("fails for an ID that is not a path-safe plugin ID", func(t *testing.T) {
+		f := install(t)
+
+		_, err := f.store.Manifest("../auth0/checkmate")
+
+		assert.Error(t, err)
+	})
+
+	t.Run("fails for a damaged lockfile", func(t *testing.T) {
+		f := install(t)
+
+		require.NoError(t, os.WriteFile(f.lockfilePath(), []byte("{"), 0o600))
+
+		_, err := f.store.Manifest(testID)
+
+		assert.ErrorIs(t, err, store.ErrLockfileDamaged)
+	})
+
+	refused := []struct {
+		name   string
+		change func(t *testing.T, f *fixture)
+		want   string
+	}{
+		{"a manifest that was modified after it was recorded", func(t *testing.T, f *fixture) {
+			path := filepath.Join(f.versionDir("1.0.0"), "plugin.json")
+			content, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(path, append(content, ' '), 0o600))
+		}, "the hash of plugin.json changed"},
+		{"a missing manifest", func(t *testing.T, f *fixture) {
+			require.NoError(t, os.Remove(filepath.Join(f.versionDir("1.0.0"), "plugin.json")))
+		}, "plugin.json"},
+		{"a manifest that is not valid, even when its hash was recorded", func(t *testing.T, f *fixture) {
+			f.rewriteManifest("1.0.0", func(m map[string]any) { delete(m, "description") })
+		}, "is not valid"},
+		{"a manifest that is for another version, even when its hash was recorded", func(t *testing.T, f *fixture) {
+			f.rewriteManifest("1.0.0", func(m map[string]any) { m["version"] = "9.9.9" })
+		}, "is for"},
+		{"a manifest that is for another plugin, even when its hash was recorded", func(t *testing.T, f *fixture) {
+			f.rewriteManifest("1.0.0", func(m map[string]any) { m["id"] = "auth0/other" })
+		}, "is for"},
+	}
+
+	for _, test := range refused {
+		t.Run("refuses "+test.name, func(t *testing.T) {
+			f := install(t)
+
+			test.change(t, f)
+
+			manifest, err := f.store.Manifest(testID)
+
+			var verification *store.VerificationError
+			require.ErrorAs(t, err, &verification)
+			assert.Contains(t, err.Error(), test.want)
+			assert.Nil(t, manifest)
+		})
+	}
+
+	t.Run("refuses a manifest that was swapped for a link", func(t *testing.T) {
+		skipOnWindows(t)
+
+		f := install(t)
+
+		path := filepath.Join(f.versionDir("1.0.0"), "plugin.json")
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+
+		elsewhere := filepath.Join(t.TempDir(), "plugin.json")
+		require.NoError(t, os.WriteFile(elsewhere, content, 0o600))
+		require.NoError(t, os.Remove(path))
+		require.NoError(t, os.Symlink(elsewhere, path))
+
+		_, err = f.store.Manifest(testID)
+
+		var verification *store.VerificationError
+		require.ErrorAs(t, err, &verification)
+		assert.Contains(t, err.Error(), "is not a regular file")
+	})
+}

@@ -623,6 +623,40 @@ func TestParseManifest_ReservedFlagNames(t *testing.T) {
 	}
 }
 
+func TestParseManifest_ReservedEnvNames(t *testing.T) {
+	names := []string{
+		"AUTH0_CLIENT_SECRET", "AUTH0_API_TOKEN", "AUTH0_CLIENT_ID", "AUTH0_DOMAIN",
+		"AUTH0_CLI_X", "AUTH0_PLUGIN_X", "AUTH0_ANYTHING", "auth0_client_secret", "Auth0_Domain",
+	}
+
+	for _, name := range names {
+		t.Run("rejects "+name, func(t *testing.T) {
+			_, err := ParseManifest(mutateManifest(t, setValue(name, "commands", 0, "permissions", "env", 0, "name")))
+
+			requireValidationError(t, err, "commands[0].permissions.env[0].name:", name)
+		})
+
+		// The schema only accepts upper case names, so the check of the reserved
+		// prefixes on a manifest that skipped the schema is tried on its own.
+		t.Run("the check alone rejects "+name, func(t *testing.T) {
+			manifest := parseMutated(t, func(map[string]any) {})
+			manifest.Commands[0].Permissions.Env[0].Name = name
+
+			problems := manifest.semanticErrors()
+
+			require.Len(t, problems, 1)
+			assert.Contains(t, problems[0], "commands[0].permissions.env[0].name:")
+			assert.Contains(t, problems[0], "reserved by the CLI")
+		})
+	}
+
+	t.Run("accepts a name that only looks like it", func(t *testing.T) {
+		manifest := parseMutated(t, setValue("AUTH0X_NAME", "commands", 0, "permissions", "env", 0, "name"))
+
+		assert.Equal(t, "AUTH0X_NAME", manifest.Commands[0].Permissions.Env[0].Name)
+	})
+}
+
 func TestParseManifest_MalformedJSON(t *testing.T) {
 	tests := []struct {
 		name string
