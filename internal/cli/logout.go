@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/keyring"
+	"github.com/auth0/auth0-cli/internal/plugins/approvals"
 )
 
 func logoutCmd(cli *cli) *cobra.Command {
@@ -21,6 +22,14 @@ func logoutCmd(cli *cli) *cobra.Command {
 			selectedTenant, err := selectValidTenantFromConfig(cli, cmd, args)
 			if err != nil {
 				return err
+			}
+
+			// The approvals go first, so that a failure leaves the tenant logged in and
+			// logging out can be tried again. Consent never outlives the session it
+			// was given in.
+			pluginApprovals := &approvals.Approvals{Dir: cli.Config.PluginsDir()}
+			if err := pluginApprovals.RemoveTenant(selectedTenant); err != nil {
+				return fmt.Errorf("failed to remove the plugin approvals of the tenant %q: %w", selectedTenant, err)
 			}
 
 			if err := cli.Config.RemoveTenant(selectedTenant); err != nil {
