@@ -53,6 +53,11 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 logout", false},
 		{"auth0 tenants use", false},
 		{"auth0 tenants list", false},
+		{"auth0 plugin list", false},
+		{"auth0 plugin search", false},
+		{"auth0 plugin info", false},
+		{"auth0 plugin install", false},
+		{"auth0 pluginx", true},
 	}
 
 	for index, testCase := range testCases {
@@ -94,6 +99,27 @@ func TestPersistentPreRunSkipsAuthForSchema(t *testing.T) {
 			root, cmd = findCommand(t, path...)
 			require.NoError(t, cmd.Flags().Set("schema", "true"))
 			require.NoError(t, root.PersistentPreRunE(cmd, nil), "--schema must skip the auth gate")
+		})
+	}
+}
+
+// TestPersistentPreRunSkipsAuthForPluginCommands runs the real pre-run hook with
+// an empty HOME, so it only passes when no login is asked for. The plugins alias
+// must take the same path as the plugin command.
+func TestPersistentPreRunSkipsAuthForPluginCommands(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	for _, path := range [][]string{{"plugin", "list"}, {"plugins", "list"}, {"plugins", "search"}, {"plugins", "info"}} {
+		t.Run(strings.Join(path, " "), func(t *testing.T) {
+			testCLI := &cli{renderer: display.NewRenderer()}
+			root := buildRootCmd(testCLI)
+			addSubCommands(root, testCLI)
+
+			cmd, _, err := root.Find(path)
+			require.NoError(t, err)
+			require.Equal(t, "auth0 plugin "+path[1], cmd.CommandPath())
+
+			assert.NoError(t, root.PersistentPreRunE(cmd, nil))
 		})
 	}
 }

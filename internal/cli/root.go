@@ -499,6 +499,13 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		}
 	}
 
+	// The plugin commands work from the registry, the plugins directory and the
+	// tenant name, so none of them needs a session. The path is built from the
+	// command name, so the plugins alias takes this branch too.
+	if invokedCommandName == pluginCommandPath || strings.HasPrefix(invokedCommandName, pluginCommandPath+" ") {
+		return false
+	}
+
 	return true
 }
 
@@ -625,6 +632,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(sessionsCmd(cli))
 	rootCmd.AddCommand(refreshTokensCmd(cli))
 	rootCmd.AddCommand(guardianCmd(cli))
+	registerPluginCmd(rootCmd, cli, buildinfo.Version)
 
 	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))
