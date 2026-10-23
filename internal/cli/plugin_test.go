@@ -94,6 +94,9 @@ func newPluginEnv(t *testing.T) *pluginEnv {
 		t.Setenv(name, "")
 	}
 
+	// A person who runs the tests inside an agent client would turn agent mode on.
+	t.Setenv(agentModeEnvVar, "false")
+
 	platform := plugins.CurrentPlatform()
 	if platform == "" {
 		t.Skip("this machine is not one of the plugin platforms")
