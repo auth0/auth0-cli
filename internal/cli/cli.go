@@ -44,6 +44,10 @@ type cli struct {
 	renderer *display.Renderer
 	tracker  *analytics.Tracker
 
+	// Builds the plugin service when a plugin command first needs it. When it
+	// is nil the real one is built. Tests set it to inject a fake.
+	plugins func() (*pluginService, error)
+
 	// Set of flags which are user specified.
 	debug               bool
 	tenant              string

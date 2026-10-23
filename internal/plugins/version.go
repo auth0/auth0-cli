@@ -29,6 +29,35 @@ func ParseVersion(s string) (Version, bool) {
 	return parseCore(s)
 }
 
+// IsPrerelease reports whether s is a semantic version with a prerelease suffix,
+// such as 1.39.0-beta.1 or v1.39.0-rc.2+build. Build metadata alone, as in
+// 1.39.0+build, is not a prerelease. Anything that does not start with
+// MAJOR.MINOR.PATCH is not a version, so it is not a prerelease either.
+func IsPrerelease(s string) bool {
+	s = strings.TrimPrefix(s, "v")
+
+	end := strings.IndexAny(s, "-+")
+	if end < 0 || s[end] != '-' {
+		return false
+	}
+
+	if _, ok := parseCore(s[:end]); !ok {
+		return false
+	}
+
+	prerelease, _, _ := strings.Cut(s[end+1:], "+")
+
+	return prerelease != ""
+}
+
+// FeatureEnabled reports whether the plugin commands are available in a CLI
+// build with the given version. They are for builds made from source, which have
+// an empty version or "dev", and for prerelease builds. A stable release carries
+// the code but not the feature.
+func FeatureEnabled(version string) bool {
+	return version == "" || version == "dev" || IsPrerelease(version)
+}
+
 // parseCore reads exactly MAJOR.MINOR.PATCH, with no leading zeros.
 func parseCore(s string) (Version, bool) {
 	parts := strings.Split(s, ".")
