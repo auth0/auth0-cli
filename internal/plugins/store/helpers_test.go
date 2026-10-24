@@ -19,10 +19,10 @@ import (
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 )
 
-const (
-	testID  = "auth0/checkmate"
-	testBin = "checkmate"
-)
+const testID = "auth0/checkmate"
+
+// testBin is the file name of the executable of the test plugin on this machine.
+var testBin = registrytest.BinName(plugins.CurrentPlatform(), "checkmate")
 
 // release describes one version of the test plugin that a test publishes.
 type release struct {
@@ -105,7 +105,6 @@ func (f *fixture) release(version string, mutate ...func(*release)) registry.Ver
 		t:        f.t,
 		id:       testID,
 		version:  version,
-		bin:      testBin,
 		format:   registry.ArtifactFormatTarGz,
 		binary:   []byte("#!/bin/sh\necho checkmate " + version + "\n"),
 		record:   registrytest.NewVersion(version),
@@ -115,6 +114,12 @@ func (f *fixture) release(version string, mutate ...func(*release)) registry.Ver
 
 	for _, change := range mutate {
 		change(r)
+	}
+
+	// A test that does not name the executable gets the one for the platform of
+	// the artifact.
+	if r.bin == "" {
+		r.bin = registrytest.BinName(r.platform, "checkmate")
 	}
 
 	r.record = registrytest.Seal(r.record)
@@ -336,13 +341,36 @@ func (f *fixture) filesSize(versions ...string) int64 {
 	return total
 }
 
-// skipOnWindows skips a test that relies on Unix file modes or symlinks.
+// skipOnWindows skips a test that relies on Unix file modes.
 func skipOnWindows(t *testing.T) {
 	t.Helper()
 
 	if runtime.GOOS == "windows" {
-		t.Skip("relies on Unix file modes and symlinks")
+		t.Skip("relies on Unix file modes")
 	}
+}
+
+// installed returns a fixture with 1.0.0 installed and active.
+func installed(t *testing.T) *fixture {
+	t.Helper()
+
+	f := newFixture(t)
+	f.install(f.index(f.release("1.0.0")), "1.0.0")
+
+	return f
+}
+
+// requireRefused checks that Verify refuses the plugin, with a reason that holds
+// want and the command that reinstalls it.
+func requireRefused(t *testing.T, f *fixture, want string) {
+	t.Helper()
+
+	_, err := f.store.Verify(testID)
+
+	var verification *store.VerificationError
+	require.ErrorAs(t, err, &verification)
+	assert.Contains(t, err.Error(), want)
+	assert.Contains(t, err.Error(), "Reinstall it with: auth0 plugin install checkmate")
 }
 
 // goodEntries returns the two good entries of the test plugin, for a test to

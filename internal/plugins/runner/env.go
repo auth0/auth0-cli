@@ -24,7 +24,7 @@ var baseNames = []string{
 }
 
 // windowsNames are added to the base list on Windows, which a plugin needs to
-// find its way around the system. They are untested until Windows support lands.
+// find its way around the system.
 var windowsNames = []string{
 	"SystemRoot", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PATHEXT", "ComSpec",
 }

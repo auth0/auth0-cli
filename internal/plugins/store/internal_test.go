@@ -86,6 +86,23 @@ func TestCheckDownloadURL(t *testing.T) {
 	}
 }
 
+func TestPluginPath(t *testing.T) {
+	s := &Store{Dir: filepath.Join("home", "plugins")}
+
+	path, err := s.pluginPath("auth0/checkmate")
+
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join("home", "plugins", "store", "auth0", "checkmate"), path)
+
+	// Names that only start like a device name are fine. The names that Windows
+	// reserves are refused by badFileName, which TestBadFileName covers.
+	for _, id := range []string{"auth0/console", "auth0/com10", "nulled/checkmate"} {
+		_, err := s.pluginPath(id)
+
+		require.NoError(t, err, id)
+	}
+}
+
 func TestBadFileName(t *testing.T) {
 	good := []string{"plugin", "plugin.exe", "plugin.json", "my-plugin_1.0", "console", "connect.exe", "com10", "com0", "lpt", "lpt10.exe", "au.x", "nulled"}
 
