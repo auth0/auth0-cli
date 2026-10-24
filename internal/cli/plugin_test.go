@@ -221,6 +221,7 @@ func (e *pluginEnv) releaseAs(id string, platform plugins.Platform, version stri
 	e.t.Helper()
 
 	name := plugins.NameOf(id)
+	bin := registrytest.BinName(platform, name)
 
 	record := registrytest.NewVersion(version)
 	record.Platforms = []plugins.Platform{platform}
@@ -244,20 +245,20 @@ func (e *pluginEnv) releaseAs(id string, platform plugins.Platform, version stri
 	}
 
 	binary = append(binary, '\n')
-	archive := registrytest.Package(id, record, registry.ArtifactFormatTarGz, name, binary)
+	archive := registrytest.Package(id, record, registry.ArtifactFormatTarGz, bin, binary)
 
 	if e.ManifestDescription != "" {
 		description, err := json.Marshal(e.ManifestDescription)
 		require.NoError(e.t, err)
 
 		manifest := bytes.Replace(registrytest.Manifest(id, record), []byte(`"description":"Test plugin `+id+`"`), append([]byte(`"description":`), description...), 1)
-		archive = registrytest.TarGz(registrytest.ArchiveEntry{Name: name, Body: binary}, registrytest.ArchiveEntry{Name: "plugin.json", Body: manifest})
+		archive = registrytest.TarGz(registrytest.ArchiveEntry{Name: bin, Body: binary}, registrytest.ArchiveEntry{Name: "plugin.json", Body: manifest})
 	}
 
 	path := pluginArtifactPath(name, version)
 
 	record.Artifacts = []registry.Artifact{
-		registrytest.NewArtifact(platform, "https://github.com"+path, registry.ArtifactFormatTarGz, name, archive),
+		registrytest.NewArtifact(platform, "https://github.com"+path, registry.ArtifactFormatTarGz, bin, archive),
 	}
 
 	e.server.Set(path, archive)
@@ -845,7 +846,7 @@ func TestInfoPluginCmd(t *testing.T) {
 		e.publish(e.index(e.release("1.0.0")))
 		e.install("1.0.0")
 
-		binary := filepath.Join(e.Dir, "store", "auth0", "checkmate", "1.0.0", pluginTestBin)
+		binary := filepath.Join(e.Dir, "store", "auth0", "checkmate", "1.0.0", registrytest.BinName(e.platform, pluginTestBin))
 		require.NoError(t, os.WriteFile(binary, []byte("tampered"), 0o700))
 
 		require.NoError(t, e.run("plugin", "info", "checkmate"))
@@ -2406,7 +2407,7 @@ func TestApprovePluginCmd(t *testing.T) {
 		require.EqualError(t, err, "the plugin auth0/nothing is not installed. Installed plugins: auth0/checkmate")
 		assertValidationError(t, err, "plugin_not_installed")
 
-		require.NoError(t, os.WriteFile(filepath.Join(e.Dir, "store", "auth0", "checkmate", "1.0.0", pluginTestBin), []byte("tampered"), 0o700))
+		require.NoError(t, os.WriteFile(filepath.Join(e.Dir, "store", "auth0", "checkmate", "1.0.0", registrytest.BinName(e.platform, pluginTestBin)), []byte("tampered"), 0o700))
 
 		err = e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant)
 

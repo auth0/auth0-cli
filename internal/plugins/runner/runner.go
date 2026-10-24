@@ -55,8 +55,10 @@ type Spec struct {
 	Stderr io.Writer
 
 	// Interactive is true for a command that talks to the user. It stays in the
-	// process group of the CLI, so the terminal keeps working, and on a timeout
-	// only the plugin process itself is stopped.
+	// process group of the CLI (on Windows, the console group), so the terminal
+	// keeps working. On Unix a timeout then stops only the plugin process itself;
+	// on Windows the whole tree is still stopped, because it is tracked by a job
+	// object.
 	Interactive bool
 
 	// The field terminal replaces the check whether Stdin is a terminal, for tests.
@@ -101,10 +103,24 @@ func (e *InterruptedError) Error() string {
 //
 // When the timeout or ctx ends the run, the plugin and every process it started
 // are asked to stop, and killed if they are still there after the grace period.
+//
 // On Unix a plugin that is not interactive is in a process group of its own, so
 // that covers the whole tree. The kill goes to the group by its number, so a
 // process that left the group is not reached, and in the instant between the
 // plugin ending and the group being checked the number could in theory be reused.
+//
+// On Windows the plugin starts suspended and is put in a job object of its own
+// before it runs, so everything it starts belongs to the job, and the kill goes
+// to the job itself, which no process number can mix up. A process can leave the
+// job only if the job allows it, and this one does not. The request to stop is a
+// Ctrl-Break sent to the group of a plugin that is not interactive; it is best
+// effort, because it needs a console, and it goes by process number. An
+// interactive plugin is not asked at all, since Ctrl-C has already reached it
+// through the console, and it is killed after the grace period.
+//
+// When the plugin exits by itself, what it left running is not stopped, on every
+// system. If the plugin cannot be put in its job object or resumed, it is killed
+// and Run returns an error before the plugin has executed any code.
 func Run(ctx context.Context, spec Spec) error {
 	if spec.Bin == "" || filepath.Base(spec.Bin) == spec.Bin {
 		return fmt.Errorf("the plugin executable %q is not a path", spec.Bin)
@@ -134,9 +150,24 @@ func Run(ctx context.Context, spec Spec) error {
 		cmd.Stdin = spec.Stdin
 	}
 
-	prepare(cmd, spec.Interactive)
+	procs := prepare(cmd, spec.Interactive)
 
 	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("could not start the plugin: %w", err)
+	}
+
+	// Release runs on every path from here on. It kills what is left of the tree
+	// unless the plugin exited by itself.
+	killRest := true
+
+	defer func() { procs.release(killRest) }()
+
+	if err := procs.started(); err != nil {
+		// Fail closed: the plugin must not run outside of its tree. Wait is called
+		// so the process is reaped and its handle closed.
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+
 		return fmt.Errorf("could not start the plugin: %w", err)
 	}
 
@@ -162,13 +193,15 @@ func Run(ctx context.Context, spec Spec) error {
 
 	select {
 	case <-done:
+		killRest = false
+
 		return result(waitErr)
 	case <-expired:
-		stop(cmd, spec.Interactive, done)
+		stop(procs, done)
 
 		return &TimeoutError{After: spec.Timeout}
 	case <-ctx.Done():
-		stop(cmd, spec.Interactive, done)
+		stop(procs, done)
 
 		return &InterruptedError{}
 	}
@@ -195,8 +228,8 @@ func result(err error) error {
 // stop asks the plugin to stop, and kills it when it and what it started are not
 // gone when the grace period ends. It returns once the plugin has been waited
 // for.
-func stop(cmd *exec.Cmd, interactive bool, done <-chan struct{}) {
-	terminate(cmd, interactive)
+func stop(procs *tree, done <-chan struct{}) {
+	procs.terminate()
 
 	deadline := time.NewTimer(grace)
 	defer deadline.Stop()
@@ -207,7 +240,7 @@ func stop(cmd *exec.Cmd, interactive bool, done <-chan struct{}) {
 	exited := false
 
 	for {
-		if exited && !lingering(cmd, interactive) {
+		if exited && !procs.lingering() {
 			return
 		}
 
@@ -216,7 +249,7 @@ func stop(cmd *exec.Cmd, interactive bool, done <-chan struct{}) {
 			exited = true
 			done = nil
 		case <-deadline.C:
-			kill(cmd, interactive)
+			procs.kill()
 
 			if !exited {
 				<-done

@@ -49,7 +49,7 @@ var (
 )
 
 // renameFile replaces a file, which tests replace to make it fail.
-var renameFile = os.Rename
+var renameFile = plugins.Rename
 
 // approval is what is stored for one plugin on one tenant.
 type approval struct {

@@ -684,6 +684,43 @@ func TestParseIndex_SemanticFailures(t *testing.T) {
 	}
 }
 
+func TestParseIndex_WindowsExecutable(t *testing.T) {
+	tests := []struct {
+		name     string
+		platform plugins.Platform
+		bin      string
+
+		// The expected error, which is empty when the index is valid.
+		wantErr string
+	}{
+		{name: "an exe", platform: plugins.PlatformWindowsX64, bin: "plugin.exe"},
+		{name: "an exe in upper case", platform: plugins.PlatformWindowsX64, bin: "PLUGIN.EXE"},
+		{name: "a name that holds another extension before the exe", platform: plugins.PlatformWindowsX64, bin: "plugin.cmd.exe"},
+		{name: "a name without an extension", platform: plugins.PlatformWindowsX64, bin: "plugin", wantErr: `plugins[0].versions[0].artifacts[2].bin: "plugin" must end in .exe`},
+		{name: "a bat script", platform: plugins.PlatformWindowsX64, bin: "plugin.bat", wantErr: `plugins[0].versions[0].artifacts[2].bin: "plugin.bat" must end in .exe`},
+		{name: "a cmd script in upper case", platform: plugins.PlatformWindowsX64, bin: "PLUGIN.CMD", wantErr: `plugins[0].versions[0].artifacts[2].bin: "PLUGIN.CMD" must end in .exe`},
+		{name: "a script name on a platform that is not Windows", platform: plugins.PlatformLinuxArm64, bin: "plugin.cmd"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			record := registrytest.NewVersion("1.0.0")
+			record.Platforms = append(record.Platforms, test.platform)
+			record.Artifacts = append(record.Artifacts, registrytest.NewArtifact(test.platform, "https://downloads.example.com/1.0.0/plugin.zip", registry.ArtifactFormatZip, test.bin, []byte("archive")))
+
+			_, err := registry.ParseIndex(registrytest.NewIndexBuilder().AddPlugin(registrytest.NewPlugin(testPluginID, record)).Build())
+
+			if test.wantErr == "" {
+				require.NoError(t, err)
+
+				return
+			}
+
+			requireInvalid(t, err, test.wantErr)
+		})
+	}
+}
+
 func TestParseIndex_DuplicateKeys(t *testing.T) {
 	// The helper "after" adds a key right after the first time the marker
 	// appears, which makes the object that the marker opens have that key twice.
