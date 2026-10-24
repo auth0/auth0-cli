@@ -1,0 +1,58 @@
+import type { ManagementClient } from "auth0";
+
+import { commands, findCommand } from "./commands";
+import { reportError } from "./lib/errors";
+import type { Output } from "./lib/output";
+import { Exit, invocation, name, version } from "./lib/plugin";
+
+/** What a run needs from the outside, so that tests can replace it. */
+export interface Deps {
+  out: Output;
+  signal: AbortSignal;
+  client: () => ManagementClient;
+}
+
+/**
+ * Picks the command from the arguments the CLI passed, runs it and returns the
+ * exit code. The CLI has already removed its own flags (--json, --tenant), so
+ * what is left belongs to the plugin.
+ */
+export async function run(argv: readonly string[], deps: Deps): Promise<number> {
+  const { out, signal, client } = deps;
+
+  if (argv[0] === "--version") {
+    out.print(`${name} ${version}`);
+    return Exit.ok;
+  }
+
+  // A plugin without a root command has nothing to run without a command name.
+  if (["help", "-h", "--help"].includes(argv[0] ?? "") && !commands.some((c) => c.name === name)) {
+    out.print(helpText());
+    return Exit.ok;
+  }
+
+  try {
+    const found = findCommand(argv);
+
+    if (found.rest.includes("-h") || found.rest.includes("--help")) {
+      out.print(`Usage: ${invocation(found.command.name)} [flags]\n\n${found.command.help}`);
+      return Exit.ok;
+    }
+
+    await found.command.run({ args: found.rest, out, signal, client });
+    return Exit.ok;
+  } catch (error) {
+    if (signal.aborted) {
+      out.note("interrupted");
+      return Exit.error;
+    }
+
+    return reportError(out, error);
+  }
+}
+
+/** Lists the commands, for people who run the file directly. */
+function helpText(): string {
+  const lines = commands.map((c) => `  ${invocation(c.name).padEnd(36)} ${c.help}`);
+  return `${name} is a plugin for the Auth0 CLI. Run it with \`auth0\`, not directly.\n\nCommands:\n${lines.join("\n")}`;
+}

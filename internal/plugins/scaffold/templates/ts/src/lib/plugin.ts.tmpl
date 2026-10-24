@@ -1,0 +1,33 @@
+import manifest from "../../plugin.json";
+
+/** The name people type after `auth0`. */
+export const name = "__PLUGIN_NAME__";
+
+/** The version in plugin.json, so that there is one place to change it. */
+export const version: string = manifest.version;
+
+/** The exit codes of the plugin. The CLI reports every code but 0 as a failure. */
+export const Exit = {
+  ok: 0,
+  /** The command ran and failed. */
+  error: 1,
+  /** The arguments were wrong. */
+  usage: 2,
+} as const;
+
+/** Returns what people type to run a command. */
+export function invocation(command: string): string {
+  return command === name ? `auth0 ${name}` : `auth0 ${name} ${command}`;
+}
+
+/**
+ * Returns a signal that aborts on Ctrl-C and SIGTERM. The CLI sends SIGTERM to a
+ * plugin that runs past its timeout.
+ */
+export function signalContext(): AbortSignal {
+  const controller = new AbortController();
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => controller.abort());
+  }
+  return controller.signal;
+}

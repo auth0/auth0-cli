@@ -1,0 +1,80 @@
+package plugin
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"strings"
+	"text/tabwriter"
+)
+
+// The output flags of the CLI, as variables. The CLI removes --json and
+// --json-compact from the arguments and sets these instead. In agent mode it
+// turns JSON on by itself.
+const (
+	EnvJSON        = "AUTH0_PLUGIN_JSON"
+	EnvJSONCompact = "AUTH0_PLUGIN_JSON_COMPACT"
+)
+
+// Output decides how a command prints. The rule for every command: the result
+// goes to Stdout, as JSON when the user asked for it and as a table otherwise,
+// and everything else (notes, errors) goes to Stderr. Scripts and agents read
+// stdout, so keep it free of anything but the result.
+type Output struct {
+	Stdout, Stderr io.Writer
+	JSON           bool
+	Compact        bool
+}
+
+// NewOutput reads the output flags of the CLI.
+func NewOutput(stdout, stderr io.Writer) *Output {
+	compact := os.Getenv(EnvJSONCompact) == "true"
+
+	return &Output{
+		Stdout:  stdout,
+		Stderr:  stderr,
+		JSON:    compact || os.Getenv(EnvJSON) == "true",
+		Compact: compact,
+	}
+}
+
+// PrintJSON writes a value as JSON, indented unless --json-compact was used.
+func (o *Output) PrintJSON(value any) error {
+	var (
+		data []byte
+		err  error
+	)
+
+	if o.Compact {
+		data, err = json.Marshal(value)
+	} else {
+		data, err = json.MarshalIndent(value, "", "  ")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(o.Stdout, "%s\n", data)
+
+	return err
+}
+
+// PrintTable writes rows as a table with aligned columns.
+func (o *Output) PrintTable(header []string, rows [][]string) error {
+	table := tabwriter.NewWriter(o.Stdout, 0, 0, 2, ' ', 0)
+
+	_, _ = fmt.Fprintln(table, strings.Join(header, "\t"))
+
+	for _, row := range rows {
+		_, _ = fmt.Fprintln(table, strings.Join(row, "\t"))
+	}
+
+	return table.Flush()
+}
+
+// Note writes a line for people to stderr, such as "No clients found.".
+func (o *Output) Note(format string, args ...any) {
+	_, _ = fmt.Fprintf(o.Stderr, format+"\n", args...)
+}

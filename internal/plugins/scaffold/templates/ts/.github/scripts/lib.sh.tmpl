@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Helpers for the release scripts. Source this file, do not run it.
+
+# A semantic version without build metadata: the tag and the archive names carry it.
+SEMVER_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
+
+# Prints the version of plugin.json, or fails when it is missing or invalid or
+# when package.json has another version (it need not have one).
+project_version() {
+  local version
+  version=$(jq -er '.version | strings' plugin.json) || {
+    echo "plugin.json has no version." >&2
+    return 1
+  }
+  [[ $version =~ $SEMVER_RE ]] || {
+    echo "The version in plugin.json is not a semantic version such as 1.2.3 (no build metadata)." >&2
+    return 1
+  }
+  if [[ -f package.json ]] && jq -e 'has("version")' package.json >/dev/null; then
+    local package
+    package=$(jq -r '.version' package.json)
+    [[ $package == "$version" ]] || {
+      echo "plugin.json has version $version but package.json has $package. Make them the same." >&2
+      return 1
+    }
+  fi
+  echo "$version"
+}

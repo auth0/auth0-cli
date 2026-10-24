@@ -1,0 +1,16 @@
+/**
+ * Returns every item of a list call. Pass it the result of any SDK `list`
+ * method: it is a page that fetches the next page while it is iterated.
+ *
+ *   const page = await client().clients.list({ per_page: 50 }, { abortSignal: signal });
+ *   const items = await collect(page);
+ *
+ * Set `per_page`: the SDK stops at the first page that is shorter than it.
+ */
+export async function collect<T>(pages: AsyncIterable<T>): Promise<T[]> {
+  const items: T[] = [];
+  for await (const item of pages) {
+    items.push(item);
+  }
+  return items;
+}
