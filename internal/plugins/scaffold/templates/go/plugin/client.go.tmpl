@@ -1,0 +1,99 @@
+package plugin
+
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"net/http"
+	"os"
+
+	managementclient "github.com/auth0/go-auth0/v3/management/client"
+	"github.com/auth0/go-auth0/v3/management/option"
+)
+
+// The variables the CLI sets for every run. This is the only file that reads
+// them, so look here when the plugin cannot reach the API.
+const (
+	// EnvDomain is the address of the CLI proxy as host:port. It is not the
+	// tenant domain: the plugin never talks to Auth0 directly.
+	EnvDomain = "AUTH0_PLUGIN_DOMAIN"
+
+	// EnvToken is a secret for this run only. It lets the plugin use the proxy,
+	// which swaps in the real token. It is not an Auth0 token.
+	EnvToken = "AUTH0_PLUGIN_MANAGEMENT_TOKEN"
+
+	// EnvCACert is a PEM file with the certificate that the proxy uses.
+	EnvCACert = "AUTH0_PLUGIN_CA_CERT"
+)
+
+// NewClient returns the go-auth0 Management API client for this run. Every call
+// goes through the proxy of the CLI, which allows only the scopes that
+// plugin.json declares for the command.
+func NewClient() (*managementclient.Management, error) {
+	domain, err := requireEnv(EnvDomain)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := requireEnv(EnvToken)
+	if err != nil {
+		return nil, err
+	}
+
+	caCert, err := requireEnv(EnvCACert)
+	if err != nil {
+		return nil, err
+	}
+
+	httpClient, err := newHTTPClient(caCert)
+	if err != nil {
+		return nil, err
+	}
+
+	// The SDK builds https://<domain>/api/v2 from the domain, so host:port works.
+	return managementclient.New(domain,
+		option.WithToken(token),
+		option.WithHTTPClient(httpClient),
+	)
+}
+
+// requireEnv returns a variable of the CLI, or an error that says what to do
+// when someone runs the plugin without the CLI.
+func requireEnv(name string) (string, error) {
+	value := os.Getenv(name)
+	if value == "" {
+		return "", fmt.Errorf("%s is not set. This plugin has to be started by the Auth0 CLI: run `auth0 %s` instead of running the file directly", name, Name)
+	}
+
+	return value, nil
+}
+
+// newHTTPClient returns an HTTP client that trusts the proxy certificate.
+//
+// The CLI also sets SSL_CERT_FILE, but Go ignores it on macOS and Windows, so
+// the plugin loads the certificate itself, next to the system certificates.
+func newHTTPClient(caCertPath string) (*http.Client, error) {
+	pem, err := os.ReadFile(caCertPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read the proxy certificate: %w", err)
+	}
+
+	pool, err := x509.SystemCertPool()
+	if err != nil {
+		pool = x509.NewCertPool()
+	}
+
+	if !pool.AppendCertsFromPEM(pem) {
+		return nil, fmt.Errorf("%s does not hold a PEM certificate", caCertPath)
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			// The only host this plugin calls is the proxy on the loopback
+			// address, so HTTP_PROXY must never apply. The CLI itself uses the
+			// proxy of the user when it forwards a call.
+			Proxy:           nil,
+			TLSClientConfig: &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12},
+		},
+	}, nil
+}

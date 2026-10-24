@@ -1,0 +1,95 @@
+# __PLUGIN_NAME__
+
+A plugin for the [Auth0 CLI](https://github.com/auth0/auth0-cli), written in TypeScript with the [auth0](https://www.npmjs.com/package/auth0) Node package and compiled to one executable with [Bun](https://bun.sh). It runs as `auth0 __PLUGIN_NAME__` and calls the Management API through the CLI, which never gives the plugin a real token.
+
+The sample command lists the clients of your tenant. Make it your own.
+
+## Requirements
+
+- Bun 1.4 or later
+- The Auth0 CLI, with plugin development turned on: `export AUTH0_CLI_PLUGIN_DEV_MODE=true`
+
+## Layout
+
+`src/index.ts` is the entry point and `src/run.ts` finds the command and turns errors into exit codes. `src/commands/` holds one file per command and the list of them. `src/lib/` holds the shared code: environment, SDK client, output, error text with exit codes, flags and pagination. `plugin.json` is the manifest: commands, flags and the Management API scopes each command may use.
+
+## Build and run
+
+```sh
+bun install          # also writes bun.lock; commit it
+bun run build        # writes ./__PLUGIN_NAME__ for this machine
+```
+
+Link the build to the CLI once. The link reads `plugin.json` and the executable again on every run, so after a change you only rebuild.
+
+```sh
+auth0 plugin dev link
+auth0 plugin approve __PLUGIN_NAME__    # a person reviews the scopes; repeat when they change
+auth0 __PLUGIN_NAME__
+auth0 __PLUGIN_NAME__ --json
+```
+
+`bun test` runs the tests, `bun run typecheck` checks the types, and `auth0 plugin dev validate` checks `plugin.json`.
+
+## Scopes
+
+The CLI proxy refuses every call that needs a scope the command did not declare, and the plugin then says which scope is missing. Declare scopes under `permissions.scopes` of the command in `plugin.json`, then approve again. The sample command needs `read:clients`.
+
+## Add a command
+
+1. Copy `src/commands/clients.ts` to `src/commands/<name>.ts`. Change the name, the help text and the code in `run`.
+2. Import it in `src/commands/index.ts` and add it to the list.
+3. Add the command to `commands` in `plugin.json`, with its description and the scopes it needs. Rebuild. A command that is not the root command runs as `auth0 __PLUGIN_NAME__ <name>`.
+
+Flags: declare them with `parseFlags` in the command and list them under `flags` in `plugin.json`; the flags of the CLI itself (`--json`, `--tenant` and so on) are handled for you. Use `out.json` to choose between `out.printJson` and `out.printTable`, `collect` for every page of a list call, and pass `signal` to every SDK call so that Ctrl-C and the CLI's timeout stop it. Results go to stdout, anything else to stderr.
+
+## Environment
+
+The CLI sets these for every run. Only `src/lib/env.ts` reads them.
+
+| Variable | Meaning |
+| --- | --- |
+| `AUTH0_PLUGIN_DOMAIN` | Address of the CLI proxy (`host:port`) |
+| `AUTH0_PLUGIN_MANAGEMENT_TOKEN` | A secret for this run that lets the plugin use the proxy |
+| `AUTH0_PLUGIN_JSON`, `AUTH0_PLUGIN_JSON_COMPACT` | `true` when the user asked for JSON output (agent mode turns it on) |
+| `AUTH0_PLUGIN_TENANT` | The tenant the run is for |
+| `NODE_EXTRA_CA_CERTS` | The certificate of the proxy, which Bun trusts without code |
+
+Exit codes: 0 on success, 1 when the command fails, 2 when the arguments are wrong.
+
+## Releasing
+
+Edit nothing by hand except `version` in `plugin.json` (a `version` in `package.json` is kept in step). Run one command, then merge the pull request it opens.
+
+```sh
+bun run release patch              # or minor, or major
+bun run release 1.2.3              # an exact version
+bun run release patch --dry-run    # show the steps, change nothing
+```
+
+It needs `git`, `gh` (`gh auth login`) and a clean `main` that matches `origin`. It creates `release/v<version>`, raises the version, commits `chore: release v<version>` with your own git settings, pushes and opens the pull request. A keyword refuses a prerelease version; give the exact version then.
+
+Merging runs the Release workflow, which:
+
+1. runs the tests (`ci.yml`) on the merged commit,
+2. compiles one executable per platform with `bun build --compile`,
+3. packs each with `plugin.json` into `<name>_<version>_<platform>.tar.gz` (`.zip` on Windows),
+4. creates the release `v<version>` at that commit with the archives, `checksums.txt` and generated notes.
+
+If a run fails half way, re-run it or run the workflow by hand on `main`: it finishes what is missing and does nothing once the release is complete. The first push of a new project releases the scaffolded version. The workflow listens to `main`; change that in `release.yml` for another branch name.
+
+| File | What it does |
+| --- | --- |
+| `scripts/release.ts` | The program behind `bun run release`; `scripts/version.ts` holds the version rules |
+| `.github/workflows/ci.yml` | Install, typecheck, test and build; the release calls it too |
+| `.github/workflows/release.yml` | The steps above |
+| `.github/actions/read-version/` | Reads the version and tells whether its tag and release exist (`.github/scripts/`) |
+| `.github/actions/build-archive/` | Compiles and packs one platform (`build-archive.sh`), uploads the archive |
+
+Every platform of `plugin.json` is built with `bun build --compile --target=bun-<platform>`, for example `bun-linux-x64-musl`.
+
+The workflow stops at the GitHub release. Signing, attestations and publishing to the plugin catalog come later.
+
+## License
+
+__LICENSE__

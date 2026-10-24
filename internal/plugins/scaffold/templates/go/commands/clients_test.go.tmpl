@@ -1,0 +1,205 @@
+package commands
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"testing"
+
+	"example.com/__PLUGIN_NAME__/plugin"
+)
+
+// serve starts a TLS server in place of the CLI proxy and points the plugin at
+// it with the same variables the CLI sets. The handler sees every request.
+func serve(t *testing.T, handler http.HandlerFunc) {
+	t.Helper()
+
+	server := httptest.NewTLSServer(handler)
+	t.Cleanup(server.Close)
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+	caPath := filepath.Join(t.TempDir(), "proxy.pem")
+
+	if err := os.WriteFile(caPath, certPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(plugin.EnvDomain, strings.TrimPrefix(server.URL, "https://"))
+	t.Setenv(plugin.EnvToken, "run-secret")
+	t.Setenv(plugin.EnvCACert, caPath)
+}
+
+// run executes the sample command the way the CLI does: the root command gets
+// no name, any other command gets its name as the first argument.
+func run(t *testing.T, out *plugin.Output, args ...string) int {
+	t.Helper()
+
+	if plugin.Name != "__COMMAND__" {
+		args = append([]string{"__COMMAND__"}, args...)
+	}
+
+	return Run(context.Background(), args, out)
+}
+
+// pageSizes are the pages of a list of 103 clients where the page size is 50.
+var pageSizes = []int{50, 50, 3}
+
+// clientRange returns the clients with the numbers from start up to end.
+func clientRange(start, end int) []map[string]string {
+	clients := []map[string]string{}
+	for i := start; i < end; i++ {
+		clients = append(clients, map[string]string{"client_id": fmt.Sprintf("id%d", i), "name": fmt.Sprintf("Client %d", i)})
+	}
+
+	return clients
+}
+
+// clientsPage returns the page of the list with this index, as the API sends it.
+func clientsPage(index int) string {
+	start := 0
+	for _, size := range pageSizes[:index] {
+		start += size
+	}
+
+	clients := clientRange(start, start+pageSizes[index])
+	body, _ := json.Marshal(map[string]any{"start": start, "limit": 50, "length": len(clients), "total": 103, "clients": clients})
+
+	return string(body)
+}
+
+func TestClients(t *testing.T) {
+	const (
+		page   = `{"start":0,"limit":50,"length":2,"total":2,"clients":[{"client_id":"id1","name":"First"},{"client_id":"id2","name":"Second"}]}`
+		empty  = `{"start":0,"limit":50,"length":0,"total":0,"clients":[]}`
+		denied = `{"statusCode":403,"error":"Forbidden","errorCode":"insufficient_scope","message":"Plugin auth0/x did not declare scope \"read:clients\" required for GET /api/v2/clients. Add it to permissions.scopes in plugin.json."}`
+		tenant = `{"statusCode":403,"error":"Forbidden","errorCode":"insufficient_scope","message":"Insufficient scope, expected any of: read:clients"}`
+	)
+
+	tests := []struct {
+		name     string
+		args     []string
+		compact  bool
+		json     bool
+		status   int
+		body     string
+		paged    bool // The server answers with the pages of clientsPage, by the page parameter.
+		wantLen  int  // The number of clients in a JSON list on stdout, instead of wantOut.
+		wantCode int
+		wantOut  string   // The whole of stdout.
+		wantErr  []string // Pieces of stderr.
+	}{
+		{
+			name: "table", status: 200, body: page,
+			wantOut: "CLIENT ID  NAME\nid1        First\nid2        Second\n",
+		},
+		{
+			name: "json", json: true, status: 200, body: page,
+			wantOut: "[\n  {\n    \"client_id\": \"id1\",\n    \"name\": \"First\"\n  },\n  {\n    \"client_id\": \"id2\",\n    \"name\": \"Second\"\n  }\n]\n",
+		},
+		{
+			name: "compact json", json: true, compact: true, status: 200, body: page,
+			wantOut: "[{\"client_id\":\"id1\",\"name\":\"First\"},{\"client_id\":\"id2\",\"name\":\"Second\"}]\n",
+		},
+		{
+			name: "every page of the list", json: true, compact: true, status: 200, paged: true,
+			wantLen: 103,
+		},
+		{
+			name: "no clients", status: 200, body: empty,
+			wantErr: []string{"No clients found."},
+		},
+		{
+			name: "no clients as json", json: true, status: 200, body: empty,
+			wantOut: "[]\n",
+		},
+		{
+			name: "scope missing from plugin.json", status: 403, body: denied,
+			wantCode: 1, wantErr: []string{"read:clients", "permissions.scopes", "auth0 plugin approve " + plugin.Name},
+		},
+		{
+			name: "scope missing from the token", status: 403, body: tenant,
+			wantCode: 1, wantErr: []string{"the API answered 403", "Insufficient scope"},
+		},
+		{
+			name: "unknown flag", args: []string{"--nope"}, status: 200, body: page,
+			wantCode: 2, wantErr: []string{"flag provided but not defined"},
+		},
+		{
+			name: "stray argument", args: []string{"extra"}, status: 200, body: page,
+			wantCode: 2, wantErr: []string{`unexpected argument "extra"`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var calls int
+
+			serve(t, func(w http.ResponseWriter, r *http.Request) {
+				calls++
+
+				if got := r.Header.Get("Authorization"); got != "Bearer run-secret" {
+					t.Errorf("Authorization = %q, want the token of the run", got)
+				}
+
+				// The API returns an empty page after the last one.
+				body := tt.body
+				if r.URL.Query().Get("page") != "0" && tt.status == 200 {
+					body = empty
+				}
+
+				if index, err := strconv.Atoi(r.URL.Query().Get("page")); tt.paged && err == nil && index < len(pageSizes) {
+					body = clientsPage(index)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(body))
+			})
+
+			var stdout, stderr bytes.Buffer
+			out := &plugin.Output{Stdout: &stdout, Stderr: &stderr, JSON: tt.json, Compact: tt.compact}
+
+			if code := run(t, out, tt.args...); code != tt.wantCode {
+				t.Errorf("exit code = %d, want %d (stderr: %s)", code, tt.wantCode, stderr.String())
+			}
+
+			if tt.wantLen > 0 {
+				var clients []map[string]string
+				if err := json.Unmarshal(stdout.Bytes(), &clients); err != nil {
+					t.Fatalf("stdout is not a JSON list: %v", err)
+				}
+
+				if len(clients) != tt.wantLen {
+					t.Errorf("stdout has %d clients, want %d", len(clients), tt.wantLen)
+				}
+
+				// Every page in order, and none twice.
+				for i, c := range clients {
+					if want := fmt.Sprintf("id%d", i); c["client_id"] != want {
+						t.Fatalf("client %d is %q, want %q", i, c["client_id"], want)
+					}
+				}
+			} else if stdout.String() != tt.wantOut {
+				t.Errorf("stdout = %q, want %q", stdout.String(), tt.wantOut)
+			}
+
+			for _, want := range tt.wantErr {
+				if !strings.Contains(stderr.String(), want) {
+					t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
+				}
+			}
+
+			if tt.wantCode == 2 && calls != 0 {
+				t.Errorf("a usage error made %d API calls, want none", calls)
+			}
+		})
+	}
+}

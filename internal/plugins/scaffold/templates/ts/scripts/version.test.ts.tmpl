@@ -1,0 +1,68 @@
+import { describe, expect, test } from "bun:test";
+import { nextVersion, readVersion, setVersion } from "./version";
+
+describe("nextVersion", () => {
+  const cases: [string, string, string, string][] = [
+    ["patch", "1.2.3", "patch", "1.2.4"],
+    ["minor resets patch", "1.2.3", "minor", "1.3.0"],
+    ["major resets minor and patch", "1.2.3", "major", "2.0.0"],
+    ["exact version", "1.2.3", "2.5.0", "2.5.0"],
+    ["release after a prerelease", "2.0.0-rc.1", "2.0.0", "2.0.0"],
+    ["a number beyond 64 bits", "1.2.99999999999999999999", "patch", "1.2.100000000000000000000"],
+  ];
+  for (const [name, current, request, want] of cases) {
+    test(name, () => expect(nextVersion(current, request)).toBe(want));
+  }
+
+  const failures: [string, string, string, string][] = [
+    ["same version", "1.2.3", "1.2.3", "already the current version"],
+    ["keyword on a prerelease", "2.0.0-rc.1", "patch", "is a prerelease"],
+    ["leading v", "1.2.3", "v1.2.4", "Write 1.2.4 without the v"],
+    ["build metadata", "1.2.3", "1.2.4+build", "not patch, minor, major"],
+    ["leading zero", "1.2.3", "1.02.4", "not patch, minor, major"],
+    ["newline", "1.2.3", "1.2.4\n", "not patch, minor, major"],
+    ["invalid current", "dev", "patch", "not a semantic version"],
+  ];
+  for (const [name, current, request, message] of failures) {
+    test(name, () => expect(() => nextVersion(current, request)).toThrow(message));
+  }
+});
+
+describe("setVersion", () => {
+  const cases: [string, string, string][] = [
+    [
+      "keeps every other character",
+      '{\n  "id": "x",\n  "version": "1.0.0",\n  "engines": {\n    "version": "9"\n  }\n}\n',
+      '{\n  "id": "x",\n  "version": "1.1.0",\n  "engines": {\n    "version": "9"\n  }\n}\n',
+    ],
+    ["tabs and odd spacing", '{\t"version" :\n\t"1.0.0" }', '{\t"version" :\n\t"1.1.0" }'],
+    ["compact", '{"a":["version"],"version":"1.0.0"}', '{"a":["version"],"version":"1.1.0"}'],
+    ["escaped value", '{"version":"1\\u002e0.0"}', '{"version":"1.1.0"}'],
+    ["a key that holds a quote", '{"a\\"b":"x","version":"1.0.0"}', '{"a\\"b":"x","version":"1.1.0"}'],
+  ];
+  for (const [name, doc, want] of cases) {
+    test(name, () => expect(setVersion(doc, "1.1.0")).toBe(want));
+  }
+
+  const failures: [string, string, string][] = [
+    ["only a nested version", '{"engines":{"version":"1.0.0"}}', 'no "version" key'],
+    ["two version keys", '{"version":"1.0.0","version":"1.0.1"}', "two"],
+    ["not a string", '{"version":1}', "not a string"],
+    ["not an object", '["version"]', "not a JSON object"],
+    ["truncated", '{"version":"1.0', "JSON"],
+  ];
+  for (const [name, doc, message] of failures) {
+    test(name, () => expect(() => setVersion(doc, "1.1.0")).toThrow(message));
+  }
+
+  test("a value that is not a semantic version is never written", () => {
+    for (const bad of ["dev", '1.0.0","x":"']) {
+      expect(() => setVersion('{"version":"1.0.0"}', bad)).toThrow("not a semantic version");
+    }
+  });
+
+  test("readVersion", () => {
+    expect(readVersion('{"id":"x","version":"3.4.5"}')).toBe("3.4.5");
+    expect(readVersion('{"engines":{"version":"3.4.5"}}')).toBeUndefined();
+  });
+});

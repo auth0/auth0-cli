@@ -31,6 +31,18 @@ type PluginLinkResult struct {
 	ApproveCommand   string `json:"approveCommand,omitempty"`
 }
 
+// PluginCreateResult is the result of creating a plugin project: the absolute
+// directory it was written to, the paths of its files relative to that directory,
+// the plugin ID and the language. Warnings holds what the person should know
+// about the project, and is left out when there is nothing.
+type PluginCreateResult struct {
+	Dir      string   `json:"dir"`
+	Files    []string `json:"files"`
+	ID       string   `json:"id"`
+	Lang     string   `json:"lang"`
+	Warnings []string `json:"warnings,omitempty"`
+}
+
 type pluginProblemView struct {
 	PluginProblem
 }
@@ -71,6 +83,18 @@ func (r *Renderer) PluginValidation(result PluginValidation) {
 // PluginLinked prints the result of linking a plugin as JSON. In the other formats
 // it prints nothing, because the command already told the person what it did.
 func (r *Renderer) PluginLinked(result PluginLinkResult) {
+	switch r.Format {
+	case OutputFormatJSON:
+		r.JSONResult(result)
+	case OutputFormatJSONCompact:
+		r.JSONCompactResult(result)
+	}
+}
+
+// PluginCreated prints the result of creating a plugin project as JSON. In the
+// other formats it prints nothing, because the command already told the person
+// what it did and what to do next.
+func (r *Renderer) PluginCreated(result PluginCreateResult) {
 	switch r.Format {
 	case OutputFormatJSON:
 		r.JSONResult(result)

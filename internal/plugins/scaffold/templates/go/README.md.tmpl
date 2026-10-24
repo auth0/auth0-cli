@@ -1,0 +1,95 @@
+# __PLUGIN_NAME__
+
+A plugin for the [Auth0 CLI](https://github.com/auth0/auth0-cli), written in Go with the [go-auth0](https://github.com/auth0/go-auth0) SDK. It runs as `auth0 __PLUGIN_NAME__` and calls the Management API through the CLI, which never gives the plugin a real token.
+
+The sample command lists the clients of your tenant. Make it your own.
+
+## Requirements
+
+- Go 1.26 or later
+- The Auth0 CLI, with plugin development turned on: `export AUTH0_CLI_PLUGIN_DEV_MODE=true`
+
+## Layout
+
+`main.go` starts the command, `commands/` holds one file per command and the registry that finds it, and `plugin/` holds the shared code: environment and SDK client, output, error text with exit codes, and pagination. `plugin.json` is the manifest: commands, flags and the Management API scopes each command may use.
+
+The Go module is named `example.com/__PLUGIN_NAME__`, a path reserved for examples, so change it in `go.mod`, the imports and the `-X` flag of `.goreleaser.yaml` when you publish the project.
+
+## Build and run
+
+```sh
+go mod tidy          # also writes go.sum; commit it
+go build -o __PLUGIN_NAME__ .
+```
+
+Link the build to the CLI once. The link reads `plugin.json` and the executable again on every run, so after a change you only rebuild.
+
+```sh
+auth0 plugin dev link
+auth0 plugin approve __PLUGIN_NAME__    # a person reviews the scopes; repeat when they change
+auth0 __PLUGIN_NAME__
+auth0 __PLUGIN_NAME__ --json
+```
+
+`make build`, `make test` and `make lint` do the same from the Makefile. `plugin.json` is checked with `auth0 plugin dev validate`.
+
+## Scopes
+
+The CLI proxy refuses every call that needs a scope the command did not declare, and the plugin then says which scope is missing. Declare scopes under `permissions.scopes` of the command in `plugin.json`, then approve again. The sample command needs `read:clients`.
+
+## Add a command
+
+1. Copy `commands/clients.go` to `commands/<name>.go`. Change the name, the help text and the code in the run function, and keep the call to `Register` in `init`.
+2. Add the command to `commands` in `plugin.json`, with its description and the scopes it needs.
+3. Rebuild. A command that is not the root command runs as `auth0 __PLUGIN_NAME__ <name>`.
+
+Flags: declare them on the command's `flag.FlagSet` and list them under `flags` in `plugin.json`; the flags of the CLI itself (`--json`, `--tenant` and so on) are handled for you. Use `out.JSON` to choose between `out.PrintJSON` and `out.PrintTable`, and `plugin.Collect` for every page of a list call. Results go to stdout, anything else to stderr.
+
+## Environment
+
+The CLI sets these for every run. Only `plugin/client.go` and `plugin/output.go` read them.
+
+| Variable | Meaning |
+| --- | --- |
+| `AUTH0_PLUGIN_DOMAIN` | Address of the CLI proxy (`host:port`) |
+| `AUTH0_PLUGIN_MANAGEMENT_TOKEN` | A secret for this run that lets the plugin use the proxy |
+| `AUTH0_PLUGIN_CA_CERT` | PEM file with the certificate of the proxy |
+| `AUTH0_PLUGIN_JSON`, `AUTH0_PLUGIN_JSON_COMPACT` | `true` when the user asked for JSON output (agent mode turns it on) |
+| `AUTH0_PLUGIN_TENANT` | The tenant the run is for |
+
+Exit codes: 0 on success, 1 when the command fails, 2 when the arguments are wrong.
+
+## Releasing
+
+Edit nothing by hand: run one command, then merge the pull request it opens.
+
+```sh
+make release BUMP=patch             # or minor, or major
+make release VERSION=1.2.3          # an exact version
+make release BUMP=patch DRY_RUN=1   # show the steps, change nothing
+```
+
+It needs `git`, `gh` (`gh auth login`) and a clean `main` that matches `origin`. It creates `release/v<version>`, raises `version` in `plugin.json`, commits `chore: release v<version>` with your own git settings, pushes and opens the pull request. A keyword refuses a prerelease version; give the exact version then.
+
+Merging runs the Release workflow, which:
+
+1. runs the tests (`ci.yml`) on the merged commit,
+2. tags it `v<version>`,
+3. runs GoReleaser: seven platforms, each packed with `plugin.json` into `<name>_<version>_<platform>.tar.gz` (`.zip` on Windows), plus `checksums.txt`,
+4. publishes them as a GitHub release with generated notes.
+
+If a run fails half way, re-run it or run the workflow by hand on `main`: it finishes what is missing and does nothing once the release is complete. The first push of a new project releases the scaffolded version. The workflow listens to `main`; change that in `release.yml` for another branch name.
+
+| File | What it does |
+| --- | --- |
+| `scripts/release/` | The program behind `make release` |
+| `.github/workflows/ci.yml` | Vet, test, build and lint; the release calls it too |
+| `.github/workflows/release.yml` | The steps above |
+| `.github/actions/read-version/` | Reads the version and tells whether its tag and release exist (`.github/scripts/`) |
+| `.goreleaser.yaml` | Builds, archives and checksums; `make release-snapshot` runs it into `dist/` without publishing |
+
+The workflow stops at the GitHub release. Signing, attestations and publishing to the plugin catalog come later.
+
+## License
+
+__LICENSE__

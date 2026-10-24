@@ -1,0 +1,161 @@
+import { describe, expect, test } from "bun:test";
+
+import { createClient } from "../lib/client";
+import { ENV } from "../lib/env";
+import { Output } from "../lib/output";
+import { name } from "../lib/plugin";
+import { run } from "../run";
+
+const page = JSON.stringify({
+  start: 0,
+  limit: 50,
+  length: 2,
+  total: 2,
+  clients: [
+    { client_id: "id1", name: "First" },
+    { client_id: "id2", name: "Second" },
+  ],
+});
+const empty = JSON.stringify({ start: 0, limit: 50, length: 0, total: 0, clients: [] });
+
+// Three pages of the list, 50 + 50 + 3 clients, where the page size is 50.
+const pageSizes = [50, 50, 3];
+const allClients = Array.from({ length: 103 }, (_, i) => ({ client_id: `id${i}`, name: `Client ${i}` }));
+function pageOf(index: number): string {
+  const start = pageSizes.slice(0, index).reduce((sum, size) => sum + size, 0);
+  const clients = allClients.slice(start, start + (pageSizes[index] ?? 0));
+  return JSON.stringify({ start, limit: 50, length: clients.length, total: allClients.length, clients });
+}
+const denied = JSON.stringify({
+  statusCode: 403,
+  error: "Forbidden",
+  errorCode: "insufficient_scope",
+  message: `Plugin auth0/x did not declare scope "read:clients" required for GET /api/v2/clients. Add it to permissions.scopes in plugin.json.`,
+});
+const tenant = JSON.stringify({
+  statusCode: 403,
+  error: "Forbidden",
+  errorCode: "insufficient_scope",
+  message: "Insufficient scope, expected any of: read:clients",
+});
+
+interface Case {
+  name: string;
+  args?: string[];
+  json?: boolean;
+  compact?: boolean;
+  status?: number;
+  body: string;
+  paged?: boolean; // The stub serves the three pages of pageOf, by the page parameter.
+  fails?: Error; // The fetch function throws, as it does when the proxy is not there.
+  code?: number;
+  stdout?: string; // The whole of stdout.
+  items?: number; // The number of clients in the JSON list on stdout, instead of stdout.
+  stderr?: string[]; // Pieces of stderr.
+}
+
+const cases: Case[] = [
+  { name: "table", body: page, stdout: "CLIENT ID  NAME\nid1        First\nid2        Second\n" },
+  {
+    name: "json",
+    json: true,
+    body: page,
+    stdout: JSON.stringify([{ client_id: "id1", name: "First" }, { client_id: "id2", name: "Second" }], null, 2) + "\n",
+  },
+  {
+    name: "compact json",
+    json: true,
+    compact: true,
+    body: page,
+    stdout: `[{"client_id":"id1","name":"First"},{"client_id":"id2","name":"Second"}]\n`,
+  },
+  {
+    name: "every page of the list",
+    json: true,
+    compact: true,
+    paged: true,
+    body: "",
+    items: allClients.length,
+  },
+  { name: "no clients", body: empty, stdout: "", stderr: ["No clients found."] },
+  { name: "no clients as json", json: true, body: empty, stdout: "[]\n" },
+  {
+    name: "scope missing from plugin.json",
+    status: 403,
+    body: denied,
+    code: 1,
+    stderr: ["read:clients", "permissions.scopes", `auth0 plugin approve ${name}`],
+  },
+  {
+    name: "scope missing from the token",
+    status: 403,
+    body: tenant,
+    code: 1,
+    stderr: ["the API answered 403", "Insufficient scope"],
+  },
+  {
+    name: "proxy not reachable",
+    fails: new TypeError("fetch failed"),
+    body: "",
+    code: 1,
+    stderr: ["error: could not reach the CLI proxy: fetch failed"],
+  },
+  { name: "unknown flag", args: ["--nope"], body: page, code: 2, stderr: ["Unknown option"] },
+  { name: "stray argument", args: ["extra"], body: page, code: 2, stderr: ["error:"] },
+];
+
+describe("clients command", () => {
+  test.each(cases)("$name", async (c) => {
+    const requests: Request[] = [];
+    // The API returns an empty page after the last one.
+    const stub = Object.assign(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        if (c.fails) {
+          throw c.fails;
+        }
+        const param = new URL(request.url).searchParams.get("page");
+        const first = param === "0";
+        return new Response(c.paged ? pageOf(Number(param)) : first || c.status ? c.body : empty, {
+          status: c.status ?? 200,
+          headers: { "content-type": "application/json" },
+        });
+      },
+      { preconnect: () => {} },
+    );
+
+    const env = { [ENV.domain]: "127.0.0.1:1", [ENV.token]: "run-secret" };
+    let stdout = "";
+    let stderr = "";
+    const out = new Output(c.json ?? false, c.compact ?? false, (t) => (stdout += t), (t) => (stderr += t));
+
+    // The root command gets no name, any other command gets its name first.
+    // The type is widened, because both names are literal types once they are written out.
+    const pluginName: string = name;
+    const command = pluginName === "__COMMAND__" ? [] : ["__COMMAND__"];
+    const code = await run([...command, ...(c.args ?? [])], {
+      out,
+      signal: new AbortController().signal,
+      client: () => createClient(env, stub),
+    });
+
+    expect(code).toBe(c.code ?? 0);
+    if (c.items !== undefined) {
+      const clients: { client_id: string }[] = JSON.parse(stdout);
+      expect(clients).toHaveLength(c.items);
+      // Every page in order, and none twice.
+      expect(clients.every((client, i) => client.client_id === `id${i}`)).toBe(true);
+    } else if (c.stdout !== undefined) {
+      expect(stdout).toBe(c.stdout);
+    }
+    for (const piece of c.stderr ?? []) {
+      expect(stderr).toContain(piece);
+    }
+    if (c.code === 2) {
+      expect(requests).toHaveLength(0);
+    } else {
+      expect(requests[0]?.headers.get("authorization")).toBe("Bearer run-secret");
+    }
+  });
+});

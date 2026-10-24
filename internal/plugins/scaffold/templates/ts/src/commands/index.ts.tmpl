@@ -1,0 +1,25 @@
+import { UsageError } from "../lib/errors";
+import { name } from "../lib/plugin";
+import { clients } from "./clients";
+import type { Command } from "./types";
+
+/** Every command of the plugin. To add one, import it and add it here. */
+export const commands: readonly Command[] = [clients];
+
+/** Returns the command for the arguments, and the arguments that are left. */
+export function findCommand(argv: readonly string[]): { command: Command; rest: string[] } {
+  const named = commands.find((c) => c.name === argv[0] && c.name !== name);
+  if (named) {
+    return { command: named, rest: argv.slice(1) };
+  }
+
+  const root = commands.find((c) => c.name === name);
+  if (root) {
+    return { command: root, rest: [...argv] };
+  }
+
+  if (argv.length === 0) {
+    throw new UsageError("a command is required");
+  }
+  throw new UsageError(`unknown command "${argv[0]}"`);
+}

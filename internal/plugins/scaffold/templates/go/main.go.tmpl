@@ -1,0 +1,23 @@
+// Command __PLUGIN_NAME__ is a plugin for the Auth0 CLI. The CLI starts it when
+// someone runs `auth0 __PLUGIN_NAME__`.
+//
+// This file only wires things together. The commands are in commands/, and
+// everything they share (environment, SDK client, output, errors) is in plugin/.
+package main
+
+import (
+	"os"
+
+	"example.com/__PLUGIN_NAME__/commands"
+	"example.com/__PLUGIN_NAME__/plugin"
+)
+
+func main() {
+	// The CLI stops a plugin that runs past its timeout, so a signal cancels
+	// the context and with it the request that is in flight.
+	ctx, stop := plugin.SignalContext()
+	code := commands.Run(ctx, os.Args[1:], plugin.NewOutput(os.Stdout, os.Stderr))
+	stop()
+
+	os.Exit(code)
+}
