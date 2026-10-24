@@ -418,7 +418,7 @@ func TestPluginCmd(t *testing.T) {
 	}
 
 	slices.Sort(names)
-	assert.Equal(t, []string{"approve", "info", "install", "list", "search", "uninstall", "update"}, names)
+	assert.Equal(t, []string{"approve", "dev", "info", "install", "list", "search", "uninstall", "update"}, names)
 }
 
 func TestSearchPluginCmd(t *testing.T) {
@@ -697,7 +697,8 @@ func TestListPluginCmd(t *testing.T) {
 		assert.Equal(t, "1.0.0", listed[0]["previous"])
 		assert.Equal(t, true, listed[0]["pinned"])
 		assert.Greater(t, listed[0]["sizeBytes"], float64(0))
-		assert.Len(t, listed[0], 6)
+		assert.Equal(t, false, listed[0]["linked"])
+		assert.Len(t, listed[0], 7)
 	})
 
 	t.Run("prints CSV", func(t *testing.T) {
@@ -763,7 +764,8 @@ func TestInfoPluginCmd(t *testing.T) {
 			"versions": [{"version": "2.0.0", "latest": true, "revoked": false}, {"version": "1.0.0", "latest": false, "revoked": false}],
 			"installed": null,
 			"deprecated": null,
-			"approvedTenants": []
+			"approvedTenants": [],
+			"linked": false
 		}`, e.stdout.String())
 	})
 
@@ -2856,4 +2858,265 @@ func TestPluginCommands_EnvAuthModeFixesTheTenant(t *testing.T) {
 			assert.Equal(t, []string{pluginTestID}, e.installedIDs())
 		})
 	}
+}
+
+func TestListPluginCmd_Linked(t *testing.T) {
+	t.Run("marks an installed plugin that is linked", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.publish(e.index(e.release("1.0.0")))
+		e.install("1.0.0")
+		e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+
+		require.NoError(t, e.run("plugin", "list"))
+
+		assert.Regexp(t, `ID\s+VERSION\s+PINNED\s+PREVIOUS\s+SIZE\s+LINKED`, e.stdout.String())
+		assert.Regexp(t, `auth0/checkmate\s+1\.0\.0\s+yes\s+.*\s+yes\s*\n`, e.stdout.String())
+
+		require.NoError(t, e.run("plugin", "list", "--json-compact"))
+
+		var listed []map[string]any
+		require.NoError(t, json.Unmarshal(e.stdout.Bytes(), &listed))
+		require.Len(t, listed, 1)
+		assert.Equal(t, true, listed[0]["linked"])
+		assert.Equal(t, "1.0.0", listed[0]["version"], "the installed version, as the entry is the installed plugin")
+	})
+
+	t.Run("lists a linked plugin that is not installed, with the version of its manifest", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+
+		require.NoError(t, e.run("plugin", "list", "--json-compact"))
+
+		assert.JSONEq(t, `[{"id":"auth0/checkmate","name":"checkmate","version":"2.0.0","pinned":false,"previous":"","sizeBytes":0,"linked":true}]`, e.stdout.String())
+
+		require.NoError(t, e.run("plugin", "list"))
+		assert.Regexp(t, `auth0/checkmate\s+2\.0\.0\s+no\s+.*yes\s*\n`, e.stdout.String())
+		assert.Empty(t, e.stderr.String())
+	})
+
+	t.Run("lists a link that cannot be used without a version, and says why", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+		require.NoError(t, os.Remove(build.Bin))
+
+		require.NoError(t, e.run("plugin", "list", "--json-compact"))
+
+		assert.JSONEq(t, `[{"id":"auth0/checkmate","name":"checkmate","version":"","pinned":false,"previous":"","sizeBytes":0,"linked":true}]`, e.stdout.String())
+		assert.Empty(t, e.stderr.String(), "JSON output carries no warning")
+
+		require.NoError(t, e.run("plugin", "list"))
+		assert.Contains(t, e.stderr.String(), "the linked plugin auth0/checkmate cannot be used")
+		assert.Contains(t, e.stderr.String(), build.Bin)
+	})
+
+	t.Run("lists the installed plugins when the file of links is damaged", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.publish(e.index(e.release("1.0.0")))
+		e.install("1.0.0")
+		require.NoError(t, os.WriteFile(e.linksPath(), []byte("{damaged"), 0o600))
+
+		require.NoError(t, e.run("plugin", "list"))
+
+		assert.Contains(t, e.stdout.String(), "auth0/checkmate")
+		assert.NotContains(t, e.stdout.String(), "LINKED")
+		assert.Contains(t, e.stderr.String(), "No linked plugin is listed")
+		assert.Contains(t, e.stderr.String(), e.linksPath())
+
+		require.NoError(t, e.run("plugin", "list", "--json-compact"))
+		assert.Empty(t, e.stderr.String(), "JSON output carries no warning")
+		assert.Contains(t, e.stdout.String(), `"linked":false`)
+	})
+
+	t.Run("shows no link and reads no file when dev mode is off", func(t *testing.T) {
+		for _, value := range devModeValues {
+			e := newPluginEnv(t)
+			t.Setenv(pluginDevModeEnv, value)
+
+			e.publish(e.index(e.release("1.0.0")))
+			e.install("1.0.0")
+
+			e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+			require.NoError(t, os.WriteFile(e.linksPath(), []byte("{damaged"), 0o600))
+
+			require.NoError(t, e.run("plugin", "list"), value)
+
+			assert.NotContains(t, e.stdout.String(), "LINKED", value)
+			assert.Empty(t, e.stderr.String(), value)
+		}
+	})
+}
+
+func TestInfoPluginCmd_Linked(t *testing.T) {
+	t.Run("describes the manifest of the build, without the registry", func(t *testing.T) {
+		// Nothing is published, so a request to the registry would fail.
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+		e.approveBuild(build)
+
+		require.NoError(t, e.run("plugin", "info", "checkmate", "--json-compact"))
+
+		assert.JSONEq(t, `{
+			"id": "auth0/checkmate",
+			"version": "2.0.0",
+			"description": "Checks the tenant",
+			"owner": {"team": "Test team", "bugs": "https://example.com/bugs"},
+			"homepage": "",
+			"requires": "",
+			"platforms": ["`+string(e.platform)+`"],
+			"permissions": {"scopes": 2, "hosts": 0, "files": 0, "env": 1},
+			"permissionsHash": "`+build.Manifest.PermissionsHash()+`",
+			"versions": [],
+			"installed": null,
+			"deprecated": null,
+			"approvedTenants": [{"tenant": "`+pluginTestTenant+`", "permissionsHash": "`+build.Manifest.PermissionsHash()+`", "approvedAt": "`+e.Now.UTC().Format(time.RFC3339)+`"}],
+			"linked": true
+		}`, e.stdout.String())
+
+		require.NoError(t, e.run("plugin", "info", "auth0/checkmate"))
+		assert.Regexp(t, `LINKED\s+yes, a local build runs in place of any installed copy`, e.stdout.String())
+		assert.Regexp(t, `VERSION\s+2\.0\.0`, e.stdout.String())
+	})
+
+	t.Run("shows an installed copy next to the build", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.publish(e.index(e.release("1.0.0")))
+		e.install("1.0.0")
+		e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+
+		require.NoError(t, e.run("plugin", "info", "checkmate"))
+
+		assert.Regexp(t, `VERSION\s+2\.0\.0`, e.stdout.String())
+		assert.Regexp(t, `INSTALLED\s+1\.0\.0`, e.stdout.String())
+	})
+
+	t.Run("a version that was asked for is a version of the registry", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.publish(e.index(e.release("1.0.0")))
+		e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+
+		require.NoError(t, e.run("plugin", "info", "checkmate@1.0.0", "--json-compact"))
+
+		object := e.jsonObject()
+		assert.Equal(t, "1.0.0", object["version"])
+		assert.Equal(t, false, object["linked"])
+	})
+
+	t.Run("a link that cannot be used is an error", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+		require.NoError(t, os.Remove(build.Bin))
+
+		err := e.run("plugin", "info", "checkmate")
+
+		require.Error(t, err)
+		assertValidationError(t, err, "plugin_link_invalid")
+		assert.Contains(t, err.Error(), build.Bin)
+	})
+
+	t.Run("goes to the registry when dev mode is off", func(t *testing.T) {
+		for _, value := range devModeValues {
+			e := newPluginEnv(t)
+			t.Setenv(pluginDevModeEnv, value)
+
+			e.publish(e.index(e.release("1.0.0")))
+			e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+
+			require.NoError(t, e.run("plugin", "info", "checkmate", "--json-compact"), value)
+
+			object := e.jsonObject()
+			assert.Equal(t, "1.0.0", object["version"], value)
+			assert.Equal(t, false, object["linked"], value)
+		}
+	})
+}
+
+func TestApprovePluginCmd_Linked(t *testing.T) {
+	t.Run("approves the permissions of the build, which need not be installed", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		assert.Contains(t, e.stderr.String(), "auth0/checkmate 2.0.0  Checks the tenant")
+		assert.Contains(t, e.stderr.String(), "Approved auth0/checkmate 2.0.0 for "+pluginTestTenant+".")
+		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("approves the build and not an installed copy that fails verification", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.publish(e.index(e.release("1.0.0")))
+		e.install("1.0.0")
+		require.NoError(t, os.WriteFile(filepath.Join(e.Dir, "store", "auth0", "checkmate", "1.0.0", registrytest.BinName(e.platform, pluginTestBin)), []byte("tampered"), 0o700))
+
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("approves the permissions as they are in the manifest now", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+
+		build.Manifest.Commands[0].Permissions = fixturePermissions([]string{"read:clients", "delete:clients"})
+		build.save(t)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		assert.Contains(t, e.stderr.String(), "delete")
+		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("is still a decision of a person", func(t *testing.T) {
+		e := newDevEnv(t)
+		e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+		e.answer("y\n")
+		e.Terminal = false
+
+		err := e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "only a person can approve a plugin")
+		assert.Empty(t, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("a link that cannot be used is not approved", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+		require.NoError(t, os.Remove(build.Bin))
+		e.answer("y\n")
+
+		err := e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant)
+
+		require.Error(t, err)
+		assertValidationError(t, err, "plugin_link_invalid")
+		assert.Empty(t, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("a link counts only in dev mode", func(t *testing.T) {
+		for _, value := range devModeValues {
+			e := newPluginEnv(t)
+			t.Setenv(pluginDevModeEnv, value)
+
+			e.link(writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable))
+			e.answer("y\n")
+
+			err := e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant)
+
+			require.Error(t, err, value)
+			assertValidationError(t, err, "plugin_not_installed")
+			assert.Empty(t, e.approvedHashes(pluginTestID), value)
+		}
+	})
 }
