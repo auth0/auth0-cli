@@ -102,7 +102,7 @@ type previousFile struct {
 // replace to make them fail.
 var (
 	stageFile  = plugins.StageTempFile
-	renameFile = os.Rename
+	renameFile = plugins.Rename
 )
 
 // verified is what a refresh accepted, and persist stores.
