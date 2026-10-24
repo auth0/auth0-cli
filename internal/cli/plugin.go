@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
+	"github.com/auth0/auth0-cli/internal/plugins/devlink"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -69,6 +71,7 @@ func pluginCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updatePluginCmd(cli))
 	cmd.AddCommand(uninstallPluginCmd(cli))
 	cmd.AddCommand(approvePluginCmd(cli))
+	cmd.AddCommand(pluginDevCmd(cli))
 
 	return cmd
 }
@@ -183,8 +186,16 @@ func listPluginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			results := make([]display.PluginListEntry, 0, len(installed))
+			// A file of links that cannot be read lists no link, and says so.
+			links, err := devLinks(svc.store.Dir)
+			if err != nil && !cli.wantsJSONError() {
+				cli.renderer.Warnf("No linked plugin is listed: %v", linksError(err))
+			}
+
+			results := make([]display.PluginListEntry, 0, len(installed)+len(links))
 			for _, plugin := range installed {
+				_, linked := links[plugin.ID]
+
 				results = append(results, display.PluginListEntry{
 					ID:        plugin.ID,
 					Name:      plugins.NameOf(plugin.ID),
@@ -192,8 +203,11 @@ func listPluginCmd(cli *cli) *cobra.Command {
 					Pinned:    plugin.Pinned,
 					Previous:  plugin.Previous,
 					SizeBytes: sizes[plugin.ID],
+					Linked:    linked,
 				})
 			}
+
+			results = append(results, linkedOnlyEntries(cli, installed, links)...)
 
 			cli.renderer.PluginList(results)
 
@@ -207,6 +221,34 @@ func listPluginCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	return cmd
+}
+
+// linkedOnlyEntries returns the entries of the linked plugins that are not
+// installed, in the order of their IDs, with the version of the manifest in the
+// directory of the build. A link that cannot be used is listed without a version,
+// and a warning says why.
+func linkedOnlyEntries(cli *cli, installed []store.Installed, links map[string]devlink.Link) []display.PluginListEntry {
+	var entries []display.PluginListEntry
+
+	for _, id := range slices.Sorted(maps.Keys(links)) {
+		build, err := links[id].Open(id)
+		if err != nil && !cli.wantsJSONError() {
+			cli.renderer.Warnf("%v", unusableLink(id, links[id], err))
+		}
+
+		if isInstalled(installed, id) {
+			continue
+		}
+
+		entry := display.PluginListEntry{ID: id, Name: plugins.NameOf(id), Linked: true}
+		if err == nil {
+			entry.Version = build.Manifest.Version
+		}
+
+		entries = append(entries, entry)
+	}
+
+	return entries
 }
 
 func infoPluginCmd(cli *cli) *cobra.Command {
@@ -229,6 +271,26 @@ func infoPluginCmd(cli *cli) *cobra.Command {
 			svc, err := cli.getPlugins()
 			if err != nil {
 				return err
+			}
+
+			// A linked plugin is described by its manifest, which needs no registry. A
+			// version that was asked for is a version of the registry.
+			if ref.Version == "" {
+				build, linked, err := linkedPlugin(cli, svc, ref.ID)
+				if err != nil {
+					return err
+				}
+
+				if linked {
+					view, err := linkedPluginInfo(cli, svc, build)
+					if err != nil {
+						return err
+					}
+
+					cli.renderer.PluginInfo(*view)
+
+					return nil
+				}
 			}
 
 			index, err := loadPluginIndex(cmd.Context(), cli, svc)
@@ -290,18 +352,13 @@ func buildPluginInfo(cmd *cobra.Command, cli *cli, svc *pluginService, index *re
 	record := records[n]
 
 	view := &display.PluginDetails{
-		ID:          plugin.ID,
-		Version:     record.Version,
-		Description: plugin.Description,
-		Owner:       plugin.Owner,
-		Homepage:    plugin.Homepage,
-		Platforms:   record.Platforms,
-		Permissions: display.PluginPermissions{
-			Scopes: len(record.Permissions.Scopes),
-			Hosts:  len(record.Permissions.Hosts),
-			Files:  len(record.Permissions.Files),
-			Env:    len(record.Permissions.Env),
-		},
+		ID:              plugin.ID,
+		Version:         record.Version,
+		Description:     plugin.Description,
+		Owner:           plugin.Owner,
+		Homepage:        plugin.Homepage,
+		Platforms:       record.Platforms,
+		Permissions:     permissionCounts(record.Permissions),
 		PermissionsHash: record.PermissionsHash,
 		Versions:        make([]display.PluginVersion, 0, len(records)),
 		ApprovedTenants: []display.PluginApproval{},
@@ -318,13 +375,65 @@ func buildPluginInfo(cmd *cobra.Command, cli *cli, svc *pluginService, index *re
 
 	view.Deprecated = pluginDeprecation(index, plugin.ID, record.Version)
 
-	if view.Installed, err = installedPluginView(cli, svc, plugin.ID); err != nil {
+	if err := addInstallState(cli, svc, view); err != nil {
 		return nil, err
 	}
 
-	approved, err := svc.approvals.List(plugin.ID)
-	if err != nil {
+	return view, nil
+}
+
+// linkedPluginInfo gathers everything info shows about a linked plugin, which is
+// what its manifest says, whether a copy is installed too, and the approvals.
+func linkedPluginInfo(cli *cli, svc *pluginService, build *devlink.Build) (*display.PluginDetails, error) {
+	manifest := build.Manifest
+
+	view := &display.PluginDetails{
+		ID:              manifest.ID,
+		Version:         manifest.Version,
+		Description:     manifest.Description,
+		Owner:           manifest.Owner,
+		Homepage:        manifest.Homepage,
+		Platforms:       manifest.Platforms,
+		Permissions:     permissionCounts(manifest.Permissions()),
+		PermissionsHash: manifest.PermissionsHash(),
+		Versions:        []display.PluginVersion{},
+		ApprovedTenants: []display.PluginApproval{},
+		Linked:          true,
+	}
+
+	if manifest.Engines != nil {
+		view.Requires = manifest.Engines.Auth0CLI
+	}
+
+	if err := addInstallState(cli, svc, view); err != nil {
 		return nil, err
+	}
+
+	return view, nil
+}
+
+// permissionCounts counts what a plugin asks to be allowed.
+func permissionCounts(permissions plugins.Permissions) display.PluginPermissions {
+	return display.PluginPermissions{
+		Scopes: len(permissions.Scopes),
+		Hosts:  len(permissions.Hosts),
+		Files:  len(permissions.Files),
+		Env:    len(permissions.Env),
+	}
+}
+
+// addInstallState adds to the view of a plugin whether a copy is installed, and
+// the tenants where it is approved.
+func addInstallState(cli *cli, svc *pluginService, view *display.PluginDetails) error {
+	var err error
+
+	if view.Installed, err = installedPluginView(cli, svc, view.ID); err != nil {
+		return err
+	}
+
+	approved, err := svc.approvals.List(view.ID)
+	if err != nil {
+		return err
 	}
 
 	for _, approval := range approved {
@@ -335,7 +444,7 @@ func buildPluginInfo(cmd *cobra.Command, cli *cli, svc *pluginService, index *re
 		})
 	}
 
-	return view, nil
+	return nil
 }
 
 // installedPluginView describes the installed copy of a plugin, or returns nil
@@ -578,8 +687,8 @@ func approvePluginCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "approve <plugin>",
 		Args:  cobra.ExactArgs(1),
-		Short: "Approve what an installed plugin may do on a tenant",
-		Long: "Show the permissions of an installed plugin and, when you agree, approve them for a tenant. " +
+		Short: "Approve what an installed or linked plugin may do on a tenant",
+		Long: "Show the permissions of an installed plugin, or of a plugin linked in dev mode, and, when you agree, approve them for a tenant. " +
 			"A plugin runs on a tenant only after a person approved its permissions there. " +
 			"The approval holds for later versions that ask for the same permissions.\n\n" +
 			"This needs a terminal. It cannot run with `--no-input`, in agent mode or in a script, because only a person approves a plugin. " +
@@ -602,16 +711,7 @@ func approvePluginCmd(cli *cli) *cobra.Command {
 				return validationError{err: errPluginNoTenant, reason: "plugin_no_tenant"}
 			}
 
-			if _, err := requireInstalled(svc.store, ref); err != nil {
-				return err
-			}
-
-			verified, err := svc.store.Verify(ref.ID)
-
-			if _, failed := errors.AsType[*store.VerificationError](err); failed {
-				return fmt.Errorf("the installed copy of %s failed verification, so it cannot be approved: %w. Reinstall it with: auth0 plugin install %s", ref.ID, err, ref.Name)
-			}
-
+			verified, err := approvalSubject(cli, svc, ref)
 			if err != nil {
 				return err
 			}
@@ -645,6 +745,32 @@ func approvePluginCmd(cli *cli) *cobra.Command {
 	}
 
 	return cmd
+}
+
+// approvalSubject returns the plugin that approve shows and approves. It is the
+// linked build when the plugin is linked, because that is what runs, and
+// otherwise the installed copy, after it was verified.
+func approvalSubject(cli *cli, svc *pluginService, ref pluginRef) (store.Verified, error) {
+	build, linked, err := linkedPlugin(cli, svc, ref.ID)
+	if err != nil {
+		return store.Verified{}, err
+	}
+
+	if linked {
+		return verifiedLinked(build), nil
+	}
+
+	if _, err := requireInstalled(svc.store, ref); err != nil {
+		return store.Verified{}, err
+	}
+
+	verified, err := svc.store.Verify(ref.ID)
+
+	if _, failed := errors.AsType[*store.VerificationError](err); failed {
+		return store.Verified{}, fmt.Errorf("the installed copy of %s failed verification, so it cannot be approved: %w. Reinstall it with: auth0 plugin install %s", ref.ID, err, ref.Name)
+	}
+
+	return verified, err
 }
 
 // pluginsDisabledEnv turns off the plugin commands that bring plugins onto a

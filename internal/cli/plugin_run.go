@@ -23,6 +23,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
+	"github.com/auth0/auth0-cli/internal/plugins/devlink"
 	"github.com/auth0/auth0-cli/internal/plugins/proxy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/runner"
@@ -73,6 +74,10 @@ var pluginOutputFlags = [...]string{"json", "json-compact", "csv"}
 // of the CLI must keep working. Whether a plugin may run is decided when it is
 // run, see pluginCommand.run.
 //
+// In dev mode, and only then, the plugins that an author linked are added first,
+// and take the place of an installed plugin with the same name. Outside dev mode
+// the file of the links is not read.
+//
 // The core commands win over the plugins. A plugin that has the name of a core
 // command or alias is not registered, and the core command says so when it runs,
 // see warnShadowedPlugin. The trailing commands are the core commands that are
@@ -87,8 +92,16 @@ func registerPluginCommands(rootCmd *cobra.Command, cli *cli, version string, tr
 		return
 	}
 
-	manifests, err := installedStore.Manifests()
-	if err != nil || len(manifests) == 0 {
+	var manifests map[string]*plugins.Manifest
+
+	if installed, err := installedStore.Manifests(); err == nil {
+		manifests = installed
+	}
+
+	// A file of links that cannot be read registers no link.
+	links, _ := devLinks(installedStore.Dir)
+
+	if len(manifests) == 0 && len(links) == 0 {
 		return
 	}
 
@@ -103,6 +116,20 @@ func registerPluginCommands(rootCmd *cobra.Command, cli *cli, version string, tr
 		for _, alias := range command.Aliases {
 			core[alias] = true
 		}
+	}
+
+	// The linked plugins come first, so that the check for a name in use below
+	// leaves an installed plugin with the name of a linked one out.
+	for _, id := range slices.Sorted(maps.Keys(links)) {
+		name := plugins.NameOf(id)
+
+		if core[name] || slices.ContainsFunc(rootCmd.Commands(), func(c *cobra.Command) bool { return c.Name() == name }) {
+			continue
+		}
+
+		rootCmd.AddCommand(newLinkedCommand(cli, rootCmd, id, links[id]))
+
+		registered = true
 	}
 
 	for _, id := range slices.Sorted(maps.Keys(manifests)) {
@@ -134,6 +161,39 @@ func registerPluginCommands(rootCmd *cobra.Command, cli *cli, version string, tr
 	if registered {
 		groupPluginCommands(rootCmd, trailing)
 	}
+}
+
+// newLinkedCommand returns the command of a linked plugin, built from the
+// manifest in the directory of the build as it is now. A link whose manifest or
+// executable cannot be used is not registered as a plugin: its command only says
+// why when it is run, and never runs the build or an installed plugin of the
+// same name.
+func newLinkedCommand(cli *cli, rootCmd *cobra.Command, id string, link devlink.Link) *cobra.Command {
+	build, err := link.Open(id)
+
+	var command *cobra.Command
+
+	if err != nil {
+		p := &pluginCommand{cli: cli, id: id, link: &link}
+
+		command = &cobra.Command{
+			Use:                plugins.NameOf(id),
+			Short:              "(Linked, cannot be used) " + plugins.SafeText(link.Path),
+			Args:               cobra.ArbitraryArgs,
+			DisableFlagParsing: true,
+			Annotations:        pluginAnnotations(id, "", nil),
+			PersistentPreRunE:  p.preRun,
+			RunE:               func(*cobra.Command, []string) error { return unusableLink(id, link, err) },
+		}
+
+		addPluginFlags(command, cli, rootCmd, plugins.Command{})
+	} else {
+		command = buildPluginCommand(rootCmd, &pluginCommand{cli: cli, id: id, version: build.Manifest.Version, link: &link}, build.Manifest)
+	}
+
+	command.GroupID = pluginGroupID
+
+	return command
 }
 
 // groupPluginCommands shows the commands of the plugins in the help of the root
@@ -220,12 +280,18 @@ func (c *cli) warnShadowedPlugin(cmd *cobra.Command) {
 	c.renderer.Warnf("The installed plugin %s has the name of the core command %q, so the core command runs and the plugin is not available. Remove the plugin with: auth0 plugin uninstall %s", id, typed, typed)
 }
 
-// pluginCommand is an installed plugin as the command tree sees it.
+// pluginCommand is an installed plugin as the command tree sees it, or a plugin
+// that an author linked from a local build.
 type pluginCommand struct {
 	cli *cli
 
 	id      string
 	version string
+
+	// Link is set for a linked plugin, and is nil for an installed one. It is the
+	// only thing that makes a run skip the checks of the files of an installed
+	// plugin, see verify.
+	link *devlink.Link
 
 	// Scanned is what the pre-run hook made of the arguments of the command that
 	// runs, for the run that follows it.
@@ -240,7 +306,13 @@ type pluginCommand struct {
 // leaves the rest for the plugin. The flags that the manifest declares are
 // registered for help and completion only, and the CLI never checks them.
 func newPluginCommand(cli *cli, rootCmd *cobra.Command, id string, manifest *plugins.Manifest) *cobra.Command {
-	p := &pluginCommand{cli: cli, id: id, version: manifest.Version}
+	return buildPluginCommand(rootCmd, &pluginCommand{cli: cli, id: id, version: manifest.Version}, manifest)
+}
+
+// buildPluginCommand is newPluginCommand for a plugin command that is already
+// made, which tells whether the plugin is installed or linked.
+func buildPluginCommand(rootCmd *cobra.Command, p *pluginCommand, manifest *plugins.Manifest) *cobra.Command {
+	cli, id := p.cli, p.id
 
 	rootSpec := manifest.RootCommand()
 
@@ -568,7 +640,7 @@ func ownedFlags(root *cobra.Command) []runner.OwnedFlag {
 func (p *pluginCommand) preRun(cmd *cobra.Command, args []string) error {
 	// From here on the command is a plugin run, even when it fails before the
 	// plugin is known, so that it never sends the event of a core command.
-	p.cli.pluginRun = &pluginRunIdentity{id: p.id}
+	p.cli.pluginRun = &pluginRunIdentity{id: p.id, linked: p.link != nil}
 
 	scanned, err := runner.Scan(args, ownedFlags(cmd.Root()))
 	if err != nil {
@@ -641,8 +713,11 @@ func (p *pluginCommand) namespace(cmd *cobra.Command) error {
 // fails closed: the plugin is run only when everything holds, in this order.
 //
 //  1. Plugins are not turned off on this machine.
-//  2. The installed files are the ones that were installed (Store.Verify).
-//  3. The registry index is current enough, and does not revoke this version.
+//  2. The installed files are the ones that were installed (Store.Verify). For a
+//     linked plugin there is nothing to compare with, so its manifest and
+//     executable are read and checked as they are, and it needs dev mode.
+//  3. The registry index is current enough, and does not revoke this version. A
+//     linked plugin is not in the index, so it cannot be revoked.
 //  4. The command can run the way it was called: a terminal when it is
 //     interactive, and the output it was asked for.
 //  5. The tenant approved the permissions of the plugin.
@@ -655,7 +730,9 @@ func (p *pluginCommand) namespace(cmd *cobra.Command) error {
 // user that can write there in between could swap the file, which the
 // permissions that Verify checks make hard but do not rule out. Verify is
 // repeated after the session is open, as that can take as long as a person needs
-// to log in.
+// to log in. For a linked plugin that second check reads the manifest again and
+// compares its permissions with the ones that were approved, so that a build that
+// is edited in between cannot run with more than the person approved.
 func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []string) error {
 	if p.scanned.Help {
 		return cmd.Help()
@@ -692,8 +769,13 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 		return err
 	}
 
-	// The plugin and its version are known now. A run that got this far is counted.
-	c.pluginRun = &pluginRunIdentity{id: p.id, version: verified.Version}
+	// The plugin and its version are known now. A run that got this far is counted,
+	// unless the plugin is linked, see trackPluginRun.
+	c.pluginRun = &pluginRunIdentity{id: p.id, version: verified.Version, linked: p.link != nil}
+
+	if p.link != nil && !c.wantsJSONError() {
+		c.renderer.Warnf("%s", linkedBanner(p.id, verified.Version, verified.Dir))
+	}
 
 	command, ok := commandOf(verified.Manifest, spec.Name)
 	if !ok {
@@ -708,12 +790,8 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 		return err
 	}
 
-	if revocation, revoked := index.Revoked(p.id, verified.Version); revoked {
-		return validationError{
-			err: fmt.Errorf("%s %s was revoked: %s. Run: auth0 plugin update %s",
-				plugins.NameOf(p.id), verified.Version, strings.TrimRight(plugins.SafeText(revocation.Reason), ". "), plugins.NameOf(p.id)),
-			reason: "plugin_revoked",
-		}
+	if err := p.checkRevoked(index, verified.Version); err != nil {
+		return err
 	}
 
 	if err := p.checkCall(cmd, svc, command); err != nil {
@@ -832,13 +910,22 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 		return p.failure(err, summary)
 	}
 
-	p.hintUpdate(svc, index, again.Version)
+	// The hint compares the version that is installed with the registry. A linked
+	// build is not installed.
+	if p.link == nil {
+		p.hintUpdate(svc, index, again.Version)
+	}
 
 	return nil
 }
 
-// verify checks the installed files of the plugin against the lockfile.
+// verify checks the installed files of the plugin against the lockfile. For a
+// linked plugin it reads the build instead, see verifyLinked.
 func (p *pluginCommand) verify(svc *pluginService) (store.Verified, error) {
+	if p.link != nil {
+		return p.verifyLinked()
+	}
+
 	verified, err := svc.store.Verify(p.id)
 	if err == nil {
 		return verified, nil
@@ -849,6 +936,26 @@ func (p *pluginCommand) verify(svc *pluginService) (store.Verified, error) {
 	}
 
 	return store.Verified{}, err
+}
+
+// verifyLinked is verify for a linked plugin, and the one place where a plugin
+// runs without Store.Verify. It needs dev mode. The manifest is read and validated
+// as it is on disk now, it must be for this plugin, and the executable must exist
+// and be a regular file that can be run. Nothing is hashed, because a build
+// changes all the time, and nothing is compared with a lockfile. The permissions
+// hash is that of the manifest just read, which the caller compares with the
+// approval, and again after the session is open.
+func (p *pluginCommand) verifyLinked() (store.Verified, error) {
+	if err := requirePluginDevMode(); err != nil {
+		return store.Verified{}, err
+	}
+
+	build, err := p.link.Open(p.id)
+	if err != nil {
+		return store.Verified{}, unusableLink(p.id, *p.link, err)
+	}
+
+	return verifiedLinked(build), nil
 }
 
 // commandOf returns the command of the manifest with the given name.
@@ -896,6 +1003,25 @@ func (p *pluginCommand) loadIndex(ctx context.Context, svc *pluginService, versi
 	}
 
 	return index, nil
+}
+
+// checkRevoked fails when the registry revoked this version of the plugin. A
+// linked build is not in the index, so there is nothing to revoke.
+func (p *pluginCommand) checkRevoked(index *registry.Index, version string) error {
+	if p.link != nil {
+		return nil
+	}
+
+	revocation, revoked := index.Revoked(p.id, version)
+	if !revoked {
+		return nil
+	}
+
+	return validationError{
+		err: fmt.Errorf("%s %s was revoked: %s. Run: auth0 plugin update %s",
+			plugins.NameOf(p.id), version, strings.TrimRight(plugins.SafeText(revocation.Reason), ". "), plugins.NameOf(p.id)),
+		reason: "plugin_revoked",
+	}
 }
 
 // checkCall refuses a command that cannot run the way it was called: an

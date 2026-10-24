@@ -165,19 +165,29 @@ var (
 	currentPlatform = plugins.CurrentPlatform
 )
 
-// pluginPath returns where the directory of a plugin is, or an error when the
-// ID is not safe to use as a path. Both parts of the ID become directory names,
-// so neither may be a name that Windows reserves, even on a system where that
-// would work: a plugin that installs here can then be installed everywhere.
-func (s *Store) pluginPath(id string) (string, error) {
+// CheckID returns an error unless id is a plugin ID, registry/name, that is safe
+// to use as a path. Both parts of the ID become directory names, so neither may
+// be a name that Windows reserves, even on a system where that would work: a
+// plugin that installs here can then be installed everywhere.
+func CheckID(id string) error {
 	if !idPattern.MatchString(id) {
-		return "", fmt.Errorf("%q is not a plugin ID in the form registry/name", id)
+		return fmt.Errorf("%q is not a plugin ID in the form registry/name", id)
 	}
 
 	for _, part := range strings.Split(id, "/") {
 		if reason := badFileName(part); reason != "" {
-			return "", fmt.Errorf("%q is not a plugin ID in the form registry/name: %q cannot be a directory name because %s", id, part, reason)
+			return fmt.Errorf("%q is not a plugin ID in the form registry/name: %q cannot be a directory name because %s", id, part, reason)
 		}
+	}
+
+	return nil
+}
+
+// pluginPath returns where the directory of a plugin is, or an error when the
+// ID is not safe to use as a path.
+func (s *Store) pluginPath(id string) (string, error) {
+	if err := CheckID(id); err != nil {
+		return "", err
 	}
 
 	return filepath.Join(s.Dir, storeDirName, filepath.FromSlash(id)), nil

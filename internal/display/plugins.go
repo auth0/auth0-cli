@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -40,7 +41,9 @@ type PluginSearchResult struct {
 	Deprecated  *PluginDeprecation `json:"deprecated"`
 }
 
-// PluginListEntry is one installed plugin.
+// PluginListEntry is one installed plugin, or a plugin that is only linked from a
+// local build. Linked is true when a local build runs in place of the installed
+// copy, or when there is no installed copy.
 type PluginListEntry struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -48,6 +51,7 @@ type PluginListEntry struct {
 	Pinned    bool   `json:"pinned"`
 	Previous  string `json:"previous"`
 	SizeBytes int64  `json:"sizeBytes"`
+	Linked    bool   `json:"linked"`
 }
 
 // PluginChangeResult is the result of an install or an update of one plugin.
@@ -122,6 +126,10 @@ type PluginDetails struct {
 	Installed       *PluginInstalled   `json:"installed"`
 	Deprecated      *PluginDeprecation `json:"deprecated"`
 	ApprovedTenants []PluginApproval   `json:"approvedTenants"`
+
+	// Linked is true when a local build of the plugin runs, whatever else is
+	// installed.
+	Linked bool `json:"linked"`
 }
 
 type pluginSearchView struct {
@@ -147,14 +155,30 @@ func (v *pluginSearchView) Object() any {
 
 type pluginListView struct {
 	PluginListEntry
+
+	// WithLinked adds the column that marks the linked plugins. Without a linked
+	// plugin in the list the column would only ever say no.
+	withLinked bool
 }
 
 func (v *pluginListView) AsTableHeader() []string {
-	return []string{"ID", "Version", "Pinned", "Previous", "Size"}
+	header := []string{"ID", "Version", "Pinned", "Previous", "Size"}
+
+	if v.withLinked {
+		header = append(header, "Linked")
+	}
+
+	return header
 }
 
 func (v *pluginListView) AsTableRow() []string {
-	return []string{plugins.SafeText(v.ID), plugins.SafeText(v.Version), yesNo(v.Pinned), plugins.SafeText(v.Previous), formatSize(v.SizeBytes)}
+	row := []string{plugins.SafeText(v.ID), plugins.SafeText(v.Version), yesNo(v.Pinned), plugins.SafeText(v.Previous), formatSize(v.SizeBytes)}
+
+	if v.withLinked {
+		row = append(row, yesNo(v.Linked))
+	}
+
+	return row
 }
 
 func (v *pluginListView) Object() any {
@@ -272,6 +296,10 @@ func (v *pluginInfoView) KeyValues() [][]string {
 
 	rows = append(rows, []string{"APPROVED TENANTS", approved})
 
+	if v.Linked {
+		rows = append(rows, []string{"LINKED", "yes, a local build runs in place of any installed copy"})
+	}
+
 	// Everything the registry supplied is printed as plain text. The ID row is
 	// already plain, and its color is not text.
 	for _, row := range rows[1:] {
@@ -307,9 +335,11 @@ func (r *Renderer) PluginList(installed []PluginListEntry) {
 		return
 	}
 
+	withLinked := slices.ContainsFunc(installed, func(plugin PluginListEntry) bool { return plugin.Linked })
+
 	results := make([]View, 0, len(installed))
 	for _, plugin := range installed {
-		results = append(results, &pluginListView{plugin})
+		results = append(results, &pluginListView{PluginListEntry: plugin, withLinked: withLinked})
 	}
 
 	r.Results(results)
