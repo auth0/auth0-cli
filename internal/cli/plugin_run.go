@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -36,6 +37,19 @@ const (
 
 	// PluginCommandAnnotation marks the commands that installed plugins add.
 	pluginCommandAnnotation = "plugin"
+
+	// PluginInfoAnnotation holds, as JSON, what the list of commands says about a
+	// command of a plugin, see pluginInfo.
+	pluginInfoAnnotation = "pluginInfo"
+
+	// The groups of the root command in the help, once a plugin adds commands. A
+	// root command that has a group for the plugin commands needs one for the core
+	// commands too.
+	coreGroupID   = "core"
+	pluginGroupID = "plugins"
+
+	coreGroupTitle   = "Available Resources:"
+	pluginGroupTitle = "Plugin Commands:"
 
 	// PluginRefreshTimeout bounds the refresh of a stale registry index before a
 	// plugin runs, so that a slow network does not hold up a plugin that may run
@@ -81,6 +95,7 @@ func registerPluginCommands(rootCmd *cobra.Command, cli *cli, version string, tr
 	cli.shadowedPlugins = nil
 
 	core := map[string]bool{"help": true, "completion": true}
+	registered := false
 
 	for _, command := range slices.Concat(rootCmd.Commands(), trailing) {
 		core[command.Name()] = true
@@ -108,8 +123,58 @@ func registerPluginCommands(rootCmd *cobra.Command, cli *cli, version string, tr
 			continue
 		}
 
-		rootCmd.AddCommand(newPluginCommand(cli, rootCmd, id, manifests[id]))
+		command := newPluginCommand(cli, rootCmd, id, manifests[id])
+		command.GroupID = pluginGroupID
+
+		rootCmd.AddCommand(command)
+
+		registered = true
 	}
+
+	if registered {
+		groupPluginCommands(rootCmd, trailing)
+	}
+}
+
+// groupPluginCommands shows the commands of the plugins in the help of the root
+// under their own heading. The root help lists the commands under one heading, so
+// the core commands, which are the ones that are not a plugin command, get a group
+// of their own with the heading they have without plugins, and the usage template
+// of the root lists the groups. It is only called when a plugin added a command,
+// so the help of a CLI without plugins is not touched.
+func groupPluginCommands(rootCmd *cobra.Command, trailing []*cobra.Command) {
+	rootCmd.AddGroup(
+		&cobra.Group{ID: coreGroupID, Title: coreGroupTitle},
+		&cobra.Group{ID: pluginGroupID, Title: pluginGroupTitle},
+	)
+
+	for _, command := range slices.Concat(rootCmd.Commands(), trailing) {
+		if command.GroupID == "" {
+			command.GroupID = coreGroupID
+		}
+	}
+
+	rootCmd.SetUsageTemplate(groupedRootUsageTemplate())
+}
+
+// groupedRootUsageTemplate is the usage template of the root with the commands
+// listed by group: the core commands, and then the commands of the plugins. The
+// list of the template is replaced as it is, so when the template of the root
+// changes and the list is not found, the template stays as it is and the commands
+// are listed together.
+func groupedRootUsageTemplate() string {
+	const list = `{{range .Commands}}{{if (.IsAvailableCommand)}}
+  {{rpad .Name .NamePadding }} {{.Short}} {{WrappedAliases .}}{{end}}{{end}}`
+
+	grouped := func(match string) string {
+		return `{{range .Commands}}{{if (and .IsAvailableCommand ` + match + `)}}
+  {{rpad .Name .NamePadding }} {{.Short}} {{WrappedAliases .}}{{end}}{{end}}`
+	}
+
+	return strings.Replace(namespaceUsageTemplate(),
+		ansi.Bold(coreGroupTitle)+list,
+		ansi.Bold(coreGroupTitle)+grouped(`(ne .GroupID "`+pluginGroupID+`")`)+"\n\n"+ansi.Bold(pluginGroupTitle)+grouped(`(eq .GroupID "`+pluginGroupID+`")`),
+		1)
 }
 
 // pluginStore returns the store of the installed plugins, for registering their
@@ -184,7 +249,8 @@ func newPluginCommand(cli *cli, rootCmd *cobra.Command, id string, manifest *plu
 		Short:              plugins.SafeText(manifest.Description),
 		Args:               cobra.ArbitraryArgs,
 		DisableFlagParsing: true,
-		Annotations:        pluginAnnotations(),
+		Annotations:        pluginAnnotations(id, manifest.Version, nil),
+		ValidArgsFunction:  completePluginFlags,
 		PersistentPreRunE:  p.preRun,
 	}
 
@@ -192,6 +258,7 @@ func newPluginCommand(cli *cli, rootCmd *cobra.Command, id string, manifest *plu
 
 	if rootSpec != nil {
 		top.Short = plugins.SafeText(rootSpec.Description)
+		top.Annotations = pluginAnnotations(id, manifest.Version, rootSpec)
 		top.Annotations[pluginRootAnnotation] = "true"
 		top.RunE = func(cmd *cobra.Command, _ []string) error { return p.run(cmd, *rootSpec, nil) }
 
@@ -215,7 +282,8 @@ func newPluginCommand(cli *cli, rootCmd *cobra.Command, id string, manifest *plu
 			Long:               pluginLong(id, manifest, &spec),
 			Args:               cobra.ArbitraryArgs,
 			DisableFlagParsing: true,
-			Annotations:        pluginAnnotations(),
+			Annotations:        pluginAnnotations(id, manifest.Version, &spec),
+			ValidArgsFunction:  completePluginFlags,
 			RunE:               func(cmd *cobra.Command, _ []string) error { return p.run(cmd, spec, []string{spec.Name}) },
 		}
 
@@ -227,14 +295,104 @@ func newPluginCommand(cli *cli, rootCmd *cobra.Command, id string, manifest *plu
 }
 
 // pluginAnnotations returns the annotations of a plugin command: it is a plugin
-// command, it stays out of the generated docs while the feature is gated, and the
-// root pre-run hook does not log in for it.
-func pluginAnnotations() map[string]string {
-	return map[string]string{
+// command, it stays out of the generated docs while the feature is gated, the root
+// pre-run hook does not log in for it, and the list of commands finds out about
+// the plugin from pluginInfo. The spec is nil for the top command of a plugin that
+// has no root command, which only groups the others.
+func pluginAnnotations(id, version string, spec *plugins.Command) map[string]string {
+	annotations := map[string]string{
 		pluginCommandAnnotation: "true",
 		skipDocsAnnotation:      "true",
 		skipAuthAnnotation:      "true",
 	}
+
+	info := pluginInfo{ID: id, Version: version}
+
+	if spec != nil {
+		info.Interactive = spec.Interactive
+		info.Output = &commandOutput{}
+
+		if spec.Output != nil {
+			*info.Output = commandOutput{JSON: spec.Output.JSON, CSV: spec.Output.CSV, AgentMode: spec.Output.AgentMode}
+		}
+
+		if spec.Permissions != nil && len(spec.Permissions.Scopes) > 0 {
+			info.Scopes = plugins.NormalizePermissions(*spec.Permissions).Scopes
+		}
+	}
+
+	if data, err := json.Marshal(info); err == nil {
+		annotations[pluginInfoAnnotation] = string(data)
+	}
+
+	return annotations
+}
+
+// pluginInfo is what the list of commands says about a command of a plugin, which
+// is kept in an annotation of the command. The scopes, the output and whether it
+// is interactive are those of the command that the call runs, and are not set for
+// the top command of a plugin that has no root command.
+type pluginInfo struct {
+	ID          string         `json:"id"`
+	Version     string         `json:"version"`
+	Scopes      []string       `json:"scopes,omitempty"`
+	Interactive bool           `json:"interactive,omitempty"`
+	Output      *commandOutput `json:"output,omitempty"`
+}
+
+// pluginInfoOf returns the information about a command of a plugin, and reports
+// false for every other command.
+func pluginInfoOf(cmd *cobra.Command) (pluginInfo, bool) {
+	var info pluginInfo
+
+	data, ok := cmd.Annotations[pluginInfoAnnotation]
+	if !ok || json.Unmarshal([]byte(data), &info) != nil {
+		return pluginInfo{}, false
+	}
+
+	return info, true
+}
+
+// completePluginFlags completes the flags that the manifest declares, and the
+// output flags that the command supports. The value of a flag is not completed.
+//
+// Cobra completes the flags of a command by itself, but it first looks for flags
+// that are marked as required, and lists only those when it finds any. The CLI
+// marks its own flags that way before a command runs, and that includes the
+// completion command, so a flag of a plugin is left out whenever a flag of the CLI
+// starts with what was typed. This adds the flags that cobra left out, and nothing
+// else, so that no flag is listed twice.
+func completePluginFlags(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if !strings.HasPrefix(toComplete, "-") {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// This is the test that cobra makes for the flags of the CLI, see
+	// completeRequireFlags in cobra.
+	var onlyRequired bool
+
+	cmd.InheritedFlags().VisitAll(func(flag *pflag.Flag) {
+		_, required := flag.Annotations[cobra.BashCompOneRequiredFlag]
+
+		onlyRequired = onlyRequired || (required && !flag.Changed && !flag.Hidden && flag.Deprecated == "" &&
+			(strings.HasPrefix("--"+flag.Name, toComplete) || (flag.Shorthand != "" && strings.HasPrefix("-"+flag.Shorthand, toComplete))))
+	})
+
+	if !onlyRequired {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	var completions []string
+
+	cmd.LocalFlags().VisitAll(func(flag *pflag.Flag) {
+		if flag.Hidden || flag.Name == "help" || !strings.HasPrefix("--"+flag.Name, toComplete) {
+			return
+		}
+
+		completions = append(completions, cobra.CompletionWithDesc("--"+flag.Name, flag.Usage))
+	})
+
+	return completions, cobra.ShellCompDirectiveNoFileComp
 }
 
 // addPluginFlags registers the flags of a command of the manifest, and the output
@@ -656,13 +814,18 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 		Interactive: command.Interactive,
 	})
 
-	if summary := gate.Summary(); summary != "" {
+	// In agent mode the renderer prints nothing, and a failed run carries the
+	// summary in its error instead.
+	summary := gate.Summary()
+	if summary != "" {
 		c.renderer.Warnf("%s", summary)
 	}
 
 	if err != nil {
-		return p.failure(err)
+		return p.failure(err, summary)
 	}
+
+	p.hintUpdate(svc, index, again.Version)
 
 	return nil
 }
@@ -853,10 +1016,11 @@ func environment(cmd *cobra.Command, command plugins.Command, tenant string, pro
 }
 
 // failure turns how the plugin ended into the error of the command. The plugin
-// did not end well: err is not nil.
-func (p *pluginCommand) failure(err error) error {
+// did not end well: err is not nil. The summary is the line about the calls that
+// the proxy denied, when there is one.
+func (p *pluginCommand) failure(err error, summary string) error {
 	name := plugins.NameOf(p.id)
-	failed := pluginError{err: err, pluginID: p.id, version: p.version}
+	failed := pluginError{err: err, pluginID: p.id, version: p.version, deniedCalls: summary}
 
 	if exit, ok := errors.AsType[*runner.ExitError](err); ok {
 		failed.reason, failed.exitCode = "plugin_exit", exit.Code
