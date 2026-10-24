@@ -475,6 +475,8 @@ Usage data points are collected during use of this CLI. This includes the CLI ve
 
 Auth0 uses this data to understand how the tool is used, to prioritize the features, enhancements and fixes that matter most to our users, and to attribute usage to a tenant for support and product purposes.
 
+The events that count plugin runs, installs, updates and uninstalls carry only the plugin name and version, plus whether a run succeeded and a short reason code. Plugin arguments, flags, tenant names and output are never part of those events.
+
 To **opt-out** of this collection, set the `AUTH0_CLI_ANALYTICS` environment variable to `false`.
 
 ## Feedback

@@ -757,6 +757,13 @@ func trackCommandOutcome(cli *cli, executionErr error) {
 		return
 	}
 
+	// A plugin run sends the event of the plugin, and never the event of a command,
+	// which carries the tenant and the output format.
+	if cli.pluginRun != nil {
+		trackPluginRun(cli, executionErr)
+		return
+	}
+
 	installID := resolveInstallIDForTracking(cli)
 	if installID == "" {
 		return

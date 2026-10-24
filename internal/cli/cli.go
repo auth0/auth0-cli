@@ -73,6 +73,11 @@ type cli struct {
 	// plugin ID, see registerPluginCommands.
 	shadowedPlugins map[string]string
 
+	// The plugin command that is running, which its pre-run hook sets, and the
+	// version of the plugin once its files were verified. It is what the telemetry
+	// of a plugin run reads, see trackPluginRun. It is nil for every other command.
+	pluginRun *pluginRunIdentity
+
 	Config config.Config
 }
 
