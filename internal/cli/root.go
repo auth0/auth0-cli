@@ -184,6 +184,10 @@ func Execute() {
 	cancelCtx := contextWithCancel()
 	err := classifyRequiredFlagError(rootCmd.ExecuteContext(cancelCtx))
 
+	// A command that is not found may be a plugin that is in the registry but is not
+	// installed.
+	err = cli.offerPluginInstall(rootCmd, buildinfo.Version, err)
+
 	// A command that held the interrupt has stopped what it started by now.
 	if interrupted(cancelCtx) {
 		os.Exit(exitInterrupted) // nolint:gocritic
@@ -701,6 +705,13 @@ func overrideHelpAndVersionFlagText(cmd *cobra.Command) {
 
 func renderErrorMessage(display *display.Renderer, err error) {
 	display.Heading(ansi.Red("error"))
+
+	// The message ends with a command, so it gets no full stop.
+	if _, ok := errors.AsType[pluginNotInstalledError](err); ok {
+		display.Errorf("%s", err.Error())
+		display.Newline()
+		return
+	}
 
 	rawErrorMessage := []rune(err.Error())
 	if len(rawErrorMessage) == 0 {
