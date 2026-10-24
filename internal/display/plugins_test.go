@@ -3,6 +3,7 @@ package display
 import (
 	"bytes"
 	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 
@@ -142,24 +143,30 @@ func TestPluginListView(t *testing.T) {
 			name:     "empty",
 			entry:    PluginListEntry{},
 			wantRow:  []string{"", "", "no", "", "0 B"},
-			wantJSON: `{"id":"","name":"","version":"","pinned":false,"previous":"","sizeBytes":0}`,
+			wantJSON: `{"id":"","name":"","version":"","pinned":false,"previous":"","sizeBytes":0,"linked":false}`,
 		},
 		{
 			name:     "pinned with a previous version",
 			entry:    PluginListEntry{ID: "auth0/checkmate", Name: "checkmate", Version: "2.0.0", Pinned: true, Previous: "1.0.0", SizeBytes: 90_500_000},
 			wantRow:  []string{"auth0/checkmate", "2.0.0", "yes", "1.0.0", "90.5 MB"},
-			wantJSON: `{"id":"auth0/checkmate","name":"checkmate","version":"2.0.0","pinned":true,"previous":"1.0.0","sizeBytes":90500000}`,
+			wantJSON: `{"id":"auth0/checkmate","name":"checkmate","version":"2.0.0","pinned":true,"previous":"1.0.0","sizeBytes":90500000,"linked":false}`,
 		},
 		{
 			name:    "hostile text is cleaned in the row",
 			entry:   PluginListEntry{ID: "auth0/" + hostilePluginText, Version: hostilePluginText, Previous: hostilePluginText, SizeBytes: 1536},
 			wantRow: []string{"auth0/" + cleanPluginText, cleanPluginText, "no", cleanPluginText, "1.5 kB"},
 		},
+		{
+			name:     "a linked plugin",
+			entry:    PluginListEntry{ID: "auth0/checkmate", Name: "checkmate", Version: "2.0.0", Linked: true},
+			wantRow:  []string{"auth0/checkmate", "2.0.0", "no", "", "0 B"},
+			wantJSON: `{"id":"auth0/checkmate","name":"checkmate","version":"2.0.0","pinned":false,"previous":"","sizeBytes":0,"linked":true}`,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			view := &pluginListView{test.entry}
+			view := &pluginListView{PluginListEntry: test.entry}
 
 			assert.Equal(t, []string{"ID", "Version", "Pinned", "Previous", "Size"}, view.AsTableHeader())
 			assert.Equal(t, test.wantRow, view.AsTableRow())
@@ -173,6 +180,13 @@ func TestPluginListView(t *testing.T) {
 			assert.Equal(t, test.entry, decoded)
 		})
 	}
+}
+
+func TestPluginListView_LinkedColumn(t *testing.T) {
+	view := &pluginListView{PluginListEntry: PluginListEntry{ID: "auth0/checkmate", Version: "2.0.0", Linked: true}, withLinked: true}
+
+	assert.Equal(t, []string{"ID", "Version", "Pinned", "Previous", "Size", "Linked"}, view.AsTableHeader())
+	assert.Equal(t, []string{"auth0/checkmate", "2.0.0", "no", "", "0 B", "yes"}, view.AsTableRow())
 }
 
 func TestPluginChangeView(t *testing.T) {
@@ -260,6 +274,26 @@ func TestPluginInfoView(t *testing.T) {
 				{"INSTALLED", "1.0.0"},
 				{"DEPRECATED", "Unmaintained (use auth0/other instead)"},
 				{"APPROVED TENANTS", "acme.us.auth0.com, other.us.auth0.com (different permissions)"},
+			},
+		},
+		{
+			name:   "a linked plugin",
+			mutate: func(d *PluginDetails) { d.Linked = true },
+			want: [][]string{
+				{"ID", ansi.Faint("auth0/checkmate")},
+				{"VERSION", "2.0.0"},
+				{"DESCRIPTION", "Audits a tenant"},
+				{"OWNER", "Tools https://example.com/bugs"},
+				{"HOMEPAGE", "https://example.com/checkmate"},
+				{"REQUIRES", "auth0-cli >=1.38.0"},
+				{"PLATFORMS", "darwin-arm64, linux-x64"},
+				{"PERMISSIONS", "2 scopes, 1 host, 0 file paths, 0 environment variables"},
+				{"PERMISSIONS HASH", "sha256:aaa"},
+				{"VERSIONS", "2.0.0 (latest), 1.1.0 (revoked), 1.0.0"},
+				{"INSTALLED", "1.0.0"},
+				{"DEPRECATED", "Unmaintained (use auth0/other instead)"},
+				{"APPROVED TENANTS", "acme.us.auth0.com, other.us.auth0.com (different permissions)"},
+				{"LINKED", "yes, a local build runs in place of any installed copy"},
 			},
 		},
 		{
@@ -363,7 +397,7 @@ func TestPluginInfoView(t *testing.T) {
 		view := &pluginInfoView{PluginDetails{Versions: []PluginVersion{}, ApprovedTenants: []PluginApproval{}}}
 
 		assert.JSONEq(t, `{"id":"","version":"","description":"","owner":{"team":"","bugs":""},"homepage":"","requires":"","platforms":null,
-			"permissions":{"scopes":0,"hosts":0,"files":0,"env":0},"permissionsHash":"","versions":[],"installed":null,"deprecated":null,"approvedTenants":[]}`, jsonOf(t, view))
+			"permissions":{"scopes":0,"hosts":0,"files":0,"env":0},"permissionsHash":"","versions":[],"installed":null,"deprecated":null,"approvedTenants":[],"linked":false}`, jsonOf(t, view))
 	})
 
 	t.Run("the JSON object of an approval has its time", func(t *testing.T) {
@@ -418,6 +452,13 @@ func TestRenderer_PluginList(t *testing.T) {
 		r.PluginList(installed)
 
 		assert.Equal(t, "ID,Version,Pinned,Previous,Size\nauth0/checkmate,2.0.0,yes,1.0.0,1.5 kB\n", stdout.String())
+	})
+
+	t.Run("has the column of linked plugins only when a plugin is linked", func(t *testing.T) {
+		r, stdout, _ := pluginRenderer(OutputFormatCSV)
+		r.PluginList(append(slices.Clone(installed), PluginListEntry{ID: "auth0/mine", Version: "0.1.0", Linked: true}))
+
+		assert.Equal(t, "ID,Version,Pinned,Previous,Size,Linked\nauth0/checkmate,2.0.0,yes,1.0.0,1.5 kB,no\nauth0/mine,0.1.0,no,,0 B,yes\n", stdout.String())
 	})
 
 	t.Run("says when nothing is installed", func(t *testing.T) {
