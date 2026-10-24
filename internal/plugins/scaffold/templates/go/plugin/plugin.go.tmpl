@@ -1,0 +1,39 @@
+// Package plugin holds what every command of this plugin shares: how it talks
+// to the Auth0 CLI (environment, output flags, exit codes, signals) and
+// helpers for the SDK. Commands are in the commands package.
+package plugin
+
+import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+// Name is the name people type after `auth0`.
+const Name = "__PLUGIN_NAME__"
+
+// Version is stamped at release time by GoReleaser (see .goreleaser.yaml).
+var Version = "dev"
+
+// The exit codes of the plugin. The CLI reports every code but 0 as a failure.
+const (
+	ExitOK    = 0
+	ExitError = 1 // The command ran and failed.
+	ExitUsage = 2 // The arguments were wrong.
+)
+
+// SignalContext returns a context that ends on Ctrl-C or SIGTERM. The CLI sends
+// SIGTERM to a plugin that runs past its timeout.
+func SignalContext() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+}
+
+// Invocation returns what people type to run a command.
+func Invocation(command string) string {
+	if command == Name {
+		return "auth0 " + Name
+	}
+
+	return "auth0 " + Name + " " + command
+}

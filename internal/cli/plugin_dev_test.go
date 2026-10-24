@@ -16,10 +16,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
 	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
+	"github.com/auth0/auth0-cli/internal/plugins/scaffold"
 )
 
 // stubExecutable is the executable of a build that is linked or checked but never
@@ -185,8 +187,10 @@ func TestPluginDevCmds_NeedDevMode(t *testing.T) {
 			t.Setenv(pluginDevModeEnv, value)
 
 			build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+			created := filepath.Join(t.TempDir(), "demo")
 
 			commands := [][]string{
+				{"plugin", "dev", "create", "demo", "--lang", "go", "--author", "Me", "--bugs", "https://example.com/issues", "--dir", created},
 				{"plugin", "dev", "link", build.Dir},
 				{"plugin", "dev", "unlink", "checkmate"},
 				{"plugin", "dev", "validate", build.Dir},
@@ -202,6 +206,7 @@ func TestPluginDevCmds_NeedDevMode(t *testing.T) {
 			}
 
 			assert.NoDirExists(t, e.Dir, "nothing is written")
+			assert.NoDirExists(t, created, "nothing is written")
 		})
 	}
 }
@@ -1310,4 +1315,555 @@ func TestVerifiedLinked(t *testing.T) {
 		assert.Nil(t, used)
 		assert.Equal(t, build.Manifest.PermissionsHash(), verifiedLinked(opened).PermissionsHash)
 	})
+}
+
+// createArgs returns the arguments that create the plugin demo in a Go project
+// in dir. A flag that is given again later in more wins.
+func createArgs(dir string, more ...string) []string {
+	args := []string{"plugin", "dev", "create", "demo", "--lang", "go", "--author", "Platform team", "--bugs", "https://example.com/issues", "--dir", dir}
+
+	return append(args, more...)
+}
+
+// createdManifest reads and parses the plugin.json of a created project.
+func createdManifest(t *testing.T, dir string) *plugins.Manifest {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(dir, devlink.ManifestName))
+	require.NoError(t, err)
+
+	manifest, err := plugins.ParseManifest(data)
+	require.NoError(t, err)
+
+	return manifest
+}
+
+func TestCreatePluginCmd(t *testing.T) {
+	tests := []struct {
+		lang    string
+		build   string
+		release string
+	}{
+		{"go", "go mod tidy && go build -o demo .", "make release BUMP=minor"},
+		{"ts", "bun install && bun run build", "bun run release minor"},
+	}
+
+	for _, test := range tests {
+		t.Run("writes a "+test.lang+" project, says what to do next, and keeps the next steps out of the JSON", func(t *testing.T) {
+			e := newDevEnv(t)
+			dir := filepath.Join(t.TempDir(), "demo")
+
+			require.NoError(t, e.run(createArgs(dir, "--lang", test.lang)...))
+
+			assert.Empty(t, e.stdout.String())
+
+			out := e.stderr.String()
+			assert.Contains(t, out, "Created auth0/demo in "+dir)
+			assert.Contains(t, out, "cd "+dir)
+			assert.Contains(t, out, test.build)
+			assert.Contains(t, out, "AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link")
+			assert.Contains(t, out, "auth0 plugin approve demo")
+			assert.Contains(t, out, "\n  auth0 demo\n")
+			assert.Contains(t, out, "the first push to main releases version 0.1.0. Release again with: "+test.release)
+			assert.NotContains(t, out, "declares no scopes")
+
+			manifest := createdManifest(t, dir)
+			assert.Equal(t, "auth0/demo", manifest.ID)
+			assert.Equal(t, "Platform team", manifest.Owner.Team)
+			assert.Equal(t, "https://example.com/issues", manifest.Owner.Bugs)
+			assert.Equal(t, []string{"read:clients"}, manifest.Commands[0].Permissions.Scopes)
+			assert.Nil(t, manifest.Engines, "a build with no version requires nothing")
+
+			assert.NoDirExists(t, e.Dir, "the plugins directory is not touched")
+		})
+
+		t.Run("prints the result as JSON for "+test.lang, func(t *testing.T) {
+			e := newDevEnv(t)
+			dir := filepath.Join(t.TempDir(), "demo")
+
+			require.NoError(t, e.run(createArgs(dir, "--lang", test.lang, "--json-compact")...))
+
+			object := e.jsonObject()
+			assert.Len(t, object, 4, "dir, files, id and lang")
+			assert.Equal(t, dir, object["dir"])
+			assert.Equal(t, "auth0/demo", object["id"])
+			assert.Equal(t, test.lang, object["lang"])
+
+			list, ok := object["files"].([]any)
+			require.True(t, ok)
+
+			files := make([]string, 0, len(list))
+			for _, file := range list {
+				files = append(files, file.(string))
+				assert.FileExists(t, filepath.Join(dir, filepath.FromSlash(file.(string))))
+			}
+
+			assert.Contains(t, files, "plugin.json")
+			assert.Contains(t, files, "README.md")
+			assert.IsIncreasing(t, files)
+
+			assert.NotContains(t, e.stdout.String(), "go mod tidy", "the next steps are for a person")
+			assert.Contains(t, e.stderr.String(), test.build)
+		})
+	}
+
+	t.Run("takes every value from the flags", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "elsewhere")
+
+		require.NoError(t, e.run(createArgs(dir,
+			"--version", "1.2.3",
+			"--description", "Counts things",
+			"--command", "lister",
+			"--command-description", "Lists them",
+			"--license", "Apache-2.0",
+			"--scopes", "read:clients, read:users",
+		)...))
+
+		manifest := createdManifest(t, dir)
+		assert.Equal(t, "1.2.3", manifest.Version)
+		assert.Equal(t, "Counts things", manifest.Description)
+		assert.Equal(t, "lister", manifest.Commands[0].Name)
+		assert.Equal(t, "Lists them", manifest.Commands[0].Description)
+		assert.Equal(t, []string{"read:clients", "read:users"}, manifest.Commands[0].Permissions.Scopes)
+
+		readme, err := os.ReadFile(filepath.Join(dir, "README.md"))
+		require.NoError(t, err)
+		assert.Contains(t, string(readme), "Apache-2.0")
+
+		out := e.stderr.String()
+		assert.Contains(t, out, "auth0 demo lister", "a command that is not the root command runs under the name of the plugin")
+		assert.Contains(t, out, "version 1.2.3")
+	})
+
+	t.Run("the command and its description follow the name and the description", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir, "--description", "Counts things")...))
+
+		manifest := createdManifest(t, dir)
+		assert.Equal(t, "demo", manifest.Commands[0].Name)
+		assert.Equal(t, "Counts things", manifest.Commands[0].Description)
+		assert.NotNil(t, manifest.RootCommand())
+	})
+
+	t.Run("the directory is named like the plugin by default", func(t *testing.T) {
+		e := newDevEnv(t)
+		parent := t.TempDir()
+		t.Chdir(parent)
+
+		args := createArgs("")
+		require.NoError(t, e.run(args[:len(args)-2]...))
+
+		assert.FileExists(t, filepath.Join(parent, "demo", devlink.ManifestName))
+		assert.Contains(t, e.stderr.String(), "cd demo\n")
+	})
+
+	t.Run("no scopes is allowed and the person is told", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir, "--scopes", "")...))
+
+		assert.Empty(t, createdManifest(t, dir).Commands[0].Permissions.Scopes)
+		assert.Contains(t, e.stderr.String(), "The first command declares no scopes, so the Management API call of the sample is denied")
+	})
+
+	t.Run("no scopes is a warning in the JSON result, and a project with scopes has none", func(t *testing.T) {
+		e := newDevEnv(t)
+
+		require.NoError(t, e.run(createArgs(filepath.Join(t.TempDir(), "demo"), "--scopes", "", "--json-compact")...))
+
+		assert.Equal(t, []any{"The first command declares no scopes, so the Management API call of the sample is denied. Add the scopes it needs under permissions.scopes in plugin.json."}, e.jsonObject()["warnings"])
+
+		require.NoError(t, e.run(createArgs(filepath.Join(t.TempDir(), "demo"), "--json-compact")...))
+
+		assert.NotContains(t, e.jsonObject(), "warnings")
+	})
+
+	t.Run("requires the version of this CLI, which has the plugin commands only as a prerelease", func(t *testing.T) {
+		original := buildinfo.Version
+		t.Cleanup(func() { buildinfo.Version = original })
+
+		buildinfo.Version = "1.40.0-beta.1"
+
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir)...))
+
+		assert.Equal(t, ">=1.40.0", createdManifest(t, dir).Engines.Auth0CLI)
+	})
+
+	t.Run("fills an empty directory", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := t.TempDir()
+
+		require.NoError(t, e.run(createArgs(dir)...))
+
+		assert.FileExists(t, filepath.Join(dir, devlink.ManifestName))
+	})
+
+	t.Run("uses the starter projects of a directory given with --from", func(t *testing.T) {
+		e := newDevEnv(t)
+		from := t.TempDir()
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, os.MkdirAll(filepath.Join(from, "go"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(from, "go", "main.go.tmpl"), []byte("// __PLUGIN_NAME__\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(from, "go", "plain.txt"), []byte("as it is\n"), 0o644))
+
+		require.NoError(t, e.run(createArgs(dir, "--from", from, "--json-compact")...))
+
+		assert.Equal(t, []any{"main.go", "plain.txt", "plugin.json"}, e.jsonObject()["files"])
+
+		main, err := os.ReadFile(filepath.Join(dir, "main.go"))
+		require.NoError(t, err)
+		assert.Equal(t, "// demo\n", string(main))
+	})
+}
+
+func TestCreatePluginCmd_Refusals(t *testing.T) {
+	// A tree for --from with a symlink in it.
+	symlinkTree := func(t *testing.T) string {
+		t.Helper()
+
+		from := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(from, "go"), 0o755))
+
+		if err := os.Symlink(from, filepath.Join(from, "go", "link")); err != nil {
+			t.Skipf("cannot create a symlink here: %v", err)
+		}
+
+		return from
+	}
+
+	tests := []struct {
+		name string
+
+		// Args returns the arguments after "plugin dev create", given the directory
+		// to create the project in.
+		args   func(t *testing.T, dir string) []string
+		reason string
+		want   []string
+	}{
+		{
+			name:   "a name that is a core command",
+			args:   func(t *testing.T, dir string) []string { return append([]string{"apps"}, createArgs(dir)[4:]...) },
+			reason: "plugin_name_reserved",
+			want:   []string{`already has a command named "apps"`},
+		},
+		{
+			name:   "a name that is not a name",
+			args:   func(t *testing.T, dir string) []string { return append([]string{"My_Plugin"}, createArgs(dir)[4:]...) },
+			reason: "plugin_create_invalid",
+			want:   []string{"My_Plugin", "lowercase"},
+		},
+		{
+			name: "no name and no terminal to ask in",
+			args: func(t *testing.T, dir string) []string {
+				return append([]string{}, createArgs(dir)[4:]...)
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"<name> is required"},
+		},
+		{
+			name:   "no language",
+			args:   func(t *testing.T, dir string) []string { return withoutFlag(createArgs(dir)[3:], "--lang") },
+			reason: "plugin_create_invalid",
+			want:   []string{"--lang is required"},
+		},
+		{
+			name:   "another language",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--lang", "rust") },
+			reason: "plugin_create_invalid",
+			want:   []string{`"rust"`, "go and ts"},
+		},
+		{
+			name:   "no author and no terminal to ask in",
+			args:   func(t *testing.T, dir string) []string { return withoutFlag(createArgs(dir)[3:], "--author") },
+			reason: "plugin_create_invalid",
+			want:   []string{"--author is required"},
+		},
+		{
+			name:   "no bugs URL and no terminal to ask in",
+			args:   func(t *testing.T, dir string) []string { return withoutFlag(createArgs(dir)[3:], "--bugs") },
+			reason: "plugin_create_invalid",
+			want:   []string{"--bugs is required"},
+		},
+		{
+			name: "a bugs URL without TLS",
+			args: func(t *testing.T, dir string) []string {
+				return append(createArgs(dir)[3:], "--bugs", "http://example.com")
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"owner.bugs"},
+		},
+		{
+			name:   "a version that is not semver",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--version", "one") },
+			reason: "plugin_create_invalid",
+			want:   []string{"version"},
+		},
+		{
+			name: "a description of 121 characters",
+			args: func(t *testing.T, dir string) []string {
+				return append(createArgs(dir)[3:], "--description", strings.Repeat("x", 121))
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"description"},
+		},
+		{
+			name:   "a scope that is not one",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--scopes", "everything") },
+			reason: "plugin_create_invalid",
+			want:   []string{"scopes"},
+		},
+		{
+			name:   "a license that is code",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--license", "MIT;ls") },
+			reason: "plugin_create_invalid",
+			want:   []string{"license"},
+		},
+		{
+			name:   "a command that is not a name",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--command", "List All") },
+			reason: "plugin_create_invalid",
+			want:   []string{"command"},
+		},
+		{
+			name:   "an ID of another registry",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--id", "acme/demo") },
+			reason: "plugin_create_invalid",
+			want:   []string{"auth0/demo"},
+		},
+		{
+			name: "--from that does not exist",
+			args: func(t *testing.T, dir string) []string {
+				return append(createArgs(dir)[3:], "--from", filepath.Join(dir, "nope"))
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"cannot use --from"},
+		},
+		{
+			name: "--from that is a file",
+			args: func(t *testing.T, dir string) []string {
+				file := filepath.Join(t.TempDir(), "file")
+				require.NoError(t, os.WriteFile(file, []byte("x"), 0o644))
+
+				return append(createArgs(dir)[3:], "--from", file)
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"is not a directory"},
+		},
+		{
+			name:   "--from with a symlink",
+			args:   func(t *testing.T, dir string) []string { return append(createArgs(dir)[3:], "--from", symlinkTree(t)) },
+			reason: "plugin_create_invalid",
+			want:   []string{"link", "symlink is not followed"},
+		},
+		{
+			name: "--from with too many files",
+			args: func(t *testing.T, dir string) []string {
+				from := t.TempDir()
+				require.NoError(t, os.MkdirAll(filepath.Join(from, "go"), 0o755))
+
+				for i := range 65 {
+					require.NoError(t, os.WriteFile(filepath.Join(from, "go", "f"+strconv.Itoa(i)), []byte("x"), 0o644))
+				}
+
+				return append(createArgs(dir)[3:], "--from", from)
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"more than 64 files"},
+		},
+		{
+			name: "--from with a file that is too big",
+			args: func(t *testing.T, dir string) []string {
+				from := t.TempDir()
+				require.NoError(t, os.MkdirAll(filepath.Join(from, "go"), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(from, "go", "big"), []byte(strings.Repeat("x", 64<<10+1)), 0o644))
+
+				return append(createArgs(dir)[3:], "--from", from)
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"big is larger than 65536 bytes"},
+		},
+		{
+			name: "--from with a token that is not in the set",
+			args: func(t *testing.T, dir string) []string {
+				from := t.TempDir()
+				require.NoError(t, os.MkdirAll(filepath.Join(from, "go"), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(from, "go", "a.tmpl"), []byte("__AUTHOR__"), 0o644))
+
+				return append(createArgs(dir)[3:], "--from", from)
+			},
+			reason: "plugin_create_invalid",
+			want:   []string{"__AUTHOR__"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			e := newDevEnv(t)
+			dir := filepath.Join(t.TempDir(), "demo")
+
+			args := test.args(t, dir)
+			if args[0] != "plugin" {
+				args = append([]string{"plugin", "dev", "create"}, args...)
+			}
+
+			err := e.run(args...)
+
+			require.Error(t, err)
+			assertValidationError(t, err, test.reason)
+
+			for _, want := range test.want {
+				assert.Contains(t, err.Error(), want)
+			}
+
+			assert.Empty(t, e.stdout.String())
+			assert.NoDirExists(t, dir, "nothing is written")
+			assert.NoDirExists(t, e.Dir)
+		})
+	}
+
+	t.Run("a directory that is not empty is left as it is", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "mine.txt"), []byte("mine"), 0o644))
+
+		err := e.run(createArgs(dir)...)
+
+		require.Error(t, err)
+		assertValidationError(t, err, "plugin_create_invalid")
+		assert.Contains(t, err.Error(), "never overwrite a non-empty directory")
+		assert.Contains(t, err.Error(), dir)
+
+		list, readErr := os.ReadDir(dir)
+		require.NoError(t, readErr)
+		require.Len(t, list, 1)
+		assert.Equal(t, "mine.txt", list[0].Name())
+	})
+
+	t.Run("a failure that is not the input is a plain error that names the path", func(t *testing.T) {
+		if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+			t.Skip("the mode of a directory does not stop this user")
+		}
+
+		e := newDevEnv(t)
+		parent := t.TempDir()
+		require.NoError(t, os.Chmod(parent, 0o500))
+		t.Cleanup(func() { _ = os.Chmod(parent, 0o700) })
+
+		dir := filepath.Join(parent, "demo")
+
+		err := e.run(createArgs(dir)...)
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "cannot create "+dir)
+		assert.NotEqual(t, "validation", errorClass(err))
+		assert.NotEqual(t, "plugin_create_invalid", errorReason(err))
+	})
+
+	t.Run("the path of a file that --from holds is safe to print", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows has no file names with control characters")
+		}
+
+		e := newDevEnv(t)
+		from := symlinkTree(t)
+		require.NoError(t, os.Symlink(from, filepath.Join(from, "go", "evil\x1b[31m")))
+
+		err := e.run(createArgs(filepath.Join(t.TempDir(), "demo"), "--from", from)...)
+
+		require.Error(t, err)
+		assert.NotContains(t, err.Error(), "\x1b")
+	})
+}
+
+// withoutFlag returns the arguments without a flag and its value.
+func withoutFlag(args []string, flag string) []string {
+	var kept []string
+
+	for i := 0; i < len(args); i++ {
+		if args[i] == flag {
+			i++
+
+			continue
+		}
+
+		kept = append(kept, args[i])
+	}
+
+	return kept
+}
+
+func TestCreateNextSteps(t *testing.T) {
+	opts := scaffold.Options{Name: "demo", Command: "demo", Dir: "demo", Lang: scaffold.LangGo}
+
+	tests := []struct {
+		name   string
+		change func(*scaffold.Options)
+		want   []string
+	}{
+		{
+			name: "go",
+			want: []string{"cd demo", "go mod tidy && go build -o demo .", "AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link", "auth0 plugin approve demo", "auth0 demo"},
+		},
+		{
+			name:   "typescript",
+			change: func(o *scaffold.Options) { o.Lang = scaffold.LangTypeScript },
+			want:   []string{"cd demo", "bun install && bun run build", "AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link", "auth0 plugin approve demo", "auth0 demo"},
+		},
+		{
+			name:   "another command",
+			change: func(o *scaffold.Options) { o.Command = "lister" },
+			want:   []string{"cd demo", "go mod tidy && go build -o demo .", "AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link", "auth0 plugin approve demo", "auth0 demo lister"},
+		},
+		{
+			name:   "a directory with a space",
+			change: func(o *scaffold.Options) { o.Dir = "my plugins/demo" },
+			want:   []string{"cd " + shellWord("my plugins/demo"), "go mod tidy && go build -o demo .", "AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link", "auth0 plugin approve demo", "auth0 demo"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			o := opts
+			if test.change != nil {
+				test.change(&o)
+			}
+
+			assert.Equal(t, test.want, createNextSteps(o))
+		})
+	}
+}
+
+func TestQuoteWord(t *testing.T) {
+	tests := []struct{ path, posix, windows string }{
+		{"demo", "demo", "demo"},
+		{"./plugins/demo", "./plugins/demo", "./plugins/demo"},
+		{`C:\work\demo`, `'C:\work\demo'`, `"C:\work\demo"`},
+		{"my dir", "'my dir'", `"my dir"`},
+		{"it's", `'it'\''s'`, `"it's"`},
+		{"a$b", "'a$b'", `"a$b"`},
+		{"a;b", "'a;b'", `"a;b"`},
+		{"a\x1bb", "a\ufffdb", "a\ufffdb"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			assert.Equal(t, test.posix, quoteWord(test.path, false), "POSIX shells")
+			assert.Equal(t, test.windows, quoteWord(test.path, true), "Windows shells")
+		})
+	}
+}
+
+func TestCreateFailed(t *testing.T) {
+	err := createFailed(errors.New("cannot create /tmp/x\x1b[31m: no space left on device"))
+
+	assert.EqualError(t, err, "cannot create /tmp/x\ufffd[31m: no space left on device")
+	assert.NotEqual(t, "validation", errorClass(err))
 }

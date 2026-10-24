@@ -1,0 +1,70 @@
+package commands
+
+import (
+	"context"
+	"flag"
+
+	"github.com/auth0/go-auth0/v3/management"
+
+	"example.com/__PLUGIN_NAME__/plugin"
+)
+
+// This is the sample command. To add your own, copy this file, change the name,
+// the help and the code in runClients, and add the command to plugin.json with
+// the scopes it needs.
+func init() {
+	Register(Command{
+		Name: "__COMMAND__",
+		Help: "List the clients of the tenant",
+		Run:  runClients,
+	})
+}
+
+// runClients lists the clients (applications) of the tenant. It needs the
+// read:clients scope, which plugin.json declares for the command.
+func runClients(ctx context.Context, args []string, out *plugin.Output) error {
+	fs := flag.NewFlagSet("__COMMAND__", flag.ContinueOnError)
+	// Declare the flags of the command here, for example:
+	//   limit := fs.Int("limit", 0, "Stop after this many clients")
+
+	if err := plugin.ParseFlags(fs, args, out); err != nil {
+		return err
+	}
+
+	api, err := plugin.NewClient()
+	if err != nil {
+		return err
+	}
+
+	// Ask only for the two fields the command prints.
+	page, err := api.Clients.List(ctx, &management.ListClientsRequestParameters{
+		Fields:        management.String("client_id,name"),
+		IncludeFields: management.Bool(true),
+		PerPage:       management.Int(50),
+	})
+	if err != nil {
+		return err
+	}
+
+	clients, err := plugin.Collect(ctx, page)
+	if err != nil {
+		return err
+	}
+
+	if out.JSON {
+		return out.PrintJSON(clients)
+	}
+
+	if len(clients) == 0 {
+		out.Note("No clients found.")
+
+		return nil
+	}
+
+	rows := make([][]string, 0, len(clients))
+	for _, c := range clients {
+		rows = append(rows, []string{c.GetClientID(), c.GetName()})
+	}
+
+	return out.PrintTable([]string{"CLIENT ID", "NAME"}, rows)
+}

@@ -1,0 +1,107 @@
+package plugin
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
+	"io"
+	"net/url"
+	"strings"
+
+	"github.com/auth0/go-auth0/v3/management/core"
+)
+
+// proxyDeniedText is part of every message that the CLI proxy writes when a
+// call needs a scope that plugin.json does not declare. Auth0 never says it.
+const proxyDeniedText = "did not declare scope"
+
+// UsageError means the arguments were wrong. The exit code is 2.
+type UsageError struct{ Message string }
+
+// Error returns the message.
+func (e UsageError) Error() string { return e.Message }
+
+// ErrHelp is what a command returns after it printed its help.
+var ErrHelp = errors.New("help requested")
+
+// ParseFlags parses the arguments of one command. Declare the flags on the
+// FlagSet first, and list them in plugin.json so that the CLI shows them in its
+// help. The flags that the CLI owns (--json, --tenant and so on) never get here.
+func ParseFlags(fs *flag.FlagSet, args []string, out *Output) error {
+	fs.SetOutput(io.Discard) // Errors are reported once, by Report.
+
+	err := fs.Parse(args)
+
+	switch {
+	case errors.Is(err, flag.ErrHelp):
+		_, _ = fmt.Fprintf(out.Stdout, "Usage: %s [flags]\n\n", Invocation(fs.Name()))
+		fs.SetOutput(out.Stdout)
+		fs.PrintDefaults()
+
+		return ErrHelp
+	case err != nil:
+		return UsageError{err.Error()}
+	case fs.NArg() > 0:
+		return UsageError{fmt.Sprintf("unexpected argument %q", fs.Arg(0))}
+	}
+
+	return nil
+}
+
+// Report prints an error to out.Stderr and returns the exit code for it: 0 for
+// no error, 2 for wrong usage and 1 for anything else. This is the one place
+// that decides what an error looks like, so change it here.
+func Report(out *Output, err error) int {
+	var (
+		usage  UsageError
+		apiErr *core.APIError
+		urlErr *url.Error
+	)
+
+	switch {
+	case err == nil, errors.Is(err, ErrHelp):
+		return ExitOK
+	case errors.As(err, &usage):
+		out.Note("error: %s\nRun `auth0 %s --help` for usage.", usage, Name)
+
+		return ExitUsage
+	case errors.Is(err, context.Canceled):
+		out.Note("interrupted")
+	case errors.As(err, &apiErr):
+		out.Note("%s", apiErrorText(apiErr))
+	case errors.As(err, &urlErr):
+		// The call got no answer: a refused connection, a TLS error, a timeout.
+		out.Note("error: could not reach the CLI proxy: %v", urlErr.Err)
+	default:
+		out.Note("error: %v", err)
+	}
+
+	return ExitError
+}
+
+// apiErrorText turns an error response of the Management API into text. The API
+// answers with {"statusCode", "error", "message", "errorCode"}, which the SDK
+// keeps as the wrapped error.
+func apiErrorText(err *core.APIError) string {
+	var body struct {
+		Message string `json:"message"`
+	}
+
+	if cause := err.Unwrap(); cause != nil {
+		_ = json.Unmarshal([]byte(cause.Error()), &body)
+	}
+
+	if body.Message == "" {
+		body.Message = "no details"
+	}
+
+	if err.StatusCode == 403 && strings.Contains(body.Message, proxyDeniedText) {
+		return fmt.Sprintf("error: the CLI blocked this call.\n  %s\n"+
+			"Declare the scope under permissions.scopes of the command in plugin.json, "+
+			"then approve the new permissions with: auth0 plugin approve %s", body.Message, Name)
+	}
+
+	return fmt.Sprintf("error: the API answered %d: %s", err.StatusCode, body.Message)
+}

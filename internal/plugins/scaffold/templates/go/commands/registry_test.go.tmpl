@@ -1,0 +1,47 @@
+package commands
+
+import (
+	"bytes"
+	"context"
+	"strings"
+	"testing"
+
+	"example.com/__PLUGIN_NAME__/plugin"
+)
+
+func TestRegisterRejectsADuplicate(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Error("Register accepted a second command with the same name")
+		}
+	}()
+
+	Register(Command{Name: "__COMMAND__"})
+}
+
+func TestRun(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		wantCode int
+		wantOut  string
+	}{
+		{name: "version", args: []string{"--version"}, wantOut: plugin.Name + " " + plugin.Version + "\n"},
+		{name: "unknown command", args: []string{"no-such-command"}, wantCode: plugin.ExitUsage},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+
+			code := Run(context.Background(), tt.args, &plugin.Output{Stdout: &stdout, Stderr: &stderr})
+			if code != tt.wantCode {
+				t.Errorf("exit code = %d, want %d", code, tt.wantCode)
+			}
+
+			if !strings.Contains(stdout.String(), tt.wantOut) {
+				t.Errorf("stdout = %q, want it to contain %q", stdout.String(), tt.wantOut)
+			}
+		})
+	}
+}

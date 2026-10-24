@@ -1,0 +1,37 @@
+import { parseFlags } from "../lib/flags";
+import { collect } from "../lib/paginate";
+import type { Command } from "./types";
+
+// This is the sample command. To add your own, copy this file, change the name,
+// the help and the code in run, add it to commands/index.ts, and add the command
+// to plugin.json with the scopes it needs.
+export const clients: Command = {
+  name: "__COMMAND__",
+  help: "List the clients of the tenant",
+
+  // It needs the read:clients scope, which plugin.json declares for the command.
+  async run({ args, out, signal, client }) {
+    // Declare the flags of the command here, for example:
+    //   const { values } = parseFlags(args, { limit: { type: "string" } });
+    parseFlags(args);
+
+    // Ask only for the two fields the command prints. The result is a page that
+    // walks every page when it is iterated.
+    const page = await client().clients.list(
+      { fields: "client_id,name", include_fields: true, per_page: 50 },
+      { abortSignal: signal },
+    );
+    const items = await collect(page);
+
+    if (out.json) {
+      out.printJson(items);
+    } else if (items.length === 0) {
+      out.note("No clients found.");
+    } else {
+      out.printTable(
+        ["CLIENT ID", "NAME"],
+        items.map((c) => [c.client_id ?? "", c.name ?? ""]),
+      );
+    }
+  },
+};

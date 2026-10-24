@@ -1,0 +1,19 @@
+{
+  "name": "__PLUGIN_NAME__",
+  "license": "__LICENSE__",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build --compile --outfile __PLUGIN_NAME__ src/index.ts",
+    "test": "bun test",
+    "release": "bun run scripts/release.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "auth0": "^7.6.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
+  }
+}
