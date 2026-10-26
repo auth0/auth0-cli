@@ -192,3 +192,25 @@ test("the real runner passes the body on stdin to the process and reads its stdo
   assert.deepEqual(JSON.parse(echoed.input), { name: "x" });
   assert.deepEqual(echoed.args.slice(0, 3), ["api", "POST", "clients"]);
 });
+
+// `auth0 api` reads stdin until it ends for every method except GET, even when there is no body. A
+// request without a body must still close it, or the command waits forever.
+test("a request without a body closes stdin, so a command that reads it to the end does not hang", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "up-fake-auth0-"));
+  const script = join(dir, "auth0");
+  writeFileSync(
+    script,
+    '#!/usr/bin/env node\nprocess.stdin.resume();\nprocess.stdin.on("end", () => console.log("{}"));\n' +
+      // If stdin is never closed, stop on our own, so a failing test does not keep the run alive.
+      "setTimeout(() => process.exit(2), 8000).unref();\n",
+  );
+  chmodSync(script, 0o755);
+  const api = createCliApiClient({ bin: script });
+
+  const outcome = await Promise.race([
+    api.request("DELETE", "client-grants/cgr_1").then(() => "finished"),
+    new Promise<string>((resolve) => setTimeout(() => resolve("hung"), 5000)),
+  ]);
+
+  assert.equal(outcome, "finished");
+});
