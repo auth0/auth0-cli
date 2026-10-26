@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/src/cli.js",
+    "bundle": "npm run build && node scripts/bundle.mjs",
     "test": "rm -rf dist && npm run build && node --test dist/test/*.test.js",
     "preview": "npm run preview:setup",
     "preview:setup": "npm run build >/dev/null && node scripts/preview-setup.mjs",
@@ -20,11 +21,11 @@
     "node": ">=20.12"
   },
   "dependencies": {
-    "@clack/prompts": "1.8.1",
-    "auth0": "4.29.0"
+    "@clack/prompts": "1.8.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "esbuild": "0.28.2",
     "typescript": "^5.0.0"
   }
 }
