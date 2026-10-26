@@ -74,25 +74,18 @@ export async function fetchPortalSnapshot(
 ): Promise<PortalSnapshot> {
   const portal = await api.request<PortalShape>("GET", `portals/${encodeURIComponent(portalId)}`);
 
-  let application: ApplicationShape | undefined;
-  let grants: PortalSnapshot["grants"] = [];
-  let applicationConnections: PortalSnapshot["applicationConnections"] = [];
-  const clientId = portal.client?.client_id;
-  if (clientId) application = await readApplication(api, clientId);
-  if (application && clientId) {
-    grants = await listAll<PortalSnapshot["grants"][number]>(api, `client-grants?client_id=${encodeURIComponent(clientId)}`, "client_grants");
-    applicationConnections = await listAll<{ id: string; name?: string }>(api, `clients/${encodeURIComponent(clientId)}/connections`, "connections");
-  }
-
-  const resourceServers = (await listAll<{ identifier: string }>(api, "resource-servers", "resource_servers")).map((server) => server.identifier);
-
-  const forms: Record<string, boolean> = {};
-  for (const formId of formIdsOf(portal)) {
-    forms[formId] = await formExists(api, formId);
-  }
-
-  const customDomain = await readCustomDomain(api);
-  const organization = options.organizationId ? await readOrganization(api, options.organizationId) : undefined;
+  // Once the portal is read, what else the audit needs does not depend on each other, so it is
+  // read together.
+  const [applicationParts, resourceServers, forms, customDomain, organization] = await Promise.all([
+    readApplicationParts(api, portal.client?.client_id),
+    listAll<{ identifier: string }>(api, "resource-servers", "resource_servers").then((servers) =>
+      servers.map((server) => server.identifier),
+    ),
+    readForms(api, portal),
+    readCustomDomain(api),
+    options.organizationId ? readOrganization(api, options.organizationId) : undefined,
+  ]);
+  const { application, grants, applicationConnections } = applicationParts;
 
   return {
     tenantDomain,
@@ -105,6 +98,27 @@ export async function fetchPortalSnapshot(
     customDomain,
     organization,
   };
+}
+
+// The application, and when it exists its grants and connections.
+async function readApplicationParts(
+  api: ApiClient,
+  clientId: string | undefined,
+): Promise<Pick<PortalSnapshot, "application" | "grants" | "applicationConnections">> {
+  const application = clientId ? await readApplication(api, clientId) : undefined;
+  if (!application || !clientId) return { application, grants: [], applicationConnections: [] };
+
+  const [grants, applicationConnections] = await Promise.all([
+    listAll<PortalSnapshot["grants"][number]>(api, `client-grants?client_id=${encodeURIComponent(clientId)}`, "client_grants"),
+    listAll<{ id: string; name?: string }>(api, `clients/${encodeURIComponent(clientId)}/connections`, "connections"),
+  ]);
+  return { application, grants, applicationConnections };
+}
+
+async function readForms(api: ApiClient, portal: PortalShape): Promise<Record<string, boolean>> {
+  const formIds = formIdsOf(portal);
+  const exist = await Promise.all(formIds.map((formId) => formExists(api, formId)));
+  return Object.fromEntries(formIds.map((formId, index) => [formId, exist[index]]));
 }
 
 export function formIdsOf(portal: PortalShape): string[] {

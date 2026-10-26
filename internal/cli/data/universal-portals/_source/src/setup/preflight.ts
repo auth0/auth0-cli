@@ -65,19 +65,30 @@ export async function runPreflight(
   const gaps: ScopeGap[] = [];
   const unexpected: PreflightResult["unexpected"] = [];
 
-  for (const probe of probes) {
-    try {
-      await api.request(probe.method, probe.path, probe.body);
-    } catch (error) {
-      if (!(error instanceof ApiError)) throw error;
-      if (error.status === 400) continue;
-      if (error.errorCode === "feature_not_enabled") throw new FeatureNotEnabledError(tenantDomain);
-      const gap = parseScopeGap(probe.name, error);
-      if (gap) {
-        gaps.push(gap);
-      } else {
-        unexpected.push({ probe: probe.name, status: error.status, message: error.message });
+  // The probes do not depend on each other, so they are sent together. The answers are read in
+  // the order of the probes, so the report and the first error do not depend on which came first.
+  const failures = await Promise.all(
+    probes.map(async (probe) => {
+      try {
+        await api.request(probe.method, probe.path, probe.body);
+        return undefined;
+      } catch (error) {
+        return { probe, error };
       }
+    }),
+  );
+
+  for (const failure of failures) {
+    if (!failure) continue;
+    const { probe, error } = failure;
+    if (!(error instanceof ApiError)) throw error;
+    if (error.status === 400) continue;
+    if (error.errorCode === "feature_not_enabled") throw new FeatureNotEnabledError(tenantDomain);
+    const gap = parseScopeGap(probe.name, error);
+    if (gap) {
+      gaps.push(gap);
+    } else {
+      unexpected.push({ probe: probe.name, status: error.status, message: error.message });
     }
   }
 
