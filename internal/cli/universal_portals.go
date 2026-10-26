@@ -8,17 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Temporary. These commands run a Node.js tool that is built into the CLI, so that Universal Portals
-// can be used before the plugin framework is available on this branch. When the framework installs
-// the tool as a plugin, remove this:
-//   - universal_portals*.go in this folder,
-//   - the data/universal-portals folder, and its section in data/README.md,
-//   - the line in root.go that adds universalPortalsCmd,
-// then run "make docs". A test fails if plugins.go appears, so this is not forgotten: the framework
-// skips a plugin whose name matches a built-in command, and the plugin would be ignored.
-
-// universalPortalsExit ends the process with the tool's exit code. Tests replace it.
-var universalPortalsExit = os.Exit
+// Temporary: these commands run a Node.js tool built into the CLI, until the plugin framework can
+// install it. When it can, remove universal_portals*.go, the data/universal-portals folder (and its
+// section in data/README.md) and the universalPortalsCmd line in root.go, then run "make docs".
+// The framework ignores a plugin named like a built-in command, so a test fails once plugins.go exists.
 
 // universalPortalsCmd groups the Universal Portals commands.
 func universalPortalsCmd(cli *cli) *cobra.Command {
@@ -71,13 +64,12 @@ func universalPortalsToolCmd(cli *cli, name, short, long, example string) *cobra
 }
 
 func runUniversalPortals(cli *cli, command string, args []string) error {
-	if err := checkNodeInstallation(); err != nil {
-		return err
-	}
-
 	node, err := exec.LookPath("node")
 	if err != nil {
-		return fmt.Errorf("node is required but was not found on the PATH: %w", err)
+		return fmt.Errorf(
+			"node is required but was not found. Install Node.js %d.%d or newer and try again",
+			universalPortalsNodeMajor, universalPortalsNodeMinor,
+		)
 	}
 
 	if err := checkUniversalPortalsNodeVersion(node); err != nil {
@@ -100,7 +92,7 @@ func runUniversalPortals(cli *cli, command string, args []string) error {
 
 	// The tool has already shown its own message, so the CLI only passes on the exit code.
 	if code != 0 {
-		universalPortalsExit(code)
+		os.Exit(code)
 	}
 
 	return nil

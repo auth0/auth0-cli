@@ -311,3 +311,14 @@ func TestUniversalPortalsRunFor(t *testing.T) {
 		})
 	}
 }
+
+func TestRunUniversalPortalsWithoutNode(t *testing.T) {
+	// Nothing is on the PATH, so nothing can be started and the user is told what to install.
+	t.Setenv("PATH", t.TempDir())
+
+	err := runUniversalPortals(&cli{}, "setup", []string{"--json"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "node is required but was not found")
+	assert.Contains(t, err.Error(), "Node.js 20.12 or newer", "the message must name the version this command needs")
+}
