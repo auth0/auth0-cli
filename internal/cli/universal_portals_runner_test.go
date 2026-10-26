@@ -203,14 +203,27 @@ func TestRunUniversalPortalsScript(t *testing.T) {
 		// The terminal sends Ctrl+C to both processes. The CLI's own handler would exit at once and
 		// cut off the tool's last message, so the runner must outlive the signal and report the
 		// tool's exit code.
-		slow := filepath.Join(t.TempDir(), "node")
-		require.NoError(t, os.WriteFile(slow, []byte("#!/bin/sh\nsleep 1\nexit 3\n"), 0o755))
-		time.AfterFunc(200*time.Millisecond, func() {
+		dir := t.TempDir()
+		started, released := filepath.Join(dir, "started"), filepath.Join(dir, "released")
+		slow := filepath.Join(dir, "node")
+		// The tool says it has started, then waits until the test has sent the signal (or gives up
+		// after about ten seconds, so a broken test cannot hang the run).
+		fakeTool := "#!/bin/sh\ntouch '" + started + "'\ni=0\n" +
+			"while [ ! -f '" + released + "' ] && [ $i -lt 200 ]; do sleep 0.05; i=$((i+1)); done\nexit 3\n"
+		require.NoError(t, os.WriteFile(slow, []byte(fakeTool), 0o755))
+		go func() {
+			for i := 0; i < 200; i++ {
+				if _, statErr := os.Stat(started); statErr == nil {
+					break
+				}
+				time.Sleep(50 * time.Millisecond)
+			}
 			process, findErr := os.FindProcess(os.Getpid())
 			if findErr == nil {
 				_ = process.Signal(syscall.SIGINT)
 			}
-		})
+			_ = os.WriteFile(released, nil, 0o600)
+		}()
 
 		code, err := runUniversalPortalsScript(universalPortalsRun{Node: slow, Script: []byte("x")})
 

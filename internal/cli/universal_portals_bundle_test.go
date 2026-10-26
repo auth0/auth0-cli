@@ -91,7 +91,7 @@ func TestEmbeddedUniversalPortalsScriptMatchesItsSources(t *testing.T) {
 
 // The plugin framework skips a plugin whose name matches a built-in command. Once the framework is on
 // this branch, the embedded command must go, or the installed plugin is silently ignored.
-func TestUniversalPortalsCommandIsRemovedWhenThePluginFrameworkArrives(t *testing.T) {
+func TestUniversalPortalsCommandIsRemovedWhenTheFrameworkArrives(t *testing.T) {
 	_, err := os.Stat("plugins.go")
 
 	require.True(t, errors.Is(err, fs.ErrNotExist),
