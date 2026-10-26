@@ -1,5 +1,5 @@
-// Management API client. Requests go through the CLI's loopback proxy, which
-// swaps the proxy token for the real access token, so this module never holds it.
+// Management API client interface. An implementation sends the requests through the CLI, either its
+// loopback proxy or the `auth0 api` command (see cli-api.ts), so this module never holds a token.
 
 export type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
