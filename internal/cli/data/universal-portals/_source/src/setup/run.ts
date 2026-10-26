@@ -1,5 +1,6 @@
 import { ApiClient } from "../api.js";
 import { PluginError } from "../plugin-error.js";
+import { scopeFixes } from "../scope-fixes.js";
 import { applicationUrl, flowEditUrl, formEditUrl, portalEditUrl } from "../dashboard.js";
 import { buildPortalForms, FORM_NAMES, FormKey } from "../forms.js";
 import { isValidPortalSlug } from "../portal-model.js";
@@ -56,7 +57,7 @@ export class MissingScopesError extends PluginError {
         ? `The CLI session is missing ${scopes.length} scope(s): ${scopes.join(", ")}.`
         : "The CLI session is missing a scope it needs.",
       "missing_scopes",
-      scopes.length > 0 ? [`auth0 login --scopes ${scopes.join(",")}`] : undefined,
+      scopes.length > 0 ? scopeFixes(scopes) : undefined,
     );
   }
 }
@@ -229,9 +230,6 @@ async function checkPermissions(probes: Probe[], deps: SetupDeps): Promise<void>
   deps.ui.error("The CLI session is missing permissions setup needs");
   for (const scope of required) deps.ui.detail(scope);
   for (const choice of choices) deps.ui.detail(`one of: ${choice.scopes.join(", ")}`);
-  if (required.length > 0) {
-    deps.ui.detail(`Run: auth0 login --scopes ${required.join(",")}`);
-  }
   throw new MissingScopesError(required, choices);
 }
 

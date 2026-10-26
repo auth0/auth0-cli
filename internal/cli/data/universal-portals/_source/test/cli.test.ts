@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { ApiError, FetchLike } from "../src/api.js";
 import { main, IoStreams } from "../src/cli.js";
 import { missingFlags, parseSetupArgs, UsageError } from "../src/args.js";
+import { scopeFixes } from "../src/scope-fixes.js";
 import { toPortalSlug } from "../src/slug.js";
 import type { Prompter } from "../src/prompt.js";
 import { captureOutput } from "./capture-output.js";
@@ -235,6 +236,18 @@ async function auditInTerminal(tenant: FakeTenant, portalId: string, prompter: P
   return { code, stderr: stderr() };
 }
 
+test("audit tells the user how to get a missing scope, for a user login and a client-credentials login", async () => {
+  const { tenant, portalId } = await tenantWithPortal();
+  tenant.deny(`GET portals/${portalId}`, "Insufficient scope, expected any of: read:portals");
+  const { io, stderr } = captureIo(fetchFor(tenant));
+
+  const code = await main(["audit", portalId], ENV, io);
+
+  assert.equal(code, 1);
+  assert.match(stderr(), /Signed in as a user: auth0 login --scopes read:portals/);
+  assert.match(stderr(), /Signed in with client credentials: add read:portals to the application's Management API grant/);
+});
+
 test("the fix menu's 'fix all' applies every error and the portal passes the audit", async () => {
   const { tenant, portalId } = await tenantWithPortal();
   tenant.portals.get(portalId)!.navigation.sidebar.components = [LEGACY_LINK];
@@ -382,7 +395,7 @@ test("in agent mode a missing scope is reported as a JSON error on stderr", asyn
   assert.equal(stdout(), "");
   const envelope = JSON.parse(stderr());
   assert.equal(envelope.error, "missing_scopes");
-  assert.deepEqual(envelope.fixes, ["auth0 login --scopes create:portals"]);
+  assert.deepEqual(envelope.fixes, scopeFixes(["create:portals"]));
 });
 
 test("a Business run that is missing its user stops with a usage error", async () => {
