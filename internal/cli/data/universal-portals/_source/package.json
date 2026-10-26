@@ -1,0 +1,30 @@
+{
+  "name": "universal-portals",
+  "version": "0.0.0-dev",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "universal-portals": "./dist/src/cli.js"
+  },
+  "files": [
+    "dist/src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/src/cli.js",
+    "test": "rm -rf dist && npm run build && node --test dist/test/*.test.js",
+    "preview": "npm run preview:setup",
+    "preview:setup": "npm run build >/dev/null && node scripts/preview-setup.mjs",
+    "preview:audit": "npm run build >/dev/null && node scripts/preview-audit.mjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.8.1",
+    "auth0": "4.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}
