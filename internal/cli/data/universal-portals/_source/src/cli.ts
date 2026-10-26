@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { parseSetupArgs, ParsedSetupArgs, UsageError, usage } from "./args.js";
 import type { FetchLike } from "./api.js";
 import { clackPrompter } from "./clack-prompter.js";
+import type { RunCommand } from "./cli-api.js";
 import type { Prompter } from "./prompt.js";
 import { runAuditCommand } from "./audit-command.js";
 import { describeError } from "./errors.js";
@@ -17,6 +18,8 @@ export interface IoStreams {
   stdinStream: NodeJS.ReadStream;
   isTTY: boolean;
   fetchImpl?: FetchLike;
+  // Starts the auth0 executable when requests go through the CLI. Replaced in tests.
+  run?: RunCommand;
   // Answers the questions. Defaults to the terminal when the run is interactive.
   prompter?: Prompter;
   // Opens the portal after setup. Defaults to the system browser; previews replace it.

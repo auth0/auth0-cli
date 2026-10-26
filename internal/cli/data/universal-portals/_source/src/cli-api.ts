@@ -46,9 +46,10 @@ export function createCliApiClient(options: CliApiOptions): ApiClient {
         if (tenant) args.push("--tenant", tenant);
         if (method === "DELETE") args.push("--force");
 
+        const what = `auth0 api ${method} ${path}`;
         const result = await runOrExplain(run, bin, args, body === undefined ? undefined : JSON.stringify(body));
-        if (result.exitCode !== 0) throw explainFailure(result.stderr, method, path, tenant);
-        return parseOutput<T>(result.stdout, method, path);
+        if (result.exitCode !== 0) throw explainFailure(result.stderr, what, tenant);
+        return parseOutput<T>(result.stdout, what);
       } finally {
         gate.leave();
       }
@@ -108,17 +109,19 @@ async function runOrExplain(
   }
 }
 
-function parseOutput<T>(stdout: string, method: HttpMethod, path: string): T {
+function parseOutput<T>(stdout: string, what: string): T {
   const text = stdout.trim();
   if (text === "") return undefined as T;
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new Error(`auth0 api ${method} ${path} printed output that is not JSON: ${text.slice(0, 120)}`);
+    throw new Error(`${what} printed output that is not JSON: ${text.slice(0, 120)}`);
   }
 }
 
-function explainFailure(stderr: string, method: HttpMethod, path: string, tenant: string | undefined): Error {
+// What went wrong, from the CLI's message. `what` names the command for the messages that
+// have no better explanation.
+function explainFailure(stderr: string, what: string, tenant: string | undefined): Error {
   // The CLI keeps only the first missing scope and drops the API's body, so the message is rebuilt
   // in the shape the permission check already reads.
   const scope = /lacks scope: ([A-Za-z0-9_:,-]+)/i.exec(stderr)?.[1];
@@ -135,14 +138,14 @@ function explainFailure(stderr: string, method: HttpMethod, path: string, tenant
   if (api) return toApiError(Number(api[1]), parseBody(api[2]));
 
   if (SIGN_IN_PROBLEM.test(stderr)) {
-    return new PluginError(
-      `The Auth0 CLI cannot use ${tenant ?? "its active tenant"}: ${firstMessage(stderr)} Run auth0 login, then run this command again.`,
-      "auth0_login_required",
-      ["auth0 login"],
-    );
+    return loginRequired(`The Auth0 CLI cannot use ${tenant ?? "its active tenant"}: ${firstMessage(stderr)}`);
   }
 
-  return new Error(`auth0 api ${method} ${path} failed: ${firstMessage(stderr)}`);
+  return new Error(`${what} failed: ${firstMessage(stderr)}`);
+}
+
+function loginRequired(message: string): PluginError {
+  return new PluginError(`${message} Run auth0 login, then run this command again.`, "auth0_login_required", ["auth0 login"]);
 }
 
 // The CLI ends the message with a period after the API's JSON.
@@ -164,6 +167,23 @@ function firstMessage(stderr: string): string {
     .map((entry) => entry.trim())
     .find((entry) => entry !== "" && !entry.startsWith("==="));
   return (line ?? "no message").replace(/^[^A-Za-z0-9]+/, "");
+}
+
+// The tenant the CLI is logged in to by default.
+export async function findActiveTenant(bin: string, run: RunCommand = runCommand): Promise<string> {
+  const what = "auth0 tenants list";
+  const result = await runOrExplain(run, bin, ["tenants", "list", "--json", "--no-color", "--no-input"], undefined);
+  if (result.exitCode !== 0) throw explainFailure(result.stderr, what, undefined);
+
+  let tenants: unknown;
+  try {
+    tenants = parseOutput(result.stdout, what);
+  } catch {
+    tenants = undefined;
+  }
+  const active = Array.isArray(tenants) ? tenants.find((tenant) => tenant?.active === true) : undefined;
+  if (typeof active?.name !== "string") throw loginRequired("The Auth0 CLI has no active tenant.");
+  return active.name;
 }
 
 export function runCommand(bin: string, args: string[], input: string | undefined): Promise<CommandResult> {

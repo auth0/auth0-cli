@@ -2,7 +2,6 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
 import { ApiClient, ApiError, createApiClient, listAll, listItems, type FetchLike } from "../src/api.js";
-import { readContext } from "../src/context.js";
 
 function fakeFetch(status: number, body: unknown): { fetch: FetchLike; calls: { url: string; init: RequestInit }[] } {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -76,27 +75,4 @@ test("listItems reads both array responses and keyed responses", () => {
   assert.deepEqual(listItems([{ id: 1 }], "portals"), [{ id: 1 }]);
   assert.deepEqual(listItems({ portals: [{ id: 2 }] }, "portals"), [{ id: 2 }]);
   assert.deepEqual(listItems({ other: [] }, "portals"), []);
-});
-
-test("readContext names every missing variable", () => {
-  assert.throws(() => readContext({}), (error: unknown) => {
-    assert.ok(error instanceof Error);
-    assert.match(error.message, /AUTH0_CLI_PROXY_URL/);
-    assert.match(error.message, /AUTH0_CLI_PROXY_TOKEN/);
-    assert.match(error.message, /AUTH0_CLI_TENANT_DOMAIN/);
-    return true;
-  });
-});
-
-test("readContext returns the three values when all are set", () => {
-  const context = readContext({
-    AUTH0_CLI_PROXY_URL: "https://127.0.0.1:1",
-    AUTH0_CLI_PROXY_TOKEN: "t",
-    AUTH0_CLI_TENANT_DOMAIN: "acme.us.auth0.com",
-  });
-  assert.deepEqual(context, {
-    proxyUrl: "https://127.0.0.1:1",
-    proxyToken: "t",
-    tenantDomain: "acme.us.auth0.com",
-  });
 });
