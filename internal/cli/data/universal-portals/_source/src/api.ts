@@ -62,8 +62,9 @@ export function listItems<T>(body: unknown, key: string): T[] {
 const PAGE_SIZE = 100;
 const MAX_PAGES = 100;
 
-// Reads every page of a list endpoint. A short page is the last one, so the total is
-// not needed, and endpoints that reject extra query parameters are not affected.
+// Reads every page of a list endpoint that takes page and per_page. A short page is the last
+// one, so the total is not needed. A few endpoints page by checkpoint instead and reject these
+// parameters: they use listAllByCheckpoint.
 export async function listAll<T>(api: ApiClient, path: string, key: string): Promise<T[]> {
   const separator = path.includes("?") ? "&" : "?";
   const items: T[] = [];
@@ -71,6 +72,22 @@ export async function listAll<T>(api: ApiClient, path: string, key: string): Pro
     const batch = listItems<T>(await api.request("GET", `${path}${separator}page=${page}&per_page=${PAGE_SIZE}`), key);
     items.push(...batch);
     if (batch.length < PAGE_SIZE) return items;
+  }
+  throw new Error(`${path} returned more than ${MAX_PAGES * PAGE_SIZE} items. The listing did not stop paging.`);
+}
+
+// Reads every page of an endpoint that pages by checkpoint: the request takes a count and the
+// token of the page to start from, and the response carries `next` while there is more.
+export async function listAllByCheckpoint<T>(api: ApiClient, path: string, key: string): Promise<T[]> {
+  const separator = path.includes("?") ? "&" : "?";
+  const items: T[] = [];
+  let from: string | undefined;
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const query = `take=${PAGE_SIZE}${from ? `&from=${encodeURIComponent(from)}` : ""}`;
+    const body = await api.request("GET", `${path}${separator}${query}`);
+    items.push(...listItems<T>(body, key));
+    from = isRecord(body) && typeof body.next === "string" && body.next !== "" ? body.next : undefined;
+    if (!from) return items;
   }
   throw new Error(`${path} returned more than ${MAX_PAGES * PAGE_SIZE} items. The listing did not stop paging.`);
 }

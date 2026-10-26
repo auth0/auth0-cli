@@ -71,3 +71,26 @@ test("the audit reads the independent parts of a portal together and gets the sa
   assert.deepEqual(together, sequential);
   assert.ok(network.peak() > 1, "the reads were sent one after another");
 });
+
+test("the audit reads every connection of an application, not only the first page", async () => {
+  const tenant = new FakeTenant();
+  tenant.connections.set("con_db", { id: "con_db", name: "Username-Password-Authentication", strategy: "auth0" });
+  const quiet = new Ui(captureOutput().stream, false, true);
+  const setup = await runSetup(
+    { template: "consumer", name: "Acme Account", slug: "acme-account" },
+    {
+      api: tenant,
+      ui: quiet,
+      prompt: { ask: async (_q, d) => d ?? "", confirm: async (_q, d) => d, choose: async (_q, o) => o[0].value, checklist: async () => [] },
+      interactive: false,
+      tenantDomain: DOMAIN,
+    },
+  );
+  for (let index = 0; index < 129; index += 1) {
+    tenant.connections.set(`con_${index}`, { id: `con_${index}`, name: `Connection ${index}`, strategy: "auth0" });
+  }
+
+  const snapshot = await fetchPortalSnapshot(tenant, setup.portal.id, DOMAIN);
+
+  assert.equal(snapshot.applicationConnections.length, 130);
+});

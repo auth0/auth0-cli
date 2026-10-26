@@ -1,4 +1,4 @@
-import { ApiClient, ApiError, listAll } from "../api.js";
+import { ApiClient, ApiError, listAll, listAllByCheckpoint } from "../api.js";
 
 // Everything the audit needs about one portal, read from the tenant. The checks
 // work on this snapshot only, so they can be tested without a tenant.
@@ -110,7 +110,8 @@ async function readApplicationParts(
 
   const [grants, applicationConnections] = await Promise.all([
     listAll<PortalSnapshot["grants"][number]>(api, `client-grants?client_id=${encodeURIComponent(clientId)}`, "client_grants"),
-    listAll<{ id: string; name?: string }>(api, `clients/${encodeURIComponent(clientId)}/connections`, "connections"),
+    // This endpoint pages by checkpoint and rejects page and per_page.
+    listAllByCheckpoint<{ id: string; name?: string }>(api, `clients/${encodeURIComponent(clientId)}/connections`, "connections"),
   ]);
   return { application, grants, applicationConnections };
 }

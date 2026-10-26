@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
-import { ApiClient, ApiError, createApiClient, listAll, listItems, type FetchLike } from "../src/api.js";
+import { ApiClient, ApiError, createApiClient, listAll, listAllByCheckpoint, listItems, type FetchLike } from "../src/api.js";
 
 function fakeFetch(status: number, body: unknown): { fetch: FetchLike; calls: { url: string; init: RequestInit }[] } {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -75,4 +75,38 @@ test("listItems reads both array responses and keyed responses", () => {
   assert.deepEqual(listItems([{ id: 1 }], "portals"), [{ id: 1 }]);
   assert.deepEqual(listItems({ portals: [{ id: 2 }] }, "portals"), [{ id: 2 }]);
   assert.deepEqual(listItems({ other: [] }, "portals"), []);
+});
+
+test("listAllByCheckpoint follows the next token until there is none, and never sends page numbers", async () => {
+  const everything = Array.from({ length: 250 }, (_, index) => ({ id: `item_${index}` }));
+  const paths: string[] = [];
+  const api = {
+    async request(_method: string, path: string) {
+      paths.push(path);
+      const params = new URL(`https://x/${path}`).searchParams;
+      const start = params.has("from") ? everything.findIndex((item) => item.id === params.get("from")) : 0;
+      const take = Number(params.get("take"));
+      const next = everything[start + take];
+      return { things: everything.slice(start, start + take), ...(next ? { next: next.id } : {}) };
+    },
+  } as ApiClient;
+
+  const items = await listAllByCheckpoint<{ id: string }>(api, "things?strategy=auth0", "things");
+
+  assert.equal(items.length, 250);
+  assert.deepEqual(paths, [
+    "things?strategy=auth0&take=100",
+    "things?strategy=auth0&take=100&from=item_100",
+    "things?strategy=auth0&take=100&from=item_200",
+  ]);
+});
+
+test("listAllByCheckpoint stops with an error when the token never runs out", async () => {
+  const api = {
+    async request() {
+      return { things: [{ id: "a" }], next: "again" };
+    },
+  } as ApiClient;
+
+  await assert.rejects(listAllByCheckpoint(api, "things", "things"), /did not stop paging/);
 });
