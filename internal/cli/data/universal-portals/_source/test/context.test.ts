@@ -43,7 +43,7 @@ test("a half-set proxy environment names every variable that is missing", async 
     assert.ok(error instanceof Error);
     assert.match(error.message, /AUTH0_CLI_PROXY_URL/);
     assert.match(error.message, /AUTH0_CLI_TENANT_DOMAIN/);
-    assert.doesNotMatch(error.message, /AUTH0_CLI_PROXY_TOKEN,/);
+    assert.doesNotMatch(error.message, /AUTH0_CLI_PROXY_TOKEN/, "the variable that is set is not listed as missing");
     assert.match(error.message, /Auth0 CLI/);
     return true;
   });

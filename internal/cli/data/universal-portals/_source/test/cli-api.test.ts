@@ -156,12 +156,16 @@ test("a missing scope becomes the 403 the preflight already understands", async 
 });
 
 test("an expired session or an unknown tenant asks the user to log in", async () => {
-  for (const stderr of [STDERR.expiredSession, STDERR.unknownTenant]) {
+  const cases: [string, RegExp][] = [
+    [STDERR.expiredSession, /Auth token expired/],
+    [STDERR.unknownTenant, /Failed to find tenant: nope\.us\.auth0\.com/],
+  ];
+  for (const [stderr, reason] of cases) {
     const error = await failure(stderr);
     assert.ok(error instanceof PluginError);
     assert.equal(error.code, "auth0_login_required");
     assert.deepEqual(error.fixes, ["auth0 login"]);
-    assert.match(error.message, /auth0 login/);
+    assert.match(error.message, reason, "the CLI's own reason is kept");
   }
 });
 
