@@ -122,6 +122,11 @@ function parseOutput<T>(stdout: string, what: string): T {
 // What went wrong, from the CLI's message. `what` names the command for the messages that
 // have no better explanation.
 function explainFailure(stderr: string, what: string, tenant: string | undefined): Error {
+  // An API error comes first: its body can quote any text, including a scope message. The body runs
+  // to the end of the output, because the CLI prints it over several lines when it is long.
+  const api = /(?<!\d)(\d{3}): API request failed: ([\s\S]*)$/.exec(stderr);
+  if (api) return toApiError(Number(api[1]), parseBody(api[2].trim()));
+
   // The CLI keeps only the first missing scope and drops the API's body, so the message is rebuilt
   // in the shape the permission check already reads.
   const scope = /lacks scope: ([A-Za-z0-9_:,-]+)/i.exec(stderr)?.[1];
@@ -133,9 +138,6 @@ function explainFailure(stderr: string, what: string, tenant: string | undefined
       message: `Insufficient scope, expected any of: ${scope}`,
     });
   }
-
-  const api = /(\d{3}): API request failed: (.*)$/m.exec(stderr);
-  if (api) return toApiError(Number(api[1]), parseBody(api[2]));
 
   if (SIGN_IN_PROBLEM.test(stderr)) {
     return loginRequired(`The Auth0 CLI cannot use ${tenant ?? "its active tenant"}: ${firstMessage(stderr)}`);

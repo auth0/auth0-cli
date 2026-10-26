@@ -118,6 +118,34 @@ test("a 400 and a 409 keep their status and error code", async () => {
   assert.deepEqual([conflict.status, conflict.errorCode], [409, "portal_conflict"]);
 });
 
+test("an API error whose message quotes a missing scope stays an API error", async () => {
+  const error = await failure(
+    "\n=== acme.us.auth0.com error\n\n ▸    400: API request failed: " +
+      '{"statusCode":400,"error":"Bad Request","message":"Invalid description: access token lacks scope: read:portals","errorCode":"invalid_body"}.\n\n',
+  );
+
+  assert.ok(error instanceof ApiError);
+  assert.deepEqual([error.status, error.errorCode], [400, "invalid_body"]);
+});
+
+test("an API error body printed over several lines keeps its status, code and message", async () => {
+  const body = JSON.stringify(
+    { statusCode: 404, error: "Not Found", message: "The portal does not exist", errorCode: "inexistent_portal" },
+    null,
+    2,
+  );
+  const error = await failure(`\n=== acme.us.auth0.com error\n\n ▸    404: API request failed: ${body}.\n\n`);
+
+  assert.ok(error instanceof ApiError);
+  assert.deepEqual([error.status, error.errorCode, error.message], [404, "inexistent_portal", "The portal does not exist"]);
+});
+
+test("a number that only ends in three digits is not read as a status", async () => {
+  const error = await failure("\n=== acme.us.auth0.com error\n\n ▸    1404: API request failed: {}.\n\n");
+
+  assert.ok(!(error instanceof ApiError), "1404 is not an HTTP status");
+});
+
 test("a missing scope becomes the 403 the preflight already understands", async () => {
   const error = await failure(STDERR.missingScope);
 
