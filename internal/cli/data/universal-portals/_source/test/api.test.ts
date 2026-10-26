@@ -1,8 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
-import { ApiClient, ApiError, createApiClient, listAll, listItems, type FetchLike } from "../src/api.js";
-import { readContext } from "../src/context.js";
+import { ApiClient, ApiError, createApiClient, listAll, listAllByCheckpoint, listItems, type FetchLike } from "../src/api.js";
 
 function fakeFetch(status: number, body: unknown): { fetch: FetchLike; calls: { url: string; init: RequestInit }[] } {
   const calls: { url: string; init: RequestInit }[] = [];
@@ -78,25 +77,36 @@ test("listItems reads both array responses and keyed responses", () => {
   assert.deepEqual(listItems({ other: [] }, "portals"), []);
 });
 
-test("readContext names every missing variable", () => {
-  assert.throws(() => readContext({}), (error: unknown) => {
-    assert.ok(error instanceof Error);
-    assert.match(error.message, /AUTH0_CLI_PROXY_URL/);
-    assert.match(error.message, /AUTH0_CLI_PROXY_TOKEN/);
-    assert.match(error.message, /AUTH0_CLI_TENANT_DOMAIN/);
-    return true;
-  });
+test("listAllByCheckpoint follows the next token until there is none, and never sends page numbers", async () => {
+  const everything = Array.from({ length: 250 }, (_, index) => ({ id: `item_${index}` }));
+  const paths: string[] = [];
+  const api = {
+    async request(_method: string, path: string) {
+      paths.push(path);
+      const params = new URL(`https://x/${path}`).searchParams;
+      const start = params.has("from") ? everything.findIndex((item) => item.id === params.get("from")) : 0;
+      const take = Number(params.get("take"));
+      const next = everything[start + take];
+      return { things: everything.slice(start, start + take), ...(next ? { next: next.id } : {}) };
+    },
+  } as ApiClient;
+
+  const items = await listAllByCheckpoint<{ id: string }>(api, "things?strategy=auth0", "things");
+
+  assert.equal(items.length, 250);
+  assert.deepEqual(paths, [
+    "things?strategy=auth0&take=100",
+    "things?strategy=auth0&take=100&from=item_100",
+    "things?strategy=auth0&take=100&from=item_200",
+  ]);
 });
 
-test("readContext returns the three values when all are set", () => {
-  const context = readContext({
-    AUTH0_CLI_PROXY_URL: "https://127.0.0.1:1",
-    AUTH0_CLI_PROXY_TOKEN: "t",
-    AUTH0_CLI_TENANT_DOMAIN: "acme.us.auth0.com",
-  });
-  assert.deepEqual(context, {
-    proxyUrl: "https://127.0.0.1:1",
-    proxyToken: "t",
-    tenantDomain: "acme.us.auth0.com",
-  });
+test("listAllByCheckpoint stops with an error when the token never runs out", async () => {
+  const api = {
+    async request() {
+      return { things: [{ id: "a" }], next: "again" };
+    },
+  } as ApiClient;
+
+  await assert.rejects(listAllByCheckpoint(api, "things", "things"), /did not stop paging/);
 });

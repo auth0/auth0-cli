@@ -15,7 +15,7 @@ import { captureOutput } from "./capture-output.js";
 const DOMAIN = "acme.us.auth0.com";
 const quiet = () => new Ui(captureOutput().stream, false, true);
 
-// Mirrors the CLI proxy's rule (internal/plugins/proxy.go, requiredScopeFor): the verb
+// Mirrors the rule the CLI proxy of the plugin framework uses (requiredScopeFor): the verb
 // comes from the HTTP method and the resource is the first path segment.
 const VERBS: Record<string, string> = { GET: "read", POST: "create", PATCH: "update", PUT: "update", DELETE: "delete" };
 

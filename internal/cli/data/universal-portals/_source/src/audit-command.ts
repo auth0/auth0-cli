@@ -1,7 +1,6 @@
-import { createApiClient } from "./api.js";
 import type { ParsedSetupArgs } from "./args.js";
 import { CancelledError, type Prompter } from "./prompt.js";
-import { checkTenantFlag, readContext } from "./context.js";
+import { apiFor, checkTenantFlag, readContext } from "./context.js";
 import { applyFixRounds, fixableFindings } from "./audit/fix.js";
 import type { Finding } from "./audit/checks.js";
 import { AuditOptions, AuditResult, runAudit } from "./audit/run.js";
@@ -19,9 +18,9 @@ export async function runAuditCommand(
   prompter: Prompter | undefined,
 ): Promise<number> {
   try {
-    const context = readContext(env);
+    const context = await readContext(env, args.tenant, io.run);
     checkTenantFlag(args.tenant, context);
-    const api = createApiClient(context.proxyUrl, context.proxyToken, io.fetchImpl);
+    const api = apiFor(context, { fetchImpl: io.fetchImpl, run: io.run });
     const portalId = args.portalId ?? "";
     const organizationId = args.organization;
     const readSnapshot = () => fetchPortalSnapshot(api, portalId, context.tenantDomain, { organizationId });

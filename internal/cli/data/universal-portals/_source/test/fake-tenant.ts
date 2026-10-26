@@ -240,8 +240,21 @@ export class FakeTenant implements ApiClient {
       this.organizations.set(org.id, org);
       return org;
     }
+    // Like the real endpoint: pages are taken by checkpoint (take, from, and a next token), and
+    // page and per_page are rejected.
     if (method === "GET" && parts[0] === "clients" && parts[2] === "connections") {
-      return { connections: [...this.connections.values()] };
+      const params = new URLSearchParams(query);
+      if (params.has("page") || params.has("per_page")) {
+        throw toApiError(400, {
+          message: "Query validation error: 'Additional properties not allowed: per_page,page'.",
+          errorCode: "invalid_query_string",
+        });
+      }
+      const all = [...this.connections.values()];
+      const take = Number(params.get("take") ?? 50);
+      const start = params.has("from") ? all.findIndex((connection) => connection.id === params.get("from")) : 0;
+      const next = all[start + take];
+      return { connections: all.slice(start, start + take), ...(next ? { next: next.id } : {}) };
     }
     if (method === "GET" && path === "connections") {
       return [...this.connections.values()];

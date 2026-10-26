@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { ApiError, FetchLike } from "../src/api.js";
 import { main, IoStreams } from "../src/cli.js";
 import { missingFlags, parseSetupArgs, UsageError } from "../src/args.js";
+import { scopeFixes } from "../src/scope-fixes.js";
 import { toPortalSlug } from "../src/slug.js";
 import type { Prompter } from "../src/prompt.js";
 import { captureOutput } from "./capture-output.js";
@@ -50,6 +51,11 @@ function captureIo(fetchImpl: FetchLike, isTTY = false): { io: IoStreams; stdout
     stdinStream: process.stdin,
     isTTY,
     fetchImpl,
+    // A test must never start the real auth0 CLI: it would call a real tenant. Tests that
+    // need the CLI pass their own runner.
+    run: async () => {
+      throw new Error("a test tried to start the real auth0 CLI");
+    },
   };
   return { io, stdout: () => out, stderr: () => captureErr.text() };
 }
@@ -230,6 +236,18 @@ async function auditInTerminal(tenant: FakeTenant, portalId: string, prompter: P
   return { code, stderr: stderr() };
 }
 
+test("audit tells the user how to get a missing scope, for a user login and a client-credentials login", async () => {
+  const { tenant, portalId } = await tenantWithPortal();
+  tenant.deny(`GET portals/${portalId}`, "Insufficient scope, expected any of: read:portals");
+  const { io, stderr } = captureIo(fetchFor(tenant));
+
+  const code = await main(["audit", portalId], ENV, io);
+
+  assert.equal(code, 1);
+  assert.match(stderr(), /Signed in as a user: auth0 login --scopes read:portals/);
+  assert.match(stderr(), /Signed in with client credentials: add read:portals to the application's Management API grant/);
+});
+
 test("the fix menu's 'fix all' applies every error and the portal passes the audit", async () => {
   const { tenant, portalId } = await tenantWithPortal();
   tenant.portals.get(portalId)!.navigation.sidebar.components = [LEGACY_LINK];
@@ -322,12 +340,28 @@ test("a non-interactive run without the required flags stops before any API call
   assert.equal(tenant.calls.length, 0);
 });
 
-test("a run outside the CLI names the variables it is missing", async () => {
-  const { io, stderr } = captureIo(fetchFor(new FakeTenant()));
+test("a run without the Auth0 CLI installed says how to install it, and calls nothing", async () => {
+  const tenant = new FakeTenant();
+  const { io, stderr } = captureIo(fetchFor(tenant));
+  io.run = async () => {
+    throw Object.assign(new Error("spawn auth0 ENOENT"), { code: "ENOENT" });
+  };
   const code = await main(["setup", "--no-input", "--template", "consumer", "--name", "x"], {}, io);
 
   assert.equal(code, 1);
-  assert.match(stderr(), /AUTH0_CLI_PROXY_URL, AUTH0_CLI_PROXY_TOKEN, AUTH0_CLI_TENANT_DOMAIN/);
+  assert.match(stderr(), /The Auth0 CLI was not found/);
+  assert.match(stderr(), /AUTH0_CLI_BIN/);
+  assert.equal(tenant.calls.length, 0);
+});
+
+test("a half-set proxy environment stops the run before any API call", async () => {
+  const tenant = new FakeTenant();
+  const { io, stderr } = captureIo(fetchFor(tenant));
+  const code = await main(["setup", "--no-input", "--template", "consumer", "--name", "x"], { AUTH0_CLI_PROXY_TOKEN: "t" }, io);
+
+  assert.equal(code, 1);
+  assert.match(stderr(), /Missing: AUTH0_CLI_PROXY_URL, AUTH0_CLI_TENANT_DOMAIN/);
+  assert.equal(tenant.calls.length, 0);
 });
 
 test("a non-interactive consumer run prints the result as JSON and never the full secret", async () => {
@@ -361,7 +395,7 @@ test("in agent mode a missing scope is reported as a JSON error on stderr", asyn
   assert.equal(stdout(), "");
   const envelope = JSON.parse(stderr());
   assert.equal(envelope.error, "missing_scopes");
-  assert.deepEqual(envelope.fixes, ["auth0 login --scopes create:portals"]);
+  assert.deepEqual(envelope.fixes, scopeFixes(["create:portals"]));
 });
 
 test("a Business run that is missing its user stops with a usage error", async () => {

@@ -1,6 +1,5 @@
-import { createApiClient } from "./api.js";
 import { missingFlags, ParsedSetupArgs, UsageError } from "./args.js";
-import { checkTenantFlag, readContext } from "./context.js";
+import { apiFor, checkTenantFlag, readContext } from "./context.js";
 import { openBrowser } from "./browser.js";
 import { CancelledError, type Prompter } from "./prompt.js";
 import type { TemplateId } from "./templates/types.js";
@@ -20,7 +19,7 @@ export async function runSetupCommand(
   prompter: Prompter | undefined,
 ): Promise<number> {
   try {
-    const context = readContext(env);
+    const context = await readContext(env, args.tenant, io.run);
     checkTenantFlag(args.tenant, context, " Nothing was created.");
     if (!interactive) {
       const missing = missingFlags(args);
@@ -28,7 +27,7 @@ export async function runSetupCommand(
         throw new UsageError(`Missing required flags for a non-interactive run: ${missing.join(", ")}`);
       }
     }
-    const tracked = trackWrites(createApiClient(context.proxyUrl, context.proxyToken, io.fetchImpl));
+    const tracked = trackWrites(apiFor(context, { fetchImpl: io.fetchImpl, run: io.run }));
 
     ui.banner("Universal Portals setup", context.tenantDomain);
     try {
