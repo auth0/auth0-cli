@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -35,6 +36,8 @@ func IndexSchema() []byte {
 type schemas struct {
 	index        *jsonschema.Schema
 	versionsFile *jsonschema.Schema
+	scopeTable   *jsonschema.Schema
+	secretFields *jsonschema.Schema
 }
 
 // compileSchemas compiles the embedded schema on first use and reuses the
@@ -60,7 +63,17 @@ var compileSchemas = sync.OnceValues(func() (schemas, error) {
 		return schemas{}, fmt.Errorf("failed to compile the registry plugin file schema: %w", err)
 	}
 
-	return schemas{index: index, versionsFile: versionsFile}, nil
+	scopeTable, err := compiler.Compile(schemaURL + "#/$defs/scopeTable")
+	if err != nil {
+		return schemas{}, fmt.Errorf("failed to compile the scope table schema: %w", err)
+	}
+
+	secretFields, err := compiler.Compile(schemaURL + "#/$defs/secretFields")
+	if err != nil {
+		return schemas{}, fmt.Errorf("failed to compile the secret fields schema: %w", err)
+	}
+
+	return schemas{index: index, versionsFile: versionsFile, scopeTable: scopeTable, secretFields: secretFields}, nil
 })
 
 // decode validates data against schema and decodes it into a T. What names the
@@ -96,4 +109,41 @@ func decode[T any](schema *jsonschema.Schema, data []byte, what string) (T, erro
 	}
 
 	return decoded, nil
+}
+
+// schemaProblems validates a section of the index, which is the value of the
+// field called name, against its schema and returns the problems with their
+// paths as they are in the index. It reports no problem for a section that
+// passes.
+func schemaProblems(name string, schema func(schemas) *jsonschema.Schema, section any) ([]string, error) {
+	compiled, err := compileSchemas()
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := json.Marshal(section)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode %s: %w", name, err)
+	}
+
+	instance, err := jsonschema.UnmarshalJSON(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s: %w", name, err)
+	}
+
+	err = schema(compiled).Validate(instance)
+	if err == nil {
+		return nil, nil
+	}
+
+	problems := plugins.SchemaProblems(err)
+	if len(problems) == 0 {
+		return nil, fmt.Errorf("failed to validate %s: %w", name, err)
+	}
+
+	for n, problem := range problems {
+		problems[n] = name + "." + strings.TrimPrefix(problem, "(root)")
+	}
+
+	return problems, nil
 }
