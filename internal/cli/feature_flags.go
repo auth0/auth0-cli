@@ -935,6 +935,9 @@ func updateVariationCmd(cli *cli) *cobra.Command {
 				if inputs.Description == "" {
 					req.SetDescription(nil)
 				} else {
+					if err := validateMinLength(variationDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
+						return err
+					}
 					req.Description = &inputs.Description
 				}
 				updated = true
