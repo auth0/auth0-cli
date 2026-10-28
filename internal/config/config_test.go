@@ -877,3 +877,53 @@ func assertConfigFileMatches(t *testing.T, actualConfigPath, expectedConfig stri
 	assert.NoError(t, err)
 	assert.Equal(t, expectedConfig, string(fileContent))
 }
+
+func TestConfig_Registries(t *testing.T) {
+	const withoutRegistries = `{
+    "install_id": "3998b053-dd7f-4bfe-bb10-c4f3a96a0180",
+    "default_tenant": "auth0-cli.eu.auth0.com",
+    "tenants": {
+        "auth0-cli.eu.auth0.com": {
+            "name": "auth0-cli",
+            "domain": "auth0-cli.eu.auth0.com"
+        }
+    }
+}`
+
+	t.Run("it loads a config file that has no registries", func(t *testing.T) {
+		config := &Config{path: createTempConfigFile(t, []byte(withoutRegistries))}
+
+		require.NoError(t, config.loadFromDisk())
+
+		assert.Empty(t, config.Registries)
+		assert.Equal(t, "auth0-cli.eu.auth0.com", config.DefaultTenant)
+	})
+
+	t.Run("it does not write an empty registries key when saving", func(t *testing.T) {
+		config := &Config{path: createTempConfigFile(t, []byte(withoutRegistries))}
+		require.NoError(t, config.loadFromDisk())
+
+		require.NoError(t, config.saveToDisk())
+
+		saved, err := os.ReadFile(config.path)
+		require.NoError(t, err)
+		assert.Contains(t, string(saved), `"default_tenant": "auth0-cli.eu.auth0.com"`)
+		assert.NotContains(t, string(saved), "registries")
+	})
+
+	t.Run("it loads and saves configured registries", func(t *testing.T) {
+		config := &Config{path: createTempConfigFile(t, []byte(`{
+			"registries": [{"name": "auth0", "url": "https://mirror.example.com/index.json"}]
+		}`))}
+
+		require.NoError(t, config.loadFromDisk())
+		assert.Equal(t, []RegistryConfig{{Name: "auth0", URL: "https://mirror.example.com/index.json"}}, config.Registries)
+
+		require.NoError(t, config.saveToDisk())
+
+		saved, err := os.ReadFile(config.path)
+		require.NoError(t, err)
+		assert.Contains(t, string(saved), `"registries": [`)
+		assert.Contains(t, string(saved), `"url": "https://mirror.example.com/index.json"`)
+	})
+}
