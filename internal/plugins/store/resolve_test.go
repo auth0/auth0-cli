@@ -208,7 +208,7 @@ func TestPluginID_MustBeSafeToUseAsAPath(t *testing.T) {
 
 	for name, operation := range operations {
 		t.Run(name, func(t *testing.T) {
-			for _, id := range []string{"../escape", "auth0/../../escape", "auth0/Check", "checkmate", ""} {
+			for _, id := range []string{"../escape", "auth0/../../escape", "auth0/Check", "checkmate", "", "auth0/con", "nul/checkmate"} {
 				f := newFixture(t)
 
 				assert.ErrorContains(t, operation(f, id), "is not a plugin ID in the form registry/name", id)

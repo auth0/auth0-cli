@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -27,6 +28,11 @@ func init() {
 
 		time.Sleep(time.Minute)
 	}
+}
+
+// ignoreStop makes the process ignore the request to stop.
+func ignoreStop() {
+	signal.Ignore(syscall.SIGTERM)
 }
 
 func TestRun_ProcessGroup(t *testing.T) {

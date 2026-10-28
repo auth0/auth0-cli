@@ -80,7 +80,7 @@ type previousFile struct {
 // replace to make them fail.
 var (
 	stageFile  = plugins.StageTempFile
-	renameFile = os.Rename
+	renameFile = plugins.Rename
 )
 
 // persist stores a verified index, its signature and the new state. The cache

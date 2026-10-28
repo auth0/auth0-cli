@@ -122,6 +122,10 @@ func (s *Store) Remove(ctx context.Context, id string) (int64, error) {
 	var problems []error
 
 	if err := os.RemoveAll(dir); err != nil {
+		if plugins.IsInUse(err) {
+			err = fmt.Errorf("the plugin is running or in use, so stop it and delete the directory by hand: %w", err)
+		}
+
 		problems = append(problems, fmt.Errorf("failed to delete %s: %w", dir, err))
 	}
 

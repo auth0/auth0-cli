@@ -23,18 +23,8 @@ func chmod(name string, mode os.FileMode) func(t *testing.T, f *fixture) {
 }
 
 func TestVerify(t *testing.T) {
-	// Install returns a fixture with 1.0.0 installed and active.
-	install := func(t *testing.T) *fixture {
-		t.Helper()
-
-		f := newFixture(t)
-		f.install(f.index(f.release("1.0.0")), "1.0.0")
-
-		return f
-	}
-
 	t.Run("passes for a clean install and returns the parsed manifest", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		verified, err := f.store.Verify(testID)
 
@@ -49,7 +39,7 @@ func TestVerify(t *testing.T) {
 	})
 
 	t.Run("fails for a plugin that is not installed", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		_, err := f.store.Verify("auth0/other")
 
@@ -70,14 +60,14 @@ func TestVerify(t *testing.T) {
 
 			content[len(content)/2] ^= 0xff
 			require.NoError(t, os.WriteFile(path, content, 0o755))
-		}, "the hash of checkmate changed"},
+		}, "the hash of " + testBin + " changed"},
 		{"a binary with a byte appended", func(t *testing.T, f *fixture) {
 			file, err := os.OpenFile(filepath.Join(f.versionDir("1.0.0"), testBin), os.O_APPEND|os.O_WRONLY, 0)
 			require.NoError(t, err)
 			_, err = file.WriteString("x")
 			require.NoError(t, err)
 			require.NoError(t, file.Close())
-		}, "the hash of checkmate changed"},
+		}, "the hash of " + testBin + " changed"},
 		{"a manifest that was modified", func(t *testing.T, f *fixture) {
 			path := filepath.Join(f.versionDir("1.0.0"), "plugin.json")
 			content, err := os.ReadFile(path)
@@ -122,30 +112,6 @@ func TestVerify(t *testing.T) {
 				}
 			})
 		}, "is not valid"},
-	}
-
-	for _, test := range refused {
-		t.Run("refuses "+test.name, func(t *testing.T) {
-			f := install(t)
-
-			test.change(t, f)
-
-			_, err := f.store.Verify(testID)
-
-			var verification *store.VerificationError
-			require.ErrorAs(t, err, &verification)
-			assert.Contains(t, err.Error(), test.want)
-			assert.Contains(t, err.Error(), "Reinstall it with: auth0 plugin install checkmate")
-		})
-	}
-
-	// These rely on Unix modes and link counts, which Verify does not check on
-	// Windows.
-	unsafe := []struct {
-		name   string
-		change func(t *testing.T, f *fixture)
-		want   string
-	}{
 		{"a binary with another hard link", func(t *testing.T, f *fixture) {
 			other := filepath.Join(filepath.Dir(f.versionDir("1.0.0")), "linked")
 			require.NoError(t, os.Link(filepath.Join(f.versionDir("1.0.0"), testBin), other))
@@ -154,6 +120,24 @@ func TestVerify(t *testing.T) {
 			other := filepath.Join(filepath.Dir(f.versionDir("1.0.0")), "linked")
 			require.NoError(t, os.Link(filepath.Join(f.versionDir("1.0.0"), "plugin.json"), other))
 		}, "has more than one hard link"},
+	}
+
+	for _, test := range refused {
+		t.Run("refuses "+test.name, func(t *testing.T) {
+			f := installed(t)
+
+			test.change(t, f)
+
+			requireRefused(t, f, test.want)
+		})
+	}
+
+	// These rely on Unix modes, which Verify does not check on Windows.
+	unsafe := []struct {
+		name   string
+		change func(t *testing.T, f *fixture)
+		want   string
+	}{
 		{"a binary writable by its group", chmod(testBin, 0o775), "is writable by other users"},
 		{"a manifest writable by everyone", chmod("plugin.json", 0o666), "is writable by other users"},
 		{"a version directory writable by its group", chmod("", 0o770), "is writable by other users"},
@@ -167,25 +151,18 @@ func TestVerify(t *testing.T) {
 		t.Run("refuses "+test.name, func(t *testing.T) {
 			skipOnWindows(t)
 
-			f := install(t)
+			f := installed(t)
 
 			test.change(t, f)
 
-			_, err := f.store.Verify(testID)
-
-			var verification *store.VerificationError
-			require.ErrorAs(t, err, &verification)
-			assert.Contains(t, err.Error(), test.want)
-			assert.Contains(t, err.Error(), "Reinstall it with: auth0 plugin install checkmate")
+			requireRefused(t, f, test.want)
 		})
 	}
 
 	t.Run("refuses a binary or a manifest that was swapped for a link to identical content", func(t *testing.T) {
-		skipOnWindows(t)
-
 		for _, name := range []string{testBin, "plugin.json"} {
 			t.Run(name, func(t *testing.T) {
-				f := install(t)
+				f := installed(t)
 
 				path := filepath.Join(f.versionDir("1.0.0"), name)
 				content, err := os.ReadFile(path)
@@ -194,48 +171,32 @@ func TestVerify(t *testing.T) {
 				elsewhere := filepath.Join(t.TempDir(), name)
 				require.NoError(t, os.WriteFile(elsewhere, content, 0o755))
 				require.NoError(t, os.Remove(path))
-				require.NoError(t, os.Symlink(elsewhere, path))
+				symlink(t, elsewhere, path)
 
-				_, err = f.store.Verify(testID)
-
-				var verification *store.VerificationError
-				require.ErrorAs(t, err, &verification)
-				assert.Contains(t, err.Error(), "is not a regular file")
+				requireRefused(t, f, "is not a regular file")
 			})
 		}
 	})
 
 	t.Run("refuses a version directory that was swapped for a link", func(t *testing.T) {
-		skipOnWindows(t)
-
-		f := install(t)
+		f := installed(t)
 
 		moved := f.versionDir("1.0.0") + ".real"
 		require.NoError(t, os.Rename(f.versionDir("1.0.0"), moved))
-		require.NoError(t, os.Symlink(moved, f.versionDir("1.0.0")))
+		symlink(t, moved, f.versionDir("1.0.0"))
 
-		_, err := f.store.Verify(testID)
-
-		var verification *store.VerificationError
-		require.ErrorAs(t, err, &verification)
-		assert.Contains(t, err.Error(), "is not a directory")
+		requireRefused(t, f, f.versionDir("1.0.0")+" is not a directory")
 	})
 
 	t.Run("refuses a plugin directory that was swapped for a link", func(t *testing.T) {
-		skipOnWindows(t)
-
-		f := install(t)
+		f := installed(t)
 
 		pluginDir := filepath.Dir(f.versionDir("1.0.0"))
 		moved := pluginDir + ".real"
 		require.NoError(t, os.Rename(pluginDir, moved))
-		require.NoError(t, os.Symlink(moved, pluginDir))
+		symlink(t, moved, pluginDir)
 
-		_, err := f.store.Verify(testID)
-
-		var verification *store.VerificationError
-		require.ErrorAs(t, err, &verification)
-		assert.Contains(t, err.Error(), pluginDir+" is not a directory")
+		requireRefused(t, f, pluginDir+" is not a directory")
 	})
 
 	t.Run("checks the active version only", func(t *testing.T) {
@@ -254,17 +215,8 @@ func TestVerify(t *testing.T) {
 }
 
 func TestManifest(t *testing.T) {
-	install := func(t *testing.T) *fixture {
-		t.Helper()
-
-		f := newFixture(t)
-		f.install(f.index(f.release("1.0.0")), "1.0.0")
-
-		return f
-	}
-
 	t.Run("returns the manifest of the active version", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		manifest, err := f.store.Manifest(testID)
 
@@ -287,7 +239,7 @@ func TestManifest(t *testing.T) {
 	})
 
 	t.Run("does not hash the executable", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		require.NoError(t, os.WriteFile(filepath.Join(f.versionDir("1.0.0"), testBin), []byte("tampered"), 0o755))
 
@@ -300,7 +252,7 @@ func TestManifest(t *testing.T) {
 	})
 
 	t.Run("fails for a plugin that is not installed", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		_, err := f.store.Manifest("auth0/other")
 
@@ -309,7 +261,7 @@ func TestManifest(t *testing.T) {
 	})
 
 	t.Run("fails for an ID that is not a path-safe plugin ID", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		_, err := f.store.Manifest("../auth0/checkmate")
 
@@ -317,7 +269,7 @@ func TestManifest(t *testing.T) {
 	})
 
 	t.Run("fails for a damaged lockfile", func(t *testing.T) {
-		f := install(t)
+		f := installed(t)
 
 		require.NoError(t, os.WriteFile(f.lockfilePath(), []byte("{"), 0o600))
 
@@ -353,7 +305,7 @@ func TestManifest(t *testing.T) {
 
 	for _, test := range refused {
 		t.Run("refuses "+test.name, func(t *testing.T) {
-			f := install(t)
+			f := installed(t)
 
 			test.change(t, f)
 
@@ -367,9 +319,7 @@ func TestManifest(t *testing.T) {
 	}
 
 	t.Run("refuses a manifest that was swapped for a link", func(t *testing.T) {
-		skipOnWindows(t)
-
-		f := install(t)
+		f := installed(t)
 
 		path := filepath.Join(f.versionDir("1.0.0"), "plugin.json")
 		content, err := os.ReadFile(path)
@@ -378,7 +328,7 @@ func TestManifest(t *testing.T) {
 		elsewhere := filepath.Join(t.TempDir(), "plugin.json")
 		require.NoError(t, os.WriteFile(elsewhere, content, 0o600))
 		require.NoError(t, os.Remove(path))
-		require.NoError(t, os.Symlink(elsewhere, path))
+		symlink(t, elsewhere, path)
 
 		_, err = f.store.Manifest(testID)
 

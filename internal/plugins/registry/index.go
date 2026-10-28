@@ -517,8 +517,9 @@ func checkVersions(path string, versions []VersionRecord) plugins.ProblemList {
 }
 
 // checkArtifacts checks that every artifact of a version record is for a
-// supported platform that the record lists, and that no platform has two
-// artifacts. The record is at recordPath.
+// supported platform that the record lists, that no platform has two artifacts,
+// and that the executable of a Windows artifact is an .exe file. The record is
+// at recordPath.
 func checkArtifacts(recordPath string, record VersionRecord) plugins.ProblemList {
 	var found plugins.ProblemList
 
@@ -536,6 +537,13 @@ func checkArtifacts(recordPath string, record VersionRecord) plugins.ProblemList
 			found.Addf("%s: platform %q is not listed in platforms", artifactPath, platform)
 		case duplicate:
 			found.Addf("%s: duplicate artifact for platform %q, already used by %s", artifactPath, platform, first)
+		}
+
+		// A script cannot be a plugin: Windows runs .bat and .cmd files through the
+		// command interpreter, which does not read the arguments the way a program
+		// does.
+		if ok && platform.OS() == "windows" && !strings.HasSuffix(strings.ToLower(artifact.Bin), ".exe") {
+			found.Addf("%s.bin: %q must end in .exe, because a plugin on Windows is a program and not a .bat or .cmd script", artifactPath, artifact.Bin)
 		}
 
 		artifactPaths[platform] = artifactPath

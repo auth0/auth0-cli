@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -223,6 +224,10 @@ func TestExtract_RefusesFilesThatAreNotArchives(t *testing.T) {
 }
 
 func TestExtract_RefusesAnExecutableNamedLikeTheManifest(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("an index refuses a Windows executable that does not end in .exe, so this name never reaches the store")
+	}
+
 	for _, bin := range []string{"plugin.json", "Plugin.JSON"} {
 		t.Run(bin, func(t *testing.T) {
 			f := newFixture(t)

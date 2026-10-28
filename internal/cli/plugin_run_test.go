@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
@@ -68,7 +67,7 @@ type fixtureReportDoc struct {
 // --code=, --path= and --marker=. Everything else is only reported, which is how
 // a test sees the arguments that the CLI passed on.
 func runPluginFixture(args []string) (code int, ok bool) {
-	if strings.TrimSuffix(filepath.Base(args[0]), ".exe") != pluginTestBin {
+	if filepath.Base(args[0]) != registrytest.BinName(plugins.CurrentPlatform(), pluginTestBin) {
 		return 0, false
 	}
 
@@ -372,11 +371,12 @@ func (r *runEnv) releaseFixture(version string, commands []plugins.Command) regi
 	data, err := json.Marshal(manifest)
 	require.NoError(r.t, err)
 
-	archive := fixtureArchive(r.t, pluginTestBin, data)
+	bin := registrytest.BinName(r.platform, pluginTestBin)
+	archive := fixtureArchive(r.t, bin, data)
 	path := "/auth0/auth0-cli-plugins/releases/download/v" + version + "/" + pluginTestBin + ".zip"
 
 	record.Artifacts = []registry.Artifact{
-		registrytest.NewArtifact(r.platform, "https://github.com"+path, registry.ArtifactFormatZip, pluginTestBin, archive),
+		registrytest.NewArtifact(r.platform, "https://github.com"+path, registry.ArtifactFormatZip, bin, archive),
 	}
 
 	r.server.Set(path, archive)
@@ -493,16 +493,6 @@ func waitForMarker(t *testing.T, path string) int {
 	}, 30*time.Second, 20*time.Millisecond)
 
 	return pid
-}
-
-// processAlive reports whether a process with the ID exists.
-func processAlive(pid int) bool {
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-
-	return process.Signal(syscall.Signal(0)) == nil
 }
 
 func TestRegisterPluginCommands_Gate(t *testing.T) {
@@ -1005,6 +995,16 @@ func TestPluginRun_Environment(t *testing.T) {
 	t.Setenv("LANG", "en_US.UTF-8")
 
 	allowed := func(name string) bool {
+		// Windows names are not case sensitive, and a plugin gets the variables that
+		// it needs to find its way around the system.
+		if runtime.GOOS == "windows" {
+			for _, system := range []string{"SystemRoot", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "PATHEXT", "ComSpec"} {
+				if strings.EqualFold(name, system) {
+					return true
+				}
+			}
+		}
+
 		switch name {
 		case "PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TERM", "TMPDIR",
 			"HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
@@ -1627,9 +1627,7 @@ func TestPluginRun_Results(t *testing.T) {
 		assert.Less(t, time.Since(started), 30*time.Second)
 		assert.JSONEq(t, `{"pluginId":"auth0/checkmate","version":"1.0.0"}`, string(buildErrorEnvelope(err).Error.Details))
 
-		if runtime.GOOS != "windows" {
-			assert.False(t, processAlive(waitForMarker(t, marker)), "the plugin must be gone")
-		}
+		assert.False(t, processAlive(waitForMarker(t, marker)), "the plugin must be gone")
 	})
 
 	t.Run("the timeout comes from the registry when the command has none", func(t *testing.T) {
@@ -1666,10 +1664,6 @@ func TestPluginRun_Results(t *testing.T) {
 }
 
 func TestPluginRun_Interrupt(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("the process tree is stopped differently on Windows")
-	}
-
 	r := newRunEnv(t, fixtureCommands())
 	r.approve()
 
@@ -1698,35 +1692,6 @@ func TestPluginRun_Interrupt(t *testing.T) {
 	assert.Equal(t, "plugin_interrupted", reason)
 	assert.Equal(t, "checkmate 1.0.0 was interrupted", err.Error())
 	assert.True(t, interrupted(ctx), "Execute exits with the code of an interrupt")
-	assert.False(t, processAlive(pid), "the plugin must be gone")
-}
-
-func TestPluginRun_Hangup(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("the process tree is stopped differently on Windows")
-	}
-
-	r := newRunEnv(t, fixtureCommands())
-	r.approve()
-
-	marker := filepath.Join(t.TempDir(), "pid")
-	done := make(chan error, 1)
-
-	go func() { done <- r.exec("checkmate", "--mode=sleep", "--marker="+marker) }()
-
-	pid := waitForMarker(t, marker)
-
-	// A terminal that is closed sends SIGHUP to the CLI. The run has taken the
-	// signal by now, as the plugin only starts after that.
-	require.NoError(t, syscall.Kill(os.Getpid(), syscall.SIGHUP))
-
-	err := <-done
-
-	require.Error(t, err)
-
-	class, reason := reasonOf(err)
-	assert.Equal(t, "plugin", class)
-	assert.Equal(t, "plugin_interrupted", reason)
 	assert.False(t, processAlive(pid), "the plugin must be gone")
 }
 
@@ -1945,16 +1910,35 @@ func TestPluginEnvironment_LoopbackIsNotProxied(t *testing.T) {
 	r.approve()
 
 	t.Setenv("NO_PROXY", "internal.example.com")
-	t.Setenv("no_proxy", "")
 	t.Setenv("HTTPS_PROXY", "http://proxy.example.com:3128")
+
+	// On Windows this is the same variable as NO_PROXY, which would be cleared.
+	if runtime.GOOS != "windows" {
+		t.Setenv("no_proxy", "")
+	}
 
 	require.NoError(t, r.exec("checkmate"))
 
 	env := r.report(t).Env
 
-	assert.Equal(t, "internal.example.com,127.0.0.1,localhost,::1", env["NO_PROXY"])
-	assert.Equal(t, "127.0.0.1,localhost,::1", env["no_proxy"])
-	assert.Equal(t, "http://proxy.example.com:3128", env["HTTPS_PROXY"], "the proxy of the user is kept")
+	// On Windows a name has one spelling in the environment of the plugin, and it is
+	// not necessarily the one that was set.
+	lookup := func(name string) string {
+		for key, value := range env {
+			if key == name || (runtime.GOOS == "windows" && strings.EqualFold(key, name)) {
+				return value
+			}
+		}
+
+		return ""
+	}
+
+	assert.Equal(t, "internal.example.com,127.0.0.1,localhost,::1", lookup("NO_PROXY"))
+	assert.Equal(t, "http://proxy.example.com:3128", lookup("HTTPS_PROXY"), "the proxy of the user is kept")
+
+	if runtime.GOOS != "windows" {
+		assert.Equal(t, "127.0.0.1,localhost,::1", env["no_proxy"])
+	}
 }
 
 func TestRenderNamespaceJSONHelp_LeavesPluginCommandsAlone(t *testing.T) {

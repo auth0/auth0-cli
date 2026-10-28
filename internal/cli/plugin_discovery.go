@@ -282,6 +282,8 @@ func writePluginHint(path string, shown time.Time) {
 	_, writeErr := temporary.Write(data)
 	closeErr := temporary.Close()
 
+	// This is os.Rename and not plugins.Rename: the hint is best effort, and the
+	// retry could hold up a command by over a second for a write that may fail.
 	if writeErr != nil || closeErr != nil || os.Rename(temporary.Name(), path) != nil {
 		_ = os.Remove(temporary.Name())
 	}

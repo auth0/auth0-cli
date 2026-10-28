@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -888,29 +887,6 @@ func TestReadPluginHint(t *testing.T) {
 
 		_, ok := readPluginHint(directory)
 		assert.False(t, ok)
-	})
-
-	t.Run("a named pipe does not hold the command up", func(t *testing.T) {
-		if runtime.GOOS == "windows" {
-			t.Skip("no named pipes here")
-		}
-
-		pipe := filepath.Join(dir, "pipe")
-		require.NoError(t, syscall.Mkfifo(pipe, 0o600))
-
-		done := make(chan bool, 1)
-
-		go func() {
-			_, ok := readPluginHint(pipe)
-			done <- ok
-		}()
-
-		select {
-		case ok := <-done:
-			assert.False(t, ok)
-		case <-time.After(10 * time.Second):
-			t.Fatal("reading the hint file blocked on a named pipe")
-		}
 	})
 
 	t.Run("a symbolic link is not followed", func(t *testing.T) {
