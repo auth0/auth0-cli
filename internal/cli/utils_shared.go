@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
@@ -715,4 +716,39 @@ func formatBuilderPageURL(tenant string, cfg *config.Config, path string) string
 	}
 
 	return fmt.Sprintf("%s/tenants/%s/%s/%s", builderURL, region, tenantName, path)
+}
+
+// validateMinLength rejects a value set through flagName that is shorter than
+// minLength characters. An empty value passes, because callers treat it as not
+// provided. Characters are counted as runes to match JSON Schema minLength.
+func validateMinLength(flagName, value string, minLength int) error {
+	if value == "" || utf8.RuneCountInString(value) >= minLength {
+		return nil
+	}
+	return usageError{
+		err:    fmt.Errorf("--%s must be at least %d characters long", flagName, minLength),
+		reason: "invalid_flag_value",
+	}
+}
+
+// marshalToJSON renders a value as a compact JSON string for pre-filling an
+// editor on update. It returns an empty string if the value is nil or can't be
+// marshaled, so the editor simply opens blank.
+func marshalToJSON(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func sliceToSet(items []string) map[string]bool {
+	set := make(map[string]bool, len(items))
+	for _, item := range items {
+		set[item] = true
+	}
+	return set
 }

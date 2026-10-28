@@ -260,6 +260,36 @@ func TestContainsStr(t *testing.T) {
 	assert.True(t, containsStr([]string{"string-1", "string-2"}, "string-1"))
 }
 
+func TestValidateMinLength(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		{name: "empty value is treated as not provided", value: ""},
+		{name: "value at the minimum", value: "abc"},
+		{name: "value above the minimum", value: "abcd"},
+		{name: "value below the minimum", value: "ab", wantErr: true},
+		{name: "multi-byte characters are counted as runes", value: "äöü"},
+		{name: "multi-byte value below the minimum", value: "äö", wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateMinLength("description", test.value, 3)
+			if !test.wantErr {
+				assert.NoError(t, err)
+				return
+			}
+
+			assert.EqualError(t, err, "--description must be at least 3 characters long")
+			var usageErr usageError
+			assert.True(t, errors.As(err, &usageErr))
+			assert.Equal(t, "invalid_flag_value", usageErr.reason)
+		})
+	}
+}
+
 func TestGenerateState(t *testing.T) {
 	state, err := generateState(0)
 	assert.Equal(t, "", state)

@@ -359,6 +359,11 @@ func TestSegmentsUpdateCmd(t *testing.T) {
 			expectedError: `invalid status "bogus": must be one of active, archived`,
 		},
 		{
+			name:          "it returns an error when --description is too short",
+			args:          []string{segID, "--description", "ab"},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name:          "it returns an error if the API call fails",
 			args:          []string{segID, "--name", "new-segment"},
 			apiError:      errors.New("500 Internal Server Error"),

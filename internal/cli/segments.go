@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -99,6 +100,12 @@ var (
 		LongForm: "status",
 		Help:     "Transition the segment to a new status (active, archived). Archiving is irreversible.",
 	}
+
+	segmentFilterType = Flag{
+		Name:     "Type",
+		LongForm: "type",
+		Help:     "Filter by type (auth0, self).",
+	}
 )
 
 // segmentStatuses are the states a segment can be transitioned to.
@@ -161,16 +168,11 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
 				req.Type = &t
 			}
 
-			var allSegments []*management.Segment
-
-			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv3.Segments.List(cmd.Context(), req)
-				if err != nil {
-					return err
-				}
-				allSegments, err = collectPages(cmd.Context(), page)
-				return err
-			}); err != nil {
+			allSegments, err := collectV3Pages(cmd.Context(), 0,
+				func(ctx context.Context) (*auth0.SegmentListPage, error) {
+					return cli.apiv3.Segments.List(ctx, req)
+				})
+			if err != nil {
 				return fmt.Errorf("failed to list segments: %w", err)
 			}
 
@@ -182,11 +184,11 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.Flags().StringVar(&inputs.Type, "type", "", "Filter by type (auth0, self).")
+	segmentFilterType.RegisterString(cmd, &inputs.Type, "")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
-	markQueryExclusive(cmd, "type")
+	markQueryExclusive(cmd, segmentFilterType.LongForm)
 
 	return cmd
 }
@@ -283,6 +285,9 @@ func createSegmentCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := segmentDescription.Ask(cmd, &inputs.Description, nil); err != nil {
+				return err
+			}
+			if err := validateMinLength(segmentDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
 				return err
 			}
 
@@ -462,6 +467,9 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 				if inputs.Description == "" {
 					req.SetDescription(nil)
 				} else {
+					if err := validateMinLength(segmentDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
+						return err
+					}
 					req.Description = &inputs.Description
 				}
 				updated = true
@@ -484,7 +492,7 @@ func updateSegmentCmd(cli *cli) *cobra.Command {
 			}
 
 			if !updated {
-				return usageError{err: errors.New("nothing to update — provide at least one flag or --data"), reason: "missing_required_flags"}
+				return usageError{err: errors.New("nothing to update: provide at least one flag or --data"), reason: "missing_required_flags"}
 			}
 
 			var result *management.UpdateSegmentResponseContent
@@ -597,11 +605,10 @@ func deleteSegmentCmd(cli *cli) *cobra.Command {
 }
 
 func (c *cli) segmentPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv3.Segments.List(ctx, &management.ListSegmentsRequestParameters{})
-	if err != nil {
-		return nil, err
-	}
-	all, err := collectPages(ctx, page)
+	all, err := collectV3Pages(ctx, 0,
+		func(ctx context.Context) (*auth0.SegmentListPage, error) {
+			return c.apiv3.Segments.List(ctx, &management.ListSegmentsRequestParameters{})
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -657,11 +664,11 @@ func parseSegmentRules(raw string) ([]*management.SegmentRule, error) {
 		out := &management.SegmentRule{}
 		for block, conditions := range rule {
 			if block != "match" && block != "not_match" {
-				return nil, invalid(fmt.Errorf("rule[%d].%s: unknown key — each rule may only have \"match\" and/or \"not_match\"", i, block))
+				return nil, invalid(fmt.Errorf("rule[%d].%s: unknown key; each rule may only have \"match\" and/or \"not_match\"", i, block))
 			}
 			for attr, expr := range conditions {
 				if !attrSet[attr] {
-					return nil, invalid(fmt.Errorf("rule[%d].%s.%s: unknown attribute — valid attributes are: %s", i, block, attr, strings.Join(segmentAttributes, ", ")))
+					return nil, invalid(fmt.Errorf("rule[%d].%s.%s: unknown attribute; valid attributes are: %s", i, block, attr, strings.Join(segmentAttributes, ", ")))
 				}
 				me, err := parseMatchExpression(expr)
 				if err != nil {
@@ -696,7 +703,7 @@ func parseMatchExpression(raw json.RawMessage) (*management.SegmentMatchExpressi
 		return nil, errors.New(`: condition must be a JSON list ["a","b"] or an operator object like {"contains":["a"]}`)
 	}
 	if len(opObj) != 1 {
-		return nil, fmt.Errorf(": a condition object must have exactly one operator — valid operators are: %s", strings.Join(segmentConditions, ", "))
+		return nil, fmt.Errorf(": a condition object must have exactly one operator; valid operators are: %s", strings.Join(segmentConditions, ", "))
 	}
 
 	for op, val := range opObj {
@@ -721,7 +728,7 @@ func parseMatchExpression(raw json.RawMessage) (*management.SegmentMatchExpressi
 			}
 			return &management.SegmentMatchExpression{SegmentExistsExpression: &management.SegmentExistsExpression{Exists: v}}, nil
 		default:
-			return nil, fmt.Errorf(".%s: unknown condition — valid conditions are: %s, or a plain list for an exact match", op, strings.Join(segmentConditions, ", "))
+			return nil, fmt.Errorf(".%s: unknown condition; valid conditions are: %s, or a plain list for an exact match", op, strings.Join(segmentConditions, ", "))
 		}
 	}
 
@@ -756,14 +763,6 @@ func setConditionField(rule *management.SegmentRule, block, attr string, expr *m
 	}
 
 	return fmt.Errorf("no field for attribute %q", attr)
-}
-
-func sliceToSet(items []string) map[string]bool {
-	set := make(map[string]bool, len(items))
-	for _, item := range items {
-		set[item] = true
-	}
-	return set
 }
 
 // stripJSONComments removes // line comments and /* */ block comments from a

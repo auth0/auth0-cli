@@ -1,13 +1,9 @@
 package cli
 
 import (
-	"context"
-	"errors"
 	"io"
 	"testing"
 
-	"github.com/auth0/go-auth0/v3/management"
-	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -59,47 +55,4 @@ func TestExperimentationDeleteRequiresForceInAgentMode(t *testing.T) {
 			assert.ErrorIs(t, err, errDestructiveNoConfirm)
 		})
 	}
-}
-
-func TestCollectPages(t *testing.T) {
-	type segmentPage = managementcore.Page[*string, *management.Segment, *management.ListSegmentsResponseContent]
-
-	segment := func(id string) *management.Segment { return &management.Segment{ID: id} }
-	ids := func(segments []*management.Segment) []string {
-		out := make([]string, 0, len(segments))
-		for _, s := range segments {
-			out = append(out, s.GetID())
-		}
-		return out
-	}
-
-	t.Run("it collects every page", func(t *testing.T) {
-		last := &segmentPage{
-			Results:      []*management.Segment{segment("seg_3")},
-			NextPageFunc: noNextPage[*string, *management.Segment, *management.ListSegmentsResponseContent](),
-		}
-		first := &segmentPage{
-			Results:      []*management.Segment{segment("seg_1"), segment("seg_2")},
-			NextPageFunc: func(context.Context) (*segmentPage, error) { return last, nil },
-		}
-
-		got, err := collectPages(context.Background(), first)
-
-		assert.NoError(t, err)
-		assert.Equal(t, []string{"seg_1", "seg_2", "seg_3"}, ids(got))
-	})
-
-	t.Run("it returns the results so far with a next-page error", func(t *testing.T) {
-		first := &segmentPage{
-			Results: []*management.Segment{segment("seg_1")},
-			NextPageFunc: func(context.Context) (*segmentPage, error) {
-				return nil, errors.New("500 Internal Server Error")
-			},
-		}
-
-		got, err := collectPages(context.Background(), first)
-
-		assert.EqualError(t, err, "500 Internal Server Error")
-		assert.Equal(t, []string{"seg_1"}, ids(got))
-	})
 }

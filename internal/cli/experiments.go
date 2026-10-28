@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -94,19 +95,43 @@ var (
 	experimentDefaultConfig = Flag{
 		Name:     "Default Config",
 		LongForm: "default-config",
-		Help:     "For Auth0-managed flags only: where non-overridden config keys resolve from — 'tenant' (inherit the tenant's live config) or 'flag' (use the flag's frozen defaults). Rejected for customer-defined flags.",
+		Help:     "For Auth0-managed flags only: where non-overridden config keys resolve from: 'tenant' (inherit the tenant's live config) or 'flag' (use the flag's frozen defaults). Rejected for customer-defined flags.",
 	}
 
 	experimentLevels = Flag{
 		Name:     "Levels",
 		LongForm: "levels",
-		Help:     "Ramp exposure levels as a comma-separated, strictly-increasing list of integer percentages in [0, 100] (e.g. 10,25,50,100). Requires --allocation-strategy percentage, and the allocations must omit weights — traffic is controlled by the level schedule, not per-variation weights.",
+		Help:     "Ramp exposure levels as a comma-separated, strictly-increasing list of integer percentages in [0, 100] (e.g. 10,25,50,100). Requires --allocation-strategy percentage, and the allocations must omit weights. Traffic is controlled by the level schedule, not per-variation weights.",
 	}
 
 	experimentStatus = Flag{
 		Name:     "Status",
 		LongForm: "status",
 		Help:     "Transition the experiment to a new status (active, paused, completed, archived).",
+	}
+
+	experimentFilterStatus = Flag{
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Filter by status (draft, active, paused, completed, archived).",
+	}
+
+	experimentFilterFeatureFlagID = Flag{
+		Name:     "Feature Flag ID",
+		LongForm: "feature-flag-id",
+		Help:     "Filter by feature flag ID.",
+	}
+
+	experimentFilterAuthFlow = Flag{
+		Name:     "Authentication Flow",
+		LongForm: "authentication-flow",
+		Help:     "Filter by authentication flow.",
+	}
+
+	experimentTargetLevel = Flag{
+		Name:     "Target Level",
+		LongForm: "target-level",
+		Help:     "The target percentage level to advance to. Must be the immediate next level in the schedule.",
 	}
 )
 
@@ -186,16 +211,11 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 				req.AuthenticationFlow = &inputs.AuthenticationFlow
 			}
 
-			var allExperiments []*management.ExperimentListItem
-
-			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv3.Experiments.List(cmd.Context(), req)
-				if err != nil {
-					return err
-				}
-				allExperiments, err = collectPages(cmd.Context(), page)
-				return err
-			}); err != nil {
+			allExperiments, err := collectV3Pages(cmd.Context(), 0,
+				func(ctx context.Context) (*auth0.ExperimentListPage, error) {
+					return cli.apiv3.Experiments.List(ctx, req)
+				})
+			if err != nil {
 				return fmt.Errorf("failed to list experiments: %w", err)
 			}
 
@@ -207,13 +227,13 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.Flags().StringVar(&inputs.Status, "status", "", "Filter by status (draft, active, paused, completed, archived).")
-	cmd.Flags().StringVar(&inputs.FeatureFlagID, "feature-flag-id", "", "Filter by feature flag ID.")
-	cmd.Flags().StringVar(&inputs.AuthenticationFlow, "authentication-flow", "", "Filter by authentication flow.")
+	experimentFilterStatus.RegisterString(cmd, &inputs.Status, "")
+	experimentFilterFeatureFlagID.RegisterString(cmd, &inputs.FeatureFlagID, "")
+	experimentFilterAuthFlow.RegisterString(cmd, &inputs.AuthenticationFlow, "")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
-	markQueryExclusive(cmd, "status", "feature-flag-id", "authentication-flow")
+	markQueryExclusive(cmd, experimentFilterStatus.LongForm, experimentFilterFeatureFlagID.LongForm, experimentFilterAuthFlow.LongForm)
 
 	return cmd
 }
@@ -318,6 +338,9 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := experimentDescription.Ask(cmd, &inputs.Description, nil); err != nil {
+				return err
+			}
+			if err := validateMinLength(experimentDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
 				return err
 			}
 
@@ -648,6 +671,9 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				if inputs.Description == "" {
 					req.SetDescription(nil)
 				} else {
+					if err := validateMinLength(experimentDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
+						return err
+					}
 					req.Description = &inputs.Description
 				}
 				updated = true
@@ -705,7 +731,7 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 
 			if !updated {
 				return usageError{
-					err:    errors.New("nothing to update — provide at least one flag (--name, --description, --authentication-flow, --allocations, --default-config, --levels, --status) or --data"),
+					err:    errors.New("nothing to update - provide at least one flag (--name, --description, --authentication-flow, --allocations, --default-config, --levels, --status) or --data"),
 					reason: "missing_required_flags",
 				}
 			}
@@ -907,15 +933,15 @@ func advanceRampExperimentCmd(cli *cli) *cobra.Command {
 				return advanceRampExperimentFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
-			if !cmd.Flags().Changed("target-level") {
+			if !experimentTargetLevel.IsSet(cmd) {
 				if !canPrompt(cmd) {
 					return usageError{err: errors.New("--target-level is required"), reason: "missing_required_flags"}
 				}
 				var levelStr string
 				q := prompt.TextInput(
-					"target-level",
+					experimentTargetLevel.LongForm,
 					"Target level (immediate next percentage)",
-					"The target percentage level to advance to. Must be the immediate next level in the schedule.",
+					experimentTargetLevel.Help,
 					"",
 					true,
 				)
@@ -950,7 +976,7 @@ func advanceRampExperimentCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
-	cmd.Flags().IntVar(&inputs.TargetLevel, "target-level", 0, "The target percentage level to advance to. Must be the immediate next level in the schedule.")
+	experimentTargetLevel.RegisterInt(cmd, &inputs.TargetLevel, 0)
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	markDataExclusive(cmd)
@@ -977,11 +1003,10 @@ func advanceRampExperimentFromJSON(cli *cli, cmd *cobra.Command, id, dataStr str
 // Picker helpers.
 
 func (c *cli) experimentPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv3.Experiments.List(ctx, &management.ListExperimentsRequestParameters{})
-	if err != nil {
-		return nil, err
-	}
-	all, err := collectPages(ctx, page)
+	all, err := collectV3Pages(ctx, 0,
+		func(ctx context.Context) (*auth0.ExperimentListPage, error) {
+			return c.apiv3.Experiments.List(ctx, &management.ListExperimentsRequestParameters{})
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -1044,7 +1069,7 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID, s
 
 	var selectedLabels []string
 	if err := prompt.AskMultiSelectWithPageSize(
-		fmt.Sprintf("Select the variations to include (choose 1–%d; use arrows/space, type to filter)", upperBound),
+		fmt.Sprintf("Select the variations to include (choose 1-%d; use arrows/space, type to filter)", upperBound),
 		&selectedLabels,
 		variationPickerPageSize,
 		labels...,
@@ -1115,7 +1140,7 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID, s
 				defaultWeight = max(remainingWeight, 0)
 			}
 			weight, err := askAllocationInt(
-				fmt.Sprintf("Weight for %q (0–100)", v.GetName()),
+				fmt.Sprintf("Weight for %q (0-100)", v.GetName()),
 				"Integer percentage of traffic assigned to this variation. Weights must sum to 100.",
 				defaultWeight,
 				0,

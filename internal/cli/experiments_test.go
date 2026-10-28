@@ -397,6 +397,18 @@ func TestExperimentsCreateCmd(t *testing.T) {
 			expectedError: "cannot unmarshal number 50.5",
 		},
 		{
+			name: "it returns an error when --description is too short",
+			args: []string{
+				"--name", "button-color",
+				"--description", "ab",
+				"--feature-flag-id", "ff_001",
+				"--authentication-flow", "authentication",
+				"--allocation-strategy", "percentage",
+				"--allocations", `[{"variation_id":"vid_001","weight":100,"is_control":true}]`,
+			},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name: "it returns an error if the API call fails",
 			args: []string{
 				"--name", "button-color",
@@ -604,6 +616,11 @@ func TestExperimentsUpdateCmd(t *testing.T) {
 			name:          "it returns an error when --status is invalid",
 			args:          []string{expID, "--status", "bogus"},
 			expectedError: `invalid status "bogus": must be one of active, paused, completed, archived`,
+		},
+		{
+			name:          "it returns an error when --description is too short",
+			args:          []string{expID, "--description", "ab"},
+			expectedError: "--description must be at least 3 characters long",
 		},
 		{
 			name:          "it returns an error if the API call fails",

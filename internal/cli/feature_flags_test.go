@@ -211,6 +211,15 @@ func TestFeatureFlagsCreateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --parameters",
 		},
 		{
+			name: "it returns an error when --description is too short",
+			args: []string{
+				"--name", "dark-mode",
+				"--description", "ab",
+				"--parameters", `{"enabled":{"type":"boolean","value":false}}`,
+			},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name: "it returns an error if the API call fails",
 			args: []string{
 				"--name", "dark-mode",
@@ -296,6 +305,11 @@ func TestFeatureFlagsUpdateCmd(t *testing.T) {
 			name:          "it returns an error when --status is invalid",
 			args:          []string{flagID, "--status", "bogus"},
 			expectedError: `invalid status "bogus": must be one of active, archived`,
+		},
+		{
+			name:          "it returns an error when --description is too short",
+			args:          []string{flagID, "--description", "ab"},
+			expectedError: "--description must be at least 3 characters long",
 		},
 		{
 			name:          "it returns an error if the API call fails",
@@ -798,6 +812,16 @@ func TestVariationsCreateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --overrides",
 		},
 		{
+			name: "it returns an error when --description is too short",
+			args: []string{
+				flagID,
+				"--name", "treatment",
+				"--description", "ab",
+				"--overrides", `{"color":"red"}`,
+			},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name: "it returns an error if the API call fails",
 			args: []string{
 				flagID,
@@ -869,6 +893,11 @@ func TestVariationsUpdateCmd(t *testing.T) {
 			name:          "it returns an error when --overrides is invalid JSON",
 			args:          []string{flagID, varID, "--overrides", "not-json"},
 			expectedError: "invalid JSON for --overrides",
+		},
+		{
+			name:          "it returns an error when --description is too short",
+			args:          []string{flagID, varID, "--description", "ab"},
+			expectedError: "--description must be at least 3 characters long",
 		},
 		{
 			name:          "it returns an error if the API call fails",

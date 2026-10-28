@@ -1,10 +1,6 @@
 package cli
 
 import (
-	"context"
-	"errors"
-
-	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +14,10 @@ const (
 	// experimentation list command that accepts --schema and --query.
 	experimentationQueryHelp = "\n\nUse '--schema' to see available query parameters.\n" +
 		"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately)."
+
+	// ExperimentationMinDescriptionLength is the API minimum for the description
+	// of every experimentation resource.
+	experimentationMinDescriptionLength = 3
 )
 
 // markQueryExclusive rejects combining --query with the individual filter
@@ -27,24 +27,6 @@ func markQueryExclusive(cmd *cobra.Command, filterFlags ...string) {
 	for _, name := range filterFlags {
 		cmd.MarkFlagsMutuallyExclusive(listQueryFlag.LongForm, name)
 	}
-}
-
-// collectPages returns the results of page and all the pages that follow it.
-func collectPages[C comparable, T, R any](ctx context.Context, page *managementcore.Page[C, T, R]) ([]T, error) {
-	var out []T
-	for page != nil {
-		out = append(out, page.Results...)
-
-		next, err := page.GetNextPage(ctx)
-		if errors.Is(err, managementcore.ErrNoPages) {
-			break
-		}
-		if err != nil {
-			return out, err
-		}
-		page = next
-	}
-	return out, nil
 }
 
 // experimentationCmd groups the Experiment Center resources (feature flags,

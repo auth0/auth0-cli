@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -79,6 +80,18 @@ var (
 		Name:     "Status",
 		LongForm: "status",
 		Help:     "Transition the feature flag to a new status (active, archived). Archiving is irreversible.",
+	}
+
+	featureFlagFilterStatus = Flag{
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Filter by status (draft, active, archived).",
+	}
+
+	featureFlagFilterType = Flag{
+		Name:     "Type",
+		LongForm: "type",
+		Help:     "Filter by type (auth0, self).",
 	}
 )
 
@@ -148,16 +161,11 @@ func listFeatureFlagsCmd(cli *cli) *cobra.Command {
 				req.Type = &t
 			}
 
-			var allFlags []*management.FeatureFlag
-
-			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv3.FeatureFlags.List(cmd.Context(), req)
-				if err != nil {
-					return err
-				}
-				allFlags, err = collectPages(cmd.Context(), page)
-				return err
-			}); err != nil {
+			allFlags, err := collectV3Pages(cmd.Context(), 0,
+				func(ctx context.Context) (*auth0.FeatureFlagListPage, error) {
+					return cli.apiv3.FeatureFlags.List(ctx, req)
+				})
+			if err != nil {
 				return fmt.Errorf("failed to list feature flags: %w", err)
 			}
 
@@ -169,12 +177,12 @@ func listFeatureFlagsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.Flags().StringVar(&inputs.Status, "status", "", "Filter by status (draft, active, archived).")
-	cmd.Flags().StringVar(&inputs.Type, "type", "", "Filter by type (auth0, self).")
+	featureFlagFilterStatus.RegisterString(cmd, &inputs.Status, "")
+	featureFlagFilterType.RegisterString(cmd, &inputs.Type, "")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
-	markQueryExclusive(cmd, "status", "type")
+	markQueryExclusive(cmd, featureFlagFilterStatus.LongForm, featureFlagFilterType.LongForm)
 
 	return cmd
 }
@@ -269,6 +277,9 @@ func createFeatureFlagCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := featureFlagDescription.Ask(cmd, &inputs.Description, nil); err != nil {
+				return err
+			}
+			if err := validateMinLength(featureFlagDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
 				return err
 			}
 
@@ -443,6 +454,9 @@ func updateFeatureFlagCmd(cli *cli) *cobra.Command {
 				if inputs.Description == "" {
 					req.SetDescription(nil)
 				} else {
+					if err := validateMinLength(featureFlagDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
+						return err
+					}
 					req.Description = &inputs.Description
 				}
 				updated = true
@@ -465,7 +479,7 @@ func updateFeatureFlagCmd(cli *cli) *cobra.Command {
 			}
 
 			if !updated {
-				return usageError{err: errors.New("nothing to update — provide at least one flag or --data"), reason: "missing_required_flags"}
+				return usageError{err: errors.New("nothing to update: provide at least one flag or --data"), reason: "missing_required_flags"}
 			}
 
 			var result *management.UpdateFeatureFlagResponseContent
@@ -749,6 +763,9 @@ func createVariationCmd(cli *cli) *cobra.Command {
 			if err := variationDescription.Ask(cmd, &inputs.Description, nil); err != nil {
 				return err
 			}
+			if err := validateMinLength(variationDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
+				return err
+			}
 
 			if err := variationOverrides.OpenEditor(
 				cmd,
@@ -942,7 +959,7 @@ func updateVariationCmd(cli *cli) *cobra.Command {
 			}
 
 			if !updated {
-				return usageError{err: errors.New("nothing to update — provide at least one flag or --data"), reason: "missing_required_flags"}
+				return usageError{err: errors.New("nothing to update: provide at least one flag or --data"), reason: "missing_required_flags"}
 			}
 
 			var result *management.UpdateVariationResponseContent
@@ -1085,11 +1102,10 @@ func deleteVariationCmd(cli *cli) *cobra.Command {
 // Picker helpers.
 
 func (c *cli) featureFlagPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv3.FeatureFlags.List(ctx, &management.ListFeatureFlagsRequestParameters{})
-	if err != nil {
-		return nil, err
-	}
-	all, err := collectPages(ctx, page)
+	all, err := collectV3Pages(ctx, 0,
+		func(ctx context.Context) (*auth0.FeatureFlagListPage, error) {
+			return c.apiv3.FeatureFlags.List(ctx, &management.ListFeatureFlagsRequestParameters{})
+		})
 	if err != nil {
 		return nil, err
 	}
@@ -1126,20 +1142,6 @@ func (c *cli) variationPickerOptions(featureFlagID string) func(ctx context.Cont
 
 		return opts, nil
 	}
-}
-
-// marshalToJSON renders a value as a compact JSON string for pre-filling an
-// editor on update. It returns an empty string if the value is nil or can't be
-// marshaled, so the editor simply opens blank.
-func marshalToJSON(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-	b, err := json.Marshal(v)
-	if err != nil {
-		return ""
-	}
-	return string(b)
 }
 
 // Editor hints.
