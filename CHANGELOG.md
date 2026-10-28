@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.39.0](https://github.com/auth0/auth0-cli/tree/v1.39.0) (October 28, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.38.0...v1.39.0)
+
+### Added
+- Add `auth0 experimentation` commands to manage Experiments, Feature Flags, Variants and Segments (EA only) [#1720]
+- Add `auth0 apis search` command with filtering and sorting options (EA) [#1704]
+
+### Fixed
+- Fix `auth0 logs tail --filter` dropping the log ID cursor, which caused repeated full-page polling [#1723]
+
 # [v1.38.0](https://github.com/auth0/auth0-cli/tree/v1.38.0) (October 19, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.37.0...v1.38.0)
@@ -320,7 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Add support for managing `Async Approval` email template [#1317]
-- Add support for Events: test triggers, redeliver, check failed deliveries and stats [#1288] 
+- Add support for Events: test triggers, redeliver, check failed deliveries and stats [#1288]
 
 ### Fixed
 - Handle 402 Payment error for specific resources during terraform generate [#1313]
@@ -381,7 +392,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.14.0...v1.14.1)
 
 ### Fixed:
-- Remove unreleased screens for ACUL [#1231] 
+- Remove unreleased screens for ACUL [#1231]
 
 
 # [v.1.14.0](https://github.com/auth0/auth0-cli/tree/v1.14.0) (May 22, 2025)
@@ -874,7 +885,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.38.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.39.0...HEAD
+[#1724]: https://github.com/auth0/auth0-cli/pull/1724
+[#1723]: https://github.com/auth0/auth0-cli/pull/1723
+[#1720]: https://github.com/auth0/auth0-cli/pull/1720
+[#1704]: https://github.com/auth0/auth0-cli/pull/1704
 [#1717]: https://github.com/auth0/auth0-cli/pull/1717
 [#1705]: https://github.com/auth0/auth0-cli/pull/1705
 [#1703]: https://github.com/auth0/auth0-cli/pull/1703
@@ -997,7 +1012,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#1240]: https://github.com/auth0/auth0-cli/issues/1240
 [#1237]: https://github.com/auth0/auth0-cli/issues/1237
 [#1231]: https://github.com/auth0/auth0-cli/issues/1231
-[#1228]: https://github.com/auth0/auth0-cli/issues/1228   
+[#1228]: https://github.com/auth0/auth0-cli/issues/1228
 [#1225]: https://github.com/auth0/auth0-cli/issues/1225
 [#1218]: https://github.com/auth0/auth0-cli/issues/1218
 [#1209]: https://github.com/auth0/auth0-cli/issues/1209
