@@ -276,6 +276,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 docs](https://auth0.github.io/auth0-cli/auth0_docs.html) - Search the Auth0 documentation
 - [auth0 domains](https://auth0.github.io/auth0-cli/auth0_domains.html) - Manage custom domains
 - [auth0 email](https://auth0.github.io/auth0-cli/auth0_email.html) - Manage email settings
+- [auth0 experimentation](https://auth0.github.io/auth0-cli/auth0_experimentation.html) - Manage Experiment Center resources
 - [auth0 flows](https://auth0.github.io/auth0-cli/auth0_flows.html) - Manage Flows
 - [auth0 forms](https://auth0.github.io/auth0-cli/auth0_forms.html) - Manage Forms
 - [auth0 guardian](https://auth0.github.io/auth0-cli/auth0_guardian.html) - Manage multi-factor authentication (Guardian)
