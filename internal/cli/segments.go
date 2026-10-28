@@ -188,7 +188,7 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
-	markQueryExclusive(cmd, segmentFilterType.LongForm)
+	markQueryFilterExclusive(cmd, segmentFilterType.LongForm)
 
 	return cmd
 }

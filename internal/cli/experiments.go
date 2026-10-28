@@ -233,7 +233,7 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
-	markQueryExclusive(cmd, experimentFilterStatus.LongForm, experimentFilterFeatureFlagID.LongForm, experimentFilterAuthFlow.LongForm)
+	markQueryFilterExclusive(cmd, experimentFilterStatus.LongForm, experimentFilterFeatureFlagID.LongForm, experimentFilterAuthFlow.LongForm)
 
 	return cmd
 }

@@ -20,10 +20,10 @@ const (
 	experimentationMinDescriptionLength = 3
 )
 
-// markQueryExclusive rejects combining --query with the individual filter
+// markQueryFilterExclusive rejects combining --query with the given filter
 // flags, which the raw query would otherwise silently override. Each filter is
 // paired with --query alone, so the filters still combine with each other.
-func markQueryExclusive(cmd *cobra.Command, filterFlags ...string) {
+func markQueryFilterExclusive(cmd *cobra.Command, filterFlags ...string) {
 	for _, name := range filterFlags {
 		cmd.MarkFlagsMutuallyExclusive(listQueryFlag.LongForm, name)
 	}
