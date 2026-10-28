@@ -24,6 +24,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
+	"github.com/auth0/auth0-cli/internal/plugins/devlink"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 )
 
@@ -842,4 +843,68 @@ func appendToFile(path, text string) error {
 	}
 
 	return file.Close()
+}
+
+func TestPluginRunTelemetry_LinkedRunsAreNotTracked(t *testing.T) {
+	tests := []struct {
+		name       string
+		unapproved bool
+		args       []string
+	}{
+		{name: "a run that succeeds", args: []string{"checkmate"}},
+		{name: "a plugin that exits with a code", args: []string{"checkmate", "--mode=exit", "--code=7"}},
+		{name: "not approved", unapproved: true, args: []string{"checkmate"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := newRunEnv(t, fixtureCommands())
+			recorder := newEventRecorder(t, r.cli)
+
+			build := r.linkFixture("2.0.0", fixtureCommands())
+			if !test.unapproved {
+				r.approveBuild(build)
+			}
+
+			events, _ := r.tracked(t, recorder, test.args...)
+
+			assert.Empty(t, events, "a build that is not published sends nothing: %v", eventNames(events))
+			assert.Empty(t, recorder.raw())
+		})
+	}
+
+	t.Run("a link that cannot be used", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		recorder := newEventRecorder(t, r.cli)
+
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		require.NoError(t, os.Remove(build.Bin))
+
+		events, err := r.tracked(t, recorder, "checkmate")
+
+		require.Error(t, err)
+		assert.Empty(t, events)
+	})
+
+	t.Run("the installed plugin is still tracked once the link is gone", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		recorder := newEventRecorder(t, r.cli)
+		r.approve()
+
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		events, err := r.tracked(t, recorder, "checkmate")
+		require.NoError(t, err)
+		require.Empty(t, events)
+
+		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+
+		events, err = r.tracked(t, recorder, "checkmate")
+		require.NoError(t, err)
+		require.Len(t, events, 1)
+
+		assert.Equal(t, "CLI - Plugin - Run", events[0].Event)
+		assert.Equal(t, "1.0.0", events[0].Properties["plugin_version"])
+	})
 }

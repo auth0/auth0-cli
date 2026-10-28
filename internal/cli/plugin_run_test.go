@@ -35,6 +35,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/keyring"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
+	"github.com/auth0/auth0-cli/internal/plugins/devlink"
 	"github.com/auth0/auth0-cli/internal/plugins/proxy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/registry/registrytest"
@@ -346,21 +347,26 @@ func newRunEnv(t *testing.T, commands []plugins.Command, change ...func(*registr
 	return r
 }
 
+// fixtureManifest returns the manifest of a version of the fixture plugin.
+func fixtureManifest(platform plugins.Platform, version string, commands []plugins.Command) plugins.Manifest {
+	return plugins.Manifest{
+		ID:          pluginTestID,
+		Version:     version,
+		APIVersion:  1,
+		Description: "Checks the tenant",
+		Owner:       plugins.Owner{Team: "Test team", Bugs: "https://example.com/bugs"},
+		Platforms:   []plugins.Platform{platform},
+		Commands:    commands,
+	}
+}
+
 // releaseFixture builds a version of the fixture plugin with the given commands
 // and serves its archive. The record has the permissions and commands of the
 // manifest, as the registry requires.
 func (r *runEnv) releaseFixture(version string, commands []plugins.Command) registry.VersionRecord {
 	r.t.Helper()
 
-	manifest := plugins.Manifest{
-		ID:          pluginTestID,
-		Version:     version,
-		APIVersion:  1,
-		Description: "Checks the tenant",
-		Owner:       plugins.Owner{Team: "Test team", Bugs: "https://example.com/bugs"},
-		Platforms:   []plugins.Platform{r.platform},
-		Commands:    commands,
-	}
+	manifest := fixtureManifest(r.platform, version, commands)
 
 	record := registrytest.NewVersion(version)
 	record.Platforms = manifest.Platforms
@@ -2964,4 +2970,576 @@ func TestPluginRun_DeniedCallsInTheEnvelope(t *testing.T) {
 			assert.NotContains(t, string(buildErrorEnvelope(p.failure(failure, "")).Error.Details), "deniedCalls", failure)
 		}
 	})
+}
+
+// linkFixture links a build of the fixture plugin whose executable is the test
+// binary, with dev mode on.
+func (r *runEnv) linkFixture(version string, commands []plugins.Command) devBuild {
+	r.t.Helper()
+
+	r.t.Setenv(pluginDevModeEnv, "true")
+
+	binary, err := fixtureBinary()
+	require.NoError(r.t, err)
+
+	build := writeDevBuild(r.t, version, commands, binary)
+	r.link(build)
+
+	return build
+}
+
+func TestPluginRun_Linked(t *testing.T) {
+	// A refusal never starts the plugin, so it never starts the proxy either.
+	assertRefused := func(t *testing.T, r *runEnv, err error, reason string) {
+		t.Helper()
+
+		require.Error(t, err)
+		assertValidationError(t, err, reason)
+		assert.False(t, r.started(), "the plugin must not have run")
+		assert.Empty(t, r.tenant.seen())
+	}
+
+	// An approved linked build.
+	newLinked := func(t *testing.T) (*runEnv, devBuild) {
+		t.Helper()
+
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		return r, build
+	}
+
+	t.Run("runs through the proxy with the scopes of its command", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/clients"))
+
+		assert.Contains(t, r.stdout.String(), "status=200")
+		assert.NotContains(t, r.stdout.String(), "shh", "the secret field is removed")
+		require.Len(t, r.tenant.seen(), 1)
+		assert.Equal(t, "Bearer "+r.Token, r.tenant.seen()[0].authorization)
+		assert.Equal(t, 1, strings.Count(r.stderr.String(), linkedBanner(pluginTestID, "2.0.0", build.Dir)), "one banner for one run")
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/users"))
+
+		assert.Contains(t, r.stdout.String(), "status=403", "the root command cannot read users")
+		assert.Contains(t, r.stderr.String(), "API call was denied")
+		assert.Len(t, r.tenant.seen(), 1, "a denied call never reaches the tenant")
+
+		require.NoError(t, r.exec("checkmate", "scan", "--mode=call", "--path=/api/v2/users"))
+
+		assert.Contains(t, r.stdout.String(), "status=200", "scan has the scopes of its own command")
+	})
+
+	t.Run("takes the place of the installed plugin of the same name", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		require.NoError(t, r.exec("checkmate"))
+		assert.Contains(t, r.stderr.String(), linkedBanner(pluginTestID, "2.0.0", build.Dir), "the linked build ran")
+
+		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+		require.NoError(t, r.exec("checkmate"))
+
+		assert.NotContains(t, r.stderr.String(), "linked build", "the installed plugin runs again")
+		assert.True(t, r.started())
+	})
+
+	t.Run("runs although the installed copy fails verification", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		verified, err := r.svc.store.Verify(pluginTestID)
+		require.NoError(t, err)
+
+		tamper(t, verified.Bin)
+
+		require.NoError(t, r.exec("checkmate"))
+		assert.Contains(t, r.stderr.String(), linkedBanner(pluginTestID, "2.0.0", build.Dir))
+		assert.True(t, r.started())
+	})
+
+	t.Run("reads the build as it is on every run", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("a running executable cannot be replaced")
+		}
+
+		r, build := newLinked(t)
+
+		require.NoError(t, r.exec("checkmate"))
+
+		// A rebuild: a new executable in the place of the old one, and an edit of the
+		// manifest that changes nothing that was approved.
+		binary, err := fixtureBinary()
+		require.NoError(t, err)
+
+		staged := build.Bin + ".new"
+		require.NoError(t, os.WriteFile(staged, binary, 0o755))
+		require.NoError(t, os.Rename(staged, build.Bin))
+
+		build.Manifest.Version = "2.1.0"
+		build.Manifest.Description = "Checks the tenant again"
+		build.save(t)
+
+		require.NoError(t, r.exec("checkmate"))
+
+		assert.Contains(t, r.stderr.String(), linkedBanner(pluginTestID, "2.1.0", build.Dir), "no new link and no new approval")
+		assert.True(t, r.started())
+	})
+
+	t.Run("still needs the approval of a person", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		// The approval of the installed copy does not count for a build.
+		r.linkFixture("2.0.0", []plugins.Command{{Name: pluginTestBin, Description: "Check a tenant", Permissions: fixturePermissions([]string{"read:clients", "read:users"})}})
+
+		err := r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_not_approved")
+		assert.Contains(t, err.Error(), "auth0 plugin approve auth0/checkmate --tenant "+pluginTestTenant)
+		assert.Zero(t, r.logins, "an unapproved build never starts a login")
+	})
+
+	t.Run("needs a new approval when the permissions changed", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		require.NoError(t, r.exec("checkmate"))
+
+		build.Manifest.Commands[0].Permissions = fixturePermissions([]string{"read:clients", "delete:clients"})
+		build.save(t)
+
+		err := r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_not_approved")
+		assert.Zero(t, r.logins)
+
+		r.approveBuild(build)
+		require.NoError(t, r.exec("checkmate"))
+		assert.True(t, r.started())
+	})
+
+	t.Run("fails when the manifest changed while the session was opened", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		login := r.svc.login
+		r.svc.login = func(ctx context.Context, c *cli) error {
+			if err := login(ctx, c); err != nil {
+				return err
+			}
+
+			build.Manifest.Commands[0].Permissions = fixturePermissions([]string{"read:clients", "delete:clients"})
+			build.save(t)
+
+			return nil
+		}
+
+		err := r.exec("checkmate")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_changed", errorReason(err))
+		assert.Equal(t, 1, r.logins, "the build is read again after the session is open")
+		assert.False(t, r.started())
+		assert.Empty(t, r.tenant.seen())
+	})
+
+	t.Run("fails when the executable went away while the session was opened", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		login := r.svc.login
+		r.svc.login = func(ctx context.Context, c *cli) error {
+			if err := login(ctx, c); err != nil {
+				return err
+			}
+
+			return os.Remove(build.Bin)
+		}
+
+		err := r.exec("checkmate")
+
+		require.Error(t, err)
+		assertValidationError(t, err, "plugin_link_invalid")
+		assert.False(t, r.started())
+	})
+
+	t.Run("keeps the index of the registry", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands(), func(b *registrytest.IndexBuilder) {
+			b.SetExpires(time.Date(2026, time.October, 1, 13, 0, 0, 0, time.UTC))
+		})
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		r.Now = r.Now.Add(2 * time.Hour)
+		r.server.Fail("/index.json", http.StatusServiceUnavailable)
+
+		err := r.exec("checkmate")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_registry_unavailable", errorReason(err))
+		assert.False(t, r.started())
+		assert.Zero(t, r.logins)
+	})
+
+	t.Run("keeps the rules of the tenant", func(t *testing.T) {
+		r, _ := newLinked(t)
+
+		t.Setenv(authModeEnvVar, authModeEnv)
+		t.Setenv(envDomain, "fixed.us.auth0.com")
+		t.Setenv(envAPIToken, "env-token")
+
+		err := r.exec("checkmate", "--tenant", pluginTestTenant)
+
+		require.Error(t, err)
+		assert.Equal(t, "env_auth_tenant_conflict", errorReason(err))
+		assert.False(t, r.started())
+		assert.Zero(t, r.logins)
+	})
+
+	t.Run("keeps the tenant of the session", func(t *testing.T) {
+		r, _ := newLinked(t)
+		r.Domain = "other.us.auth0.com"
+
+		err := r.exec("checkmate")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_tenant_mismatch", errorReason(err))
+		assert.False(t, r.started())
+	})
+
+	t.Run("passes only the environment the command declared", func(t *testing.T) {
+		r, _ := newLinked(t)
+
+		t.Setenv("AUTH0_CLIENT_SECRET", "the-secret-of-the-cli")
+		t.Setenv(pluginFixtureEnv, "declared-value")
+		t.Setenv("UNDECLARED_VARIABLE", "undeclared")
+
+		require.NoError(t, r.exec("checkmate", "scan"))
+
+		env := r.report(t).Env
+
+		assert.Equal(t, "declared-value", env[pluginFixtureEnv])
+		assert.NotContains(t, env, "AUTH0_CLIENT_SECRET")
+		assert.NotContains(t, env, "UNDECLARED_VARIABLE")
+		assert.NotContains(t, env, pluginDevModeEnv)
+	})
+
+	t.Run("stops a command that runs out of time", func(t *testing.T) {
+		commands := fixtureCommands()
+		commands[1].Timeout = "1s"
+
+		r := newRunEnv(t, commands)
+		build := r.linkFixture("2.0.0", commands)
+		r.approveBuild(build)
+
+		err := r.exec("checkmate", "scan", "--mode=sleep", "--marker="+filepath.Join(t.TempDir(), "pid"))
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_timeout", errorReason(err))
+	})
+
+	t.Run("refuses an output the command does not support", func(t *testing.T) {
+		r, _ := newLinked(t)
+
+		err := r.exec("checkmate", "scan", "--json")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_output_unsupported", errorReason(err))
+		assert.False(t, r.started())
+		assert.Empty(t, r.tenant.seen())
+	})
+
+	t.Run("prints no banner in machine output", func(t *testing.T) {
+		for _, flag := range []string{"--json", "--json-compact", "--agent-mode"} {
+			r, _ := newLinked(t)
+
+			require.NoError(t, r.exec("checkmate", flag, "--mode=call", "--path=/api/v2/clients"), flag)
+
+			assert.Contains(t, r.stdout.String(), "status=200", flag)
+			assert.Empty(t, r.stderr.String(), flag)
+		}
+	})
+
+	t.Run("is not revoked by the registry", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("1.0.0", fixtureCommands())
+		r.approveBuild(build)
+		r.approve()
+
+		r.republish(r.fixtureIndex(r.record).Revoke(pluginTestID, "1.0.0", "it leaks tokens."))
+
+		require.NoError(t, r.exec("checkmate"))
+		assert.True(t, r.started())
+
+		// The installed copy of the same version is revoked, so the revocation is read.
+		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+
+		err := r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_revoked")
+	})
+
+	t.Run("does not hint at an update of the installed copy", func(t *testing.T) {
+		r := newHintEnv(t)
+		build := r.linkFixture("1.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		require.NoError(t, r.exec("checkmate"))
+
+		assert.NotContains(t, r.stderr.String(), hintLine)
+		assert.NoFileExists(t, hintPath(r))
+
+		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+		require.NoError(t, r.exec("checkmate"))
+
+		assert.Contains(t, r.stderr.String(), hintLine, "the installed copy still gets it")
+	})
+}
+
+func TestPluginRun_LinkedNeedsDevMode(t *testing.T) {
+	for _, value := range devModeValues {
+		t.Run("the links are ignored with dev mode "+value, func(t *testing.T) {
+			r := newRunEnv(t, fixtureCommands())
+			r.approve()
+
+			build := r.linkFixture("2.0.0", fixtureCommands())
+			r.approveBuild(build)
+
+			t.Setenv(pluginDevModeEnv, value)
+
+			require.NoError(t, r.exec("checkmate"))
+
+			assert.NotContains(t, r.stderr.String(), "linked build", "the installed plugin ran")
+			assert.True(t, r.started())
+
+			// A tampered copy is refused, and the link does not stand in for it.
+			verified, err := r.svc.store.Verify(pluginTestID)
+			require.NoError(t, err)
+
+			tamper(t, verified.Bin)
+
+			err = r.exec("checkmate")
+
+			require.Error(t, err)
+			assert.Equal(t, "plugin_verification_failed", errorReason(err))
+			assert.False(t, r.started())
+		})
+	}
+
+	t.Run("a run does not start when dev mode went off after the commands were made", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		r.cli.renderer = &display.Renderer{MessageWriter: r.stderr, ResultWriter: r.stdout}
+
+		root := buildRootCmd(r.cli)
+		addPersistentFlags(root, r.cli)
+		addSubCommands(root, r.cli)
+		enforceUnknownSubcommand(root)
+		root.SetOut(r.stdout)
+		root.SetErr(r.stderr)
+
+		// The command of the linked build is in the tree.
+		found, _, err := root.Find([]string{pluginTestBin})
+		require.NoError(t, err)
+		require.NotEqual(t, root, found)
+
+		t.Setenv(pluginDevModeEnv, "")
+
+		root.SetArgs([]string{"checkmate"})
+
+		err = root.ExecuteContext(context.Background())
+
+		require.Error(t, err)
+		assertValidationError(t, err, "plugin_dev_mode_required")
+		assert.False(t, r.started())
+		assert.Zero(t, r.logins)
+		assert.Empty(t, r.tenant.seen())
+	})
+
+	t.Run("verify of a linked plugin needs dev mode", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+
+		link := devlink.Link{Path: build.Dir, Bin: build.Bin}
+		linked := &pluginCommand{cli: r.cli, id: pluginTestID, link: &link}
+
+		verified, err := linked.verify(r.svc)
+
+		require.NoError(t, err)
+		assert.Equal(t, "2.0.0", verified.Version)
+
+		t.Setenv(pluginDevModeEnv, "")
+
+		_, err = linked.verify(r.svc)
+
+		require.Error(t, err)
+		assertValidationError(t, err, "plugin_dev_mode_required")
+	})
+}
+
+func TestRegisterPluginCommands_Linked(t *testing.T) {
+	t.Run("a linked plugin comes first, and takes the name of an installed one", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+
+		root := &cobra.Command{Use: "auth0"}
+		addPersistentFlags(root, r.cli)
+		registerPluginCommands(root, r.cli, "dev", nil)
+
+		require.Len(t, root.Commands(), 1, "one command for the name")
+
+		var info struct {
+			Version string `json:"version"`
+		}
+
+		require.NoError(t, json.Unmarshal([]byte(root.Commands()[0].Annotations[pluginInfoAnnotation]), &info))
+		assert.Equal(t, build.Manifest.Version, info.Version, "the command is the one of the linked build")
+	})
+
+	t.Run("a linked plugin with no installed plugin", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+
+		root := &cobra.Command{Use: "auth0"}
+		addPersistentFlags(root, e.cli)
+		registerPluginCommands(root, e.cli, "dev", nil)
+
+		require.Len(t, root.Commands(), 1)
+		assert.Equal(t, pluginTestBin, root.Commands()[0].Name())
+	})
+
+	t.Run("a name of a core command is not registered", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		e.link(build)
+
+		root := &cobra.Command{Use: "auth0"}
+		root.AddCommand(&cobra.Command{Use: pluginTestBin})
+
+		registerPluginCommands(root, e.cli, "dev", nil)
+
+		assert.Len(t, root.Commands(), 1)
+	})
+
+	t.Run("nothing is registered or read when dev mode is off", func(t *testing.T) {
+		for _, value := range devModeValues {
+			e := newPluginEnv(t)
+			t.Setenv(pluginDevModeEnv, value)
+
+			// A file that would be an error if it were read.
+			require.NoError(t, os.MkdirAll(e.Dir, 0o700))
+			require.NoError(t, os.WriteFile(e.linksPath(), []byte("{damaged"), 0o600))
+
+			build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+			require.NoError(t, os.WriteFile(e.linksPath(), []byte(`{"formatVersion":1,"links":{"auth0/checkmate":{"path":`+strconv.Quote(build.Dir)+`,"bin":`+strconv.Quote(build.Bin)+`}}}`), 0o600))
+
+			root := &cobra.Command{Use: "auth0"}
+
+			assert.NotPanics(t, func() { registerPluginCommands(root, e.cli, "dev", []*cobra.Command{nil}) })
+			assert.Empty(t, root.Commands(), value)
+		}
+	})
+
+	t.Run("a file of links that is damaged registers no link and breaks nothing", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		t.Setenv(pluginDevModeEnv, "true")
+
+		require.NoError(t, os.WriteFile(filepath.Join(r.Dir, devlink.FileName), []byte("{damaged"), 0o600))
+
+		root := &cobra.Command{Use: "auth0"}
+		addPersistentFlags(root, r.cli)
+
+		assert.NotPanics(t, func() { registerPluginCommands(root, r.cli, "dev", nil) })
+
+		require.Len(t, root.Commands(), 1, "the installed plugin is registered as it is without links")
+
+		require.NoError(t, r.exec("apps", "--help"))
+		assert.Empty(t, r.stderr.String())
+
+		require.NoError(t, r.exec("checkmate"))
+		assert.NotContains(t, r.stderr.String(), "linked build")
+		assert.True(t, r.started())
+	})
+
+	t.Run("a damaged file with nothing installed registers nothing", func(t *testing.T) {
+		e := newDevEnv(t)
+
+		require.NoError(t, os.MkdirAll(e.Dir, 0o700))
+		require.NoError(t, os.WriteFile(e.linksPath(), []byte("{damaged"), 0o600))
+
+		root := &cobra.Command{Use: "auth0"}
+
+		assert.NotPanics(t, func() { registerPluginCommands(root, e.cli, "dev", []*cobra.Command{nil}) })
+		assert.Empty(t, root.Commands())
+	})
+}
+
+func TestPluginRun_LinkedThatCannotBeUsed(t *testing.T) {
+	tests := []struct {
+		name   string
+		damage func(t *testing.T, build devBuild)
+		want   []string
+	}{
+		{
+			name:   "the executable is gone",
+			damage: func(t *testing.T, build devBuild) { require.NoError(t, os.Remove(build.Bin)) },
+			want:   []string{"the linked plugin auth0/checkmate cannot be used", "{bin}"},
+		},
+		{
+			name: "the manifest is gone",
+			damage: func(t *testing.T, build devBuild) {
+				require.NoError(t, os.Remove(filepath.Join(build.Dir, devlink.ManifestName)))
+			},
+			want: []string{"the linked plugin auth0/checkmate cannot be used", devlink.ManifestName},
+		},
+		{
+			name:   "the manifest has a problem",
+			damage: func(t *testing.T, build devBuild) { build.writeManifestText(t, `{"id":"auth0/checkmate"}`) },
+			want:   []string{"cannot be used", "version:"},
+		},
+		{
+			name: "the manifest is for another plugin",
+			damage: func(t *testing.T, build devBuild) {
+				build.Manifest.ID = "auth0/other"
+				build.save(t)
+			},
+			want: []string{"is for the plugin auth0/other, not auth0/checkmate"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := newRunEnv(t, fixtureCommands())
+			r.approve()
+
+			build := r.linkFixture("2.0.0", fixtureCommands())
+			r.approveBuild(build)
+
+			test.damage(t, build)
+
+			for _, args := range [][]string{{"checkmate"}, {"checkmate", "scan"}, {"checkmate", "--agent-mode"}} {
+				err := r.exec(args...)
+
+				require.Error(t, err, args)
+				assertValidationError(t, err, "plugin_link_invalid")
+
+				for _, want := range test.want {
+					assert.Contains(t, err.Error(), strings.ReplaceAll(want, "{bin}", build.Bin))
+				}
+
+				assert.Contains(t, err.Error(), "auth0 plugin dev validate "+build.Dir)
+				assert.Contains(t, err.Error(), "auth0 plugin dev unlink checkmate")
+				assert.False(t, r.started(), "neither the build nor the installed plugin runs")
+				assert.Empty(t, r.tenant.seen())
+				assert.Zero(t, r.logins)
+			}
+		})
+	}
 }
