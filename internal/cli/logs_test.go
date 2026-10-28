@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -121,10 +122,11 @@ API Operation              Update branding settings                             
 				return nil, fmt.Errorf("generic error")
 			})
 
+		// The poller and the renderer write to the message writer concurrently.
 		cli := &cli{
 			renderer: &display.Renderer{
-				MessageWriter: &bytes.Buffer{},
-				ResultWriter:  &bytes.Buffer{},
+				MessageWriter: &syncBuffer{},
+				ResultWriter:  &syncBuffer{},
 			},
 			api: &auth0.API{Log: logsAPI},
 		}
@@ -141,6 +143,19 @@ API Operation              Update branding settings                             
 
 		assert.Equal(t, "log_id:[354234 TO *] AND (type:f)", request.URL.Query().Get("q"))
 	})
+}
+
+// syncBuffer is a bytes.Buffer safe for concurrent writes.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.Write(p)
 }
 
 func TestTailLogsQuery(t *testing.T) {
