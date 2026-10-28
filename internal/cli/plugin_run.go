@@ -566,6 +566,10 @@ func ownedFlags(root *cobra.Command) []runner.OwnedFlag {
 // them as cobra would have, and then runs the hook of the root, which does not
 // log in for these commands.
 func (p *pluginCommand) preRun(cmd *cobra.Command, args []string) error {
+	// From here on the command is a plugin run, even when it fails before the
+	// plugin is known, so that it never sends the event of a core command.
+	p.cli.pluginRun = &pluginRunIdentity{id: p.id}
+
 	scanned, err := runner.Scan(args, ownedFlags(cmd.Root()))
 	if err != nil {
 		return usageError{err: err}
@@ -687,6 +691,9 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 	if err != nil {
 		return err
 	}
+
+	// The plugin and its version are known now. A run that got this far is counted.
+	c.pluginRun = &pluginRunIdentity{id: p.id, version: verified.Version}
 
 	command, ok := commandOf(verified.Manifest, spec.Name)
 	if !ok {
