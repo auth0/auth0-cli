@@ -103,6 +103,7 @@ type APIV3 struct {
 	FeatureFlags                 FeatureFlagsAPI
 	Variations                   VariationsAPI
 	Segments                     SegmentsAPI
+	ResourceServerV3             ResourceServerAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -136,6 +137,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		FeatureFlags:                 m.Experimentation.FeatureFlags,
 		Variations:                   m.Experimentation.FeatureFlags.Variations,
 		Segments:                     m.Experimentation.Segments,
+		ResourceServerV3:             m.ResourceServers,
 	}
 }
 
