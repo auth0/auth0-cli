@@ -38,6 +38,30 @@ delete_resources "flows vault connections" "integration-test-" "id"
 delete_resources "flows" "integration-test-" "id"
 delete_resources "logs streams" "integration-test-" "id"
 
+# Experimentation resources need bespoke cleanup: the delete commands accept a
+# single ID (not a space-separated list), and an active experiment must be moved
+# out of the active state before it can be deleted. Order matters — experiments
+# reference feature flags/variations, so they go first; segments are independent.
+function delete_experimentation {
+  local resource=${1-} name=${2-}
+
+  printf "\r\nGathering experimentation %s for cleanup...\r\n" "${resource}"
+  ids=$( auth0 experimentation ${resource} list --json --no-input | jq -r ".[] | select(.name | test(\"^${name}.+\")) | .id" )
+
+  for id in ${ids}; do
+    if [[ "${resource}" == "experiments" ]]; then
+      # A running experiment cannot be deleted; pause it first (best effort).
+      auth0 experimentation experiments update "${id}" --status paused --no-input >/dev/null 2>&1 || true
+    fi
+    echo "Deleting experimentation ${resource}: ${id}"
+    auth0 experimentation ${resource} delete "${id}" --force
+  done
+}
+
+delete_experimentation "experiments" "integration-test-"
+delete_experimentation "feature-flags" "integration-test-"
+delete_experimentation "segments" "integration-test-"
+
 auth0 domains delete $(./test/integration/scripts/get-custom-domain-id.sh) --no-input
 
 # clean up the email provider

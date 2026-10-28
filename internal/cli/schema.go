@@ -91,6 +91,19 @@ func markDataExclusive(cmd *cobra.Command) {
 	})
 }
 
+// markQueryExclusive rejects combining --query with any granular input flag, as both
+// set the same query params. --number stays allowed (ignored). Call after flags are registered.
+func markQueryExclusive(cmd *cobra.Command) {
+	if cmd.Flags().Lookup("query") == nil {
+		return
+	}
+	cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Name != "query" && f.Name != "number" && isInputFlag(f.Name) {
+			cmd.MarkFlagsMutuallyExclusive("query", f.Name)
+		}
+	})
+}
+
 // isInputFlag reports whether a flag supplies request input, as opposed to
 // delivery (--data, --schema) or output (--json, --csv, --force).
 func isInputFlag(name string) bool {

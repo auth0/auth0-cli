@@ -46,6 +46,18 @@ func AskMultiSelectWithDefault(message string, response interface{}, defaults []
 	return askOne(prompt, response)
 }
 
+// AskMultiSelectWithPageSize is AskMultiSelect that shows pageSize options at a
+// time, scrolling through longer lists instead of rendering them all at once.
+func AskMultiSelectWithPageSize(message string, response interface{}, pageSize int, options ...string) error {
+	prompt := &survey.MultiSelect{
+		Message:  message,
+		Options:  options,
+		PageSize: pageSize,
+	}
+
+	return askOne(prompt, response)
+}
+
 func AskBool(message string, value *bool, defaultValue bool) error {
 	*value = defaultValue
 	prompt := &survey.Confirm{
