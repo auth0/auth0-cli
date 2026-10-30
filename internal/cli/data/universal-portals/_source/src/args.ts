@@ -24,6 +24,8 @@ export interface ParsedSetupArgs {
   organization?: string;
   json: boolean;
   noInput: boolean;
+  // Setup only: show what a run would create and change, without writing to the tenant.
+  dryRun?: boolean;
 }
 
 // Parses the arguments the plugin receives from the CLI. Interactive questions
@@ -44,6 +46,7 @@ export function parseSetupArgs(argv: string[]): ParsedSetupArgs {
       organization: { type: "string", short: "o" },
       json: { type: "boolean" },
       "no-input": { type: "boolean" },
+      "dry-run": { type: "boolean" },
       help: { type: "boolean", short: "h" },
       strict: { type: "boolean" },
       fix: { type: "boolean" },
@@ -101,6 +104,7 @@ export function parseSetupArgs(argv: string[]): ParsedSetupArgs {
     organization: values.organization,
     json: Boolean(values.json),
     noInput: Boolean(values["no-input"]),
+    dryRun: Boolean(values["dry-run"]),
   };
 }
 
@@ -126,6 +130,7 @@ export function usage(): string {
     "  -u, --user <email or id>        Business only: the user who will test the portal.",
     "  -o, --organization <id|name>    Business only: the organization, when the user has several.",
     "      --no-input                  Never prompt; fail on anything missing.",
+    "      --dry-run                   Show what setup would create, without changing the tenant.",
     "      --json                      Print the result as JSON on stdout.",
     "  -h, --help                      Show this help.",
     "",

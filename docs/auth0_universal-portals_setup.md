@@ -5,11 +5,9 @@ has_toc: false
 ---
 # auth0 universal-portals setup
 
-Provisions the Auth0 resources required by a Universal Portals application:
+Creates a Universal Portal with its application, forms and pages, and checks that the logged-in session has the permissions it needs.
 
-  - Auth0 My Account API and My Organization API (resource servers)
-  - A Regular Web App client with the required configuration
-  - Client grants for My Account API, My Organization API, and the Management API
+All flags are handled by the tool. Run "auth0 universal-portals setup --help" for the list.
 
 ## Usage
 ```
@@ -20,17 +18,12 @@ auth0 universal-portals setup [flags]
 
 ```
   auth0 universal-portals setup
-  auth0 universal-portals setup --name "Acme" --slug "acme"
-  auth0 up setup -n "Acme" -s "acme"
+  auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 up setup --dry-run --template consumer --name "Acme Account" --json
+  auth0 up setup --no-input --template consumer --name "Acme Account" --json
 ```
 
 
-## Flags
-
-```
-  -n, --name string   Display name of the portal.
-  -s, --slug string   URL-friendly identifier for the portal (e.g. my-portal).
-```
 
 
 ## Inherited Flags
@@ -45,6 +38,7 @@ auth0 universal-portals setup [flags]
 
 ## Related Commands
 
-- [auth0 universal-portals setup](auth0_universal-portals_setup.md) - Set up Auth0 resources for a Universal Portals application
+- [auth0 universal-portals audit](auth0_universal-portals_audit.md) - Check a Universal Portal
+- [auth0 universal-portals setup](auth0_universal-portals_setup.md) - Set up a Universal Portal
 
 

@@ -82,6 +82,11 @@ test("parses the setup flags", () => {
   assert.equal(args.json, true);
 });
 
+test("--dry-run is a setup flag and is off unless it is given", () => {
+  assert.equal(parseSetupArgs(["setup", "--dry-run"]).dryRun, true);
+  assert.equal(parseSetupArgs(["setup"]).dryRun, false);
+});
+
 test("rejects an unknown template and an unknown command", () => {
   assert.throws(() => parseSetupArgs(["setup", "--template", "both"]), UsageError);
   assert.throws(() => parseSetupArgs(["publish"]), /Unknown command "publish"/);
@@ -379,6 +384,58 @@ test("a non-interactive consumer run prints the result as JSON and never the ful
   const secret = [...tenant.clients.values()].find((client) => client.name?.startsWith("Acme Account"))?.client_secret;
   assert.ok(secret);
   assert.ok(!stdout().includes(secret) && !stderr().includes(secret), "the full secret must not be printed");
+});
+
+test("a dry run prints the plan as JSON and changes nothing in the tenant", async () => {
+  const tenant = new FakeTenant();
+  const { io, stdout } = captureIo(fetchFor(tenant));
+  const code = await main(
+    ["setup", "--dry-run", "--no-input", "--json", "--template", "consumer", "--name", "Acme Account"],
+    ENV,
+    io,
+  );
+
+  assert.equal(code, 0);
+  const plan = JSON.parse(stdout());
+  assert.equal(plan.dryRun, true);
+  assert.equal(plan.portal.status, "created");
+  assert.equal(plan.portal.url, `https://${DOMAIN}/portals/acme-account`);
+  assert.ok(plan.requests.some((request: { method: string; path: string }) => request.method === "POST" && request.path === "portals"));
+  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), []);
+  assert.equal(tenant.portals.size + tenant.clients.size, 0);
+});
+
+test("a dry run without --json writes its summary to stderr and nothing to stdout", async () => {
+  const tenant = new FakeTenant();
+  const { io, stdout, stderr } = captureIo(fetchFor(tenant));
+  const code = await main(["setup", "--dry-run", "--no-input", "--template", "consumer", "--name", "Acme Account"], ENV, io);
+
+  assert.equal(code, 0);
+  assert.equal(stdout(), "");
+  assert.match(stderr(), /Dry run complete/);
+  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), []);
+});
+
+test("a dry run with missing flags gives the same usage error as a real run", async () => {
+  const tenant = new FakeTenant();
+  const { io, stderr } = captureIo(fetchFor(tenant));
+  const code = await main(["setup", "--dry-run", "--no-input", "--template", "consumer"], ENV, io);
+
+  assert.equal(code, 2);
+  assert.match(stderr(), /Missing required flags for a non-interactive run: --name/);
+  assert.equal(tenant.calls.length, 0);
+});
+
+test("a dry run without a login stops with the login error and reads nothing", async () => {
+  const tenant = new FakeTenant();
+  const { io, stdout, stderr } = captureIo(fetchFor(tenant));
+  io.run = async () => ({ exitCode: 1, stdout: "", stderr: "Error: failed to find tenant" });
+  const code = await main(["setup", "--dry-run", "--json", "--template", "consumer", "--name", "Acme Account"], {}, io);
+
+  assert.equal(code, 1);
+  assert.equal(stdout(), "");
+  assert.equal(JSON.parse(stderr()).error, "auth0_login_required");
+  assert.equal(tenant.calls.length, 0);
 });
 
 test("in agent mode a missing scope is reported as a JSON error on stderr", async () => {

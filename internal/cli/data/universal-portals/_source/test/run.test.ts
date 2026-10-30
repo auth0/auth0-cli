@@ -7,6 +7,7 @@ import { BusinessAccessError } from "../src/setup/business-types.js";
 import { MissingScopesError, runSetup, SetupDeps, SetupOptions } from "../src/setup/run.js";
 import { FORMS_VAULT_NAME } from "../src/setup/vault.js";
 import { FORMS_VAULT_SCOPES, MY_ACCOUNT_SCOPES, MY_ORGANIZATION_SCOPES } from "../src/setup/payload.js";
+import { CLIENT_SECRET_PLACEHOLDER, planWrites } from "../src/dry-run.js";
 import { FakeTenant } from "./fake-tenant.js";
 import { captureOutput } from "./capture-output.js";
 
@@ -393,4 +394,68 @@ test("leaving the organization empty puts a placeholder in the link", async () =
   const result = await runSetup({ ...CONSUMER, template: "business", name: "Acme Admin", slug: "acme-admin" }, deps);
 
   assert.equal(result.portal.url, `https://${DOMAIN}/portals/acme-admin?organization=<ORGANIZATION_ID>`);
+});
+
+test("a dry run reports what a new consumer portal would create and sends no writes", async () => {
+  const tenant = new FakeTenant();
+  const plan = planWrites(tenant);
+  const { deps } = harness(tenant, { api: plan.api, dryRun: true });
+  const result = await runSetup(CONSUMER, deps);
+
+  assert.equal(result.portal.status, "created");
+  assert.equal(result.application.status, "created");
+  assert.ok(result.resources.every((resource) => resource.status === "created"));
+  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), [], "a dry run must not write");
+  assert.equal(tenant.portals.size + tenant.clients.size + tenant.forms.size + tenant.vaults.size, 0);
+
+  const requests = plan.requests().map((request) => `${request.method} ${request.path}`);
+  for (const expected of ["POST resource-servers", "POST clients", "POST client-grants", "POST forms/import", "POST portals"]) {
+    assert.ok(requests.includes(expected), `the plan includes ${expected}`);
+  }
+  assert.equal(
+    plan.requests().filter((request) => JSON.stringify(request.body) === "{}").length,
+    0,
+    "the permission probes that send writes are not sent in a dry run",
+  );
+});
+
+test("a dry run after setup reuses what exists and plans the portal with a placeholder secret", async () => {
+  const tenant = new FakeTenant();
+  await runSetup(CONSUMER, harness(tenant).deps);
+  const secret = [...tenant.clients.values()].find((client) => client.name?.startsWith("Acme Account"))?.client_secret;
+  assert.ok(secret);
+  tenant.portals.clear();
+  const callsBefore = tenant.calls.length;
+
+  const plan = planWrites(tenant);
+  const { deps, output } = harness(tenant, { api: plan.api, dryRun: true });
+  const result = await runSetup(CONSUMER, deps);
+
+  assert.equal(result.application.status, "reused");
+  assert.equal(result.portal.status, "created");
+  assert.deepEqual(tenant.calls.slice(callsBefore).filter((call) => !call.startsWith("GET ")), []);
+
+  const planned = plan.requests();
+  assert.ok(planned.some((request) => request.method === "PATCH" && request.path.startsWith("clients/")));
+  const portalRequest = planned.find((request) => request.method === "POST" && request.path === "portals");
+  assert.equal((portalRequest?.body as { client: { client_secret: string } }).client.client_secret, CLIENT_SECRET_PLACEHOLDER);
+  assert.ok(!JSON.stringify(planned).includes(secret), "the planned requests never carry the real secret");
+  assert.ok(!output().includes(secret), "the output never shows the real secret");
+});
+
+test("a dry run of a business portal plans its organization access and writes nothing", async () => {
+  const tenant = new FakeTenant();
+  seedBusinessUser(tenant, { withOrg: true, withRole: false });
+  const plan = planWrites(tenant);
+  const { deps } = harness(tenant, { api: plan.api, dryRun: true });
+  const result = await runSetup(
+    { ...CONSUMER, template: "business", name: "Acme Admin", slug: "acme-admin", userQuery: "jane@acme.com" },
+    deps,
+  );
+
+  assert.equal(result.organization?.id, "org_1");
+  assert.equal(result.organization?.hasRole, false);
+  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), [], "a dry run must not write");
+  assert.equal(tenant.portals.size, 0);
+  assert.ok(plan.requests().some((request) => request.path === "resource-servers"));
 });
