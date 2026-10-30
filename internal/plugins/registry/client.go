@@ -13,6 +13,9 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/auth0/auth0-cli/internal/plugins"
+	"github.com/auth0/auth0-cli/internal/plugins/filelock"
 )
 
 // The limits on what the client reads, so that a misbehaving registry cannot
@@ -22,6 +25,10 @@ const (
 	maxSignatureBytes = 16 << 10
 	maxStateBytes     = 16 << 10
 )
+
+// lockFileName is the name of the file in the cache directory that processes
+// lock while they refresh the registry.
+const lockFileName = ".lock"
 
 const (
 	// The timeout of a single request of the default HTTP client.
@@ -169,15 +176,8 @@ func (c *Client) refresh(ctx context.Context) (*Index, state, error) {
 
 // lock takes the lock that serializes refreshes of this cache, creating the
 // cache directory and the lock file when they do not exist, and returns the
-// function that frees it. The lock is an exclusive lock on the lock file, which
-// is created with restricted permissions. The operating system also frees it when
-// the process ends, so a crash cannot leave it behind. Locks on separate handles
-// of the same file exclude each other, also within one process.
-//
-// It tries without blocking and waits lockPollInterval between attempts, until
-// the context is done or lockTimeout has passed. It then returns an error that
-// wraps ErrBusy, and also wraps the error of the context when that is what ended
-// the wait.
+// function that frees it. A lock that stays busy is reported as ErrBusy,
+// wrapping the error of the context when that is what ended the wait.
 func (c *Client) lock(ctx context.Context) (release func(), err error) {
 	if err := os.MkdirAll(c.Dir, cacheDirPerm); err != nil {
 		return nil, fmt.Errorf("failed to create the registry directory: %w", err)
@@ -187,46 +187,7 @@ func (c *Client) lock(ctx context.Context) (release func(), err error) {
 		return nil, fmt.Errorf("failed to restrict the registry directory: %w", err)
 	}
 
-	file, err := os.OpenFile(filepath.Join(c.Dir, lockFileName), os.O_RDWR|os.O_CREATE, cacheFilePerm)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open the registry lock: %w", err)
-	}
-
-	waitCtx, cancel := context.WithTimeout(ctx, lockTimeout)
-	defer cancel()
-
-	ticker := time.NewTicker(lockPollInterval)
-	defer ticker.Stop()
-
-	for {
-		locked, err := tryLock(file)
-		if err != nil {
-			_ = file.Close()
-
-			return nil, fmt.Errorf("failed to lock the registry cache: %w", err)
-		}
-
-		if locked {
-			// Freeing the lock does what it can and reports nothing, as closing the
-			// file frees it too.
-			return func() {
-				unlock(file)
-				_ = file.Close()
-			}, nil
-		}
-
-		select {
-		case <-waitCtx.Done():
-			_ = file.Close()
-
-			if ctx.Err() != nil {
-				return nil, fmt.Errorf("%w (%w)", ErrBusy, ctx.Err())
-			}
-
-			return nil, ErrBusy
-		case <-ticker.C:
-		}
-	}
+	return filelock.Acquire(ctx, filepath.Join(c.Dir, lockFileName), ErrBusy)
 }
 
 // fetchVerified downloads the index and its signature, verifies them, parses
@@ -574,9 +535,9 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 		return nil, fmt.Errorf("%w at %s: the server answered %s", ErrOffline, rawURL, response.Status)
 	}
 
-	data, err := readCapped(response.Body, limit)
+	data, err := plugins.ReadCapped(response.Body, limit)
 	switch {
-	case errors.Is(err, errTooLarge):
+	case errors.Is(err, plugins.ErrTooLarge):
 		return nil, newInvalidError(rawURL, []string{fmt.Sprintf("(root): larger than the allowed %d bytes", limit)})
 	case err != nil:
 		return nil, fmt.Errorf("%w at %s: %w", ErrOffline, rawURL, err)

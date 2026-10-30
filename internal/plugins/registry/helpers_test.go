@@ -2,8 +2,6 @@ package registry_test
 
 import (
 	"crypto/ed25519"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -210,11 +208,4 @@ func versionPath(path ...any) []any {
 // fixedClock returns a clock function that always returns now.
 func fixedClock(now time.Time) func() time.Time {
 	return func() time.Time { return now }
-}
-
-// sha256Hex returns the lowercase hex SHA-256 of data.
-func sha256Hex(data []byte) string {
-	sum := sha256.Sum256(data)
-
-	return hex.EncodeToString(sum[:])
 }

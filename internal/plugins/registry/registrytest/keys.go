@@ -58,7 +58,7 @@ func NewKeyPair(t testing.TB) (string, registry.KeySet, ed25519.PrivateKey) {
 // Sign returns the content of the index.json.sig file for indexJSON, signed
 // with the key of the given ID.
 func Sign(indexJSON []byte, keyID string, private ed25519.PrivateKey) []byte {
-	return must(json.Marshal(map[string]string{
+	return mustValue(json.Marshal(map[string]string{
 		"keyId":     keyID,
 		"algorithm": "ed25519",
 		"signature": base64.StdEncoding.EncodeToString(ed25519.Sign(private, indexJSON)),

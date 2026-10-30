@@ -1,8 +1,6 @@
 package registrytest
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"path"
 	"time"
@@ -14,7 +12,7 @@ import (
 // NewVersion returns a valid record for the given version, with one command, no
 // permissions, and an artifact for macOS on Apple silicon and for Linux on x64.
 func NewVersion(version string) registry.VersionRecord {
-	sum := sha256.Sum256([]byte(version))
+	sum := SHA256Hex([]byte(version))
 
 	return Seal(registry.VersionRecord{
 		Version:   version,
@@ -30,12 +28,12 @@ func NewVersion(version string) registry.VersionRecord {
 			{
 				OS: "darwin", Arch: "arm64",
 				URL:    "https://downloads.example.com/" + version + "/plugin-darwin-arm64",
-				SHA256: hex.EncodeToString(sum[:]), Size: 1024, Format: registry.ArtifactFormatRaw, Bin: "plugin",
+				SHA256: sum, Size: 1024, Format: registry.ArtifactFormatRaw, Bin: "plugin",
 			},
 			{
 				OS: "linux", Arch: "x64", Libc: "glibc",
 				URL:    "https://downloads.example.com/" + version + "/plugin-linux-x64.tar.gz",
-				SHA256: hex.EncodeToString(sum[:]), Size: 2048, Format: registry.ArtifactFormatTarGz, Bin: "plugin",
+				SHA256: sum, Size: 2048, Format: registry.ArtifactFormatTarGz, Bin: "plugin",
 			},
 		},
 	})
@@ -122,15 +120,14 @@ func (b *IndexBuilder) AddPlugin(plugin registry.Plugin) *IndexBuilder {
 // AddRefPlugin adds a plugin whose versions are listed in a separate file that
 // is pinned by its hash. The file is available from Files.
 func (b *IndexBuilder) AddRefPlugin(plugin registry.Plugin) *IndexBuilder {
-	file := must(json.Marshal(map[string]any{"versions": plugin.Versions}))
+	file := mustValue(json.Marshal(map[string]any{"versions": plugin.Versions}))
 
 	name := plugins.NameOf(plugin.ID)
 	filePath := path.Join("plugins", name+".json")
 	b.files[filePath] = file
 
-	sum := sha256.Sum256(file)
 	plugin.Versions = nil
-	plugin.Ref = &registry.Ref{Path: filePath, SHA256: hex.EncodeToString(sum[:])}
+	plugin.Ref = &registry.Ref{Path: filePath, SHA256: SHA256Hex(file)}
 
 	return b.AddPlugin(plugin)
 }
@@ -151,7 +148,7 @@ func (b *IndexBuilder) Deprecate(deprecation registry.Deprecation) *IndexBuilder
 
 // Build returns the index.json document.
 func (b *IndexBuilder) Build() []byte {
-	return must(json.Marshal(b.index))
+	return mustValue(json.Marshal(b.index))
 }
 
 // Files returns the per-plugin files of the plugins added with AddRefPlugin,
@@ -160,9 +157,9 @@ func (b *IndexBuilder) Files() map[string][]byte {
 	return b.files
 }
 
-// must returns value, and panics when err is not nil. It is for building test
+// mustValue returns value, and panics when err is not nil. It is for building test
 // data out of values that this package controls, where an error is a bug.
-func must[T any](value T, err error) T {
+func mustValue[T any](value T, err error) T {
 	if err != nil {
 		panic(err)
 	}
