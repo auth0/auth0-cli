@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/auth0/auth0-cli-plugins/main/schema/index.v1.schema.json",
+  "title": "Auth0 CLI plugin registry index",
+  "description": "The signed index.json that an Auth0 CLI plugin registry publishes. Unknown fields are ignored so that a registry can add fields without breaking older CLIs, except inside permissions, where an unknown field is never ignored.",
+  "type": "object",
+  "required": ["formatVersion", "version", "expires"],
+  "properties": {
+    "formatVersion": {
+      "description": "Version of the index format. A CLI that only understands version 1 rejects anything greater.",
+      "type": "integer",
+      "const": 1
+    },
+    "version": {
+      "description": "Serial number of the index. It only ever goes up, and the CLI rejects an index older than the newest one it has seen.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "expires": {
+      "description": "Time after which the CLI no longer trusts the index, as an RFC 3339 UTC timestamp.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/plugin" }
+    },
+    "revoked": {
+      "description": "Plugin versions that must no longer run. Entries are kept indefinitely.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "reason"],
+        "properties": {
+          "id": { "$ref": "#/$defs/pluginID" },
+          "version": { "$ref": "#/$defs/version" },
+          "reason": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "deprecated": {
+      "description": "Plugins or plugin versions that should no longer be used. An entry without a version deprecates the whole plugin.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "message"],
+        "properties": {
+          "id": { "$ref": "#/$defs/pluginID" },
+          "version": { "$ref": "#/$defs/version" },
+          "message": { "$ref": "#/$defs/text" },
+          "replacement": { "$ref": "#/$defs/pluginID" }
+        }
+      }
+    },
+    "policy": {
+      "description": "Settings that the registry hands to the CLI. Every setting is optional and falls back to a default.",
+      "type": "object",
+      "properties": {
+        "offlineGraceDays": {
+          "description": "Days after the last refresh during which installed plugins keep running without a reachable registry.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3650
+        },
+        "checkIntervalHours": {
+          "description": "Hours after which the CLI refreshes the index before it installs or updates a plugin.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8760
+        },
+        "maxDownloadBytes": {
+          "description": "Largest plugin artifact in bytes that the CLI downloads.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967296
+        },
+        "defaultTimeout": {
+          "description": "Go duration string such as 30s or 10m for commands that do not declare a timeout. Must be greater than zero.",
+          "type": "string",
+          "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"
+        },
+        "versionRetention": {
+          "description": "Number of old versions of a plugin to keep on disk. Zero keeps all of them.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      }
+    },
+    "scopeTable": {
+      "description": "Opaque to this schema."
+    },
+    "secretFields": {
+      "description": "Opaque to this schema."
+    }
+  },
+  "$defs": {
+    "httpsURL": {
+      "type": "string",
+      "pattern": "^https://[^\\s/?#]+([/?#]\\S*)?$"
+    },
+    "text": {
+      "description": "Non-empty free text. It cannot contain control characters (U+0000 to U+001F, U+007F, and the C1 controls U+0080 to U+009F) or the line and paragraph separators U+2028 and U+2029, so that it is safe to print to a terminal and every JSON encoder writes it the same way.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00-\\x1f\\x7f-\\x9f\u2028\u2029]+$"
+    },
+    "pluginID": {
+      "description": "Plugin identifier in the form registry/name.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "description": "Plugin version as strict semver without a leading v. The registry only lists stable versions, so a prerelease or build suffix is not allowed.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "sha256": {
+      "description": "Lowercase hex SHA-256 digest without a prefix.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "platform": {
+      "type": "string",
+      "enum": [
+        "darwin-arm64",
+        "darwin-x64",
+        "linux-x64",
+        "linux-arm64",
+        "linux-x64-musl",
+        "linux-arm64-musl",
+        "windows-x64"
+      ]
+    },
+    "plugin": {
+      "type": "object",
+      "required": ["id", "description", "owner", "latest"],
+      "properties": {
+        "id": { "$ref": "#/$defs/pluginID" },
+        "description": {
+          "description": "One line summary of the plugin, up to 120 characters.",
+          "$ref": "#/$defs/text",
+          "maxLength": 120
+        },
+        "owner": {
+          "type": "object",
+          "required": ["team", "bugs"],
+          "properties": {
+            "team": { "$ref": "#/$defs/text" },
+            "bugs": { "$ref": "#/$defs/httpsURL" }
+          }
+        },
+        "homepage": { "$ref": "#/$defs/httpsURL" },
+        "latest": {
+          "description": "Newest version of the plugin.",
+          "$ref": "#/$defs/version"
+        },
+        "versions": {
+          "description": "The versions of the plugin, listed in the index itself.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/versionRecord" }
+        },
+        "ref": {
+          "description": "The versions of the plugin, listed in a separate file that is pinned by its hash. The file holds an object with a versions list.",
+          "type": "object",
+          "required": ["path", "sha256"],
+          "properties": {
+            "path": {
+              "description": "Path of the file relative to the index, without a leading slash and without . or .. segments.",
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$"
+            },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["versions"] },
+        { "required": ["ref"] }
+      ]
+    },
+    "versionsFile": {
+      "description": "The per-plugin file that a ref points to.",
+      "type": "object",
+      "required": ["versions"],
+      "properties": {
+        "versions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/versionRecord" }
+        }
+      }
+    },
+    "versionRecord": {
+      "type": "object",
+      "required": ["version", "platforms", "permissionsHash", "permissions", "commands", "artifacts"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "engines": {
+          "type": "object",
+          "required": ["auth0-cli"],
+          "properties": {
+            "auth0-cli": {
+              "description": "Version constraint on the Auth0 CLI that can run the plugin. One or more space separated comparators that must all match, such as >=1.39.0 <2.0.0. Each comparator is one of >=, <=, >, < or = followed by MAJOR.MINOR.PATCH.",
+              "type": "string",
+              "pattern": "^(>=|<=|>|<|=)(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)( (>=|<=|>|<|=)(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*))*$"
+            }
+          }
+        },
+        "platforms": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/platform" }
+        },
+        "permissionsHash": {
+          "description": "The consent hash of permissions and commands, calculated the same way as for a plugin.json manifest.",
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "permissions": { "$ref": "#/$defs/permissions" },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "interactive"],
+            "properties": {
+              "name": { "$ref": "#/$defs/identifier" },
+              "interactive": { "type": "boolean" }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/artifact" }
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["os", "arch", "url", "sha256", "size", "format", "bin"],
+      "properties": {
+        "os": { "type": "string", "enum": ["darwin", "linux", "windows"] },
+        "arch": { "type": "string", "enum": ["arm64", "x64"] },
+        "libc": { "type": "string", "enum": ["glibc", "musl"] },
+        "url": { "$ref": "#/$defs/httpsURL" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "size": { "type": "integer", "minimum": 1 },
+        "format": { "type": "string", "enum": ["raw", "tar.gz", "zip"] },
+        "bin": {
+          "description": "File name of the executable inside the artifact. For the raw format it is the name the downloaded file is saved as.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$"
+        }
+      },
+      "if": {
+        "properties": { "os": { "const": "linux" } },
+        "required": ["os"]
+      },
+      "then": { "required": ["libc"] },
+      "else": { "properties": { "libc": false } }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scopes": {
+          "description": "Management API scopes the plugin needs.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+:[a-z0-9_]+$"
+          }
+        },
+        "hosts": {
+          "description": "Hosts the plugin may contact.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["host", "reason"],
+            "properties": {
+              "host": {
+                "description": "Lowercase hostname without scheme, port or path. A single leading *. wildcard is allowed when followed by at least two labels, such as *.amazonaws.com.",
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^([a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*|\\*\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+)$"
+              },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "files": {
+          "description": "File system locations the plugin may access.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "access", "reason"],
+            "properties": {
+              "path": { "$ref": "#/$defs/text" },
+              "access": {
+                "type": "string",
+                "enum": ["read", "write"]
+              },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "env": {
+          "description": "Environment variables the plugin may read.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "reason"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Z_][A-Z0-9_]*$"
+              },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+Trusted registry public keys
+
+Each key is a file named <keyId>.pub that holds the base64 encoding of the
+32 byte raw Ed25519 public key on a single line. Every .pub file in this
+directory is embedded in the CLI and trusted to sign the registry index. Keys
+can only be added by changing this directory and releasing the CLI. No
+environment variable, config entry or flag can add or replace a key.
+
+To rotate a key, embed the new key next to the old one, release the CLI, then
+let the signer switch to the new key ID. The old key is removed in a later
+release, once the CLI versions that only know the old key are no longer
+supported.
+
+No production key is embedded yet, see the TODO in ../keys.go.

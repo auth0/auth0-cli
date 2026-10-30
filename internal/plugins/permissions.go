@@ -40,16 +40,9 @@ type EnvPermission struct {
 }
 
 // Permissions returns the normalized union of the permissions requested by all
-// commands. Scopes are sorted and deduplicated, hosts are sorted by host and
-// then reason, files by path, access and reason, and env by name and then
-// reason. Exact duplicates are dropped, and no slice is ever nil.
+// commands, as NormalizePermissions returns it.
 func (m *Manifest) Permissions() Permissions {
-	union := Permissions{
-		Scopes: []string{},
-		Hosts:  []HostPermission{},
-		Files:  []FilePermission{},
-		Env:    []EnvPermission{},
-	}
+	var union Permissions
 
 	for _, command := range m.Commands {
 		if command.Permissions == nil {
@@ -62,18 +55,33 @@ func (m *Manifest) Permissions() Permissions {
 		union.Env = append(union.Env, command.Permissions.Env...)
 	}
 
-	union.Scopes = sortedUnique(union.Scopes, strings.Compare)
-	union.Hosts = sortedUnique(union.Hosts, func(a, b HostPermission) int {
+	return NormalizePermissions(union)
+}
+
+// NormalizePermissions returns a copy of the permissions in the form that the
+// consent hash is calculated from. Scopes are sorted and deduplicated, hosts are
+// sorted by host and then reason, files by path, access and reason, and env by
+// name and then reason. Exact duplicates are dropped, and no slice is ever nil.
+func NormalizePermissions(permissions Permissions) Permissions {
+	normalized := Permissions{
+		Scopes: append([]string{}, permissions.Scopes...),
+		Hosts:  append([]HostPermission{}, permissions.Hosts...),
+		Files:  append([]FilePermission{}, permissions.Files...),
+		Env:    append([]EnvPermission{}, permissions.Env...),
+	}
+
+	normalized.Scopes = sortedUnique(normalized.Scopes, strings.Compare)
+	normalized.Hosts = sortedUnique(normalized.Hosts, func(a, b HostPermission) int {
 		return cmp.Or(cmp.Compare(a.Host, b.Host), cmp.Compare(a.Reason, b.Reason))
 	})
-	union.Files = sortedUnique(union.Files, func(a, b FilePermission) int {
+	normalized.Files = sortedUnique(normalized.Files, func(a, b FilePermission) int {
 		return cmp.Or(cmp.Compare(a.Path, b.Path), cmp.Compare(a.Access, b.Access), cmp.Compare(a.Reason, b.Reason))
 	})
-	union.Env = sortedUnique(union.Env, func(a, b EnvPermission) int {
+	normalized.Env = sortedUnique(normalized.Env, func(a, b EnvPermission) int {
 		return cmp.Or(cmp.Compare(a.Name, b.Name), cmp.Compare(a.Reason, b.Reason))
 	})
 
-	return union
+	return normalized
 }
 
 // sortedUnique sorts items with compare and drops adjacent duplicates.
@@ -83,20 +91,34 @@ func sortedUnique[T comparable](items []T, compare func(a, b T) int) []T {
 	return slices.Compact(items)
 }
 
-// consentCommand is the per-command part of the consent hash.
-type consentCommand struct {
-	name        string
-	interactive bool
+// ConsentCommand is the per-command part of the consent hash.
+type ConsentCommand struct {
+	Name        string `json:"name"`
+	Interactive bool   `json:"interactive"`
 }
 
-// PermissionsHash returns "sha256:" followed by the lowercase hex SHA-256 of
-// the canonical JSON of the consent document for the manifest.
+// PermissionsHash returns the consent hash of the manifest. It is ConsentHash
+// applied to the permissions union returned by Permissions and to the name and
+// interactive value of every command.
+func (m *Manifest) PermissionsHash() string {
+	commands := make([]ConsentCommand, 0, len(m.Commands))
+	for _, command := range m.Commands {
+		commands = append(commands, ConsentCommand{Name: command.Name, Interactive: command.Interactive})
+	}
+
+	return ConsentHash(m.Permissions(), commands)
+}
+
+// ConsentHash returns "sha256:" followed by the lowercase hex SHA-256 of the
+// canonical JSON of the consent document for the given permissions and
+// commands.
 //
-// The consent document is the permissions union returned by Permissions,
-// followed by one entry per command holding the command name and its
-// interactive value, sorted by command name so that the command order in the
-// manifest does not matter. The canonical JSON has no whitespace, no HTML
-// escaping, and this fixed shape:
+// The consent document is the permissions, followed by one entry per command
+// holding the command name and its interactive value, sorted by command name so
+// that the order of the commands does not matter. The permissions are hashed as
+// given, so they must already be normalized the way Manifest.Permissions
+// returns them, with every list sorted and free of duplicates. The canonical
+// JSON has no whitespace, no HTML escaping, and this fixed shape:
 //
 //	{"scopes":[...],"hosts":[{"host":..,"reason":..}],
 //	 "files":[{"path":..,"access":..,"reason":..}],
@@ -113,15 +135,9 @@ type consentCommand struct {
 // free of an error path, and keeps it from depending on the encoding rules of
 // the Go version that built the CLI. The string escaping matches what
 // encoding/json writes with HTML escaping turned off.
-func (m *Manifest) PermissionsHash() string {
-	union := m.Permissions()
-
-	commands := make([]consentCommand, 0, len(m.Commands))
-	for _, command := range m.Commands {
-		commands = append(commands, consentCommand{name: command.Name, interactive: command.Interactive})
-	}
-	slices.SortFunc(commands, func(a, b consentCommand) int {
-		return cmp.Compare(a.name, b.name)
+func ConsentHash(union Permissions, commands []ConsentCommand) string {
+	commands = slices.SortedFunc(slices.Values(commands), func(a, b ConsentCommand) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	document := []byte(`{"scopes":`)
@@ -139,11 +155,11 @@ func (m *Manifest) PermissionsHash() string {
 		return appendObject(dst, "name", env.Name, "reason", env.Reason)
 	})
 	document = append(document, `,"commands":`...)
-	document = appendList(document, commands, func(dst []byte, command consentCommand) []byte {
+	document = appendList(document, commands, func(dst []byte, command ConsentCommand) []byte {
 		dst = append(dst, `{"name":`...)
-		dst = appendJSONString(dst, command.name)
+		dst = appendJSONString(dst, command.Name)
 		dst = append(dst, `,"interactive":`...)
-		dst = strconv.AppendBool(dst, command.interactive)
+		dst = strconv.AppendBool(dst, command.Interactive)
 
 		return append(dst, '}')
 	})
