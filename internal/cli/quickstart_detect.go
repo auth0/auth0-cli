@@ -14,7 +14,7 @@ import (
 type DetectionResult struct {
 	Framework           string
 	Type                string   // "spa" | "regular" | "native".
-	BuildTool           string   // "vite" | "maven" | "gradle" | "composer" | "" (NA).
+	BuildTool           string   // "vite" | "webpack" | "maven" | "gradle" | "composer" | "" (NA).
 	BundleID            string   // Package/bundle ID for native apps (e.g. "com.example.myapp"); empty if not found.
 	Detected            bool     // True if any signal file matched.
 	AmbiguousFrameworks []string // Set when >1 package.json dep matched.
@@ -124,6 +124,14 @@ func DetectProject(dir string) DetectionResult {
 	// -- 7. Nuxt.config.[ts|js] — Before vite.config (Nuxt uses Vite internally).
 	if fileExistsAny(dir, "nuxt.config.ts", "nuxt.config.js") {
 		result.Framework = "nuxt"
+		result.Type = "regular"
+		result.Detected = true
+		return result
+	}
+
+	// -- 7b. TanStack Start (@tanstack/react-start dep) — Before vite.config (TanStack Start uses Vite + react).
+	if hasDep(earlyDeps, "@tanstack/react-start") {
+		result.Framework = "tanstack-start"
 		result.Type = "regular"
 		result.Detected = true
 		return result
@@ -284,7 +292,33 @@ func DetectProject(dir string) DetectionResult {
 		}
 	}
 
+	// -- 20. Webpack.config.[js|ts|cjs|mjs] — last, because many non-SPA projects ship a webpack config.
+	if !result.Detected && fileExistsAny(dir, "webpack.config.js", "webpack.config.ts", "webpack.config.cjs", "webpack.config.mjs") {
+		if framework, ok := detectWebpackFramework(earlyDeps); ok {
+			result.Framework = framework
+			result.Type = "spa"
+			result.BuildTool = "webpack"
+			result.Detected = true
+		}
+	}
+
 	return result
+}
+
+// detectWebpackFramework maps client-side dependencies to a webpack SPA framework. A webpack
+// config alone is not enough: other frameworks (Vue, Svelte, Angular) have no webpack quickstart,
+// and server bundles also use webpack.
+func detectWebpackFramework(deps map[string]bool) (string, bool) {
+	switch {
+	case hasDep(deps, "react"):
+		return "react", true
+	case hasDep(deps, "vue"), hasDep(deps, "svelte"), hasDep(deps, "@angular/core"):
+		return "", false
+	case hasDep(deps, "webpack-dev-server"):
+		return "vanilla-javascript", true
+	default:
+		return "", false
+	}
 }
 
 // collectPackageJSONCandidates returns framework candidates from package.json deps.
@@ -334,19 +368,29 @@ func detectFromCsproj(content string) (framework, qsType string, found bool) {
 func detectJavaFramework(content string) string {
 	lower := strings.ToLower(content)
 	switch {
-	case strings.Contains(lower, "spring-boot") ||
-		strings.Contains(lower, "springframework.boot"):
+	case strings.Contains(lower, "mvc-auth-commons"):
+		return "java-mvc"
+	case containsAnyOf(lower, "spring-boot", "springframework.boot"):
 		return "spring-boot"
-	case strings.Contains(lower, "javax.ee") ||
-		strings.Contains(lower, "jakarta.ee") ||
-		strings.Contains(lower, "javax.servlet") ||
-		strings.Contains(lower, "jakarta.servlet") ||
-		// Jakarta.platform:jakarta.jakartaee-api is the standard BOM for Jakarta EE 9+.
-		strings.Contains(lower, "jakarta.platform"):
+	// Full Java EE / Jakarta EE platform or EE-only APIs (the Jakarta EE 9+ BOM is
+	// jakarta.platform:jakarta.jakartaee-api).
+	case containsAnyOf(lower, "javaee-api", "jakartaee-api", "jakarta.platform", "javax.ee", "jakarta.ee",
+		"security.enterprise", "microprofile"):
 		return "java-ee"
+	case containsAnyOf(lower, "javax.servlet", "jakarta.servlet"):
+		return "java-mvc"
 	default:
 		return "vanilla-java"
 	}
+}
+
+func containsAnyOf(s string, substrings ...string) bool {
+	for _, sub := range substrings {
+		if strings.Contains(s, sub) {
+			return true
+		}
+	}
+	return false
 }
 
 func isExpoProject(dir string) bool {
