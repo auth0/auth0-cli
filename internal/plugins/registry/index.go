@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
 	"github.com/auth0/auth0-cli/internal/plugins"
 )
 
@@ -42,10 +44,39 @@ type Index struct {
 	Deprecations  []Deprecation `json:"deprecated,omitempty"`
 	Policy        Policy        `json:"policy,omitzero"`
 
-	// ScopeTable and SecretFields are kept as they are in the index until the
-	// code that uses them lands (DXCDT-2606, DXCDT-2614).
-	ScopeTable   json.RawMessage `json:"scopeTable,omitempty"`
-	SecretFields json.RawMessage `json:"secretFields,omitempty"`
+	// ScopeTable and SecretFields are the data the plugin proxy enforces. They
+	// are zero when the registry publishes none, and the proxy refuses to run a
+	// plugin then.
+	ScopeTable   ScopeTable   `json:"scopeTable,omitzero"`
+	SecretFields SecretFields `json:"secretFields,omitzero"`
+}
+
+// ScopeTable lists the Management API calls that the plugin proxy knows a scope
+// for. A call that no rule matches is denied.
+type ScopeTable struct {
+	FormatVersion int         `json:"formatVersion"`
+	Rules         []ScopeRule `json:"rules"`
+}
+
+// ScopeRule says which scopes allow one Management API call.
+type ScopeRule struct {
+	// Method is the HTTP method, one of GET, POST, PUT, PATCH and DELETE.
+	Method string `json:"method"`
+
+	// Path is the path template, such as /api/v2/clients/{id}. A segment in
+	// braces matches any one segment.
+	Path string `json:"path"`
+
+	// AnyOf lists the scopes that allow the call. A plugin that declared at least
+	// one of them may make it.
+	AnyOf []string `json:"anyOf"`
+}
+
+// SecretFields lists the names of the fields that the plugin proxy removes from
+// every response before the plugin sees it.
+type SecretFields struct {
+	FormatVersion int      `json:"formatVersion"`
+	Names         []string `json:"names"`
 }
 
 // Plugin is a plugin listed in the index. The versions of a plugin are either
@@ -323,10 +354,130 @@ func (i *Index) semanticErrors() plugins.ProblemList {
 		}
 	}
 
+	// The sections are optional in the index, and the zero value stands for a
+	// section that is not there. A section that is there has format version 1.
+	if i.ScopeTable.FormatVersion != 0 {
+		found = append(found, i.ScopeTable.problems()...)
+	}
+
+	if i.SecretFields.FormatVersion != 0 {
+		found = append(found, i.SecretFields.problems()...)
+	}
+
 	if timeout := i.Policy.DefaultTimeout; timeout != "" {
 		if err := plugins.CheckTimeout(timeout); err != nil {
 			found.Addf("policy.defaultTimeout: %v", err)
 		}
+	}
+
+	return found
+}
+
+// Validate checks the scope table with the schema of the index and with the
+// checks that the schema cannot express, which are the checks that ParseIndex
+// makes. It returns an error that wraps ErrInvalidIndex and names the JSON path
+// of every problem, as seen from the index. Code that gets a table from
+// anywhere but ParseIndex must call it before it relies on the table.
+func (t ScopeTable) Validate() error {
+	if problems := t.problems(); len(problems) > 0 {
+		return newInvalidError("scopeTable", problems)
+	}
+
+	return nil
+}
+
+// problems returns the problems found by the schema or, when the schema has
+// none, by the checks that it cannot express.
+func (t ScopeTable) problems() plugins.ProblemList {
+	found, err := schemaProblems("scopeTable", func(s schemas) *jsonschema.Schema { return s.scopeTable }, t)
+	if err != nil {
+		return plugins.ProblemList{err.Error()}
+	}
+
+	if len(found) > 0 {
+		return found
+	}
+
+	return t.extraProblems()
+}
+
+// extraProblems runs the checks on the scope table that JSON Schema cannot
+// express: no dot segments, and no two rules for the same call.
+func (t ScopeTable) extraProblems() plugins.ProblemList {
+	var found plugins.ProblemList
+
+	// Rules that only differ in the names of their parameters match the same
+	// calls, so they count as the same rule.
+	shapes := make(map[string]string, len(t.Rules))
+
+	for n, rule := range t.Rules {
+		rulePath := fmt.Sprintf("scopeTable.rules[%d]", n)
+
+		segments := strings.Split(strings.TrimPrefix(rule.Path, "/api/v2/"), "/")
+		for m, segment := range segments {
+			if segment == "." || segment == ".." {
+				found.Addf("%s.path: segment %d must not be %q", rulePath, m+1, segment)
+			}
+
+			if strings.HasPrefix(segment, "{") {
+				segments[m] = "{}"
+			}
+		}
+
+		shape := rule.Method + " " + strings.Join(segments, "/")
+		if first, duplicate := shapes[shape]; duplicate {
+			found.Addf("%s: duplicate rule for %s %s, already defined by %s", rulePath, rule.Method, rule.Path, first)
+		}
+
+		shapes[shape] = rulePath
+	}
+
+	return found
+}
+
+// Validate checks the secret fields with the schema of the index and with the
+// checks that the schema cannot express, which are the checks that ParseIndex
+// makes. It returns an error that wraps ErrInvalidIndex and names the JSON path
+// of every problem, as seen from the index.
+func (f SecretFields) Validate() error {
+	if problems := f.problems(); len(problems) > 0 {
+		return newInvalidError("secretFields", problems)
+	}
+
+	return nil
+}
+
+// problems returns the problems found by the schema or, when the schema has
+// none, by the checks that it cannot express.
+func (f SecretFields) problems() plugins.ProblemList {
+	found, err := schemaProblems("secretFields", func(s schemas) *jsonschema.Schema { return s.secretFields }, f)
+	if err != nil {
+		return plugins.ProblemList{err.Error()}
+	}
+
+	if len(found) > 0 {
+		return found
+	}
+
+	return f.extraProblems()
+}
+
+// extraProblems runs the checks on the secret field names that JSON Schema
+// cannot express: names are compared without regard to case, so two names that
+// only differ in case are duplicates.
+func (f SecretFields) extraProblems() plugins.ProblemList {
+	var found plugins.ProblemList
+
+	names := make(map[string]string, len(f.Names))
+
+	for n, name := range f.Names {
+		namePath := fmt.Sprintf("secretFields.names[%d]", n)
+
+		if first, duplicate := names[strings.ToLower(name)]; duplicate {
+			found.Addf("%s: duplicate name %q, already used by %s", namePath, name, first)
+		}
+
+		names[strings.ToLower(name)] = namePath
 	}
 
 	return found
