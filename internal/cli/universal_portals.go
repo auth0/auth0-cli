@@ -34,6 +34,7 @@ Auth0 Management API as the tenant you are logged in to.`,
 All flags are handled by the tool. Run "auth0 universal-portals setup --help" for the list.`,
 			`  auth0 universal-portals setup
   auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 up setup --dry-run --template consumer --name "Acme Account" --json
   auth0 up setup --no-input --template consumer --name "Acme Account" --json`),
 		universalPortalsToolCmd(cli, "audit",
 			"Check a Universal Portal",

@@ -76,6 +76,8 @@ export interface SetupDeps {
   prompt: Prompter;
   interactive: boolean;
   tenantDomain: string;
+  // A dry run only reads, so the probes that send writes are skipped. Their scopes are not checked.
+  dryRun?: boolean;
 }
 
 export interface SetupResult {
@@ -92,7 +94,10 @@ export async function runSetup(options: SetupOptions, deps: SetupDeps): Promise<
   const resources: SetupResult["resources"] = [];
   const { ui, api, tenantDomain } = deps;
 
-  const probes = SETUP_PROBES.filter((probe) => !probe.businessOnly || options.template === "business");
+  const probes = SETUP_PROBES.filter(
+    (probe) =>
+      (!probe.businessOnly || options.template === "business") && (!deps.dryRun || probe.method === "GET"),
+  );
   await checkPermissions(probes, deps);
 
   let slug = options.slug;

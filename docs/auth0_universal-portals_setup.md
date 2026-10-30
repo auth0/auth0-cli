@@ -19,6 +19,7 @@ auth0 universal-portals setup [flags]
 ```
   auth0 universal-portals setup
   auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 up setup --dry-run --template consumer --name "Acme Account" --json
   auth0 up setup --no-input --template consumer --name "Acme Account" --json
 ```
 

@@ -4,8 +4,9 @@ import { openBrowser } from "./browser.js";
 import { CancelledError, type Prompter } from "./prompt.js";
 import type { TemplateId } from "./templates/types.js";
 import type { IoStreams } from "./cli.js";
+import { type PlannedRequest, planWrites } from "./dry-run.js";
 import { reportError } from "./errors.js";
-import { runSetup, SetupOptions, SlugRaceError } from "./setup/run.js";
+import { runSetup, SetupOptions, SetupResult, SlugRaceError } from "./setup/run.js";
 import { toPortalSlug } from "./slug.js";
 import { trackWrites } from "./write-tracker.js";
 import type { Ui } from "./ui.js";
@@ -28,19 +29,24 @@ export async function runSetupCommand(
       }
     }
     const tracked = trackWrites(apiFor(context, { fetchImpl: io.fetchImpl, run: io.run }));
+    // A dry run reads the tenant as a real run does, but keeps the requests that would change it.
+    const planned = args.dryRun ? planWrites(tracked.api) : undefined;
 
     ui.banner("Universal Portals setup", context.tenantDomain);
+    if (planned) ui.info(DRY_RUN_NOTE);
     try {
       const options = prompter
         ? await askForMissing(args, prompter, context.tenantDomain)
         : optionsFromArgs(args);
       const result = await runSetup(options, {
-        api: tracked.api,
+        api: planned?.api ?? tracked.api,
         ui,
         prompt: prompter ?? unansweredPrompter(),
         interactive,
         tenantDomain: context.tenantDomain,
+        dryRun: planned !== undefined,
       });
+      if (planned) return reportPlan(result, planned.requests(), args.json, io, ui);
       if (args.json) {
         io.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
         return 0;
@@ -63,6 +69,23 @@ export async function runSetupCommand(
   } catch (error) {
     return reportError(error, args.json, io, ui);
   }
+}
+
+// The statuses in a dry run are what a real run would report. Writes are not checked here, so
+// the note says so: a real run is the only check of the permissions for creating things.
+const DRY_RUN_NOTE =
+  "Dry run: nothing is created or changed. Statuses show what a real run would do. Write permissions are checked by a real run only.";
+
+// The result of a real run, plus the requests it would send in the order it would send them. The
+// portal is not opened, because nothing was created.
+function reportPlan(result: SetupResult, requests: PlannedRequest[], json: boolean, io: IoStreams, ui: Ui): number {
+  if (json) {
+    io.stdout.write(`${JSON.stringify({ dryRun: true, ...result, requests }, null, 2)}\n`);
+    return 0;
+  }
+  ui.result(`Dry run complete. ${requests.length} request(s) would change the tenant.`);
+  ui.detail("Run the same command without --dry-run to set up the portal.");
+  return 0;
 }
 
 // Enter opens the portal. "n" or Ctrl+C means no: the portal is already set up,
