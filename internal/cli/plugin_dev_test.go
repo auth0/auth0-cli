@@ -1359,7 +1359,7 @@ func TestCreatePluginCmd(t *testing.T) {
 
 			out := e.stderr.String()
 			assert.Contains(t, out, "Created auth0/demo in "+dir)
-			assert.Contains(t, out, "cd "+dir)
+			assert.Contains(t, out, "cd "+shellWord(dir))
 			assert.Contains(t, out, test.build)
 			assert.Contains(t, out, "AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link")
 			assert.Contains(t, out, "auth0 plugin approve demo")
