@@ -164,6 +164,11 @@ func TestTreeProblems(t *testing.T) {
 // download.
 var networkFailure = regexp.MustCompile(`dial tcp|no such host|i/o timeout|proxy.golang.org|connection refused|network is unreachable|TLS handshake|ConnectionRefused|FailedToOpenSocket|ConnectionClosed|ENOTFOUND|Unable to connect`)
 
+// registryDenied matches a package registry that refuses the request because
+// this machine has no credentials for it (for example a private mirror in the
+// bun configuration). It is an environment condition, like a missing network.
+var registryDenied = regexp.MustCompile(`error: GET \S+ - 40[13]`)
+
 // TestEmbedded_BuildsAndPasses scaffolds each project and builds, vets and tests
 // it with the tools of its language, the way a person would. It needs the tool
 // and the package registry (or a warm cache), so a case is skipped when either is
@@ -213,6 +218,9 @@ func TestEmbedded_BuildsAndPasses(t *testing.T) {
 				output, err := cmd.CombinedOutput()
 				if err != nil && i == 0 && networkFailure.Match(output) {
 					t.Skipf("%s %s needs the network: %s", tool, args[0], output)
+				}
+				if err != nil && i == 0 && registryDenied.Match(output) {
+					t.Skipf("%s %s cannot reach the package registry without credentials: %s", tool, args[0], output)
 				}
 
 				require.NoError(t, err, "%s %s:\n%s", tool, strings.Join(args, " "), output)
