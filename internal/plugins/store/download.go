@@ -39,7 +39,7 @@ const (
 // checkDownloadURL reports an error that wraps ErrDownloadHost unless raw is an
 // https URL, without credentials and on the standard port, on a download host.
 // A build made with the plugintest tag also accepts the loopback addresses
-// 127.0.0.1, localhost and [::1], over http or https and on any port.
+// 127.0.0.1, localhost and [::1], over https and on any port.
 func checkDownloadURL(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil {
@@ -48,7 +48,7 @@ func checkDownloadURL(raw string) error {
 
 	host := strings.ToLower(parsed.Hostname())
 
-	if allowLoopback && (parsed.Scheme == "http" || parsed.Scheme == "https") && slices.Contains([]string{"127.0.0.1", "localhost", "::1"}, host) {
+	if allowLoopback && parsed.Scheme == "https" && slices.Contains([]string{"127.0.0.1", "localhost", "::1"}, host) {
 		return nil
 	}
 
