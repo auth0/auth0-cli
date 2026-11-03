@@ -63,7 +63,7 @@ brews:
     commit_author:
       name: auth0
       email: auth0-cli-cd-sa@okta.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    commit_msg_template: "Beta brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
     license: MIT
@@ -99,7 +99,7 @@ scoops:
     commit_author:
       name: auth0
       email: auth0-cli-cd-sa@okta.com
-    commit_msg_template: "Scoop manifest update for {{ .ProjectName }} version {{ .Tag }}"
+    commit_msg_template: "Beta scoop manifest update for {{ .ProjectName }} version {{ .Tag }}"
     homepage: https://auth0.github.io/auth0-cli
     description: Build, manage and test your Auth0 integrations from the command line
     license: MIT

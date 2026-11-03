@@ -123,10 +123,10 @@ jobs:
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "Brew formula update for auth0-cli version ${{ github.ref_name }}"
+          commit-message: "Beta brew formula update for auth0-cli version ${{ github.ref_name }}"
           branch: ${{ github.ref_name }}
-          title: "Brew formula update for auth0-cli version ${{ github.ref_name }}"
-          body: "This PR updates the Homebrew formula for version ${{ github.ref_name }}."
+          title: "Beta brew formula update for auth0-cli version ${{ github.ref_name }}"
+          body: "This PR updates the beta Homebrew formula (auth0-beta) for version ${{ github.ref_name }}."
           base: main
           sign-commits: true
           path: homebrew-auth0-cli
@@ -170,10 +170,10 @@ jobs:
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "Scoop manifest update for auth0-cli version ${{ github.ref_name }}"
+          commit-message: "Beta scoop manifest update for auth0-cli version ${{ github.ref_name }}"
           branch: ${{ github.ref_name }}
-          title: "Scoop manifest update for auth0-cli version ${{ github.ref_name }}"
-          body: "This PR updates the Scoop manifest for version ${{ github.ref_name }}."
+          title: "Beta scoop manifest update for auth0-cli version ${{ github.ref_name }}"
+          body: "This PR updates the beta Scoop manifest (auth0-beta) for version ${{ github.ref_name }}."
           base: main
           sign-commits: true
           path: scoop-auth0-cli
