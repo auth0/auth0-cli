@@ -28,9 +28,9 @@ jobs:
           go-version-file: auth0-cli/go.mod
           check-latest: true
 
-      # GoReleaser automatically marks SemVer prerelease tags (those with a
-      # "-suffix") as GitHub prereleases. Homebrew and Scoop PRs are
-      # intentionally omitted so beta builds never reach package managers.
+      # GoReleaser marks SemVer prerelease tags (those with a "-suffix") as GitHub
+      # prereleases. The beta formula and manifest are separate from the stable
+      # auth0 package, so the stable formula and manifest are not touched.
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
@@ -39,3 +39,141 @@ jobs:
           workdir: 'auth0-cli'
         env:
           GITHUB_TOKEN: ${{ github.token }}
+
+      # The tap jobs run on their own so a failed tap PR can be re-run
+      # without publishing the release again.
+      - name: Upload Homebrew formula
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: homebrew-formula
+          path: auth0-cli/dist/homebrew/auth0-beta.rb
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 5
+
+      - name: Upload Scoop manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scoop-manifest
+          path: auth0-cli/dist/scoop/auth0-beta.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 5
+
+  # Scan every published archive. Nothing depends on this job, so a failed scan fails
+  # its own run but does not block the release or the Homebrew and Scoop updates.
+  rl-scan:
+    name: RL Scan
+    needs: goreleaser
+    strategy:
+      fail-fast: false
+      matrix:
+        asset-suffix:
+          - Darwin_arm64.tar.gz
+          - Darwin_x86_64.tar.gz
+          - Linux_arm64.tar.gz
+          - Linux_x86_64.tar.gz
+          - Windows_arm64.zip
+          - Windows_x86_64.zip
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/rl.yml
+    with:
+      tag: ${{ github.ref_name }}
+      asset-suffix: ${{ matrix.asset-suffix }}
+    secrets: inherit
+
+  homebrew:
+    name: Homebrew Tap
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download Homebrew formula
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: homebrew-formula
+          path: homebrew-formula
+
+      - name: Generate Homebrew app token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: auth0
+          repositories: homebrew-auth0-cli
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout Homebrew Tap Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: auth0/homebrew-auth0-cli
+          token: ${{ steps.app-token.outputs.token }}
+          path: homebrew-auth0-cli
+
+      - name: Copy Brew Formula
+        run: |
+          cp homebrew-formula/*.rb homebrew-auth0-cli/
+
+      - name: Create Homebrew Pull Request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "Brew formula update for auth0-cli version ${{ github.ref_name }}"
+          branch: ${{ github.ref_name }}
+          title: "Brew formula update for auth0-cli version ${{ github.ref_name }}"
+          body: "This PR updates the Homebrew formula for version ${{ github.ref_name }}."
+          base: main
+          sign-commits: true
+          path: homebrew-auth0-cli
+
+  scoop:
+    name: Scoop Bucket
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download Scoop manifest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: scoop-manifest
+          path: scoop-manifest
+
+      - name: Generate Scoop app token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: auth0
+          repositories: scoop-auth0-cli
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout Scoop Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: auth0/scoop-auth0-cli
+          token: ${{ steps.app-token.outputs.token }}
+          path: scoop-auth0-cli
+
+      - name: Copy Scoop Manifest
+        run: |
+          cp scoop-manifest/*.json scoop-auth0-cli/
+
+      - name: Create Scoop Pull Request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          commit-message: "Scoop manifest update for auth0-cli version ${{ github.ref_name }}"
+          branch: ${{ github.ref_name }}
+          title: "Scoop manifest update for auth0-cli version ${{ github.ref_name }}"
+          body: "This PR updates the Scoop manifest for version ${{ github.ref_name }}."
+          base: main
+          sign-commits: true
+          path: scoop-auth0-cli
