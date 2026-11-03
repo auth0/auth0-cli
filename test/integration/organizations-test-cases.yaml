@@ -316,3 +316,7 @@ tests:
       exactly: "[]"
     config:
       retries: 5
+
+  041 - delete organization invitation app:
+    command: auth0 apps delete $(./test/integration/scripts/get-org-inv-app-id.sh) --force --no-input
+    exit-code: 0

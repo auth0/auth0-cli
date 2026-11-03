@@ -198,7 +198,8 @@ func TestConfig_SaveToDisk(t *testing.T) {
 		config := &Config{path: path.Join(tmpDir, "auth0", "config.json")}
 
 		err = config.saveToDisk()
-		assert.EqualError(t, err, fmt.Sprintf("mkdir %s/auth0: permission denied", tmpDir))
+		assert.ErrorIs(t, err, ErrConfigNotWritable)
+		assert.Contains(t, err.Error(), fmt.Sprintf("mkdir %s/auth0: permission denied", tmpDir))
 	})
 }
 

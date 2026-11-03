@@ -1,4 +1,4 @@
-//go:generate mockgen -source auth.go -destination mock/auth.go -package mock
+//go:generate go tool mockgen -source auth.go -destination mock/auth.go -package mock
 package auth
 
 import (
@@ -123,7 +123,7 @@ func WaitUntilUserLogsIn(ctx context.Context, httpClient *http.Client, state Sta
 var RequiredScopes = []string{
 	"openid",
 	"create:clients", "delete:clients", "read:clients", "update:clients",
-	"create:client_grants", "read:client_grants",
+	"create:client_grants", "read:client_grants", "update:client_grants", "delete:client_grants",
 	"create:resource_servers", "delete:resource_servers", "read:resource_servers", "update:resource_servers",
 	"create:roles", "delete:roles", "read:roles", "update:roles",
 	"create:rules", "delete:rules", "read:rules", "update:rules",
@@ -133,14 +133,17 @@ var RequiredScopes = []string{
 	"read:phone_templates",
 	"create:email_templates", "read:email_templates", "update:email_templates",
 	"create:email_provider", "read:email_provider", "update:email_provider", "delete:email_provider",
-	"read:flows", "read:forms", "read:flows_vault_connections",
-	"read:connections", "update:connections", "read:connections_options", "update:connections_options",
+	"read:flows", "create:flows", "update:flows", "delete:flows",
+	"read:flows_executions",
+	"read:forms", "create:forms", "update:forms", "delete:forms",
+	"read:flows_vault_connections", "create:flows_vault_connections", "update:flows_vault_connections", "delete:flows_vault_connections",
+	"create:connections", "read:connections", "update:connections", "delete:connections", "read:connections_options", "update:connections_options",
 	"read:client_keys", "read:logs", "read:tenant_settings", "update:tenant_settings",
 	"read:custom_domains", "create:custom_domains", "update:custom_domains", "delete:custom_domains",
 	"read:anomaly_blocks", "delete:anomaly_blocks",
 	"create:log_streams", "delete:log_streams", "read:log_streams", "update:log_streams",
 	"create:actions", "delete:actions", "read:actions", "update:actions",
-	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles", "read:organization_connections",
+	"create:organizations", "delete:organizations", "read:organizations", "update:organizations", "read:organization_members", "read:organization_member_roles", "read:organization_connections", "read:organization_client_grants",
 	"read:prompts", "update:prompts",
 	"read:attack_protection", "update:attack_protection",
 	"read:event_streams", "create:event_streams", "update:event_streams", "delete:event_streams", "read:events",
@@ -148,6 +151,12 @@ var RequiredScopes = []string{
 	"read:token_exchange_profiles", "create:token_exchange_profiles", "update:token_exchange_profiles", "delete:token_exchange_profiles",
 	"read:organization_invitations", "create:organization_invitations", "delete:organization_invitations",
 	"read:organization_discovery_domains", "read:self_service_profiles", "read:user_attribute_profiles",
+	"read:sessions", "update:sessions", "delete:sessions",
+	"read:refresh_tokens", "update:refresh_tokens", "delete:refresh_tokens",
+	"read:guardian_factors", "update:guardian_factors",
+	"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
+	"read:mfa_policies", "update:mfa_policies",
+	// "read:experimentation", "create:experimentation", "update:experimentation", "delete:experimentation",.
 }
 
 // GetDeviceCode kicks-off the device authentication flow by requesting
@@ -240,6 +249,16 @@ func GetAccessTokenFromClientCreds(ctx context.Context, args ClientCredentials) 
 	u, err := url.Parse("https://" + args.Domain)
 	if err != nil {
 		return Result{}, err
+	}
+
+	// Guard against a domain that parses to a different host (for example
+	// "tenant.example@evil.example"), which would POST the client secret to that
+	// other host. Require it to be a bare host that parses back to itself.
+	if u.User != nil || u.Host != args.Domain || u.Path != "" {
+		return Result{}, fmt.Errorf(
+			"invalid tenant domain %q: expected a bare host such as tenant.us.auth0.com",
+			args.Domain,
+		)
 	}
 
 	credsConfig := &clientcredentials.Config{

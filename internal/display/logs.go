@@ -279,14 +279,19 @@ func (n *noBellStdout) Close() error {
 func (r *Renderer) QuitPrompt() bool {
 	fmt.Print("\nPress 'q' to quit or any other key to continue...\n")
 
-	ContTty, _ := tty.Open()
-	defer func(ContTty *tty.TTY) {
-		_ = ContTty.Close()
-	}(ContTty)
-
-	rn, err := ContTty.ReadRune()
+	contTTY, err := tty.Open()
 	if err != nil {
-		panic(err)
+		// No interactive TTY (an agent or piped run): quit the loop cleanly rather
+		// than crash.
+		return true
+	}
+	defer func() {
+		_ = contTTY.Close()
+	}()
+
+	rn, err := contTTY.ReadRune()
+	if err != nil {
+		return true
 	}
 
 	return rn == 'q' || rn == 'Q'

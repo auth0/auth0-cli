@@ -2,7 +2,7 @@
 
 ## Frameworks & layout
 
-- **Unit tests:** Go's standard `testing`, with `github.com/stretchr/testify` (`assert`) for assertions and `github.com/golang/mock/gomock` for mocks.
+- **Unit tests:** Go's standard `testing`, with `github.com/stretchr/testify` (`assert`) for assertions and `go.uber.org/mock/gomock` for mocks.
 - **Location:** colocated `*_test.go` files next to the code (e.g. `internal/cli/apps_test.go`), same package.
 - **Integration tests:** YAML-driven test cases under `test/integration/*-test-cases.yaml`, executed by `commander` against a live Auth0 tenant.
 - **Coverage:** produced by `make test-unit` (`coverage-unit-tests.out`) and uploaded to Codecov in CI. `codecov.yml` holds the config; there is no hard local threshold gate.

@@ -1,4 +1,4 @@
-//go:generate mockgen -source=event_streams.go -destination=mock/event_streams_mock.go -package=mock
+//go:generate go tool mockgen -source=event_streams.go -destination=mock/event_streams_mock.go -package=mock
 
 package auth0
 

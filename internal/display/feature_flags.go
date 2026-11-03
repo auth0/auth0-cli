@@ -222,7 +222,7 @@ func formatOverrides(overrides management.VariationOverridesMap) string {
 	}
 	parts := make([]string, 0, len(overrides))
 	for k, v := range overrides {
-		parts = append(parts, fmt.Sprintf("%s=%v", k, v.GetValue()))
+		parts = append(parts, fmt.Sprintf("%s=%v", k, v))
 	}
 	return strings.Join(parts, ", ")
 }

@@ -79,6 +79,12 @@ func TestWaitUntilUserLogsIn(t *testing.T) {
 			expect:     "slow down!",
 		},
 		{
+			name:       "should surface an expired device code",
+			httpStatus: http.StatusOK,
+			response:   "{\"error\": \"expired_token\", \"error_description\": \"The device code has expired.\"}",
+			expect:     "The device code has expired.",
+		},
+		{
 			name:       "should error if can't parse tenant info",
 			httpStatus: http.StatusOK,
 			response:   "{\"access_token\": \"bad.token\"}",
@@ -226,6 +232,30 @@ func TestParseTenant(t *testing.T) {
 			assert.EqualError(t, err, testCase.err)
 			assert.Equal(t, "", tenant)
 			assert.Equal(t, "", domain)
+		})
+	}
+}
+
+func TestGetAccessTokenFromClientCredsRejectsUnsafeDomain(t *testing.T) {
+	// A domain that parses to a host other than itself must be rejected before any
+	// token request, so the client secret can never be POSTed to another host.
+	tests := []struct {
+		name   string
+		domain string
+	}{
+		{name: "userinfo redirects the host", domain: "tenant.example@evil.example"},
+		{name: "path redirects the request", domain: "tenant.us.auth0.com/oauth/token"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := GetAccessTokenFromClientCreds(context.Background(), ClientCredentials{
+				ClientID:     "client-id",
+				ClientSecret: "client-secret",
+				Domain:       test.domain,
+			})
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid tenant domain")
 		})
 	}
 }

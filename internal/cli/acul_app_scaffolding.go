@@ -51,7 +51,7 @@ type Metadata struct {
 	Description string `json:"description"`
 }
 
-const stableACULVersion = "v2.0.1"
+const stableACULVersion = "v3.0.0"
 
 // loadManifest downloads and parses the manifest.json for the latest release.
 func loadManifest(tag string) (*Manifest, error) {
@@ -268,8 +268,8 @@ func selectTemplate(cmd *cobra.Command, manifest *Manifest, providedTemplate str
 				return key, nil
 			}
 		}
-		return "", fmt.Errorf("invalid template '%s'. Available templates: %s",
-			providedTemplate, strings.Join(templateNames, ", "))
+		return "", usageError{err: fmt.Errorf("invalid template '%s'. Available templates: %s",
+			providedTemplate, strings.Join(templateNames, ", ")), reason: "invalid_flag_value"}
 	}
 
 	var chosenTemplateName string
@@ -326,7 +326,7 @@ func validateAndSelectScreens(cli *cli, screenIDs, providedScreens []string, mul
 			return nil, err
 		}
 		if len(selected) == 0 {
-			return nil, fmt.Errorf("at least one screen must be selected")
+			return nil, usageError{err: fmt.Errorf("at least one screen must be selected"), reason: "missing_required_flags"}
 		}
 		return selected, nil
 	}
@@ -433,7 +433,7 @@ func copyProjectTemplateFiles(cli *cli, baseFiles []string, chosenTemplate, temp
 			continue
 		}
 
-		if err := copyFile(srcPath, destPath); err != nil {
+		if err := utils.CopyFile(srcPath, destPath); err != nil {
 			return fmt.Errorf("error copying file %s: %w", filePath, err)
 		}
 	}
@@ -530,26 +530,6 @@ func downloadFile(url string) (string, error) {
 	return tempFile.Name(), nil
 }
 
-// Function to copy a file from a source path to a destination path.
-func copyFile(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
-	}
-	defer out.Close()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return fmt.Errorf("failed to copy file contents: %w", err)
-	}
-	return out.Close()
-}
-
 // Function to recursively copy a directory.
 func copyDir(src, dst string) error {
 	sourceInfo, err := os.Stat(src)
@@ -579,7 +559,7 @@ func copyDir(src, dst string) error {
 		if info.IsDir() {
 			return os.MkdirAll(destPath, info.Mode())
 		}
-		return copyFile(path, destPath)
+		return utils.CopyFile(path, destPath)
 	})
 }
 

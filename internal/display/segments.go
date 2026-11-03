@@ -14,6 +14,7 @@ type segmentView struct {
 	Name        string
 	Description string
 	Type        string
+	Status      string
 	Rules       string
 	CreatedAt   string
 	UpdatedAt   string
@@ -21,7 +22,7 @@ type segmentView struct {
 }
 
 func (v *segmentView) AsTableHeader() []string {
-	return []string{"ID", "Name", "Type", "Rules", "Updated"}
+	return []string{"ID", "Name", "Type", "Status", "Rules", "Updated"}
 }
 
 func (v *segmentView) AsTableRow() []string {
@@ -29,7 +30,7 @@ func (v *segmentView) AsTableRow() []string {
 	if len(rules) > 50 {
 		rules = rules[:47] + "..."
 	}
-	return []string{ansi.Faint(v.ID), v.Name, v.Type, rules, v.UpdatedAt}
+	return []string{ansi.Faint(v.ID), v.Name, v.Type, v.Status, rules, v.UpdatedAt}
 }
 
 func (v *segmentView) KeyValues() [][]string {
@@ -37,6 +38,7 @@ func (v *segmentView) KeyValues() [][]string {
 		{"ID", ansi.Faint(v.ID)},
 		{"NAME", v.Name},
 		{"TYPE", v.Type},
+		{"STATUS", v.Status},
 	}
 	if v.Description != "" {
 		kvs = append(kvs, []string{"DESCRIPTION", v.Description})
@@ -70,6 +72,7 @@ func makeSegmentView(s *management.Segment) *segmentView {
 		Name:        s.GetName(),
 		Description: s.GetDescription(),
 		Type:        strings.ToLower(string(s.GetType())),
+		Status:      featureFlagStatus(string(s.GetStatus())),
 		Rules:       formatRules(s.GetRules()),
 		CreatedAt:   timeAgo(s.GetCreatedAt()),
 		UpdatedAt:   timeAgo(s.GetUpdatedAt()),
@@ -83,6 +86,7 @@ func makeSegmentViewFromGet(s *management.GetSegmentResponseContent) *segmentVie
 		Name:        s.GetName(),
 		Description: s.GetDescription(),
 		Type:        strings.ToLower(string(s.GetType())),
+		Status:      featureFlagStatus(string(s.GetStatus())),
 		Rules:       formatRules(s.GetRules()),
 		CreatedAt:   timeAgo(s.GetCreatedAt()),
 		UpdatedAt:   timeAgo(s.GetUpdatedAt()),
@@ -115,6 +119,7 @@ func (r *Renderer) SegmentCreate(s *management.CreateSegmentResponseContent) err
 		Name:        s.GetName(),
 		Description: s.GetDescription(),
 		Type:        strings.ToLower(string(s.GetType())),
+		Status:      featureFlagStatus(string(s.GetStatus())),
 		Rules:       formatRules(s.GetRules()),
 		CreatedAt:   timeAgo(s.GetCreatedAt()),
 		UpdatedAt:   timeAgo(s.GetUpdatedAt()),
@@ -133,6 +138,7 @@ func (r *Renderer) SegmentUpdate(s *management.UpdateSegmentResponseContent) err
 		Name:        s.GetName(),
 		Description: s.GetDescription(),
 		Type:        strings.ToLower(string(s.GetType())),
+		Status:      featureFlagStatus(string(s.GetStatus())),
 		Rules:       formatRules(s.GetRules()),
 		CreatedAt:   timeAgo(s.GetCreatedAt()),
 		UpdatedAt:   timeAgo(s.GetUpdatedAt()),

@@ -1,4 +1,4 @@
-//go:generate mockgen -source=branding.go -destination=mock/branding_mock.go -package=mock
+//go:generate go tool mockgen -source=branding.go -destination=mock/branding_mock.go -package=mock
 
 package auth0
 

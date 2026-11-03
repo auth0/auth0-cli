@@ -218,6 +218,10 @@ func deleteLogStreamCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
@@ -264,9 +268,7 @@ func openLogStreamsCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatLogStreamSettingsPath(inputs.ID))
-
-			return nil
+			return openManageURL(cli, cli.tenant, formatLogStreamSettingsPath(inputs.ID))
 		},
 	}
 

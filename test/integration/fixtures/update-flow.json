@@ -1,0 +1,16 @@
+{
+  "actions": [
+    {
+      "id": "step_http",
+      "type": "HTTP",
+      "action": "SEND_REQUEST",
+      "allow_failure": false,
+      "mask_output": false,
+      "params": {
+        "method": "GET",
+        "url": "https://api.example.com/updated",
+        "content_type": "JSON"
+      }
+    }
+  ]
+}

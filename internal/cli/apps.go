@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
 	"slices"
 	"strings"
 
@@ -91,7 +93,7 @@ var (
 		Name:         "Allowed Origin URLs",
 		LongForm:     "origins",
 		ShortForm:    "o",
-		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs.",
+		Help:         "Comma-separated list of URLs allowed to make requests from JavaScript to Auth0 API (typically used with CORS). By default, all your callback URLs will be allowed. This field allows you to enter other origins if necessary. You can also use wildcards at the subdomain level (e.g., https://*.contoso.com). Query strings and hash information are not taken into account when validating these URLs. This sets allowed_origins; use --web-origins to set web_origins.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
@@ -99,7 +101,7 @@ var (
 		Name:         "Allowed Web Origin URLs",
 		LongForm:     "web-origins",
 		ShortForm:    "w",
-		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode.",
+		Help:         "Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode. This sets web_origins and is required for silent authentication in SPAs.",
 		IsRequired:   false,
 		AlwaysPrompt: true,
 	}
@@ -122,7 +124,7 @@ var (
 		Name:       "Grants",
 		LongForm:   "grants",
 		ShortForm:  "g",
-		Help:       "List of grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code.",
+		Help:       "List of OAuth grant types supported for this application. Can include code, implicit, refresh-token, credentials, password, password-realm, mfa-oob, mfa-otp, mfa-recovery-code, and device-code. A machine to machine application also needs a client grant to call an API: see '" + clientGrantCreateCommand + "'.",
 		IsRequired: false,
 	}
 	appResourceServerIdentifier = Flag{
@@ -168,15 +170,17 @@ var (
 		Name:      "Allow Delegated Access",
 		LongForm:  "delegation-allow-delegated-access",
 		ShortForm: "d",
-		Help: "(Early Access) Allow the application to accept Session Transfer Tokens containing an Actor, " +
+		Help: "Allow the application to accept Session Transfer Tokens containing an Actor, " +
 			"enabling delegated (impersonation) access. Defaults to false.",
+		AlwaysPrompt: true,
 	}
 	appSTDelegationDeviceBinding = Flag{
 		Name:      "Delegation Enforce Device Binding",
 		LongForm:  "delegation-enforce-device-binding",
 		ShortForm: "b",
-		Help: "(Early Access) Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
+		Help: "Device binding enforcement for delegated (impersonation) access: 'ip' or 'asn'. " +
 			"Defaults to 'ip'.",
+		AlwaysPrompt: true,
 	}
 	refreshToken = Flag{
 		Name:      "Refresh Token",
@@ -208,7 +212,59 @@ var (
 		ShortForm: "y",
 		Help:      "Controls whether Auth0 redirects users to the application's callback URL on authentication errors or in email verification flows: 'allow_always' or 'open_redirect_protection'. Require --is-first-party=false",
 	}
+	appOrganizationUsage = Flag{
+		Name:     "Organization Usage",
+		LongForm: "organization-usage",
+		Help:     "How the application handles organizations at authentication: 'deny', 'allow', or 'require'.",
+	}
+	appOrganizationRequireBehavior = Flag{
+		Name:     "Organization Require Behavior",
+		LongForm: "organization-require-behavior",
+		Help:     "How to prompt for an organization at authentication: 'no_prompt', 'pre_login_prompt', or 'post_login_prompt'. 'post_login_prompt' requires an OIDC-conformant application.",
+	}
+	appOrganizationDiscoveryMethods = Flag{
+		Name:     "Organization Discovery Methods",
+		LongForm: "organization-discovery-methods",
+		Help:     "Comma-separated list of methods for discovering organizations during the 'pre_login_prompt'. Possible values: 'email', 'organization_name'. Requires --organization-require-behavior=pre_login_prompt.",
+	}
 )
+
+// validateAppOrganizationFlags mirrors the one cross-field dependency the
+// Management API actually enforces, so a misconfiguration surfaces as an
+// actionable client-side error instead of a 400 from the server:
+//   - --organization-discovery-methods can only be used when
+//     --organization-require-behavior is "pre_login_prompt".
+//
+// Deliberately NOT validated here, because the API imposes no such rule
+// (confirmed by sweeping every combination against a live tenant):
+//   - --organization-require-behavior has no dependency on --organization-usage;
+//     the server accepts any usage, or none, alongside any require behavior.
+//   - --organization-require-behavior=post_login_prompt requires an
+//     OIDC-conformant application, a condition on a different field that the
+//     server validates and reports on its own.
+//
+// On create the prerequisite flag must be supplied alongside the dependent one.
+// On update it may already be set on the application, so an absent prerequisite
+// flag is left to the server to validate.
+func validateAppOrganizationFlags(cmd *cobra.Command, requireBehavior string, prerequisiteMandatory bool) error {
+	if appOrganizationDiscoveryMethods.IsSet(cmd) {
+		if !appOrganizationRequireBehavior.IsSet(cmd) {
+			if prerequisiteMandatory {
+				return usageError{
+					err:    errors.New("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt"),
+					reason: "missing_required_flags",
+				}
+			}
+		} else if requireBehavior != "pre_login_prompt" {
+			return validationError{
+				err:    fmt.Errorf("--organization-discovery-methods requires --organization-require-behavior=pre_login_prompt, but got %q", requireBehavior),
+				reason: "invalid_flag_value",
+			}
+		}
+	}
+
+	return nil
+}
 
 func appsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -249,6 +305,20 @@ func useAppCmd(cli *cli) *cobra.Command {
   auth0 apps use --none
   auth0 apps use <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// 'apps use' only saves a default app to the on-disk config, which env
+			// auth mode does not use. Fail fast instead of surfacing a confusing
+			// config-write error.
+			if envAuthEnabled(os.Getenv) {
+				return authError{
+					err: fmt.Errorf(
+						"'auth0 apps use' saves a default application to the on-disk config, which is not used in %s=%s mode. "+
+							"Pass the application ID directly to each command instead",
+						authModeEnvVar, authModeEnv,
+					),
+					reason: "env_auth_not_persistable",
+				}
+			}
+
 			if inputs.None {
 				inputs.ID = ""
 			} else {
@@ -285,6 +355,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		RevealSecrets bool
 		Number        int
+		Schema        bool
+		Query         string
 	}
 
 	cmd := &cobra.Command{
@@ -292,17 +364,35 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your applications",
-		Long:    "List your existing applications. To create one, run: `auth0 apps create`.",
+		Long: `List your existing applications. To create one, run: ` + "`auth0 apps create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 apps list
   auth0 apps ls
   auth0 apps list --reveal-secrets
   auth0 apps list --reveal-secrets --number 100
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
-  auth0 apps ls --csv`,
+  auth0 apps ls --csv
+  auth0 apps list --schema
+  auth0 apps list --schema --json
+  auth0 apps list --query '{"app_type":"spa"}'
+  auth0 apps list --query '{"app_type":"spa"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/clients")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "clients",
+					SchemaCmd: "auth0 apps list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
-				return fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")
+				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			list, err := getWithPagination(
@@ -341,6 +431,8 @@ func listAppsCmd(cli *cli) *cobra.Command {
 
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -421,6 +513,10 @@ func deleteAppCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if tenant, _ := cli.Config.GetTenant(cli.tenant); slices.Contains(ids, tenant.ClientID) {
 					cli.renderer.Warnf("Warning: You're about to delete the client used to authenticate the CLI. If deleted, the CLI will cease to operate once the access token has expired.")
@@ -469,6 +565,11 @@ func createAppCmd(cli *cli) *cobra.Command {
 		IsFirstParty             bool
 		ThirdPartySecurityMode   string
 		RedirectionPolicy        string
+		OrganizationUsage        string
+		OrganizationRequire      string
+		OrganizationDiscovery    []string
+		Data                     string
+		Schema                   bool
 	}
 	var oidcConformant = true
 	var algorithm = "RS256"
@@ -479,7 +580,10 @@ func createAppCmd(cli *cli) *cobra.Command {
 		Short: "Create a new application",
 		Long: "Create a new application.\n\n" +
 			"To create interactively, use `auth0 apps create` with no arguments.\n\n" +
-			"To create non-interactively, supply at least the application name, and type through the flags.",
+			"To create non-interactively, supply at least the application name, and type through the flags.\n\n" +
+			"To let a machine to machine application call an API, run: `" + clientGrantCreateCommand + "`.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 apps create
   auth0 apps create --name myapp
   auth0 apps create --name myapp --description <description>
@@ -492,8 +596,36 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create -n myapp -d <description> -t [native|spa|regular|m2m|resource_server] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps create --name "My API Client" --type resource_server --resource-server-identifier "https://api.example.com"
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
-  auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection`,
+  auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
+  auth0 apps create --name myapp --type regular --organization-usage require --organization-require-behavior pre_login_prompt --organization-discovery-methods email,organization_name
+
+  # Discover the payload schema
+  auth0 apps create --schema
+  auth0 apps create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apps create --data '{"name":"myapp","app_type":"spa"}'
+  auth0 apps create --data @app.json
+  cat app.json | auth0 apps create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/clients")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createAppFromJSON(cli, cmd, payload, inputs.RevealSecrets)
+			}
+
+			// Validate organization flag dependencies before any interactive
+			// prompts so a misconfiguration fails fast.
+			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, true); err != nil {
+				return err
+			}
+
 			if err := appName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -577,7 +709,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 					inputs.ResourceServerIdentifier = selectedAPI.GetIdentifier()
 				} else if strings.TrimSpace(inputs.ResourceServerIdentifier) == "" {
-					return fmt.Errorf("resource-server-identifier cannot be empty for resource_server app type")
+					return usageError{err: fmt.Errorf("resource-server-identifier cannot be empty for resource_server app type"), reason: "missing_required_flags"}
 				}
 			}
 
@@ -615,7 +747,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 
 			if len(inputs.RefreshToken) != 0 {
 				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
-					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+					return validationError{err: fmt.Errorf("apps: %s refreshToken invalid JSON", err), reason: "malformed_json"}
 				}
 			}
 
@@ -643,6 +775,18 @@ func createAppCmd(cli *cli) *cobra.Command {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
 			}
 
+			// Set organization behavior.
+			if appOrganizationUsage.IsSet(cmd) {
+				a.OrganizationUsage = &inputs.OrganizationUsage
+			}
+			if appOrganizationRequireBehavior.IsSet(cmd) {
+				a.OrganizationRequireBehavior = &inputs.OrganizationRequire
+			}
+			if appOrganizationDiscoveryMethods.IsSet(cmd) {
+				discoveryMethods := excludeEmptyEntries(inputs.OrganizationDiscovery)
+				a.OrganizationDiscoveryMethods = &discoveryMethods
+			}
+
 			// Set grants.
 			if len(inputs.Grants) > 0 {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
@@ -657,9 +801,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to create application: %w", err)
 			}
 
-			if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, a.GetClientID()); err != nil {
-				return err
-			}
+			persistDefaultAppID(cli, a.GetClientID())
 
 			cli.renderer.ApplicationCreate(a, inputs.RevealSecrets)
 
@@ -686,6 +828,12 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appIsFirstParty.RegisterBool(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterString(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterString(cmd, &inputs.RedirectionPolicy, "")
+	appOrganizationUsage.RegisterString(cmd, &inputs.OrganizationUsage, "")
+	appOrganizationRequireBehavior.RegisterString(cmd, &inputs.OrganizationRequire, "")
+	appOrganizationDiscoveryMethods.RegisterStringSlice(cmd, &inputs.OrganizationDiscovery, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -709,6 +857,11 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		IsFirstParty           bool
 		ThirdPartySecurityMode string
 		RedirectionPolicy      string
+		OrganizationUsage      string
+		OrganizationRequire    string
+		OrganizationDiscovery  []string
+		Data                   string
+		Schema                 bool
 	}
 
 	cmd := &cobra.Command{
@@ -718,7 +871,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		Long: "Update an application.\n\n" +
 			"To update interactively, use `auth0 apps update` with no arguments.\n\n" +
 			"To update non-interactively, supply the application id, name, type and other information you " +
-			"might want to change through the available flags.",
+			"might want to change through the available flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 apps update
   auth0 apps update <app-id> --name myapp
   auth0 apps update <app-id> --name myapp --description <description>
@@ -730,8 +885,30 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar" --metadata "bazz=buzz"
   auth0 apps update <app-id> -n myapp -d <description> -t [native|spa|regular|m2m] -r --json --metadata "foo=bar,bazz=buzz"
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
-  auth0 apps update <app-id> --redirection-policy allow_always`,
+  auth0 apps update <app-id> --redirection-policy allow_always
+  auth0 apps update <app-id> --organization-usage require --organization-require-behavior pre_login_prompt
+
+  # Discover the payload schema
+  auth0 apps update --schema
+  auth0 apps update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 apps update <app-id> --data '{"name":"myapp","description":"updated"}'
+  auth0 apps update <app-id> --data @app.json
+  cat app.json | auth0 apps update <app-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/clients/{id}")
+			}
+
+			// Validate organization flag dependencies before the network read
+			// and interactive prompts so a misconfiguration fails fast. On
+			// update a prerequisite may already be set on the application, so an
+			// absent flag is deferred to the server.
+			if err := validateAppOrganizationFlags(cmd, inputs.OrganizationRequire, false); err != nil {
+				return err
+			}
+
 			var current *management.Client
 
 			if len(args) == 0 {
@@ -741,6 +918,14 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateAppFromJSON(cli, cmd, inputs.ID, payload, inputs.RevealSecrets)
 			}
 
 			if err := ansi.Waiting(func() (err error) {
@@ -893,7 +1078,7 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.RefreshToken = current.RefreshToken
 			} else {
 				if err := json.Unmarshal([]byte(inputs.RefreshToken), &a.RefreshToken); err != nil {
-					return fmt.Errorf("apps: %s refreshToken invalid JSON", err)
+					return validationError{err: fmt.Errorf("apps: %s refreshToken invalid JSON", err), reason: "malformed_json"}
 				}
 			}
 
@@ -914,6 +1099,19 @@ func updateAppCmd(cli *cli) *cobra.Command {
 
 			if appRedirectionPolicy.IsSet(cmd) {
 				a.RedirectionPolicy = &inputs.RedirectionPolicy
+			}
+
+			if appOrganizationUsage.IsSet(cmd) {
+				a.OrganizationUsage = &inputs.OrganizationUsage
+			}
+
+			if appOrganizationRequireBehavior.IsSet(cmd) {
+				a.OrganizationRequireBehavior = &inputs.OrganizationRequire
+			}
+
+			if appOrganizationDiscoveryMethods.IsSet(cmd) {
+				discoveryMethods := excludeEmptyEntries(inputs.OrganizationDiscovery)
+				a.OrganizationDiscoveryMethods = &discoveryMethods
 			}
 
 			if err := ansi.Waiting(func() error {
@@ -946,8 +1144,65 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appIsFirstParty.RegisterBoolU(cmd, &inputs.IsFirstParty, true)
 	appThirdPartySecurityMode.RegisterStringU(cmd, &inputs.ThirdPartySecurityMode, "")
 	appRedirectionPolicy.RegisterStringU(cmd, &inputs.RedirectionPolicy, "")
+	appOrganizationUsage.RegisterStringU(cmd, &inputs.OrganizationUsage, "")
+	appOrganizationRequireBehavior.RegisterStringU(cmd, &inputs.OrganizationRequire, "")
+	appOrganizationDiscoveryMethods.RegisterStringSliceU(cmd, &inputs.OrganizationDiscovery, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+// persistDefaultAppID records a newly created app as the tenant's default. It is
+// a local convenience only: the app already exists in Auth0, so a failed
+// preference write must never turn a successful create into a failure. It warns
+// and continues.
+func persistDefaultAppID(cli *cli, clientID string) {
+	// Env auth mode writes nothing to disk, so skip the save entirely.
+	if envAuthEnabled(os.Getenv) {
+		return
+	}
+
+	if err := cli.Config.SetDefaultAppIDForTenant(cli.tenant, clientID); err != nil {
+		cli.renderer.Warnf("Application created, but it could not be saved as the default for this tenant: %v", err)
+	}
+}
+
+func createAppFromJSON(cli *cli, cmd *cobra.Command, dataStr string, revealSecrets bool) error {
+	client, err := runJSONWrite[management.Client](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/clients",
+		URI:        cli.api.HTTPClient.URI("clients"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 apps create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create application: %w", err)
+	}
+
+	// Preserve the interactive path's side effect: the created app becomes the
+	// tenant default (best-effort and non-fatal, see persistDefaultAppID).
+	persistDefaultAppID(cli, client.GetClientID())
+
+	cli.renderer.ApplicationCreate(client, revealSecrets)
+	return nil
+}
+
+func updateAppFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string, revealSecrets bool) error {
+	client, err := runJSONWrite[management.Client](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/clients/{id}",
+		URI:        cli.api.HTTPClient.URI("clients", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 apps update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update application with ID %q: %w", id, err)
+	}
+
+	cli.renderer.ApplicationUpdate(client, revealSecrets)
+	return nil
 }
 
 func openAppCmd(cli *cli) *cobra.Command {
@@ -971,9 +1226,7 @@ func openAppCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatAppSettingsPath(inputs.ID))
-
-			return nil
+			return openManageURL(cli, cli.tenant, formatAppSettingsPath(inputs.ID))
 		},
 	}
 
@@ -1131,9 +1384,15 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 			return nil, fmt.Errorf("failed to list applications: %w", err)
 		}
 
-		tenant, err := c.Config.GetTenant(c.tenant)
-		if err != nil {
-			return nil, err
+		// Env auth mode has no saved default app to prioritize; only look one up in
+		// normal mode.
+		var defaultAppID string
+		if !envAuthEnabled(os.Getenv) {
+			tenant, err := c.Config.GetTenant(c.tenant)
+			if err != nil {
+				return nil, err
+			}
+			defaultAppID = tenant.DefaultAppID
 		}
 
 		var priorityOpts, opts pickerOptions
@@ -1147,7 +1406,7 @@ func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOp
 			)
 			option := pickerOption{value: value, label: label}
 
-			if tenant.DefaultAppID == client.GetClientID() {
+			if defaultAppID == client.GetClientID() {
 				priorityOpts = append(priorityOpts, option)
 			} else {
 				opts = append(opts, option)
@@ -1241,8 +1500,6 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
   auth0 apps session-transfer update <app-id>
   auth0 apps session-transfer update <app-id> --can-create-token --json
   auth0 apps session-transfer update <app-id> --can-create-token=true --allowed-auth-methods=cookie,query --enforce-device-binding=ip
-
-  # Delegation (Early Access): impersonation via Session Transfer
   auth0 apps session-transfer update <app-id> --delegation-allow-delegated-access=true --delegation-enforce-device-binding=asn`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -1274,6 +1531,13 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			if current.SessionTransfer.Delegation == nil {
+				current.SessionTransfer.Delegation = &management.SessionTransferDelegation{
+					AllowDelegatedAccess: auth0.Bool(false),
+					EnforceDeviceBinding: auth0.String("ip"),
+				}
+			}
+
 			if err := appSTCanCreateToken.AskBoolU(cmd, &inputs.CanCreateToken, current.SessionTransfer.CanCreateSessionTransferToken); err != nil {
 				return err
 			}
@@ -1284,6 +1548,14 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 			}
 
 			if err := appSTEnforceDeviceBinding.SelectU(cmd, &inputs.EnforceDeviceBinding, []string{"none", "ip", "asn"}, current.SessionTransfer.EnforceDeviceBinding); err != nil {
+				return err
+			}
+
+			if err := appSTDelegationAllowAccess.AskBoolU(cmd, &inputs.DelegationAllowAccess, current.SessionTransfer.Delegation.AllowDelegatedAccess); err != nil {
+				return err
+			}
+
+			if err := appSTDelegationDeviceBinding.SelectU(cmd, &inputs.DelegationDeviceBinding, []string{"ip", "asn"}, current.SessionTransfer.Delegation.EnforceDeviceBinding); err != nil {
 				return err
 			}
 
@@ -1302,16 +1574,17 @@ func appsSessionTransferUpdateCmd(cli *cli) *cobra.Command {
 				st.EnforceDeviceBinding = current.SessionTransfer.EnforceDeviceBinding
 			}
 
-			// Delegation (EA) is sent only when a flag is set, leaving it untouched for
-			// others. The API merges sub-fields, so sending just the changed one is enough.
-			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) {
-				delegation := &management.SessionTransferDelegation{}
+			if appSTDelegationAllowAccess.IsSet(cmd) || appSTDelegationDeviceBinding.IsSet(cmd) || noLocalFlagSet(cmd) {
+				delegation := &management.SessionTransferDelegation{
+					AllowDelegatedAccess: current.SessionTransfer.Delegation.AllowDelegatedAccess,
+					EnforceDeviceBinding: current.SessionTransfer.Delegation.EnforceDeviceBinding,
+				}
 
-				if appSTDelegationAllowAccess.IsSet(cmd) {
+				if appSTDelegationAllowAccess.IsSet(cmd) || noLocalFlagSet(cmd) {
 					delegation.AllowDelegatedAccess = &inputs.DelegationAllowAccess
 				}
 
-				if appSTDelegationDeviceBinding.IsSet(cmd) {
+				if appSTDelegationDeviceBinding.IsSet(cmd) || noLocalFlagSet(cmd) {
 					delegation.EnforceDeviceBinding = &inputs.DelegationDeviceBinding
 				}
 

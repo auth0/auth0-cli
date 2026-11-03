@@ -234,7 +234,7 @@ func assertTerraformMainFileWasGeneratedCorrectly(t *testing.T, outputDIR string
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
-      version = ">= 1.0.0"
+      version = ">= 1.0.0, < 1.58.0"
     }
   }
 }
@@ -486,6 +486,15 @@ func TestTerraformInputs_ParseResourceFetchers(t *testing.T) {
 			},
 			expectedDataFetchers: []resourceDataFetcher{
 				&phoneNotificationTemplateResourceFetcher{apiv3},
+			},
+		},
+		{
+			name: "it can successfully parse resources: auth0_token_exchange_profile",
+			input: terraformInputs{
+				Resources: []string{"auth0_token_exchange_profile"},
+			},
+			expectedDataFetchers: []resourceDataFetcher{
+				&tokenExchangeProfileResourceFetcher{api},
 			},
 		},
 		{

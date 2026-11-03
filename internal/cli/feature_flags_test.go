@@ -3,14 +3,16 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"testing"
 
 	management "github.com/auth0/go-auth0/v3/management"
 	managementcore "github.com/auth0/go-auth0/v3/management/core"
-	"github.com/golang/mock/gomock"
+	"github.com/auth0/go-auth0/v3/management/option"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
@@ -209,6 +211,15 @@ func TestFeatureFlagsCreateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --parameters",
 		},
 		{
+			name: "it returns an error when --description is too short",
+			args: []string{
+				"--name", "dark-mode",
+				"--description", "ab",
+				"--parameters", `{"enabled":{"type":"boolean","value":false}}`,
+			},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name: "it returns an error if the API call fails",
 			args: []string{
 				"--name", "dark-mode",
@@ -281,6 +292,24 @@ func TestFeatureFlagsUpdateCmd(t *testing.T) {
 			name:          "it returns an error when --parameters is invalid JSON",
 			args:          []string{flagID, "--parameters", "not-json"},
 			expectedError: "invalid JSON for --parameters",
+		},
+		{
+			name: "it successfully updates the status",
+			args: []string{flagID, "--status", "active"},
+			apiResponse: &management.UpdateFeatureFlagResponseContent{
+				ID:   flagID,
+				Name: "old-name",
+			},
+		},
+		{
+			name:          "it returns an error when --status is invalid",
+			args:          []string{flagID, "--status", "bogus"},
+			expectedError: `invalid status "bogus": must be one of active, archived`,
+		},
+		{
+			name:          "it returns an error when --description is too short",
+			args:          []string{flagID, "--description", "ab"},
+			expectedError: "--description must be at least 3 characters long",
 		},
 		{
 			name:          "it returns an error if the API call fails",
@@ -401,139 +430,107 @@ func TestFeatureFlagsUpdateCmdSkipsUnchangedParameters(t *testing.T) {
 	assert.ErrorContains(t, err, "nothing to update")
 }
 
+func TestFeatureFlagsUpdateCmdClearsDescription(t *testing.T) {
+	const flagID = "ff_abc123"
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	description := "old description"
+	featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+	featureFlagAPI.EXPECT().
+		Get(gomock.Any(), flagID).
+		Return(&management.GetFeatureFlagResponseContent{ID: flagID, Name: "old-name", Description: &description}, nil)
+
+	// The API rejects an empty description, so clearing it must send null.
+	var sent []byte
+	featureFlagAPI.EXPECT().
+		Update(gomock.Any(), flagID, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, req *management.UpdateFeatureFlagRequestContent, _ ...option.RequestOption) (*management.UpdateFeatureFlagResponseContent, error) {
+			var err error
+			sent, err = json.Marshal(req)
+			return &management.UpdateFeatureFlagResponseContent{ID: flagID, Name: "old-name"}, err
+		})
+
+	cli := &cli{
+		renderer: &display.Renderer{
+			MessageWriter: io.Discard,
+			ResultWriter:  io.Discard,
+		},
+		apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
+	}
+
+	cmd := updateFeatureFlagCmd(cli)
+	cmd.SetArgs([]string{flagID, "--description", ""})
+	err := cmd.Execute()
+
+	assert.NoError(t, err)
+	assert.JSONEq(t, `{"description":null}`, string(sent))
+}
+
 func TestFeatureFlagsDeleteCmd(t *testing.T) {
 	const flagID = "ff_abc123"
 
-	t.Run("it successfully deletes a feature flag with --force", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+	tests := []struct {
+		name          string
+		getErr        error
+		deleteErr     error
+		expectDelete  bool
+		expectedError string
+	}{
+		{
+			name:         "it successfully deletes a feature flag with --force",
+			expectDelete: true,
+		},
+		{
+			// Delete returns 204 for an unknown ID, so the 404 comes from the lookup.
+			name:          "it returns the not-found error for an unknown feature flag",
+			getErr:        errors.New("404 Not Found: feature_flag_not_found"),
+			expectedError: `failed to delete feature flag "ff_abc123": 404 Not Found: feature_flag_not_found`,
+		},
+		{
+			name:          "it returns an error if the delete call fails",
+			deleteErr:     errors.New("500 Internal Server Error"),
+			expectDelete:  true,
+			expectedError: `failed to delete feature flag "ff_abc123": 500 Internal Server Error`,
+		},
+	}
 
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			Delete(gomock.Any(), flagID).
-			Return(nil)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-			force: true,
-		}
+			featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
+			featureFlagAPI.EXPECT().
+				Get(gomock.Any(), flagID).
+				Return(&management.GetFeatureFlagResponseContent{}, test.getErr)
+			if test.expectDelete {
+				featureFlagAPI.EXPECT().
+					Delete(gomock.Any(), flagID).
+					Return(test.deleteErr)
+			}
 
-		cmd := deleteFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID})
-		err := cmd.Execute()
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
+				force: true,
+			}
 
-		assert.NoError(t, err)
-	})
+			cmd := deleteFeatureFlagCmd(cli)
+			cmd.SetArgs([]string{flagID})
+			err := cmd.Execute()
 
-	t.Run("it returns an error if the API call fails", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			Delete(gomock.Any(), flagID).
-			Return(errors.New("500 Internal Server Error"))
-
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-			force: true,
-		}
-
-		cmd := deleteFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID})
-		err := cmd.Execute()
-
-		assert.EqualError(t, err, `failed to delete feature flag "ff_abc123": 500 Internal Server Error`)
-	})
-}
-
-func TestFeatureFlagsStatusCmd(t *testing.T) {
-	const flagID = "ff_abc123"
-
-	t.Run("it successfully sets the status to active", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			UpdateStatus(gomock.Any(), flagID, &management.UpdateFeatureFlagStatusRequestContent{
-				Status: management.FeatureFlagStatusEnum("active"),
-			}).
-			Return(&management.UpdateFeatureFlagStatusResponseContent{}, nil)
-
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-		}
-
-		cmd := statusFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID, "active"})
-		err := cmd.Execute()
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("it successfully archives with --force", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			UpdateStatus(gomock.Any(), flagID, &management.UpdateFeatureFlagStatusRequestContent{
-				Status: management.FeatureFlagStatusEnum("archived"),
-			}).
-			Return(&management.UpdateFeatureFlagStatusResponseContent{}, nil)
-
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-			force: true,
-		}
-
-		cmd := statusFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID, "archived"})
-		err := cmd.Execute()
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("it returns an error if the API call fails", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		featureFlagAPI := mock.NewMockFeatureFlagsAPI(ctrl)
-		featureFlagAPI.EXPECT().
-			UpdateStatus(gomock.Any(), flagID, gomock.Any()).
-			Return(nil, errors.New("400 Bad Request"))
-
-		cli := &cli{
-			renderer: &display.Renderer{
-				MessageWriter: io.Discard,
-				ResultWriter:  io.Discard,
-			},
-			apiv3: &auth0.APIV3{FeatureFlags: featureFlagAPI},
-		}
-
-		cmd := statusFeatureFlagCmd(cli)
-		cmd.SetArgs([]string{flagID, "active"})
-		err := cmd.Execute()
-
-		assert.EqualError(t, err, `failed to set feature flag "ff_abc123" to active: 400 Bad Request`)
-	})
+			if test.expectedError != "" {
+				assert.EqualError(t, err, test.expectedError)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestFeatureFlagPickerOptions(t *testing.T) {
@@ -784,7 +781,7 @@ func TestVariationsCreateCmd(t *testing.T) {
 			args: []string{
 				flagID,
 				"--name", "treatment",
-				"--overrides", `{"color":{"value":"red"}}`,
+				"--overrides", `{"color":"red"}`,
 			},
 			apiResponse: &management.CreateVariationResponseContent{
 				ID:            "vid_new",
@@ -815,11 +812,21 @@ func TestVariationsCreateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --overrides",
 		},
 		{
+			name: "it returns an error when --description is too short",
+			args: []string{
+				flagID,
+				"--name", "treatment",
+				"--description", "ab",
+				"--overrides", `{"color":"red"}`,
+			},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name: "it returns an error if the API call fails",
 			args: []string{
 				flagID,
 				"--name", "treatment",
-				"--overrides", `{"color":{"value":"red"}}`,
+				"--overrides", `{"color":"red"}`,
 			},
 			apiError:      errors.New("400 Bad Request"),
 			expectedError: "failed to create variation: 400 Bad Request",
@@ -888,10 +895,30 @@ func TestVariationsUpdateCmd(t *testing.T) {
 			expectedError: "invalid JSON for --overrides",
 		},
 		{
+			name:          "it returns an error when --description is too short",
+			args:          []string{flagID, varID, "--description", "ab"},
+			expectedError: "--description must be at least 3 characters long",
+		},
+		{
 			name:          "it returns an error if the API call fails",
 			args:          []string{flagID, varID, "--name", "new-treatment"},
 			apiError:      errors.New("500 Internal Server Error"),
 			expectedError: `failed to update variation "vid_001": 500 Internal Server Error`,
+		},
+		{
+			name:        "it successfully adds and changes override keys",
+			args:        []string{flagID, varID, "--overrides", `{"color":"blue","size":2}`},
+			apiResponse: &management.UpdateVariationResponseContent{ID: varID, Name: "old-treatment"},
+		},
+		{
+			name:          "it returns an error when override keys are removed",
+			args:          []string{flagID, varID, "--overrides", `{"size":2}`},
+			expectedError: "override keys can't be removed from an existing variation (color)",
+		},
+		{
+			name:          "it returns an error when overrides are reset to the control",
+			args:          []string{flagID, varID, "--overrides", `{}`},
+			expectedError: "override keys can't be removed from an existing variation (color)",
 		},
 	}
 
@@ -904,7 +931,11 @@ func TestVariationsUpdateCmd(t *testing.T) {
 			// Update reads the current variation first to pre-fill values and diff.
 			variationsAPI.EXPECT().
 				Get(gomock.Any(), flagID, varID).
-				Return(&management.GetVariationResponseContent{ID: varID, Name: "old-treatment"}, nil)
+				Return(&management.GetVariationResponseContent{
+					ID:        varID,
+					Name:      "old-treatment",
+					Overrides: management.VariationOverridesMap{"color": "red"},
+				}, nil)
 			if test.apiResponse != nil || test.apiError != nil {
 				variationsAPI.EXPECT().
 					Update(gomock.Any(), flagID, varID, gomock.Any()).
@@ -969,4 +1000,117 @@ func TestVariationsUpdateCmdRendersFullResponse(t *testing.T) {
 	assert.Contains(t, out, "new-treatment")
 	// FeatureFlagID should be rendered on the update view.
 	assert.Contains(t, out, flagID)
+}
+
+func TestVariationsDeleteCmd(t *testing.T) {
+	const flagID = "ff_abc123"
+
+	tests := []struct {
+		name          string
+		args          []string
+		agentMode     bool
+		gets          map[string]error // Variation ID -> Get result.
+		deletes       map[string]error // Variation ID -> Delete result.
+		expectedError []string
+	}{
+		{
+			name:    "it deletes a single variation",
+			args:    []string{flagID, "var_1", "--force"},
+			deletes: map[string]error{"var_1": nil},
+		},
+		{
+			name:    "it deletes multiple variations",
+			args:    []string{flagID, "var_1", "var_2", "var_3", "--force"},
+			deletes: map[string]error{"var_1": nil, "var_2": nil, "var_3": nil},
+		},
+		{
+			name: "it continues past a failed delete and reports it",
+			args: []string{flagID, "var_1", "var_2", "var_3", "--force"},
+			deletes: map[string]error{
+				"var_1": nil,
+				"var_2": errors.New("500 Internal Server Error"),
+				"var_3": nil,
+			},
+			expectedError: []string{`failed to delete variation "var_2"`, "500 Internal Server Error"},
+		},
+		{
+			// Delete returns 204 for an unknown ID, so the 404 comes from the lookup.
+			name:          "it returns the not-found error for an unknown variation",
+			args:          []string{flagID, "var_missing", "--force"},
+			gets:          map[string]error{"var_missing": errors.New("404 Not Found: variation_not_found")},
+			expectedError: []string{`failed to delete variation "var_missing"`, "variation_not_found"},
+		},
+		{
+			name: "it deletes the known variations and reports the unknown ones",
+			args: []string{flagID, "var_1", "var_missing", "--force"},
+			gets: map[string]error{
+				"var_1":       nil,
+				"var_missing": errors.New("404 Not Found: variation_not_found"),
+			},
+			deletes:       map[string]error{"var_1": nil},
+			expectedError: []string{`failed to delete variation "var_missing"`, "variation_not_found"},
+		},
+		{
+			name:          "it reports the API's not-found error for an unknown feature flag",
+			args:          []string{flagID, "var_1", "--force"},
+			gets:          map[string]error{"var_1": errors.New("404 Not Found: feature_flag_not_found")},
+			expectedError: []string{`failed to delete variation "var_1"`, "feature_flag_not_found"},
+		},
+		{
+			name:          "it requires --force in agent mode",
+			args:          []string{flagID, "var_1"},
+			agentMode:     true,
+			expectedError: []string{errDestructiveNoConfirm.Error()},
+		},
+		{
+			name:      "it deletes in agent mode when --force is set",
+			args:      []string{flagID, "var_1", "--force"},
+			agentMode: true,
+			deletes:   map[string]error{"var_1": nil},
+		},
+		{
+			name:          "it returns an error when no variation ID is given non-interactively",
+			args:          []string{flagID},
+			expectedError: []string{"missing a required argument"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			variationsAPI := mock.NewMockVariationsAPI(ctrl)
+			for id, err := range test.deletes {
+				if _, ok := test.gets[id]; !ok {
+					variationsAPI.EXPECT().Get(gomock.Any(), flagID, id).Return(&management.GetVariationResponseContent{}, nil)
+				}
+				variationsAPI.EXPECT().Delete(gomock.Any(), flagID, id).Return(err)
+			}
+			for id, err := range test.gets {
+				variationsAPI.EXPECT().Get(gomock.Any(), flagID, id).Return(&management.GetVariationResponseContent{}, err)
+			}
+
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				apiv3:     &auth0.APIV3{Variations: variationsAPI},
+				agentMode: test.agentMode,
+			}
+
+			cmd := deleteVariationCmd(cli)
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+
+			if len(test.expectedError) == 0 {
+				assert.NoError(t, err)
+				return
+			}
+			for _, want := range test.expectedError {
+				assert.ErrorContains(t, err, want)
+			}
+		})
+	}
 }

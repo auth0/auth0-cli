@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
 
@@ -21,6 +21,10 @@ type mockManagementError struct {
 
 func (m mockManagementError) Status() int {
 	return m.statusCode
+}
+
+func (m mockManagementError) Code() string {
+	return ""
 }
 
 func TestAPIProvisioningTypeFor(t *testing.T) {

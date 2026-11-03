@@ -169,6 +169,8 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 		Enabled           bool
 		ResultURL         string
 		ResultURLLifetime int
+		Data              string
+		Schema            bool
 	}
 
 	cmd := &cobra.Command{
@@ -190,8 +192,21 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
   auth0 email templates update welcome --enabled=false --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome"
   auth0 email templates update welcome --enabled=true --body "$(cat path/to/body.html)" --from "welcome@example.com" --lifetime 6100 --subject "Welcome" --url "https://example.com"
   auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json
-  auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json-compact`,
+  auth0 email templates update welcome -e=true -b "$(cat path/to/body.html)" -f "welcome@example.com" -l 6100 -s "Welcome" -u "https://example.com" --json-compact
+
+  # Discover the payload schema
+  auth0 email templates update --schema
+  auth0 email templates update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 email templates update welcome --data '{"body":"<html>Welcome!</html>","enabled":true}'
+  auth0 email templates update welcome --data @template.json
+  cat template.json | auth0 email templates update welcome`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/email-templates/{templateName}")
+			}
+
 			if len(args) > 0 {
 				inputs.Template = args[0]
 			} else {
@@ -200,9 +215,17 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateEmailTemplateFromJSON(cli, cmd, inputs.Template, payload)
+			}
+
 			var oldTemplate *management.EmailTemplate
 			templateExists := true
-			err := ansi.Waiting(func() (err error) {
+			err = ansi.Waiting(func() (err error) {
 				oldTemplate, err = cli.api.EmailTemplate.Read(cmd.Context(), apiEmailTemplateFor(inputs.Template))
 				return err
 			})
@@ -300,8 +323,26 @@ func updateEmailTemplateCmd(cli *cli) *cobra.Command {
 	emailTemplateEnabled.RegisterBoolU(cmd, &inputs.Enabled, true)
 	emailTemplateURL.RegisterStringU(cmd, &inputs.ResultURL, "")
 	emailTemplateLifetime.RegisterIntU(cmd, &inputs.ResultURLLifetime, 0)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func updateEmailTemplateFromJSON(cli *cli, cmd *cobra.Command, name, dataStr string) error {
+	email, err := runJSONWrite[management.EmailTemplate](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/email-templates/{templateName}",
+		URI:        cli.api.HTTPClient.URI("email-templates", apiEmailTemplateFor(name)),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 email templates update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update email template %q: %w", name, err)
+	}
+	cli.renderer.EmailTemplateUpdate(email)
+	return nil
 }
 
 func (c *cli) emailTemplatePickerOptions(_ context.Context) (pickerOptions, error) {

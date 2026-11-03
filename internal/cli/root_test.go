@@ -4,13 +4,18 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/iostream"
 )
 
 type testManagementError struct {
@@ -26,6 +31,10 @@ func (m testManagementError) Status() int {
 	return m.status
 }
 
+func (m testManagementError) Code() string {
+	return ""
+}
+
 func TestCommandRequiresAuthentication(t *testing.T) {
 	var testCases = []struct {
 		givenCommand                    string
@@ -37,6 +46,7 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 apps list", true},
 		{"auth0 apps create", true},
 		{"auth0 orgs members list", true},
+		{"auth0 __complete", false},
 		{"auth0 completion", false},
 		{"auth0 help", false},
 		{"auth0 login", false},
@@ -49,6 +59,149 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		t.Run(fmt.Sprintf("TestCase #%d Command: %s", index, testCase.givenCommand), func(t *testing.T) {
 			actualAuth := commandRequiresAuthentication(testCase.givenCommand)
 			assert.Equal(t, testCase.expectedToRequireAuthentication, actualAuth)
+		})
+	}
+}
+
+// TestPersistentPreRunSkipsAuthForSchema verifies --schema skips the auth gate:
+// with an empty HOME only the --schema case passes; without it, auth is required.
+func TestPersistentPreRunSkipsAuthForSchema(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	findCommand := func(t *testing.T, path ...string) (*cobra.Command, *cobra.Command) {
+		t.Helper()
+		testCLI := &cli{renderer: display.NewRenderer()}
+		root := buildRootCmd(testCLI)
+		addSubCommands(root, testCLI)
+		cmd, _, err := root.Find(path)
+		require.NoError(t, err)
+		require.Equal(t, path[len(path)-1], cmd.Name())
+		return root, cmd
+	}
+
+	testCases := [][]string{
+		{"apis", "list"},
+		{"apis", "create"},
+		{"apis", "update"},
+		{"acul", "config", "set"},
+	}
+
+	for _, path := range testCases {
+		t.Run(strings.Join(path, " "), func(t *testing.T) {
+			root, cmd := findCommand(t, path...)
+			require.Error(t, root.PersistentPreRunE(cmd, nil), "auth must be required without --schema")
+
+			root, cmd = findCommand(t, path...)
+			require.NoError(t, cmd.Flags().Set("schema", "true"))
+			require.NoError(t, root.PersistentPreRunE(cmd, nil), "--schema must skip the auth gate")
+		})
+	}
+}
+
+func TestEnforceUnknownSubcommand(t *testing.T) {
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0"}
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		return root
+	}
+
+	t.Run("namespace rejects an unknown subcommand as a usage error", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+
+		err = group.Args(group, []string{"lst"})
+		assert.Error(t, err)
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		// The class is still "usage" for the JSON envelope, but every failure
+		// collapses to the generic exit code for backwards compatibility.
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, exitGeneric, exitCodeForError(err))
+	})
+
+	t.Run("namespace accepts no args and prints help", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		assert.NoError(t, group.Args(group, []string{}))
+		assert.True(t, group.Runnable())
+	})
+
+	t.Run("root rejects an unknown top-level command as a usage error", func(t *testing.T) {
+		root := newTree()
+		assert.Error(t, root.Args(root, []string{"bogus"}))
+		assert.Equal(t, exitGeneric, exitCodeForError(root.Args(root, []string{"bogus"})))
+	})
+
+	t.Run("does not override a runnable leaf command", func(t *testing.T) {
+		leaf, _, err := newTree().Find([]string{"actions", "list"})
+		assert.NoError(t, err)
+		assert.Nil(t, leaf.Args)
+	})
+
+	t.Run("namespace still rejects unknown flags", func(t *testing.T) {
+		group, _, err := newTree().Find([]string{"actions"})
+		assert.NoError(t, err)
+		// Whitelisting unknown flags would let `auth0 actions --bogus` (and even
+		// `auth0 actions --bogus list`, which swallows the subcommand) print help
+		// and exit 0. The namespace must keep rejecting unknown flags so they
+		// surface as a usage error with a non-zero exit.
+		assert.False(t, group.FParseErrWhitelist.UnknownFlags)
+	})
+}
+
+func TestWrapFlagError(t *testing.T) {
+	// Drive real command execution so wrapFlagError sees exactly what pflag
+	// leaves behind (the leftover positional, if any) at flag-error time.
+	newTree := func() *cobra.Command {
+		root := &cobra.Command{Use: "auth0", SilenceUsage: true, SilenceErrors: true}
+		root.PersistentFlags().Bool("debug", false, "")
+		group := &cobra.Command{Use: "actions"}
+		leaf := &cobra.Command{Use: "list", RunE: func(*cobra.Command, []string) error { return nil }}
+		group.AddCommand(leaf)
+		root.AddCommand(group)
+		enforceUnknownSubcommand(root)
+		root.SetFlagErrorFunc(wrapFlagError)
+		return root
+	}
+
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{
+			name:    "mistyped subcommand plus unknown flag reports both",
+			args:    []string{"actions", "lst", "--bogus"},
+			wantErr: `unknown command "lst" for "auth0 actions" (also: unknown flag: --bogus)`,
+		},
+		{
+			name:    "flag before the positional reports only the flag",
+			args:    []string{"actions", "--bogus", "lst"},
+			wantErr: "unknown flag: --bogus",
+		},
+		{
+			name:    "unknown flag with no positional reports only the flag",
+			args:    []string{"actions", "--bogus"},
+			wantErr: "unknown flag: --bogus",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := newTree()
+			root.SetArgs(test.args)
+			err := root.Execute()
+			assert.EqualError(t, err, test.wantErr)
+
+			var usageErr usageError
+			assert.True(t, errors.As(err, &usageErr))
+			assert.Equal(t, "usage", errorClass(err))
+			assert.Equal(t, exitGeneric, exitCodeForError(err))
 		})
 	}
 }
@@ -100,6 +253,37 @@ func TestClassifyCommandFailure(t *testing.T) {
 			props := classifyCommandFailure(err)
 			assert.Equal(t, "auth", props["error_class"])
 		}
+	})
+
+	t.Run("emits the finer error_reason alongside error_class", func(t *testing.T) {
+		props := classifyCommandFailure(config.ErrInvalidToken)
+		assert.Equal(t, "auth", props["error_class"])
+		assert.Equal(t, "session_expired", props["error_reason"])
+	})
+}
+
+func TestClassifyRequiredFlagError(t *testing.T) {
+	t.Run("wraps cobra's missing-required-flag error as usage/required_flag", func(t *testing.T) {
+		err := classifyRequiredFlagError(errors.New(`required flag(s) "client-id" not set`))
+
+		var usageErr usageError
+		assert.True(t, errors.As(err, &usageErr))
+		assert.Equal(t, "usage", errorClass(err))
+		assert.Equal(t, "required_flag", errorReason(err))
+	})
+
+	t.Run("passes a nil error through", func(t *testing.T) {
+		assert.NoError(t, classifyRequiredFlagError(nil))
+	})
+
+	t.Run("leaves an unrelated error unwrapped", func(t *testing.T) {
+		err := errors.New("something else")
+		assert.Same(t, err, classifyRequiredFlagError(err))
+	})
+
+	t.Run("does not double-wrap an already classified usage error", func(t *testing.T) {
+		original := usageError{err: errors.New("unknown flag: --bogus")}
+		assert.Equal(t, original, classifyRequiredFlagError(original))
 	})
 }
 
@@ -178,6 +362,74 @@ func TestIsAPICommand(t *testing.T) {
 	}
 }
 
+func TestCommandTrackingProperties(t *testing.T) {
+	t.Run("includes tenant domain when authenticated", func(t *testing.T) {
+		c := &cli{tenant: "example.us.auth0.com", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "example.us.auth0.com", props["tenant"])
+	})
+
+	t.Run("includes empty tenant when unauthenticated", func(t *testing.T) {
+		c := &cli{tenant: "", renderer: &display.Renderer{}}
+		props := commandTrackingProperties(c)
+		assert.Equal(t, "", props["tenant"])
+	})
+}
+
+func TestLoginTrackingProperties(t *testing.T) {
+	tests := []struct {
+		name   string
+		ciEnv  string
+		wantCI string
+	}{
+		{"outside CI", "", "false"},
+		{"inside CI", "true", "true"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, envVar := range ciEnvironmentVariables {
+				t.Setenv(envVar, "")
+			}
+			t.Setenv("CI", test.ciEnv)
+			setNonTerminalIO(t)
+
+			props := loginTrackingProperties(&cli{detectedAgent: "claude-code"}, "example.us.auth0.com")
+
+			assert.Equal(t, map[string]string{
+				"tenant":       "example.us.auth0.com",
+				"ci":           test.wantCI,
+				"agent_client": "claude-code",
+				"interactive":  "false",
+			}, props)
+		})
+	}
+}
+
+func TestLoginAndCommandTrackingPropertiesShareContext(t *testing.T) {
+	setNonTerminalIO(t)
+	c := &cli{detectedAgent: "cursor", tenant: "example.us.auth0.com", renderer: &display.Renderer{}}
+
+	login := loginTrackingProperties(c, "example.us.auth0.com")
+	command := commandTrackingProperties(c)
+
+	for _, key := range []string{"interactive", "ci", "agent_client", "tenant"} {
+		assert.Equal(t, command[key], login[key], key)
+	}
+}
+
+// setNonTerminalIO points stdin/stdout at regular files so interactive is "false" regardless of the test runner's TTY.
+func setNonTerminalIO(t *testing.T) {
+	t.Helper()
+	input, output := iostream.Input, iostream.Output
+	t.Cleanup(func() { iostream.Input, iostream.Output = input, output })
+
+	file, err := os.CreateTemp(t.TempDir(), "io")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = file.Close() })
+	iostream.Input, iostream.Output = file, file
+}
+
 func TestMergeProperties(t *testing.T) {
 	base := map[string]string{"interactive": "true", "success": "true"}
 	override := map[string]string{"success": "false", "error_class": "auth"}
@@ -186,4 +438,60 @@ func TestMergeProperties(t *testing.T) {
 	assert.Equal(t, "true", merged["interactive"])
 	assert.Equal(t, "false", merged["success"])
 	assert.Equal(t, "auth", merged["error_class"])
+}
+
+func TestResolveAgentMode(t *testing.T) {
+	// Precedence: an explicit --agent-mode flag in args > AUTH0_AGENT_MODE > detection.
+	tests := []struct {
+		name     string
+		env      string
+		args     []string
+		detected string
+		expected bool
+	}{
+		{name: "bare flag wins over env false", args: []string{"--agent-mode"}, env: "false", detected: "human", expected: true},
+		{name: "flag=false wins over env true and detection", args: []string{"--agent-mode=false"}, env: "true", detected: "claude-code", expected: false},
+		{name: "flag=true enables", args: []string{"--agent-mode=true"}, detected: "human", expected: true},
+		{name: "unparseable flag falls through to env", args: []string{"--agent-mode=maybe"}, env: "1", detected: "human", expected: true},
+		{name: "env truthy when no flag", env: "1", detected: "human", expected: true},
+		{name: "env false disables even when detected", env: "false", detected: "claude-code", expected: false},
+		{name: "detected agent when no flag or env", detected: "claude-code", expected: true},
+		{name: "human is not agent mode", detected: "human", expected: false},
+		{name: "unknown is not agent mode", detected: "unknown", expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv(agentModeEnvVar, test.env)
+			assert.Equal(t, test.expected, resolveAgentMode(test.detected, test.args))
+		})
+	}
+}
+
+func TestApplyAgentModeDefaults(t *testing.T) {
+	t.Run("disabled sets nothing", func(t *testing.T) {
+		c := &cli{agentMode: false}
+		applyAgentModeDefaults(c, &cobra.Command{Use: "list"})
+		assert.False(t, c.json)
+		assert.False(t, c.noInput)
+		assert.False(t, c.noColor)
+	})
+
+	t.Run("enabled sets json/no-input/no-color", func(t *testing.T) {
+		c := &cli{agentMode: true}
+		applyAgentModeDefaults(c, &cobra.Command{Use: "list"})
+		assert.True(t, c.json)
+		assert.True(t, c.noInput)
+		assert.True(t, c.noColor)
+	})
+
+	t.Run("explicit output flag is not overridden", func(t *testing.T) {
+		cmd := &cobra.Command{Use: "list"}
+		cmd.Flags().Bool("csv", false, "")
+		_ = cmd.Flags().Set("csv", "true")
+
+		c := &cli{agentMode: true}
+		applyAgentModeDefaults(c, cmd)
+		assert.False(t, c.json) // JSON not forced because --csv was explicit.
+	})
 }

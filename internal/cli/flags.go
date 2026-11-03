@@ -137,6 +137,14 @@ func (f *Flag) RegisterStringSliceU(cmd *cobra.Command, value *[]string, default
 	registerStringSlice(cmd, f, value, defaultValue, true)
 }
 
+func (f *Flag) RegisterStringArray(cmd *cobra.Command, value *[]string, defaultValue []string) {
+	registerStringArray(cmd, f, value, defaultValue, false)
+}
+
+func (f *Flag) RegisterStringArrayU(cmd *cobra.Command, value *[]string, defaultValue []string) {
+	registerStringArray(cmd, f, value, defaultValue, true)
+}
+
 func (f *Flag) RegisterStringMap(cmd *cobra.Command, value *map[string]string, defaultValue map[string]string) {
 	registerStringMap(cmd, f, value, defaultValue, false)
 }
@@ -325,6 +333,24 @@ func registerStringSlice(cmd *cobra.Command, f *Flag, value *[]string, defaultVa
 	}
 }
 
+func registerStringArray(cmd *cobra.Command, f *Flag, value *[]string, defaultValue []string, isUpdate bool) {
+	cmd.Flags().StringArrayVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
+
+	// Set up flag aliases if specified.
+	if len(f.AlsoKnownAs) > 0 {
+		flag := cmd.Flags().Lookup(f.LongForm)
+		if flag != nil {
+			for _, alias := range f.AlsoKnownAs {
+				cmd.Flags().StringArrayVar(value, alias, defaultValue, f.Help)
+			}
+		}
+	}
+
+	if err := markFlagRequired(cmd, f, isUpdate); err != nil {
+		panic(auth0.Error(err, "failed to register string array flag"))
+	}
+}
+
 func registerStringMap(cmd *cobra.Command, f *Flag, value *map[string]string, defaultValue map[string]string, isUpdate bool) {
 	cmd.Flags().StringToStringVarP(value, f.LongForm, f.ShortForm, defaultValue, f.Help)
 
@@ -407,7 +433,7 @@ func askIntSlice(i commandInput, value *[]int, defaultValue *[]int) error {
 		}
 		v := 0
 		if _, err := fmt.Sscanf(part, "%d", &v); err != nil {
-			return fmt.Errorf("invalid integer value: %s", part)
+			return usageError{err: fmt.Errorf("invalid integer value: %s", part), reason: "invalid_flag_value"}
 		}
 		result = append(result, v)
 	}

@@ -9,42 +9,70 @@ import (
 	"sync"
 )
 
-// agentEnvEntry maps an env var to a canonical agent_client name.
-// The requiredPrefix field restricts matching to values with that prefix (case-insensitive).
-type agentEnvEntry struct {
+// agentClientUnknownAgent is returned when an agent was detected but could not be named.
+// It is distinct from "unknown", which means no invoker signal was found at all.
+const agentClientUnknownAgent = "unknown-agent"
+
+// envCondition is one requirement on an env var: presence by default, an exact value
+// via requiredValue, or a case-insensitive prefix via requiredPrefix.
+type envCondition struct {
 	envVar         string
+	requiredValue  string
 	requiredPrefix string
-	agentName      string
+}
+
+// agentEnvEntry maps a set of AND-ed env conditions to a canonical agent_client name.
+type agentEnvEntry struct {
+	conditions []envCondition
+	agentName  string
+}
+
+// matches reports whether every condition holds. An entry with no conditions never matches.
+func (e agentEnvEntry) matches(getEnv func(string) string) bool {
+	for _, cond := range e.conditions {
+		raw := strings.TrimSpace(getEnv(cond.envVar))
+		switch {
+		case raw == "":
+			return false
+		case cond.requiredValue != "" && raw != cond.requiredValue:
+			return false
+		case cond.requiredPrefix != "" && !strings.HasPrefix(strings.ToLower(raw), strings.ToLower(cond.requiredPrefix)):
+			return false
+		}
+	}
+
+	return len(e.conditions) > 0
 }
 
 // agentEnvTable is the ordered allow-list of agent env signals. First match wins.
 var agentEnvTable = []agentEnvEntry{
 	// Claude Code.
-	{envVar: "CLAUDECODE", agentName: "claude-code"},
-	{envVar: "CLAUDE_CODE_SESSION_ID", agentName: "claude-code"},
-	{envVar: "CLAUDE_CODE_ENTRYPOINT", agentName: "claude-code"},
-	{envVar: "AI_AGENT", requiredPrefix: "claude-code", agentName: "claude-code"},
-	// Cursor.
-	{envVar: "CURSOR_AGENT", agentName: "cursor"},
-	{envVar: "CURSOR_TRACE_ID", agentName: "cursor"},
-	{envVar: "CURSOR_CONVERSATION_ID", agentName: "cursor"},
+	{conditions: []envCondition{{envVar: "CLAUDECODE"}}, agentName: "claude-code"},
+	{conditions: []envCondition{{envVar: "CLAUDE_CODE_SESSION_ID"}}, agentName: "claude-code"},
+	{conditions: []envCondition{{envVar: "CLAUDE_CODE_ENTRYPOINT"}}, agentName: "claude-code"},
+	{conditions: []envCondition{{envVar: "AI_AGENT", requiredPrefix: "claude-code"}}, agentName: "claude-code"},
+	// Cursor — the agent, not a human in its terminal. CURSOR_TRACE_ID is set for every
+	// Cursor terminal, so we key on the agent-execution markers instead: CURSOR_AGENT
+	// (headless cursor-agent CLI) and CURSOR_EXTENSION_HOST_ROLE=agent-exec (in-IDE agent).
+	{conditions: []envCondition{{envVar: "CURSOR_AGENT"}}, agentName: "cursor"},
+	{conditions: []envCondition{{envVar: "CURSOR_EXTENSION_HOST_ROLE", requiredValue: "agent-exec"}}, agentName: "cursor"},
 	// Codex.
-	{envVar: "CODEX_THREAD_ID", agentName: "codex"},
+	{conditions: []envCondition{{envVar: "CODEX_THREAD_ID"}}, agentName: "codex"},
 	// Gemini-cli.
-	{envVar: "GEMINI_CLI_VERSION", agentName: "gemini"},
+	{conditions: []envCondition{{envVar: "GEMINI_CLI_VERSION"}}, agentName: "gemini"},
 	// AntiGravity.
-	{envVar: "ANTIGRAVITY_CLI_ALIAS", agentName: "antigravity"},
-	{envVar: "ANTIGRAVITY_CONVERSATION_ID", agentName: "antigravity"},
+	{conditions: []envCondition{{envVar: "ANTIGRAVITY_CLI_ALIAS"}}, agentName: "antigravity"},
+	{conditions: []envCondition{{envVar: "ANTIGRAVITY_CONVERSATION_ID"}}, agentName: "antigravity"},
 	// AI_AGENT catch-all (must be last).
-	{envVar: "AI_AGENT", agentName: "unknown-agent"},
+	{conditions: []envCondition{{envVar: "AI_AGENT"}}, agentName: agentClientUnknownAgent},
 }
 
 // agentProcessNames maps parent process names (partial, lower-cased) to agent names.
-// Covers both AI agent binaries and CLI surfaces that spawn auth0-cli as a subprocess.
+// Cursor is omitted: its app is the ancestor of both a human terminal and the agent,
+// so the process name cannot tell them apart; the env markers above handle Cursor.
 var agentProcessNames = map[string]string{
 	// AI agents.
 	"claude":  "claude-code",
-	"cursor":  "cursor",
 	"copilot": "github-copilot",
 	"codex":   "codex",
 	"gemini":  "gemini",
@@ -82,18 +110,9 @@ func detectAgentWithEnv(
 
 	// Tier 2: Env allow-list.
 	for _, entry := range agentEnvTable {
-		raw := strings.TrimSpace(getEnv(entry.envVar))
-		if raw == "" {
-			continue
+		if entry.matches(getEnv) {
+			return entry.agentName
 		}
-
-		if entry.requiredPrefix != "" {
-			if !strings.HasPrefix(strings.ToLower(raw), strings.ToLower(entry.requiredPrefix)) {
-				continue
-			}
-		}
-
-		return entry.agentName
 	}
 
 	// Tier 2b: Wildcard sweep for unknown future agents. Catches the shared
@@ -106,15 +125,14 @@ func detectAgentWithEnv(
 		}
 
 		upperKey := strings.ToUpper(key)
-		// Unlisted CURSOR_* infra vars share generic agent suffixes; skip them here
-		// so they don't false-positive as unknown-agent. Named CURSOR_* entries are
-		// matched in Tier 2 above.
+		// Skip CURSOR_* vars: they're set for every Cursor terminal, human included, so
+		// they must not trip the sweep. The Cursor agent is matched in Tier 2 above.
 		if strings.HasPrefix(upperKey, "CURSOR_") {
 			continue
 		}
 		for _, suffix := range agentEnvSuffixes {
 			if strings.HasSuffix(upperKey, suffix) {
-				return "unknown-agent"
+				return agentClientUnknownAgent
 			}
 		}
 	}
@@ -224,6 +242,10 @@ var knownAgentClients = []string{
 	"antigravity",
 }
 
+// maxAgentClientNameLength caps an unrecognized AUTH0_CLI_CLIENT value before it
+// is prefixed with "client-".
+const maxAgentClientNameLength = 64
+
 // sanitizeAgentName restricts AUTH0_CLI_CLIENT to the allow-list; unknown values are prefixed with "client-".
 func sanitizeAgentName(raw string) string {
 	lower := strings.ToLower(strings.TrimSpace(raw))
@@ -232,6 +254,12 @@ func sanitizeAgentName(raw string) string {
 		if lower == name {
 			return name
 		}
+	}
+
+	// The name is sent in a header on every request, so cap it to keep an
+	// oversized AUTH0_CLI_CLIENT value from bloating or breaking requests.
+	if runes := []rune(lower); len(runes) > maxAgentClientNameLength {
+		lower = string(runes[:maxAgentClientNameLength])
 	}
 
 	return "client-" + lower
