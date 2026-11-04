@@ -1,0 +1,59 @@
+config:
+  inherit-env: true
+  retries: 1
+
+tests:
+  001 - users refresh-tokens list empty:
+    command: auth0 users refresh-tokens list $(./test/integration/scripts/get-user-id.sh)
+    exit-code: 0
+    stderr:
+      contains:
+        - No refresh tokens available. This user has no refresh tokens
+
+  002 - users refresh-tokens list empty (json):
+    command: auth0 users refresh-tokens list $(./test/integration/scripts/get-user-id.sh) --json
+    exit-code: 0
+    stdout:
+      exactly: "[]"
+
+  003 - users refresh-tokens list with invalid number:
+    command: auth0 users refresh-tokens list $(./test/integration/scripts/get-user-id.sh) --number 1001
+    exit-code: 1
+    stderr:
+      contains:
+        - Number flag invalid, please pass a number between 1 and 1000
+
+  004 - refresh-tokens show not found:
+    command: auth0 refresh-tokens show dcr_doesnotexist
+    exit-code: 1
+    stderr:
+      contains:
+        - Failed to read refresh token with ID "dcr_doesnotexist"
+
+  005 - refresh-tokens revoke rejects client-id without user-id:
+    command: auth0 refresh-tokens revoke --client-id some-client --force
+    exit-code: 1
+    stderr:
+      contains:
+        - "--client-id requires --user-id"
+
+  006 - refresh-tokens revoke rejects audience without client-id:
+    command: auth0 refresh-tokens revoke --user-id some-user --audience https://api --force
+    exit-code: 1
+    stderr:
+      contains:
+        - "--audience requires --user-id and --client-id"
+
+  007 - refresh-tokens revoke rejects token id together with user-id:
+    command: auth0 refresh-tokens revoke rt_1 --user-id some-user --force
+    exit-code: 1
+    stderr:
+      contains:
+        - either a token id or --user-id, not both
+
+  008 - users refresh-tokens list rejects json and csv together:
+    command: auth0 users refresh-tokens list $(./test/integration/scripts/get-user-id.sh) --json --csv
+    exit-code: 1
+    stderr:
+      contains:
+        - "any flags in the group [json json-compact csv] are set none of the others can be"

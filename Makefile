@@ -54,13 +54,10 @@ deps: ## Download dependencies
 	${call print, "Downloading dependencies"}
 	@go mod vendor -v
 
-$(GO_BIN)/mockgen:
-	${call print, "Installing mockgen"}
-	@go install -v github.com/golang/mock/mockgen@latest
 
 $(GO_BIN)/golangci-lint:
 	${call print, "Installing golangci-lint"}
-	@go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.6
+	@go install -v github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
 
 $(GO_BIN)/govulncheck:
 	${call print, "Installing go vulnerability checker"}
@@ -166,7 +163,7 @@ test-unit: ## Run unit tests
 	${call print, "Running unit tests"}
 	@go test -v -race ${GO_PACKAGES} -coverprofile="coverage-unit-tests.out"
 
-test-integration: install-with-cover $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`
+test-integration: install-with-cover $(GO_BIN)/auth0 $(GO_BIN)/commander ## Run integration tests. To run a specific test pass the FILTER var. Usage: `make test-integration FILTER="attack protection"`. To run a single suite file pass the FILE var. Usage: `make test-integration FILE="./test/integration/forms-test-cases.yaml"`
 	${call print, "Running integration tests"}
 	@mkdir -p "coverage"
 	@PATH=$(GO_BIN):$$PATH \

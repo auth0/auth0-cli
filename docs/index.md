@@ -77,18 +77,32 @@ There are two ways to authenticate:
 {: .warning }
 Authenticating as a user is not supported for **private cloud** tenants. Instead, those users should authenticate with client credentials.
 
+## Discovering and Scripting Commands
+
+Run `auth0 commands` to see every command in a tree, or `auth0 commands --flat` for a flat list that is easy to scan. Add `--json` (optionally with `--detailed`) for a machine-readable representation.
+
+The help for any command can also be emitted as JSON by combining `--help` with `--json`, for example `auth0 apps create --help --json`. Setting the `AUTH0_AGENT_MODE=1` environment variable makes help emit JSON without needing to pass `--json`, which is convenient for scripts and AI agents.
+
 ## Available Commands
 
 - [auth0 actions](auth0_actions.md) - Manage resources for actions
 - [auth0 acul](auth0_acul.md) - Advanced Customization the Universal Login experience
+- [auth0 agent](auth0_agent.md) - Manage Auth0 AI capabilities
 - [auth0 api](auth0_api.md) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
 - [auth0 apps](auth0_apps.md) - Manage resources for applications
+- [auth0 client-grants](auth0_client-grants.md) - Manage client grants
+- [auth0 commands](auth0_commands.md) - Discover every CLI command in one place, for humans and AI agents
 - [auth0 completion](auth0_completion.md) - Setup autocomplete features for this CLI on your terminal
+- [auth0 connections](auth0_connections.md) - Manage resources for connections
+- [auth0 docs](auth0_docs.md) - Search the Auth0 documentation
 - [auth0 domains](auth0_domains.md) - Manage custom domains
 - [auth0 email](auth0_email.md) - Manage email settings and configure email providers
 - [auth0 event-streams](auth0_event-streams.md) - Manage Event Stream
 - [auth0 experimentation](auth0_experimentation.md) - Manage Experiment Center resources
+- [auth0 flows](auth0_flows.md) - Manage Flows
+- [auth0 forms](auth0_forms.md) - Manage Forms
+- [auth0 guardian](auth0_guardian.md) - Manage multi-factor authentication (Guardian)
 - [auth0 login](auth0_login.md) - Authenticate the Auth0 CLI
 - [auth0 logout](auth0_logout.md) - Log out of a tenant's session
 - [auth0 logs](auth0_logs.md) - View tenant logs
@@ -97,8 +111,10 @@ Authenticating as a user is not supported for **private cloud** tenants. Instead
 - [auth0 phone](auth0_phone.md) - Manage phone providers
 - [auth0 protection](auth0_protection.md) - Manage resources for attack protection
 - [auth0 quickstarts](auth0_quickstarts.md) - Quickstart support for getting bootstrapped
+- [auth0 refresh-tokens](auth0_refresh-tokens.md) - Manage resources for refresh tokens
 - [auth0 roles](auth0_roles.md) - Manage resources for roles
 - [auth0 rules](auth0_rules.md) - Manage resources for rules
+- [auth0 sessions](auth0_sessions.md) - Manage resources for sessions
 - [auth0 tenant-settings](auth0_tenant-settings.md) - Manage tenant settings
 - [auth0 tenants](auth0_tenants.md) - Manage configured tenants
 - [auth0 terraform](auth0_terraform.md) - Manage terraform configuration for your Auth0 Tenant

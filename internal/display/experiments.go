@@ -2,6 +2,7 @@ package display
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,7 +21,12 @@ type experimentView struct {
 	AuthFlow           string
 	AllocationStrategy string
 	Allocations        string
+	DefaultConfig      string
+	Levels             string
+	CurrentLevel       string
+	EditableFields     string
 	StartedAt          string
+	EndedAt            string
 	CreatedAt          string
 	UpdatedAt          string
 	raw                interface{}
@@ -47,11 +53,26 @@ func (v *experimentView) KeyValues() [][]string {
 	if v.Description != "" {
 		kvs = append(kvs, []string{"DESCRIPTION", v.Description})
 	}
+	if v.DefaultConfig != "" {
+		kvs = append(kvs, []string{"DEFAULT CONFIG", v.DefaultConfig})
+	}
 	if v.Allocations != "" {
 		kvs = append(kvs, []string{"ALLOCATIONS", v.Allocations})
 	}
+	if v.Levels != "" {
+		kvs = append(kvs, []string{"RAMP LEVELS", v.Levels})
+	}
+	if v.CurrentLevel != "" {
+		kvs = append(kvs, []string{"CURRENT LEVEL", v.CurrentLevel})
+	}
+	if v.EditableFields != "" {
+		kvs = append(kvs, []string{"EDITABLE FIELDS", v.EditableFields})
+	}
 	if v.StartedAt != "" {
 		kvs = append(kvs, []string{"STARTED", v.StartedAt})
+	}
+	if v.EndedAt != "" {
+		kvs = append(kvs, []string{"ENDED", v.EndedAt})
 	}
 	kvs = append(kvs,
 		[]string{"CREATED", v.CreatedAt},
@@ -106,6 +127,35 @@ func formatAllocations(allocations []*management.AllocationItem) string {
 	return strings.Join(parts, " / ")
 }
 
+func formatLevels(levels []int) string {
+	if len(levels) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(levels))
+	for _, l := range levels {
+		parts = append(parts, fmt.Sprintf("%d%%", l))
+	}
+	return strings.Join(parts, " → ")
+}
+
+func formatCurrentLevel(level *int) string {
+	if level == nil {
+		return ""
+	}
+	return strconv.Itoa(*level) + "%"
+}
+
+func formatDefaultConfig(c *management.DefaultConfigEnum) string {
+	if c == nil {
+		return ""
+	}
+	return string(*c)
+}
+
+func formatEditableFields(fields []string) string {
+	return strings.Join(fields, ", ")
+}
+
 func optionalTimeAgo(t *time.Time) string {
 	if t == nil {
 		return ""
@@ -124,7 +174,12 @@ func makeExperimentViewFromListItem(e *management.ExperimentListItem) *experimen
 		AuthFlow:           e.GetAuthenticationFlow(),
 		AllocationStrategy: string(e.GetAllocationStrategy()),
 		Allocations:        formatAllocations(e.GetAllocations()),
+		DefaultConfig:      formatDefaultConfig(e.DefaultConfig),
+		Levels:             formatLevels(e.GetLevels()),
+		CurrentLevel:       formatCurrentLevel(e.CurrentLevel),
+		EditableFields:     formatEditableFields(e.GetEditableFields()),
 		StartedAt:          optionalTimeAgo(e.StartedAt),
+		EndedAt:            optionalTimeAgo(e.EndedAt),
 		CreatedAt:          timeAgo(e.GetCreatedAt()),
 		UpdatedAt:          timeAgo(e.GetUpdatedAt()),
 		raw:                e,
@@ -142,7 +197,12 @@ func makeExperimentViewFromGet(e *management.GetExperimentResponseContent) *expe
 		AuthFlow:           e.GetAuthenticationFlow(),
 		AllocationStrategy: string(e.GetAllocationStrategy()),
 		Allocations:        formatAllocations(e.GetAllocations()),
+		DefaultConfig:      formatDefaultConfig(e.DefaultConfig),
+		Levels:             formatLevels(e.GetLevels()),
+		CurrentLevel:       formatCurrentLevel(e.CurrentLevel),
+		EditableFields:     formatEditableFields(e.GetEditableFields()),
 		StartedAt:          optionalTimeAgo(e.StartedAt),
+		EndedAt:            optionalTimeAgo(e.EndedAt),
 		CreatedAt:          timeAgo(e.GetCreatedAt()),
 		UpdatedAt:          timeAgo(e.GetUpdatedAt()),
 		raw:                e,
@@ -160,20 +220,38 @@ func makeExperimentViewFromCreate(e *management.CreateExperimentResponseContent)
 		AuthFlow:           e.GetAuthenticationFlow(),
 		AllocationStrategy: string(e.GetAllocationStrategy()),
 		Allocations:        formatAllocations(e.GetAllocations()),
+		DefaultConfig:      formatDefaultConfig(e.DefaultConfig),
+		Levels:             formatLevels(e.GetLevels()),
+		CurrentLevel:       formatCurrentLevel(e.CurrentLevel),
+		EditableFields:     formatEditableFields(e.GetEditableFields()),
+		StartedAt:          optionalTimeAgo(e.StartedAt),
+		EndedAt:            optionalTimeAgo(e.EndedAt),
 		CreatedAt:          timeAgo(e.GetCreatedAt()),
 		UpdatedAt:          timeAgo(e.GetUpdatedAt()),
 		raw:                e,
 	}
 }
 
-func makeExperimentViewFromStatusUpdate(e *management.UpdateExperimentStatusResponseContent) *experimentView {
+func makeExperimentViewFromUpdate(e *management.UpdateExperimentResponseContent) *experimentView {
 	return &experimentView{
-		ID:        e.GetID(),
-		Name:      e.GetName(),
-		Status:    experimentStatus(string(e.GetStatus())),
-		Valid:     boolean(e.GetIsValid()),
-		UpdatedAt: timeAgo(e.GetUpdatedAt()),
-		raw:       e,
+		ID:                 e.GetID(),
+		Name:               e.GetName(),
+		Description:        e.GetDescription(),
+		Status:             experimentStatus(string(e.GetStatus())),
+		Valid:              boolean(e.GetIsValid()),
+		FeatureFlagID:      e.GetFeatureFlagID(),
+		AuthFlow:           e.GetAuthenticationFlow(),
+		AllocationStrategy: string(e.GetAllocationStrategy()),
+		Allocations:        formatAllocations(e.GetAllocations()),
+		DefaultConfig:      formatDefaultConfig(e.DefaultConfig),
+		Levels:             formatLevels(e.GetLevels()),
+		CurrentLevel:       formatCurrentLevel(e.CurrentLevel),
+		EditableFields:     formatEditableFields(e.GetEditableFields()),
+		StartedAt:          optionalTimeAgo(e.StartedAt),
+		EndedAt:            optionalTimeAgo(e.EndedAt),
+		CreatedAt:          timeAgo(e.GetCreatedAt()),
+		UpdatedAt:          timeAgo(e.GetUpdatedAt()),
+		raw:                e,
 	}
 }
 
@@ -205,38 +283,31 @@ func (r *Renderer) ExperimentCreate(e *management.CreateExperimentResponseConten
 
 func (r *Renderer) ExperimentUpdate(e *management.UpdateExperimentResponseContent) error {
 	r.Heading("experiment updated")
-	view := &experimentView{
-		ID:                 e.GetID(),
-		Name:               e.GetName(),
-		Description:        e.GetDescription(),
-		Status:             experimentStatus(string(e.GetStatus())),
-		Valid:              boolean(e.GetIsValid()),
-		FeatureFlagID:      e.GetFeatureFlagID(),
-		AuthFlow:           e.GetAuthenticationFlow(),
-		AllocationStrategy: string(e.GetAllocationStrategy()),
-		Allocations:        formatAllocations(e.GetAllocations()),
-		StartedAt:          optionalTimeAgo(e.StartedAt),
-		CreatedAt:          timeAgo(e.GetCreatedAt()),
-		UpdatedAt:          timeAgo(e.GetUpdatedAt()),
-		raw:                e,
-	}
-	r.Result(view)
+	r.Result(makeExperimentViewFromUpdate(e))
 	return nil
 }
 
-func (r *Renderer) ExperimentStatusUpdate(e *management.UpdateExperimentStatusResponseContent) error {
-	r.Heading(fmt.Sprintf("experiment %s", strings.ToLower(string(e.GetStatus()))))
-	r.Result(makeExperimentViewFromStatusUpdate(e))
-	r.Newline()
-	switch e.GetStatus() {
-	case "active":
-		r.Infof("Experiment is now running. To pause it, run: auth0 experimentation experiments status %s paused", e.GetID())
-	case "paused":
-		r.Infof("Experiment paused. To resume, run: auth0 experimentation experiments status %s active", e.GetID())
-	case "completed":
-		r.Infof("Experiment completed. To archive it, run: auth0 experimentation experiments status %s archived", e.GetID())
+// experimentAdvanceRampView renders the advance-ramp result.
+type experimentAdvanceRampView struct {
+	result *management.AdvanceRampResponseContent
+}
+
+func (v *experimentAdvanceRampView) AsTableHeader() []string { return nil }
+func (v *experimentAdvanceRampView) AsTableRow() []string    { return nil }
+func (v *experimentAdvanceRampView) Object() interface{}     { return v.result }
+
+func (v *experimentAdvanceRampView) KeyValues() [][]string {
+	return [][]string{
+		{"EXPERIMENT", ansi.Faint(v.result.GetExperimentID())},
+		{"FROM LEVEL", strconv.Itoa(v.result.GetFromLevel()) + "%"},
+		{"TO LEVEL", strconv.Itoa(v.result.GetToLevel()) + "%"},
+		{"CURRENT LEVEL", strconv.Itoa(v.result.GetCurrentLevel()) + "%"},
 	}
-	return nil
+}
+
+func (r *Renderer) ExperimentAdvanceRamp(e *management.AdvanceRampResponseContent) {
+	r.Heading("experiment ramp advanced")
+	r.Result(&experimentAdvanceRampView{result: e})
 }
 
 func (r *Renderer) ExperimentValidate(id string, v *management.ValidateExperimentResponseContent) {
@@ -246,7 +317,7 @@ func (r *Renderer) ExperimentValidate(id string, v *management.ValidateExperimen
 	r.Result(view)
 	r.Newline()
 	if v.GetIsValid() {
-		r.Infof("Experiment is ready to start. Run: auth0 experimentation experiments status %s active", id)
+		r.Infof("Experiment is ready to start. Run: auth0 experimentation experiments update %s --status active", id)
 	} else {
 		r.Warnf("Fix the validation errors above before starting the experiment.")
 	}

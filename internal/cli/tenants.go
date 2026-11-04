@@ -104,8 +104,7 @@ func openTenantCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			openManageURL(cli, selectedTenant, "tenant/general")
-			return nil
+			return openManageURL(cli, selectedTenant, "tenant/general")
 		},
 	}
 

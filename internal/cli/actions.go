@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/auth0/go-auth0"
@@ -39,11 +41,11 @@ var (
 	}
 
 	actionCode = Flag{
-		Name:       "Code",
-		LongForm:   "code",
-		ShortForm:  "c",
-		Help:       "Code content for the action.",
-		IsRequired: true,
+		Name:         "Code",
+		LongForm:     "code",
+		ShortForm:    "c",
+		Help:         "Code content for the action.",
+		AlwaysPrompt: true,
 	}
 
 	actionDependency = Flag{
@@ -67,6 +69,13 @@ var (
 		Help:      "Runtime to be used in the action.  Possible values are: node22(recommended), node18, node16, node12",
 	}
 
+	actionModule = Flag{
+		Name:      "Module",
+		LongForm:  "module",
+		ShortForm: "m",
+		Help:      "Action module to associate with the action, as comma-separated key=value pairs matching the API fields: module_id and module_version_id (both required, UUIDs). Can be passed multiple times to associate several modules.",
+	}
+
 	actionTemplates = map[string]string{
 		"post-login":             actionTemplatePostLogin,
 		"credentials-exchange":   actionTemplateCredentialsExchange,
@@ -84,9 +93,21 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "actions",
 		Short: "Manage resources for actions",
-		Long: "Actions are secure, tenant-specific, versioned functions written in Node.js that execute " +
-			"at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's " +
-			"capabilities with custom logic.",
+		Long: `Actions are secure, tenant-specific, versioned functions written in Node.js that execute
+at certain points within the Auth0 platform. Actions are used to customize and extend Auth0's
+capabilities with custom logic.
+
+## Schema Discovery & JSON Input
+
+Use '--schema' on a command to print its request payload schema, and '--data'
+to provide that payload programmatically (validated against the schema before the call).
+
+Examples:
+  auth0 actions create --schema                    # Show the create payload schema
+  auth0 actions create --data @action.json         # Create from JSON file
+  auth0 actions create --data '{"name":"..."}'     # Create from inline JSON
+
+For more details: https://auth0.com/docs/api/management/v2`,
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
@@ -98,23 +119,47 @@ func actionsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(deployActionCmd(cli))
 	cmd.AddCommand(openActionCmd(cli))
 	cmd.AddCommand(diffActionCmd(cli))
+	cmd.AddCommand(actionsModulesCmd(cli))
 
 	return cmd
 }
 
 func listActionsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your actions",
-		Long:    "List your existing actions. To create one, run: `auth0 actions create`.",
+		Long: `List your existing actions. To create one, run: ` + "`auth0 actions create`" + `.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
 		Example: `  auth0 actions list
   auth0 actions ls
   auth0 actions ls --json
   auth0 actions ls --json-compact
-  auth0 actions ls --csv`,
+  auth0 actions ls --csv
+  auth0 actions list --schema
+  auth0 actions list --schema --json
+  auth0 actions list --query '{"triggerId":"post-login"}'
+  auth0 actions list --query '{"deployed":"true"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/actions/actions")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "actions/actions",
+					SchemaCmd: "auth0 actions list",
+				}, inputs.Query)
+			}
+
 			var list *management.ActionList
 
 			if err := ansi.Waiting(func() (err error) {
@@ -134,6 +179,8 @@ func listActionsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -190,25 +237,63 @@ func createActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
+		Modules      []string
+		Data         string
+		Schema       bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Args:  cobra.NoArgs,
 		Short: "Create a new action",
-		Long: "Create a new action.\n\n" +
-			"To create interactively, use `auth0 actions create` with no flags.\n\n" +
-			"To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.",
-		Example: `  auth0 actions create
-  auth0 actions create --name myaction
+		Long: `Create a new action.
+
+To create interactively, use 'auth0 actions create' with no flags.
+
+To create non-interactively, supply the action name, trigger, code, secrets and dependencies through the flags.
+
+## JSON Input (for agents and automation)
+
+Use '--schema' to print the request payload schema, then '--data' to provide
+action data as JSON:
+  - Inline JSON: --data '{"name":"my-action",...}'
+  - From file: --data @action.json
+  - From stdin: pipe data in (e.g. cat action.json | auth0 actions create)
+
+The JSON is validated against the OpenAPI schema before sending to the API.`,
+		Example: `  # Interactive mode
+  auth0 actions create
+
+  # Flag-based mode
   auth0 actions create --name myaction --trigger post-login
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --runtime node18
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
-  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
+  auth0 actions create --name myaction --trigger post-login --code "$(cat path/to/code.js)" --module "module_id=mod_123,module_version_id=ver_456"
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 --json
+  auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -s "API_KEY=value" --json-compact
+
+  # Discover the payload schema (add --json for machine-readable output)
+  auth0 actions create --schema
+  auth0 actions create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions create --data '{"name":"my-action","supported_triggers":[{"id":"post-login","version":"v3"}]}'
+  auth0 actions create --data @action.json
+  cat action.json | auth0 actions create
+  auth0 actions create --data @action.json --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Schema discovery mode: print the request payload and exit.
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/actions/actions")
+			}
+
+			// JSON input mode (for agents and automation): explicit --data or piped stdin.
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createActionFromJSON(cli, cmd, payload)
+			}
+
 			if err := actionName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -259,6 +344,14 @@ func createActionCmd(cli *cli) *cobra.Command {
 				Secrets:      inputSecretsToActionSecrets(inputs.Secrets),
 			}
 
+			if len(inputs.Modules) != 0 {
+				modules, err := inputModulesToActionModules(inputs.Modules)
+				if err != nil {
+					return err
+				}
+				action.Modules = modules
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Action.Create(cmd.Context(), action)
 			}); err != nil {
@@ -279,6 +372,13 @@ func createActionCmd(cli *cli) *cobra.Command {
 	actionDependency.RegisterStringMap(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMap(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterString(cmd, &inputs.Runtime, "")
+	actionModule.RegisterStringArray(cmd, &inputs.Modules, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+
+	// --data supplies the whole payload, so it cannot be combined with the
+	// granular input flags. Output flags (--json) and --schema are not affected.
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -291,26 +391,53 @@ func updateActionCmd(cli *cli) *cobra.Command {
 		Dependencies map[string]string
 		Secrets      map[string]string
 		Runtime      string
+		Modules      []string
+		Data         string
+		Schema       bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an action",
-		Long: "Update an action.\n\n" +
-			"To update interactively, use `auth0 actions update` with no arguments.\n\n" +
-			"To update non-interactively, supply the action id, name, code, secrets and " +
-			"dependencies through the flags.",
-		Example: `  auth0 actions update <action-id>
+		Long: `Update an action.
+
+To update interactively, use 'auth0 actions update' with no arguments.
+To update non-interactively, supply the action id, name, code, secrets and dependencies through the flags.
+## JSON Input (for agents and automation)
+
+Use '--schema' to print the request payload schema, then '--data' to provide
+update data as JSON:
+  - Inline JSON: --data '{"name":"updated-name","runtime":"node22"}'
+  - From file: --data @update.json
+  - From stdin: pipe data in (e.g. cat update.json | auth0 actions update <id>)
+
+The JSON is validated against the OpenAPI schema before sending to the API.`,
+		Example: `  # Interactive mode
+  auth0 actions update
+  auth0 actions update <action-id>
+
+  # Flag-based mode
   auth0 actions update <action-id> --runtime node18
-  auth0 actions update <action-id> --name myaction --runtime node18
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js) --r node18"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --secret "SECRET=value"
-  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)" --dependency "lodash=4.0.0" --dependency "uuid=9.0.0" --secret "API_KEY=value" --secret "SECRET=value"
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json
-  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -r node18 -d "lodash=4.0.0" -d "uuid=9.0.0" -s "API_KEY=value" -s "SECRET=value" --json-compact`,
+  auth0 actions update <action-id> --name myaction --code "$(cat path/to/code.js)"
+  auth0 actions update <action-id> --module "module_id=mod_123,module_version_id=ver_456" --json
+  auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0" --json-compact
+
+  # Discover the payload schema (add --json for machine-readable output)
+  auth0 actions update --schema
+  auth0 actions update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 actions update <action-id> --data '{"name":"updated-name","runtime":"node22"}'
+  auth0 actions update <action-id> --data @update.json
+  cat update.json | auth0 actions update <action-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Schema discovery mode: print the request payload and exit.
+			// This does not require an action ID.
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/actions/actions/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
@@ -319,8 +446,17 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			// JSON input mode (for agents and automation): explicit --data or piped stdin.
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateActionFromJSON(cli, cmd, inputs.ID, payload)
+			}
+
 			var oldAction *management.Action
-			err := ansi.Waiting(func() (err error) {
+			err = ansi.Waiting(func() (err error) {
 				oldAction, err = cli.api.Action.Read(cmd.Context(), inputs.ID)
 				return err
 			})
@@ -332,26 +468,33 @@ func updateActionCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if err := actionCode.OpenEditorU(
-				cmd,
-				&inputs.Code,
-				oldAction.GetCode(),
-				inputs.Name+".*.js",
-			); err != nil {
-				return fmt.Errorf("failed to capture input from the editor: %w", err)
-			}
-
-			if !cli.force && canPrompt(cmd) {
-				var confirmed bool
-				if err := prompt.AskBool("Do you want to save the action code?", &confirmed, true); err != nil {
-					return fmt.Errorf("failed to capture prompt input: %w", err)
+			// When the update is driven purely by non-code flags (e.g. --module),
+			// skip the interactive code editor and its save confirmation so those
+			// changes aren't discarded by answering "No".
+			editingCode := actionCode.IsSet(cmd) || !hasNonCodeFlagSet(cmd)
+			if editingCode {
+				if err := actionCode.OpenEditorU(
+					cmd,
+					&inputs.Code,
+					oldAction.GetCode(),
+					inputs.Name+".*.js",
+				); err != nil {
+					return fmt.Errorf("failed to capture input from the editor: %w", err)
 				}
-				if !confirmed {
-					return nil
+
+				if !cli.force && canPrompt(cmd) {
+					var confirmed bool
+					if err := prompt.AskBool("Do you want to save the action code?", &confirmed, true); err != nil {
+						return fmt.Errorf("failed to capture prompt input: %w", err)
+					}
+					if !confirmed {
+						return nil
+					}
 				}
 			}
 
 			updatedAction := &management.Action{
+				Name:              oldAction.Name,
 				SupportedTriggers: oldAction.SupportedTriggers,
 			}
 			if inputs.Name != "" {
@@ -365,6 +508,14 @@ func updateActionCmd(cli *cli) *cobra.Command {
 			}
 			if len(inputs.Secrets) != 0 {
 				updatedAction.Secrets = inputSecretsToActionSecrets(inputs.Secrets)
+			}
+
+			if len(inputs.Modules) != 0 {
+				modules, err := inputModulesToActionModules(inputs.Modules)
+				if err != nil {
+					return err
+				}
+				updatedAction.Modules = modules
 			}
 
 			if inputs.Runtime != "" {
@@ -391,8 +542,62 @@ func updateActionCmd(cli *cli) *cobra.Command {
 	actionDependency.RegisterStringMapU(cmd, &inputs.Dependencies, nil)
 	actionSecret.RegisterStringMapU(cmd, &inputs.Secrets, nil)
 	actionRuntime.RegisterStringU(cmd, &inputs.Runtime, "")
+	actionModule.RegisterStringArrayU(cmd, &inputs.Modules, nil)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+
+	// --data supplies the whole payload, so it cannot be combined with the
+	// granular input flags. Output flags (--json) and --schema are not affected.
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+// createActionFromJSON creates an action from a --data JSON payload.
+func createActionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	action, err := runJSONWrite[management.Action](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/actions/actions",
+		URI:        cli.api.HTTPClient.URI("actions", "actions"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 actions create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create action: %w", err)
+	}
+
+	cli.renderer.ActionCreate(action)
+
+	return nil
+}
+
+// updateActionFromJSON updates an action from a --data JSON payload. The endpoint
+// applies PATCH semantics, so unspecified fields keep their current values.
+func updateActionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	action, err := runJSONWrite[management.Action](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/actions/actions/{id}",
+		URI:        cli.api.HTTPClient.URI("actions", "actions", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 actions update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update action with ID %q: %w", id, err)
+	}
+
+	cli.renderer.ActionUpdate(action)
+
+	return nil
+}
+
+// hasNonCodeFlagSet reports whether the user set any update flag other than the
+// action code, so a non-code update (e.g. --module) can skip the code editor.
+func hasNonCodeFlagSet(cmd *cobra.Command) bool {
+	return actionName.IsSet(cmd) ||
+		actionDependency.IsSet(cmd) ||
+		actionSecret.IsSet(cmd) ||
+		actionRuntime.IsSet(cmd) ||
+		actionModule.IsSet(cmd)
 }
 
 func deleteActionCmd(cli *cli) *cobra.Command {
@@ -417,6 +622,10 @@ func deleteActionCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				ids = args
+			}
+
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
 			}
 
 			if !cli.force && canPrompt(cmd) {
@@ -517,9 +726,7 @@ func openActionCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			openManageURL(cli, cli.Config.DefaultTenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
-
-			return nil
+			return openManageURL(cli, cli.tenant, formatActionDetailsPath(url.PathEscape(inputs.ID)))
 		},
 	}
 
@@ -539,7 +746,8 @@ func diffActionCmd(cli *cli) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		Long:  "Show code difference between two versions of an Actions",
 		Example: `auth0 actions diff
-  auth0 actions diff <action-id>`,
+  auth0 actions diff <action-id>
+  auth0 actions diff <action-id> --version1 2 --version2 3`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			if len(args) == 0 {
@@ -574,10 +782,24 @@ func diffActionCmd(cli *cli) *cobra.Command {
 				page++
 			}
 
-			var err error
-			inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
-			if err != nil {
-				return err
+			version1Set := cmd.Flags().Changed("version1")
+			version2Set := cmd.Flags().Changed("version2")
+			switch {
+			case version1Set && version2Set:
+				// Use the versions supplied via flags as-is.
+			case version1Set != version2Set:
+				// Exactly one version was supplied. Require both or neither so an
+				// explicitly pinned version is never silently discarded (in
+				// interactive mode the picker would otherwise overwrite it).
+				return usageError{err: fmt.Errorf("provide both --version1 and --version2, or neither"), reason: "incompatible_flags"}
+			case canPrompt(cmd):
+				var err error
+				inputs.version1, inputs.version2, err = pickTwoVersions(allVersions)
+				if err != nil {
+					return err
+				}
+			default:
+				return usageError{err: fmt.Errorf("missing required flags in non-interactive mode: --version1 and --version2"), reason: "missing_required_flags"}
 			}
 
 			var code1, code2 string
@@ -605,6 +827,10 @@ func diffActionCmd(cli *cli) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().IntVar(&inputs.version1, "version1", 0, "First version number (baseline) to compare.")
+	cmd.Flags().IntVar(&inputs.version2, "version2", 0, "Second version number to compare against.")
+
 	return cmd
 }
 
@@ -720,6 +946,49 @@ func inputSecretsToActionSecrets(secrets map[string]string) *[]management.Action
 	}
 
 	return &actionSecrets
+}
+
+// inputModulesToActionModules parses repeatable --module flag values into the
+// action's Modules payload. Each value is a comma-separated set of key=value
+// pairs whose keys mirror the Management API field names: module_id and
+// module_version_id, both required. The API identifies the version to attach by
+// its UUID (module_version_id); the version number is derived server-side and
+// returned on read, so it is not accepted as input here.
+func inputModulesToActionModules(modules []string) (*[]management.ActionModules, error) {
+	actionModules := make([]management.ActionModules, 0, len(modules))
+
+	for _, raw := range modules {
+		var module management.ActionModules
+
+		for _, pair := range strings.Split(raw, ",") {
+			key, value, found := strings.Cut(pair, "=")
+			key = strings.TrimSpace(key)
+			value = strings.TrimSpace(value)
+			if !found || key == "" || value == "" {
+				return nil, usageError{err: fmt.Errorf("invalid --module value %q: expected comma-separated key=value pairs (e.g. \"module_id=<uuid>,module_version_id=<uuid>\")", raw), reason: "invalid_flag_value"}
+			}
+
+			switch key {
+			case "module_id":
+				module.ModuleID = auth0.String(value)
+			case "module_version_id":
+				module.ModuleVersionID = auth0.String(value)
+			default:
+				return nil, usageError{err: fmt.Errorf("invalid --module value %q: unknown key %q (supported keys: module_id, module_version_id)", raw, key), reason: "invalid_flag_value"}
+			}
+		}
+
+		if module.ModuleID == nil {
+			return nil, usageError{err: fmt.Errorf("invalid --module value %q: module_id is required", raw), reason: "invalid_flag_value"}
+		}
+		if module.ModuleVersionID == nil {
+			return nil, usageError{err: fmt.Errorf("invalid --module value %q: module_version_id is required (the UUID of a specific module version)", raw), reason: "invalid_flag_value"}
+		}
+
+		actionModules = append(actionModules, module)
+	}
+
+	return &actionModules, nil
 }
 
 func printColorDiff(code1, code2 string, fromVersion, toVersion int) {

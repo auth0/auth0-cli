@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/auth0/go-auth0/v3/management"
-	managementcore "github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -23,6 +26,18 @@ const (
 	// longer lists are paged/scrolled.
 	variationPickerPageSize = 10
 )
+
+// authenticationFlowOptions are the flows an experiment can target. `all`
+// targets every flow at once but requires the experiment to be the only active
+// one (enforced server-side).
+var authenticationFlowOptions = []string{
+	"authentication",
+	"mfa_enrollment",
+	"mfa_challenge",
+	"password_reset",
+	"passkey_enrollment",
+	"all",
+}
 
 var (
 	experimentID = Argument{
@@ -58,7 +73,7 @@ var (
 		Name:       "Authentication Flow",
 		LongForm:   "authentication-flow",
 		ShortForm:  "a",
-		Help:       "Authentication flow this experiment applies to (e.g. login, signup).",
+		Help:       "Authentication flow this experiment applies to: authentication, mfa_enrollment, mfa_challenge, password_reset, passkey_enrollment, or all.",
 		IsRequired: true,
 	}
 
@@ -71,15 +86,22 @@ var (
 	}
 
 	experimentAllocations = Flag{
-		Name:     "Allocations",
-		LongForm: "allocations",
-		Help:     "JSON array of allocation items ({variation_id, weight, is_control} for percentage, where weight is an integer percentage from 1 to 100; {variation_id, segment_id, is_control} for segment).",
+		Name:      "Allocations",
+		LongForm:  "allocations",
+		ShortForm: "A",
+		Help:      "JSON array of allocation items ({variation_id, weight, is_control} for percentage, where weight is an integer percentage from 0 to 100; {variation_id, segment_id, priority, is_control, is_fallback} for segment).",
 	}
 
-	experimentAssignmentConfig = Flag{
-		Name:     "Assignment Config",
-		LongForm: "assignment-config",
-		Help:     `JSON object configuring how users are assigned to variations (e.g. '{"subject":"device"}').`,
+	experimentDefaultConfig = Flag{
+		Name:     "Default Config",
+		LongForm: "default-config",
+		Help:     "For Auth0-managed flags only: where non-overridden config keys resolve from: 'tenant' (inherit the tenant's live config) or 'flag' (use the flag's frozen defaults). Rejected for customer-defined flags.",
+	}
+
+	experimentLevels = Flag{
+		Name:     "Levels",
+		LongForm: "levels",
+		Help:     "Ramp exposure levels as a comma-separated, strictly-increasing list of integer percentages in [0, 100] (e.g. 10,25,50,100). Requires --allocation-strategy percentage, and the allocations must omit weights. Traffic is controlled by the level schedule, not per-variation weights.",
 	}
 
 	experimentStatus = Flag{
@@ -87,7 +109,34 @@ var (
 		LongForm: "status",
 		Help:     "Transition the experiment to a new status (active, paused, completed, archived).",
 	}
+
+	experimentFilterStatus = Flag{
+		Name:     "Status",
+		LongForm: "status",
+		Help:     "Filter by status (draft, active, paused, completed, archived).",
+	}
+
+	experimentFilterFeatureFlagID = Flag{
+		Name:     "Feature Flag ID",
+		LongForm: "feature-flag-id",
+		Help:     "Filter by feature flag ID.",
+	}
+
+	experimentFilterAuthFlow = Flag{
+		Name:     "Authentication Flow",
+		LongForm: "authentication-flow",
+		Help:     "Filter by authentication flow.",
+	}
+
+	experimentTargetLevel = Flag{
+		Name:     "Target Level",
+		LongForm: "target-level",
+		Help:     "The target percentage level to advance to. Must be the immediate next level in the schedule.",
+	}
 )
+
+// experimentStatuses are the lifecycle states an experiment can be transitioned to.
+var experimentStatuses = []string{"active", "paused", "completed", "archived"}
 
 func experimentsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
@@ -109,7 +158,7 @@ func experimentsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(updateExperimentCmd(cli))
 	cmd.AddCommand(deleteExperimentCmd(cli))
 	cmd.AddCommand(validateExperimentCmd(cli))
-	cmd.AddCommand(statusExperimentCmd(cli))
+	cmd.AddCommand(advanceRampExperimentCmd(cli))
 
 	return cmd
 }
@@ -119,6 +168,8 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 		Status             string
 		FeatureFlagID      string
 		AuthenticationFlow string
+		Schema             bool
+		Query              string
 	}
 
 	cmd := &cobra.Command{
@@ -126,13 +177,28 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your experiments",
-		Long:    "List all experiments. To create one, run: `auth0 experimentation experiments create`.",
+		Long:    "List all experiments. To create one, run: `auth0 experimentation experiments create`." + experimentationQueryHelp,
 		Example: `  auth0 experimentation experiments list
   auth0 experimentation experiments ls
   auth0 experimentation experiments list --json
   auth0 experimentation experiments list --status active
-  auth0 experimentation experiments list --feature-flag-id <id>`,
+  auth0 experimentation experiments list --feature-flag-id <id>
+  auth0 experimentation experiments list --schema
+  auth0 experimentation experiments list --schema --json
+  auth0 experimentation experiments list --query '{"status":"active","take":10}'
+  auth0 experimentation experiments list --query '{"status":"active"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/experimentation/experiments")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "experimentation/experiments",
+					SchemaCmd: "auth0 experimentation experiments list",
+				}, inputs.Query)
+			}
+
 			req := &management.ListExperimentsRequestParameters{}
 			if inputs.Status != "" {
 				s := management.ExperimentStatusEnum(inputs.Status)
@@ -145,27 +211,11 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 				req.AuthenticationFlow = &inputs.AuthenticationFlow
 			}
 
-			var allExperiments []*management.ExperimentListItem
-
-			if err := ansi.Waiting(func() error {
-				page, err := cli.apiv3.Experiments.List(cmd.Context(), req)
-				if err != nil {
-					return err
-				}
-				allExperiments = append(allExperiments, page.Results...)
-				for {
-					next, err := page.GetNextPage(cmd.Context())
-					if errors.Is(err, managementcore.ErrNoPages) {
-						break
-					}
-					if err != nil {
-						return err
-					}
-					allExperiments = append(allExperiments, next.Results...)
-					page = next
-				}
-				return nil
-			}); err != nil {
+			allExperiments, err := collectV3Pages(cmd.Context(), 0,
+				func(ctx context.Context) (*auth0.ExperimentListPage, error) {
+					return cli.apiv3.Experiments.List(ctx, req)
+				})
+			if err != nil {
 				return fmt.Errorf("failed to list experiments: %w", err)
 			}
 
@@ -177,10 +227,13 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
-	cmd.Flags().StringVar(&inputs.Status, "status", "", "Filter by status (draft, active, paused, completed, archived).")
-	cmd.Flags().StringVar(&inputs.FeatureFlagID, "feature-flag-id", "", "Filter by feature flag ID.")
-	cmd.Flags().StringVar(&inputs.AuthenticationFlow, "authentication-flow", "", "Filter by authentication flow.")
+	experimentFilterStatus.RegisterString(cmd, &inputs.Status, "")
+	experimentFilterFeatureFlagID.RegisterString(cmd, &inputs.FeatureFlagID, "")
+	experimentFilterAuthFlow.RegisterString(cmd, &inputs.AuthenticationFlow, "")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
+	markQueryFilterExclusive(cmd, experimentFilterStatus.LongForm, experimentFilterFeatureFlagID.LongForm, experimentFilterAuthFlow.LongForm)
 
 	return cmd
 }
@@ -194,7 +247,7 @@ func showExperimentCmd(cli *cli) *cobra.Command {
 		Use:   "show",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an experiment",
-		Long:  "Display details about an experiment including its allocations and validation status.",
+		Long:  "Display details about an experiment including its allocations, ramp levels, and validation status.",
 		Example: `  auth0 experimentation experiments show
   auth0 experimentation experiments show <experiment-id>
   auth0 experimentation experiments show <experiment-id> --json`,
@@ -234,7 +287,10 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 		AuthenticationFlow string
 		AllocationStrategy string
 		Allocations        string
-		AssignmentConfig   string
+		DefaultConfig      string
+		Levels             string
+		Data               string
+		Schema             bool
 	}
 
 	cmd := &cobra.Command{
@@ -243,15 +299,48 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 		Short: "Create a new experiment",
 		Long: "Create a new experiment.\n\n" +
 			"To create interactively, use `auth0 experimentation experiments create` with no flags.\n\n" +
-			"To create non-interactively, supply all required flags.",
+			"To create non-interactively, supply all required flags.\n\n" +
+			"The allocation strategy is required and cannot be changed after creation. The allocations are " +
+			"optional: omit them to create a draft and add them later with " +
+			"`auth0 experimentation experiments update`." + experimentationDataHelp,
 		Example: `  auth0 experimentation experiments create
-  auth0 experimentation experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow login --allocation-strategy percentage --assignment-config '{"subject":"device"}' --allocations '[{"variation_id":"vid_1","weight":50,"is_control":true},{"variation_id":"vid_2","weight":50,"is_control":false}]'`,
+  auth0 experimentation experiments create --name "draft-test" --feature-flag-id ff_abc --authentication-flow authentication --allocation-strategy percentage
+  auth0 experimentation experiments create --name "button-color" --feature-flag-id ff_abc --authentication-flow authentication --allocation-strategy percentage --allocations '[{"variation_id":"vid_1","weight":50,"is_control":true},{"variation_id":"vid_2","weight":50,"is_control":false}]'
+  auth0 experimentation experiments create -n "gradual-rollout" -f ff_abc -a authentication -s percentage --levels 10,25,50,100 --allocations '[{"variation_id":"vid_1","is_control":true},{"variation_id":"vid_2","is_control":false}]'
+  auth0 experimentation experiments create -n "by-region" -f ff_abc -a authentication -s segment --allocations '[{"variation_id":"vid_1","is_control":true,"is_fallback":true},{"variation_id":"vid_2","segment_id":"seg_abc","priority":1,"is_control":false}]'
+
+  # Discover the payload schema
+  auth0 experimentation experiments create --schema
+  auth0 experimentation experiments create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 experimentation experiments create --data '{"name":"draft-test","feature_flag_id":"ff_abc","authentication_flow":"authentication","allocation_strategy":"percentage"}'
+  auth0 experimentation experiments create --data @experiment.json
+  cat experiment.json | auth0 experimentation experiments create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/experimentation/experiments")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createExperimentFromJSON(cli, cmd, payload)
+			}
+
 			if err := experimentName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
+			if inputs.Name == "" {
+				return usageError{err: errors.New("--name is required"), reason: "missing_required_flags"}
+			}
 
 			if err := experimentDescription.Ask(cmd, &inputs.Description, nil); err != nil {
+				return err
+			}
+			if err := validateMinLength(experimentDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
 				return err
 			}
 
@@ -261,26 +350,41 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 					return err
 				}
 			} else if inputs.FeatureFlagID == "" {
-				return fmt.Errorf("--feature-flag-id is required")
+				return usageError{err: errors.New("--feature-flag-id is required"), reason: "missing_required_flags"}
 			}
 
-			if err := experimentAuthFlow.Ask(cmd, &inputs.AuthenticationFlow, nil); err != nil {
-				return err
+			// Authentication flow — dropdown of the supported flows.
+			if inputs.AuthenticationFlow == "" && canPrompt(cmd) {
+				if err := experimentAuthFlow.Select(cmd, &inputs.AuthenticationFlow, authenticationFlowOptions, nil); err != nil {
+					return err
+				}
+			} else if inputs.AuthenticationFlow == "" {
+				return usageError{err: errors.New("--authentication-flow is required"), reason: "missing_required_flags"}
 			}
 
-			// Allocation strategy — dropdown.
+			// Allocation strategy — required, and fixed once the experiment exists.
 			if inputs.AllocationStrategy == "" && canPrompt(cmd) {
 				strategyOptions := []string{"percentage", "segment"}
 				if err := experimentAllocationStrategy.Select(cmd, &inputs.AllocationStrategy, strategyOptions, nil); err != nil {
 					return err
 				}
 			} else if inputs.AllocationStrategy == "" {
-				return fmt.Errorf("--allocation-strategy is required")
+				return usageError{err: errors.New("--allocation-strategy is required"), reason: "missing_required_flags"}
 			}
 
-			// Allocations — build interactively from variation picker, or accept raw JSON.
-			if inputs.Allocations == "" && canPrompt(cmd) {
-				allocs, err := cli.buildAllocationsInteractively(cmd, inputs.FeatureFlagID, inputs.AllocationStrategy)
+			// Ramp levels decide whether allocations carry weights (a ramp's traffic
+			// follows its level schedule), so settle them before the allocations.
+			// Ramps require the percentage strategy, so only offer them there.
+			if inputs.Levels == "" && inputs.AllocationStrategy == "percentage" && canPrompt(cmd) && prompt.Confirm("Configure ramp levels?") {
+				if err := experimentLevels.Ask(cmd, &inputs.Levels, nil); err != nil {
+					return err
+				}
+			}
+
+			// Allocations — optional; build interactively from the variation picker
+			// behind a confirmation, or accept raw JSON.
+			if inputs.Allocations == "" && canPrompt(cmd) && prompt.ConfirmWithDefault("Configure the traffic allocations now?", true) {
+				allocs, err := cli.buildAllocationsInteractively(cmd, inputs.FeatureFlagID, inputs.AllocationStrategy, inputs.Levels != "")
 				if err != nil {
 					return err
 				}
@@ -289,49 +393,61 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 					return err
 				}
 				inputs.Allocations = string(b)
-			} else if inputs.Allocations == "" {
-				return fmt.Errorf("--allocations is required")
-			}
-
-			// Assignment config — required. Prompt interactively if not provided via flag.
-			if inputs.AssignmentConfig == "" && canPrompt(cmd) {
-				subjectOptions := []string{"device"}
-				var chosen string
-				if err := experimentAssignmentConfig.Select(cmd, &chosen, subjectOptions, nil); err != nil {
-					return err
-				}
-				inputs.AssignmentConfig = fmt.Sprintf(`{"subject":%q}`, chosen)
-			} else if inputs.AssignmentConfig == "" {
-				return fmt.Errorf("--assignment-config is required")
-			}
-
-			var ac management.AssignmentConfig
-			if err := json.Unmarshal([]byte(inputs.AssignmentConfig), &ac); err != nil {
-				return fmt.Errorf("invalid JSON for --assignment-config: %w", err)
 			}
 
 			var allocations []*management.AllocationRequestItem
-			if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
-				return fmt.Errorf("invalid JSON for --allocations (ensure the value is quoted in your shell): %w", err)
+			if inputs.Allocations != "" {
+				if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
+					return validationError{err: fmt.Errorf("invalid JSON for --allocations (ensure the value is quoted in your shell): %w", err), reason: "malformed_json"}
+				}
+				if err := validateAllocationCount(allocations); err != nil {
+					return err
+				}
+				if err := validateAllocationWeights(allocations); err != nil {
+					return err
+				}
 			}
-			if err := validateAllocationCount(allocations); err != nil {
-				return err
-			}
-			if err := validateAllocationWeights(allocations); err != nil {
-				return err
+			if inputs.Levels != "" {
+				// Report a malformed schedule before the rules that depend on it.
+				if _, err := parseLevels(inputs.Levels); err != nil {
+					return err
+				}
+				if err := validateRampAllocations(inputs.AllocationStrategy, allocations); err != nil {
+					return err
+				}
 			}
 
-			strategy := management.AllocationStrategyEnum(inputs.AllocationStrategy)
+			// Default config only applies to Auth0-managed flags, so offer it behind
+			// a confirmation when not supplied via a flag.
+			if inputs.DefaultConfig == "" && canPrompt(cmd) && prompt.Confirm("Set a default config (Auth0-managed flags only)?") {
+				if err := experimentDefaultConfig.Select(cmd, &inputs.DefaultConfig, []string{"tenant", "flag"}, nil); err != nil {
+					return err
+				}
+			}
+
 			req := &management.CreateExperimentRequestContent{
 				Name:               inputs.Name,
 				FeatureFlagID:      inputs.FeatureFlagID,
-				AuthenticationFlow: inputs.AuthenticationFlow,
-				AllocationStrategy: strategy,
-				AssignmentConfig:   &ac,
+				AuthenticationFlow: management.AuthenticationFlowEnum(inputs.AuthenticationFlow),
+				AllocationStrategy: management.AllocationStrategyEnum(inputs.AllocationStrategy),
 				Allocations:        allocations,
 			}
 			if inputs.Description != "" {
 				req.Description = &inputs.Description
+			}
+			if inputs.DefaultConfig != "" {
+				dc, err := parseDefaultConfig(inputs.DefaultConfig)
+				if err != nil {
+					return err
+				}
+				req.DefaultConfig = &dc
+			}
+			if inputs.Levels != "" {
+				levels, err := parseLevels(inputs.Levels)
+				if err != nil {
+					return err
+				}
+				req.Levels = levels
 			}
 
 			var result *management.CreateExperimentResponseContent
@@ -354,40 +470,74 @@ func createExperimentCmd(cli *cli) *cobra.Command {
 	experimentAuthFlow.RegisterString(cmd, &inputs.AuthenticationFlow, "")
 	experimentAllocationStrategy.RegisterString(cmd, &inputs.AllocationStrategy, "")
 	experimentAllocations.RegisterString(cmd, &inputs.Allocations, "")
-	experimentAssignmentConfig.RegisterString(cmd, &inputs.AssignmentConfig, "")
+	experimentDefaultConfig.RegisterString(cmd, &inputs.DefaultConfig, "")
+	experimentLevels.RegisterString(cmd, &inputs.Levels, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
 
 func updateExperimentCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID               string
-		Name             string
-		Description      string
-		Allocations      string
-		AssignmentConfig string
+		ID                 string
+		Name               string
+		Description        string
+		AuthenticationFlow string
+		Allocations        string
+		DefaultConfig      string
+		Levels             string
+		Status             string
+		Data               string
+		Schema             bool
 	}
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Update an experiment",
-		Long: "Update an experiment.\n\n" +
-			"Note: feature flag, authentication flow, and allocation strategy cannot be changed after creation. " +
-			"To change an experiment's status, use `auth0 experimentation experiments status`.\n\n" +
-			"To update interactively, use `auth0 experimentation experiments update` with no arguments.",
+		Long: "Update an experiment, including transitioning its status with --status " +
+			"(active, paused, completed, archived).\n\n" +
+			"Note: the feature flag and allocation strategy cannot be changed after creation, and " +
+			"authentication flow, allocations, default config, and ramp levels can only be changed while the " +
+			"experiment is a draft.\n\n" +
+			"To update interactively, use `auth0 experimentation experiments update` with no arguments." +
+			experimentationDataHelp,
 		Example: `  auth0 experimentation experiments update
   auth0 experimentation experiments update <experiment-id>
   auth0 experimentation experiments update <experiment-id> --name "new-name"
-  auth0 experimentation experiments update <experiment-id> --assignment-config '{"subject":"device"}'
-  auth0 experimentation experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]'`,
+  auth0 experimentation experiments update <experiment-id> --levels 10,50,100
+  auth0 experimentation experiments update <experiment-id> --allocations '[{"variation_id":"vid","weight":100,"is_control":true}]'
+  auth0 experimentation experiments update <experiment-id> --status active
+
+  # Discover the payload schema
+  auth0 experimentation experiments update --schema
+  auth0 experimentation experiments update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 experimentation experiments update <experiment-id> --data '{"status":"active"}'
+  auth0 experimentation experiments update <experiment-id> --data @experiment.json
+  cat experiment.json | auth0 experimentation experiments update <experiment-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/experimentation/experiments/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
 				if err := experimentID.Pick(cmd, &inputs.ID, cli.experimentPickerOptions); err != nil {
 					return err
 				}
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateExperimentFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			// Read the current experiment so interactive prompts can be pre-filled
@@ -422,35 +572,52 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			// Assignment config and allocations aren't simple text fields, so
-			// (when not supplied via flags) offer to edit them interactively behind
-			// a confirmation rather than always prompting.
-			if inputs.AssignmentConfig == "" && !experimentAssignmentConfig.IsSet(cmd) && canPrompt(cmd) {
-				currentSubject := ""
-				if ac := current.GetAssignmentConfig(); ac != nil {
-					currentSubject = string(ac.GetSubject())
+			// These fields can only be changed while the experiment is a draft, so
+			// (when not supplied via a flag) offer each behind a confirmation rather
+			// than always prompting. A flag always wins; the confirm gate only runs
+			// in interactive mode.
+			authFlowChanged := experimentAuthFlow.IsSet(cmd)
+			defaultConfigChanged := experimentDefaultConfig.IsSet(cmd)
+			levelsChanged := experimentLevels.IsSet(cmd)
+			statusChanged := experimentStatus.IsSet(cmd)
+
+			// Ramp levels decide whether allocations carry weights, so settle them
+			// before the allocations. Ramps require the percentage strategy.
+			strategy := string(current.GetAllocationStrategy())
+			if !levelsChanged && strategy == "percentage" && canPrompt(cmd) && prompt.Confirm("Change the ramp levels?") {
+				if err := experimentLevels.Ask(cmd, &inputs.Levels, nil); err != nil {
+					return err
 				}
-				if prompt.Confirm(fmt.Sprintf("Change the assignment config? (current subject: %q)", currentSubject)) {
-					subjectOptions := []string{"device"}
-					var chosen string
-					if err := experimentAssignmentConfig.Select(cmd, &chosen, subjectOptions, nil); err != nil {
-						return err
-					}
-					inputs.AssignmentConfig = fmt.Sprintf(`{"subject":%q}`, chosen)
-				}
+				levelsChanged = true
 			}
+			if levelsChanged && strategy != "percentage" {
+				// An experiment created without a strategy keeps none, as PATCH can't set one.
+				if strategy == "" {
+					return usageError{err: errors.New("ramp levels require the percentage allocation strategy, but this experiment has none"), reason: "invalid_flag_value"}
+				}
+				return usageError{err: fmt.Errorf("ramp levels require the percentage allocation strategy, but this experiment uses %s", strategy), reason: "invalid_flag_value"}
+			}
+			ramp := levelsChanged || len(current.GetLevels()) > 0
+			// Turning a draft into a ramp leaves any existing weights in place,
+			// which the API then rejects at validation, so the allocations must be
+			// re-entered without them. Levels can only change on a draft, so leave
+			// any other status to the API to reject.
+			mustReplaceAllocations := levelsChanged &&
+				current.GetStatus() == management.ExperimentStatusEnumDraft &&
+				len(current.GetLevels()) == 0 &&
+				allocationsHaveWeights(current.GetAllocations())
 
+			// Allocations aren't a simple text field, so (when not supplied via a
+			// flag) offer to edit them interactively behind a confirmation rather
+			// than always prompting.
 			if inputs.Allocations == "" && !experimentAllocations.IsSet(cmd) && canPrompt(cmd) {
-				if prompt.Confirm("Change the traffic allocations?") {
-					// Mirror create: let the user pick the allocation strategy,
-					// defaulting to the experiment's current one.
-					strategy := string(current.GetAllocationStrategy())
-					strategyOptions := []string{"percentage", "segment"}
-					if err := experimentAllocationStrategy.Select(cmd, &strategy, strategyOptions, &strategy); err != nil {
-						return err
-					}
-
-					allocs, err := cli.buildAllocationsInteractively(cmd, current.GetFeatureFlagID(), strategy)
+				if mustReplaceAllocations {
+					cli.renderer.Infof("Ramp experiments don't use allocation weights, so re-enter the allocations without them.")
+				}
+				if mustReplaceAllocations || prompt.Confirm("Change the traffic allocations?") {
+					// Mirror create: build allocations for the experiment's current
+					// (immutable) strategy.
+					allocs, err := cli.buildAllocationsInteractively(cmd, current.GetFeatureFlagID(), strategy, ramp)
 					if err != nil {
 						return err
 					}
@@ -462,6 +629,31 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				}
 			} else if err := experimentAllocations.AskU(cmd, &inputs.Allocations, nil); err != nil {
 				return err
+			}
+			if mustReplaceAllocations && inputs.Allocations == "" {
+				return usageError{
+					err:    errors.New("the current allocations have weights, which ramp experiments don't use: also pass --allocations without \"weight\" when setting --levels"),
+					reason: "missing_required_flags",
+				}
+			}
+
+			if !authFlowChanged && canPrompt(cmd) && prompt.Confirm("Change the authentication flow?") {
+				if err := experimentAuthFlow.Select(cmd, &inputs.AuthenticationFlow, authenticationFlowOptions, nil); err != nil {
+					return err
+				}
+				authFlowChanged = true
+			}
+			if !defaultConfigChanged && canPrompt(cmd) && prompt.Confirm("Change the default config (Auth0-managed flags only)?") {
+				if err := experimentDefaultConfig.Select(cmd, &inputs.DefaultConfig, []string{"tenant", "flag"}, nil); err != nil {
+					return err
+				}
+				defaultConfigChanged = true
+			}
+			if !statusChanged && canPrompt(cmd) && prompt.Confirm("Change the status?") {
+				if err := experimentStatus.Select(cmd, &inputs.Status, experimentStatuses, nil); err != nil {
+					return err
+				}
+				statusChanged = true
 			}
 
 			// Build a request containing only the fields the user actually
@@ -475,24 +667,42 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				updated = true
 			}
 			if inputs.Description != currentDescription {
-				req.Description = &inputs.Description
+				// The API rejects an empty description; clearing it means sending null.
+				if inputs.Description == "" {
+					req.SetDescription(nil)
+				} else {
+					if err := validateMinLength(experimentDescription.LongForm, inputs.Description, experimentationMinDescriptionLength); err != nil {
+						return err
+					}
+					req.Description = &inputs.Description
+				}
 				updated = true
 			}
-			if inputs.AssignmentConfig != "" {
-				var ac management.AssignmentConfig
-				if err := json.Unmarshal([]byte(inputs.AssignmentConfig), &ac); err != nil {
-					return fmt.Errorf("invalid JSON for --assignment-config: %w", err)
+			if authFlowChanged {
+				flow := management.AuthenticationFlowEnum(inputs.AuthenticationFlow)
+				req.AuthenticationFlow = &flow
+				updated = true
+			}
+			if defaultConfigChanged {
+				dc, err := parseDefaultConfig(inputs.DefaultConfig)
+				if err != nil {
+					return err
 				}
-				// Only send it if the subject actually changed.
-				if ac.GetSubject() != current.GetAssignmentConfig().GetSubject() {
-					req.AssignmentConfig = &ac
-					updated = true
+				req.DefaultConfig = &dc
+				updated = true
+			}
+			if levelsChanged {
+				levels, err := parseLevels(inputs.Levels)
+				if err != nil {
+					return err
 				}
+				req.Levels = levels
+				updated = true
 			}
 			if inputs.Allocations != "" {
 				var allocations []*management.AllocationRequestItem
 				if err := json.Unmarshal([]byte(inputs.Allocations), &allocations); err != nil {
-					return fmt.Errorf("invalid JSON for --allocations: %w", err)
+					return validationError{err: fmt.Errorf("invalid JSON for --allocations: %w", err), reason: "malformed_json"}
 				}
 				if err := validateAllocationCount(allocations); err != nil {
 					return err
@@ -500,14 +710,30 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 				if err := validateAllocationWeights(allocations); err != nil {
 					return err
 				}
+				if ramp {
+					if err := validateRampAllocations(strategy, allocations); err != nil {
+						return err
+					}
+				}
 				// Allocations are PUT-like: whenever the user opts in (via the flag
 				// or by confirming the interactive prompt) we send the whole array.
 				req.Allocations = allocations
 				updated = true
 			}
+			if statusChanged {
+				if !slices.Contains(experimentStatuses, inputs.Status) {
+					return usageError{err: fmt.Errorf("invalid status %q: must be one of %s", inputs.Status, strings.Join(experimentStatuses, ", ")), reason: "invalid_flag_value"}
+				}
+				status := management.ExperimentTransitionStatusEnum(inputs.Status)
+				req.Status = &status
+				updated = true
+			}
 
 			if !updated {
-				return fmt.Errorf("nothing to update — provide at least one flag (--name, --description, --assignment-config, --allocations)")
+				return usageError{
+					err:    errors.New("nothing to update - provide at least one flag (--name, --description, --authentication-flow, --allocations, --default-config, --levels, --status) or --data"),
+					reason: "missing_required_flags",
+				}
 			}
 
 			var result *management.UpdateExperimentResponseContent
@@ -526,10 +752,46 @@ func updateExperimentCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	experimentName.RegisterStringU(cmd, &inputs.Name, "")
 	experimentDescription.RegisterStringU(cmd, &inputs.Description, "")
+	experimentAuthFlow.RegisterStringU(cmd, &inputs.AuthenticationFlow, "")
 	experimentAllocations.RegisterStringU(cmd, &inputs.Allocations, "")
-	experimentAssignmentConfig.RegisterStringU(cmd, &inputs.AssignmentConfig, "")
+	experimentDefaultConfig.RegisterStringU(cmd, &inputs.DefaultConfig, "")
+	experimentLevels.RegisterStringU(cmd, &inputs.Levels, "")
+	experimentStatus.RegisterStringU(cmd, &inputs.Status, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createExperimentFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	result, err := runJSONWrite[management.CreateExperimentResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/experimentation/experiments",
+		URI:        cli.api.HTTPClient.URI("experimentation", "experiments"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 experimentation experiments create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create experiment: %w", err)
+	}
+
+	return cli.renderer.ExperimentCreate(result)
+}
+
+func updateExperimentFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	result, err := runJSONWrite[management.UpdateExperimentResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/experimentation/experiments/{id}",
+		URI:        cli.api.HTTPClient.URI("experimentation", "experiments", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 experimentation experiments update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update experiment %q: %w", id, err)
+	}
+
+	return cli.renderer.ExperimentUpdate(result)
 }
 
 func deleteExperimentCmd(cli *cli) *cobra.Command {
@@ -553,6 +815,10 @@ func deleteExperimentCmd(cli *cli) *cobra.Command {
 				ids = args
 			}
 
+			if !cli.force && cli.agentMode {
+				return errDestructiveNoConfirm
+			}
+
 			if !cli.force && canPrompt(cmd) {
 				if confirmed := prompt.Confirm("Are you sure you want to proceed?"); !confirmed {
 					return nil
@@ -561,6 +827,11 @@ func deleteExperimentCmd(cli *cli) *cobra.Command {
 
 			return ansi.ProgressBar("Deleting experiment(s)", ids, func(_ int, id string) error {
 				if id != "" {
+					// Delete returns 204 for an unknown ID, so check that it exists first.
+					if _, err := cli.apiv3.Experiments.Get(cmd.Context(), id); err != nil {
+						return fmt.Errorf("failed to delete experiment %q: %w", id, err)
+					}
+
 					if err := cli.apiv3.Experiments.Delete(cmd.Context(), id); err != nil {
 						return fmt.Errorf("failed to delete experiment %q: %w", id, err)
 					}
@@ -616,66 +887,132 @@ func validateExperimentCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// statusExperimentCmd transitions an experiment to a target lifecycle status (active, paused, completed, or archived).
-func statusExperimentCmd(cli *cli) *cobra.Command {
+// advanceRampExperimentCmd advances a ramp experiment to the next exposure
+// level in its configured schedule.
+func advanceRampExperimentCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID     string
-		Status string
+		ID          string
+		TargetLevel int
+		Data        string
+		Schema      bool
 	}
 
-	// ValidStatuses are the lifecycle states an experiment can be transitioned to.
-	validStatuses := []string{"active", "paused", "completed", "archived"}
-
 	cmd := &cobra.Command{
-		Use:   "status",
-		Args:  cobra.MaximumNArgs(2),
-		Short: "Change an experiment's status",
-		Long: "Transition an experiment to a new lifecycle status: active, paused, completed, or archived.\n\n" +
-			"  • active    — start (or resume) the experiment; runs full validation before activating\n" +
-			"  • paused    — pause a running experiment; it can be resumed by setting it active again\n" +
-			"  • completed — mark the experiment as finished; it can then be archived\n" +
-			"  • archived  — archive a completed experiment\n\n" +
-			"To set the status interactively, run `auth0 experimentation experiments status` with no arguments.",
-		Example: `  auth0 experimentation experiments status
-  auth0 experimentation experiments status <experiment-id>
-  auth0 experimentation experiments status <experiment-id> active
-  auth0 experimentation experiments status <experiment-id> paused`,
+		Use:   "advance-ramp",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Advance a ramp experiment to its next level",
+		Long: "Advance a ramp experiment to the next exposure level in its schedule.\n\n" +
+			"The target level must be the immediate next level configured on the experiment. " +
+			"Configure ramp levels with `auth0 experimentation experiments create --levels` (or `update --levels`)." +
+			experimentationDataHelp,
+		Example: `  auth0 experimentation experiments advance-ramp
+  auth0 experimentation experiments advance-ramp <experiment-id> --target-level 25
+
+  # Discover the payload schema
+  auth0 experimentation experiments advance-ramp --schema
+  auth0 experimentation experiments advance-ramp --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 experimentation experiments advance-ramp <experiment-id> --data '{"target_level":25}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := resolveStatusTarget(cmd, args, &experimentID, cli.experimentPickerOptions, &experimentStatus, validStatuses, &inputs.ID, &inputs.Status); err != nil {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/experimentation/experiments/{id}/advance-ramp")
+			}
+
+			if len(args) > 0 {
+				inputs.ID = args[0]
+			} else if err := experimentID.Pick(cmd, &inputs.ID, cli.experimentPickerOptions); err != nil {
 				return err
 			}
 
-			status := management.ExperimentTransitionStatusEnum(inputs.Status)
-			var result *management.UpdateExperimentStatusResponseContent
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return advanceRampExperimentFromJSON(cli, cmd, inputs.ID, payload)
+			}
+
+			if !experimentTargetLevel.IsSet(cmd) {
+				if !canPrompt(cmd) {
+					return usageError{err: errors.New("--target-level is required"), reason: "missing_required_flags"}
+				}
+				var levelStr string
+				q := prompt.TextInput(
+					experimentTargetLevel.LongForm,
+					"Target level (immediate next percentage)",
+					experimentTargetLevel.Help,
+					"",
+					true,
+				)
+				if err := prompt.AskOne(q, &levelStr); err != nil {
+					return err
+				}
+				level, err := strconv.Atoi(strings.TrimSpace(levelStr))
+				if err != nil {
+					return usageError{err: fmt.Errorf("invalid target level %q: must be a whole number", levelStr), reason: "invalid_flag_value"}
+				}
+				inputs.TargetLevel = level
+			}
+
+			if inputs.TargetLevel < 0 || inputs.TargetLevel > 100 {
+				return usageError{err: fmt.Errorf("invalid target level %d: must be between 0 and 100", inputs.TargetLevel), reason: "invalid_flag_value"}
+			}
+
+			var result *management.AdvanceRampResponseContent
 			if err := ansi.Waiting(func() (err error) {
-				result, err = cli.apiv3.Experiments.UpdateStatus(cmd.Context(), inputs.ID, &management.UpdateExperimentStatusRequestContent{
-					Status: status,
+				result, err = cli.apiv3.Experiments.AdvanceRamp(cmd.Context(), inputs.ID, &management.AdvanceRampRequestContent{
+					TargetLevel: inputs.TargetLevel,
 				})
 				return err
 			}); err != nil {
-				return fmt.Errorf("failed to set experiment %q to %s: %w", inputs.ID, inputs.Status, err)
+				return fmt.Errorf("failed to advance ramp for experiment %q: %w", inputs.ID, err)
 			}
 
-			return cli.renderer.ExperimentStatusUpdate(result)
+			cli.renderer.ExperimentAdvanceRamp(result)
+			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	experimentTargetLevel.RegisterInt(cmd, &inputs.TargetLevel, 0)
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func advanceRampExperimentFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	result, err := runJSONWrite[management.AdvanceRampResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/experimentation/experiments/{id}/advance-ramp",
+		URI:        cli.api.HTTPClient.URI("experimentation", "experiments", id, "advance-ramp"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 experimentation experiments advance-ramp",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to advance ramp for experiment %q: %w", id, err)
+	}
+
+	cli.renderer.ExperimentAdvanceRamp(result)
+	return nil
 }
 
 // Picker helpers.
 
 func (c *cli) experimentPickerOptions(ctx context.Context) (pickerOptions, error) {
-	page, err := c.apiv3.Experiments.List(ctx, &management.ListExperimentsRequestParameters{})
+	all, err := collectV3Pages(ctx, 0,
+		func(ctx context.Context) (*auth0.ExperimentListPage, error) {
+			return c.apiv3.Experiments.List(ctx, &management.ListExperimentsRequestParameters{})
+		})
 	if err != nil {
 		return nil, err
 	}
 
 	var opts pickerOptions
-	for _, e := range page.Results {
+	for _, e := range all {
 		label := fmt.Sprintf("%s %s %s", e.GetName(), ansi.Faint("("+e.GetID()+")"), statusBadge(string(e.GetStatus())))
 		opts = append(opts, pickerOption{value: e.GetID(), label: label})
 	}
@@ -702,8 +1039,12 @@ func statusBadge(status string) string {
 	}
 }
 
-// buildAllocationsInteractively prompts for each variation's weight or segment and returns the assembled allocations.
-func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID string, strategy string) ([]*management.AllocationRequestItem, error) {
+// buildAllocationsInteractively prompts for the variations to include and how
+// each is allocated, returning allocations that satisfy the API's rules for the
+// strategy: exactly one control; for percentage, weights summing to 100 (or no
+// weights for ramp experiments, whose traffic follows the level schedule); for
+// segment, exactly one fallback and a segment for every other variation.
+func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID, strategy string, ramp bool) ([]*management.AllocationRequestItem, error) {
 	ctx := cmd.Context()
 	variations, err := c.apiv3.Variations.List(ctx, featureFlagID)
 	if err != nil {
@@ -728,7 +1069,7 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 
 	var selectedLabels []string
 	if err := prompt.AskMultiSelectWithPageSize(
-		fmt.Sprintf("Select the variations to include (choose 1–%d; use arrows/space, type to filter)", upperBound),
+		fmt.Sprintf("Select the variations to include (choose 1-%d; use arrows/space, type to filter)", upperBound),
 		&selectedLabels,
 		variationPickerPageSize,
 		labels...,
@@ -754,75 +1095,188 @@ func (c *cli) buildAllocationsInteractively(cmd *cobra.Command, featureFlagID st
 		}
 	}
 
-	c.renderer.Infof("Selected %d variation(s). You will be prompted to configure each one.", len(selectedVariations))
+	c.renderer.Infof("Selected %d variation(s).", len(selectedVariations))
+
+	// The API requires exactly one control (and, for segment strategy, exactly
+	// one fallback), so pick each once rather than asking per variation.
+	control, err := c.pickAllocationVariation(cmd, "Control", "Which variation is the control (the baseline the others are compared against)?", selectedVariations)
+	if err != nil {
+		return nil, err
+	}
+
+	fallback := -1
+	var segOpts pickerOptions
+	if strategy == "segment" {
+		if fallback, err = c.pickAllocationVariation(cmd, "Fallback", "Which variation is the fallback (served to users who match no segment)?", selectedVariations); err != nil {
+			return nil, err
+		}
+		// Every variation other than the fallback must target a segment.
+		if len(selectedVariations) > 1 {
+			if segOpts, err = c.segmentPickerOptions(ctx); err != nil {
+				return nil, fmt.Errorf("each variation other than the fallback must target a segment: %w", err)
+			}
+		}
+	}
+
 	c.renderer.Newline()
 
 	var allocations []*management.AllocationRequestItem
+	remainingWeight := 100
+	priority := 0
 
 	for i, v := range selectedVariations {
-		c.renderer.Infof("Variation %d/%d: %s %s", i+1, len(selectedVariations), v.GetName(), ansi.Faint("("+v.GetID()+")"))
-
-		var isControl bool
-		if err := prompt.AskBool("Is control", &isControl, false); err != nil {
-			return nil, err
-		}
-
 		alloc := &management.AllocationRequestItem{
 			VariationID: v.GetID(),
-			IsControl:   isControl,
+			IsControl:   i == control,
 		}
 
-		switch strategy {
-		case "percentage":
-			defaultWeight := strconv.Itoa(100 / len(selectedVariations))
-			var weightStr string
-			q := prompt.TextInput(
-				"weight",
-				fmt.Sprintf("Weight for %q (1–100)", v.GetName()),
-				"Integer percentage of traffic assigned to this variation (1–100).",
+		switch {
+		case strategy == "percentage" && !ramp:
+			c.renderer.Infof("Variation %d/%d: %s %s", i+1, len(selectedVariations), v.GetName(), ansi.Faint("("+v.GetID()+")"))
+			// Default to an even split, with the last variation taking the
+			// remainder so the defaults always sum to 100.
+			defaultWeight := 100 / len(selectedVariations)
+			if i == len(selectedVariations)-1 {
+				defaultWeight = max(remainingWeight, 0)
+			}
+			weight, err := askAllocationInt(
+				fmt.Sprintf("Weight for %q (0-100)", v.GetName()),
+				"Integer percentage of traffic assigned to this variation. Weights must sum to 100.",
 				defaultWeight,
-				true,
+				0,
 			)
-			if err := prompt.AskOne(q, &weightStr); err != nil {
+			if err != nil {
 				return nil, err
 			}
-			weightInt, err := strconv.Atoi(weightStr)
-			if err != nil {
-				return nil, fmt.Errorf("invalid weight %q: must be a whole number", weightStr)
+			remainingWeight -= weight
+			alloc.Weight = &weight
+		case strategy == "segment" && i == fallback:
+			isFallback := true
+			alloc.IsFallback = &isFallback
+		case strategy == "segment":
+			c.renderer.Infof("Variation %d/%d: %s %s", i+1, len(selectedVariations), v.GetName(), ansi.Faint("("+v.GetID()+")"))
+			selectFlag := Flag{Name: "Segment", LongForm: "segment"}
+			var chosen string
+			if err := selectFlag.Select(cmd, &chosen, segOpts.labels(), nil); err != nil {
+				return nil, err
 			}
-			alloc.Weight = &weightInt
-		case "segment":
-			// Segment_id is optional — fetch available segments and offer a picker
-			// with a "No segment" escape hatch. If no segments exist at all, skip silently.
-			segOpts, err := c.segmentPickerOptions(ctx)
+			sid := segOpts.getValue(chosen)
+			alloc.SegmentID = &sid
+
+			priority++
+			p, err := askAllocationInt(
+				fmt.Sprintf("Priority for %q (1 is evaluated first)", v.GetName()),
+				"When a user matches several segments, the allocation with the lowest priority number wins.",
+				priority,
+				1,
+			)
 			if err != nil {
-				// No segments exist — warn and continue without assigning one.
-				c.renderer.Warnf("No segments available for variation %q (segment_id left unset). Create segments with `auth0 experimentation segments create`.", v.GetName())
-			} else {
-				// Prepend a skip option so the user can leave segment_id blank.
-				skipLabel := "No segment (unassigned)"
-				labels := append([]string{skipLabel}, segOpts.labels()...)
-				selectFlag := Flag{Name: "Segment", LongForm: "segment"}
-				var chosen string
-				if err := selectFlag.Select(cmd, &chosen, labels, &skipLabel); err != nil {
-					return nil, err
-				}
-				if chosen != skipLabel {
-					sid := segOpts.getValue(chosen)
-					alloc.SegmentID = &sid
-				}
+				return nil, err
 			}
+			alloc.Priority = &p
 		}
 
 		allocations = append(allocations, alloc)
 	}
 
+	if strategy == "percentage" && !ramp && remainingWeight != 0 {
+		return nil, fmt.Errorf("allocation weights must sum to 100, got %d", 100-remainingWeight)
+	}
+
 	return allocations, nil
+}
+
+// pickAllocationVariation asks which of the selected variations plays a role
+// (control or fallback) and returns its index. A single variation is chosen
+// without prompting.
+func (c *cli) pickAllocationVariation(cmd *cobra.Command, name, message string, variations []*management.Variation) (int, error) {
+	if len(variations) == 1 {
+		c.renderer.Infof("%s: %s", name, variations[0].GetName())
+		return 0, nil
+	}
+
+	labels := make([]string, 0, len(variations))
+	for _, v := range variations {
+		labels = append(labels, variationOptionLabel(v))
+	}
+
+	var chosen string
+	selectFlag := Flag{Name: message, LongForm: strings.ToLower(name)}
+	if err := selectFlag.Select(cmd, &chosen, labels, nil); err != nil {
+		return 0, err
+	}
+
+	return slices.Index(labels, chosen), nil
+}
+
+// askAllocationInt prompts for a whole number between minValue and 100.
+func askAllocationInt(message, help string, defaultValue, minValue int) (int, error) {
+	var raw string
+	q := prompt.TextInput("value", message, help, strconv.Itoa(defaultValue), true)
+	if err := prompt.AskOne(q, &raw); err != nil {
+		return 0, err
+	}
+
+	n, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil || n < minValue || n > 100 {
+		return 0, fmt.Errorf("invalid value %q: must be a whole number between %d and 100", raw, minValue)
+	}
+
+	return n, nil
+}
+
+// allocationsHaveWeights reports whether any existing allocation carries a weight.
+func allocationsHaveWeights(allocations []*management.AllocationItem) bool {
+	for _, a := range allocations {
+		if a.Weight != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // variationOptionLabel renders a variation as a picker option label ("name (id)").
 func variationOptionLabel(v *management.Variation) string {
 	return fmt.Sprintf("%s %s", v.GetName(), ansi.Faint("("+v.GetID()+")"))
+}
+
+// parseDefaultConfig validates the --default-config value against the API enum (tenant | flag).
+func parseDefaultConfig(raw string) (management.DefaultConfigEnum, error) {
+	dc, err := management.NewDefaultConfigEnumFromString(raw)
+	if err != nil {
+		return "", usageError{err: fmt.Errorf("invalid --default-config %q: must be tenant or flag", raw), reason: "invalid_flag_value"}
+	}
+	return dc, nil
+}
+
+// parseLevels decodes a comma-separated --levels value into a strictly-increasing
+// slice of integer percentages in [0, 100], matching the ramp schedule the API expects.
+func parseLevels(raw string) ([]int, error) {
+	parts := strings.Split(raw, ",")
+	levels := make([]int, 0, len(parts))
+	prev := -1
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return nil, usageError{err: fmt.Errorf("invalid level %q: must be a whole number", p), reason: "invalid_flag_value"}
+		}
+		if n < 0 || n > 100 {
+			return nil, usageError{err: fmt.Errorf("invalid level %d: must be between 0 and 100", n), reason: "invalid_flag_value"}
+		}
+		if n <= prev {
+			return nil, usageError{err: fmt.Errorf("--levels must be strictly increasing: %d does not come after %d", n, prev), reason: "invalid_flag_value"}
+		}
+		prev = n
+		levels = append(levels, n)
+	}
+	if len(levels) == 0 {
+		return nil, usageError{err: errors.New("--levels must contain at least one integer percentage (e.g. 10,25,50,100)"), reason: "invalid_flag_value"}
+	}
+	return levels, nil
 }
 
 // validateAllocationCount enforces that the number of allocations is within the
@@ -832,22 +1286,43 @@ func variationOptionLabel(v *management.Variation) string {
 func validateAllocationCount(allocations []*management.AllocationRequestItem) error {
 	switch {
 	case len(allocations) == 0:
-		return fmt.Errorf("--allocations must contain at least one variation")
+		return usageError{err: errors.New("--allocations must contain at least one variation"), reason: "invalid_flag_value"}
 	case len(allocations) > maxExperimentAllocations:
-		return fmt.Errorf("--allocations contains %d variations but an experiment accepts at most %d", len(allocations), maxExperimentAllocations)
+		return usageError{
+			err:    fmt.Errorf("--allocations contains %d variations but an experiment accepts at most %d", len(allocations), maxExperimentAllocations),
+			reason: "invalid_flag_value",
+		}
 	}
 	return nil
 }
 
-// validateAllocationWeights enforces that each --allocations JSON weight is a whole-number percentage between 1 and 100.
+// validateRampAllocations enforces the API's ramp rules up front: ramps need the
+// percentage strategy, and their allocations must omit weights. The API accepts
+// weights on create but then fails validation, so catch them here.
+func validateRampAllocations(strategy string, allocations []*management.AllocationRequestItem) error {
+	if strategy != "percentage" {
+		return usageError{err: errors.New("ramp levels require --allocation-strategy percentage"), reason: "invalid_flag_value"}
+	}
+	for _, a := range allocations {
+		if a.Weight != nil {
+			return usageError{
+				err:    errors.New("ramp experiments don't use allocation weights (traffic follows the --levels schedule): remove \"weight\" from --allocations"),
+				reason: "invalid_flag_value",
+			}
+		}
+	}
+	return nil
+}
+
+// validateAllocationWeights enforces that each --allocations JSON weight is a whole-number percentage between 0 and 100.
 func validateAllocationWeights(allocations []*management.AllocationRequestItem) error {
 	for _, a := range allocations {
 		if a.Weight == nil {
 			continue
 		}
 		w := *a.Weight
-		if w < 1 || w > 100 {
-			return fmt.Errorf("invalid weight %d: must be a whole number between 1 and 100", w)
+		if w < 0 || w > 100 {
+			return usageError{err: fmt.Errorf("invalid weight %d: must be a whole number between 0 and 100", w), reason: "invalid_flag_value"}
 		}
 	}
 	return nil

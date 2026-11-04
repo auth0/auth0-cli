@@ -35,31 +35,41 @@ func AskMultiSelect(message string, response interface{}, options ...string) err
 	return err
 }
 
-// AskMultiSelectWithPageSize is like AskMultiSelect but shows at most pageSize
-// options at a time, letting the user scroll/page through longer lists (e.g.
-// when a feature flag has more variations than fit on screen). A pageSize <= 0
-// falls back to survey's default page size.
-func AskMultiSelectWithPageSize(message string, response interface{}, pageSize int, options ...string) error {
+// AskMultiSelectWithDefault is AskMultiSelect with the given default options pre-selected.
+func AskMultiSelectWithDefault(message string, response interface{}, defaults []string, options ...string) error {
 	prompt := &survey.MultiSelect{
 		Message: message,
 		Options: options,
+		Default: defaults,
 	}
-	if pageSize > 0 {
-		prompt.PageSize = pageSize
+
+	return askOne(prompt, response)
+}
+
+// AskMultiSelectWithPageSize is AskMultiSelect that shows pageSize options at a
+// time, scrolling through longer lists instead of rendering them all at once.
+func AskMultiSelectWithPageSize(message string, response interface{}, pageSize int, options ...string) error {
+	prompt := &survey.MultiSelect{
+		Message:  message,
+		Options:  options,
+		PageSize: pageSize,
 	}
 
 	return askOne(prompt, response)
 }
 
 func AskBool(message string, value *bool, defaultValue bool) error {
+	*value = defaultValue
 	prompt := &survey.Confirm{
 		Message: message,
 		Default: defaultValue,
 	}
 
-	err := askOne(prompt, value)
+	if err := askOne(prompt, value); err != nil {
+		*value = defaultValue
+	}
 
-	return err
+	return nil
 }
 
 // Confirm prompts the user with a yes/no question and returns their response.

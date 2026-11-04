@@ -43,7 +43,12 @@ type applicationView struct {
 	IsFirstParty             *bool
 	ThirdPartySecurityMode   string
 	RedirectionPolicy        string
-	revealSecret             bool
+
+	OrganizationUsage            string
+	OrganizationRequireBehavior  string
+	OrganizationDiscoveryMethods []string
+
+	revealSecret bool
 
 	raw interface{}
 }
@@ -143,6 +148,18 @@ func (v *applicationView) KeyValues() [][]string {
 		keyValues = append(keyValues, []string{"REDIRECTION POLICY", v.RedirectionPolicy})
 	}
 
+	if v.OrganizationUsage != "" {
+		keyValues = append(keyValues, []string{"ORGANIZATION USAGE", v.OrganizationUsage})
+	}
+
+	if v.OrganizationRequireBehavior != "" {
+		keyValues = append(keyValues, []string{"ORGANIZATION REQUIRE BEHAVIOR", v.OrganizationRequireBehavior})
+	}
+
+	if len(v.OrganizationDiscoveryMethods) > 0 {
+		keyValues = append(keyValues, []string{"ORGANIZATION DISCOVERY METHODS", strings.Join(v.OrganizationDiscoveryMethods, ", ")})
+	}
+
 	return keyValues
 }
 
@@ -231,8 +248,13 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		IsFirstParty:             client.IsFirstParty,
 		ThirdPartySecurityMode:   client.GetThirdPartySecurityMode(),
 		RedirectionPolicy:        client.GetRedirectionPolicy(),
-		raw:                      client,
-		RefreshToken:             string(jsonRefreshToken),
+
+		OrganizationUsage:            client.GetOrganizationUsage(),
+		OrganizationRequireBehavior:  client.GetOrganizationRequireBehavior(),
+		OrganizationDiscoveryMethods: client.GetOrganizationDiscoveryMethods(),
+
+		raw:          client,
+		RefreshToken: string(jsonRefreshToken),
 	}
 }
 

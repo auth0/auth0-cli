@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
@@ -249,14 +250,14 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, portalName, slug str
 	for _, g := range grants {
 		g := g
 		if err := ansi.Waiting(func() error {
-			return createPortalGrant(ctx, cli.api.ClientGrant, g)
+			return createPortalGrant(ctx, cli.apiv3.ClientGrant, g)
 		}); err != nil {
-			return fmt.Errorf("failed to create client grant for %q: %w", g.GetAudience(), err)
+			return fmt.Errorf("failed to create client grant for %q: %w", g.Audience, err)
 		}
 	}
 	cli.renderer.Successf("Client grants created")
 	for _, g := range grants {
-		cli.renderer.Detailf("%s", ansi.Faint(g.GetAudience()))
+		cli.renderer.Detailf("%s", ansi.Faint(g.Audience))
 	}
 	cli.renderer.Newline()
 
@@ -459,21 +460,24 @@ func createPortalClient(ctx context.Context, api auth0.ClientAPI, name, domain, 
 
 // buildPortalGrants returns the three grants required by Universal Portals.
 // Pure function: no I/O, fully testable.
-func buildPortalGrants(clientID, tenant string) []*management.ClientGrant {
+func buildPortalGrants(clientID, tenant string) []*managementv3.CreateClientGrantRequestContent {
 	myAccountScopes := myAccountAPIScopes
 	myOrgScopes := myOrgAPIScopes
 	mgmtScopes := managementAPIScopes
+	userSubject := managementv3.ClientGrantSubjectTypeEnumUser
+	clientSubject := managementv3.ClientGrantSubjectTypeEnumClient
 
-	return []*management.ClientGrant{
-		{ClientID: auth0.String(clientID), Audience: auth0.String("https://" + tenant + "/me/"), SubjectType: auth0.String("user"), Scope: &myAccountScopes},
-		{ClientID: auth0.String(clientID), Audience: auth0.String("https://" + tenant + "/my-org/"), SubjectType: auth0.String("user"), Scope: &myOrgScopes},
-		{ClientID: auth0.String(clientID), Audience: auth0.String("https://" + tenant + "/api/v2/"), SubjectType: auth0.String("client"), Scope: &mgmtScopes},
+	return []*managementv3.CreateClientGrantRequestContent{
+		{ClientID: auth0.String(clientID), Audience: "https://" + tenant + "/me/", SubjectType: &userSubject, Scope: myAccountScopes},
+		{ClientID: auth0.String(clientID), Audience: "https://" + tenant + "/my-org/", SubjectType: &userSubject, Scope: myOrgScopes},
+		{ClientID: auth0.String(clientID), Audience: "https://" + tenant + "/api/v2/", SubjectType: &clientSubject, Scope: mgmtScopes},
 	}
 }
 
 // createPortalGrant creates a single client grant via the typed SDK.
-func createPortalGrant(ctx context.Context, api auth0.ClientGrantAPI, grant *management.ClientGrant) error {
-	return api.Create(ctx, grant)
+func createPortalGrant(ctx context.Context, api auth0.ClientGrantAPIV3, grant *managementv3.CreateClientGrantRequestContent) error {
+	_, err := api.Create(ctx, grant)
+	return err
 }
 
 // errAPIConflict is returned by rawAPIPost when the server responds 409.

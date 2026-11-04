@@ -33,7 +33,7 @@ func TestCustomClientWithRetries(t *testing.T) {
 			writer.WriteHeader(200)
 		}))
 
-		client := customClientWithRetries()
+		client := customClientWithRetries("")
 
 		request, err := http.NewRequest(http.MethodGet, testServer.URL, nil)
 		require.NoError(t, err)
@@ -67,7 +67,7 @@ func TestCustomClientWithRetries(t *testing.T) {
 			writer.WriteHeader(200)
 		}))
 
-		client := customClientWithRetries()
+		client := customClientWithRetries("")
 
 		request, err := http.NewRequest(http.MethodGet, testServer.URL, nil)
 		require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestCustomClientWithRetries(t *testing.T) {
 			writer.WriteHeader(500)
 		}))
 
-		client := customClientWithRetries()
+		client := customClientWithRetries("")
 
 		request, err := http.NewRequest(http.MethodGet, testServer.URL, nil)
 		require.NoError(t, err)

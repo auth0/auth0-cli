@@ -6,23 +6,23 @@ if [ -f "$FILE" ]; then
     exit 0
 fi
 
-# Ensure the feature flag and a control variation exist first.
-FF_ID=$(./test/integration/scripts/get-feature-flag-id.sh)
-CONTROL_ID=$(./test/integration/scripts/get-variation-id.sh)
+# Reuse the dedicated experiments-suite flag and its control + treatment
+# variations for a balanced percentage split.
+FF_ID=$(./test/integration/scripts/get-experiment-flag-id.sh)
+CONTROL_ID=$(./test/integration/scripts/get-experiment-control-id.sh)
+TREATMENT_ID=$(./test/integration/scripts/get-experiment-treatment-id.sh)
 
-# Create a second (treatment) variation for the allocation pair.
-treatment=$( auth0 experimentation feature-flags variations create "$FF_ID" \
-  -n "integration-test-treatment" \
-  -o '{"color":{"value":"red"}}' \
-  --json --no-input )
-TREATMENT_ID=$(echo "$treatment" | jq -r '.["id"]')
+# The flag now has 2 variations (control + treatment), so it can be activated.
+# An experiment can only transition to active while its feature flag is active,
+# so activate it here to support the lifecycle tests. Already-active is a no-op.
+auth0 experimentation feature-flags update "$FF_ID" --status active --no-input >/dev/null 2>&1 || true
 
 experiment=$( auth0 experimentation experiments create \
   -n "integration-test-experiment" \
   -f "$FF_ID" \
-  -a "login" \
+  -a "authentication" \
   -s "percentage" \
-  -A "[{\"variation_id\":\"$CONTROL_ID\",\"weight\":50,\"is_control\":true},{\"variation_id\":\"$TREATMENT_ID\",\"weight\":50,\"is_control\":false}]" \
+  --allocations "[{\"variation_id\":\"$CONTROL_ID\",\"weight\":50,\"is_control\":true},{\"variation_id\":\"$TREATMENT_ID\",\"weight\":50,\"is_control\":false}]" \
   --json --no-input )
 
 mkdir -p ./test/integration/identifiers

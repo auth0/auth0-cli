@@ -15,7 +15,6 @@ type API struct {
 	Branding             BrandingAPI
 	BrandingTheme        BrandingThemeAPI
 	Client               ClientAPI
-	ClientGrant          ClientGrantAPI
 	Connection           ConnectionAPI
 	CustomDomain         CustomDomainAPI
 	EmailTemplate        EmailTemplateAPI
@@ -23,7 +22,6 @@ type API struct {
 	EventStream          EventStreamAPI
 	Flow                 FlowAPI
 	FlowVaultConnection  FlowVaultConnectionAPI
-	Form                 FormAPI
 	Log                  LogAPI
 	LogStream            LogStreamAPI
 	Organization         OrganizationAPI
@@ -50,7 +48,6 @@ func NewAPI(m *management.Management) *API {
 		Branding:             m.Branding,
 		BrandingTheme:        m.BrandingTheme,
 		Client:               m.Client,
-		ClientGrant:          m.ClientGrant,
 		Connection:           m.Connection,
 		CustomDomain:         m.CustomDomain,
 		EmailTemplate:        m.EmailTemplate,
@@ -58,7 +55,6 @@ func NewAPI(m *management.Management) *API {
 		EventStream:          m.EventStream,
 		Flow:                 m.Flow,
 		FlowVaultConnection:  m.Flow.Vault,
-		Form:                 m.Form,
 		Log:                  m.Log,
 		LogStream:            m.LogStream,
 		Organization:         m.Organization,
@@ -79,23 +75,69 @@ func NewAPI(m *management.Management) *API {
 
 type APIV3 struct {
 	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV3
+	ClientGrant                  ClientGrantAPIV3
+	ClientGrantOrganization      ClientGrantOrganizationAPIV3
 	Events                       EventsAPIV3
+	Form                         FormAPIV3
+	Flow                         FlowAPIV3
+	FlowExecution                FlowExecutionAPIV3
+	FlowVaultConnection          FlowVaultConnectionAPIV3
 	PhoneNotificationTemplate    PhoneNotificationTemplateAPI
+	Session                      SessionAPIV3
+	RefreshToken                 RefreshTokenAPIV3
+	UserSession                  UserSessionAPIV3
+	UserRefreshToken             UserRefreshTokenAPIV3
+	ActionModule                 ActionModuleAPIV3
+	ActionModuleVersion          ActionModuleVersionAPIV3
+	GuardianPolicy               GuardianPolicyAPIV3
+	GuardianEnrollment           GuardianEnrollmentAPIV3
+	GuardianFactor               GuardianFactorAPIV3
+	GuardianFactorPhone          GuardianFactorPhoneAPIV3
+	GuardianFactorSms            GuardianFactorSmsAPIV3
+	GuardianFactorPush           GuardianFactorPushAPIV3
+	GuardianFactorDuo            GuardianFactorDuoAPIV3
+	NetworkACLKey                NetworkACLKeyAPIV3
+	Connection                   ConnectionAPIV3
+	ConnectionEnabledClient      ConnectionEnabledClientAPIV3
 	Experiments                  ExperimentsAPI
 	FeatureFlags                 FeatureFlagsAPI
 	Variations                   VariationsAPI
 	Segments                     SegmentsAPI
+	ResourceServerV3             ResourceServerAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
 	return &APIV3{
 		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
+		ClientGrant:                  m.ClientGrants,
+		ClientGrantOrganization:      m.ClientGrants.Organizations,
 		Events:                       m.Events,
+		Form:                         m.Forms,
+		Flow:                         m.Flows,
+		FlowExecution:                m.Flows.Executions,
+		FlowVaultConnection:          m.Flows.Vault.Connections,
 		PhoneNotificationTemplate:    m.Branding.Phone.Templates,
+		Session:                      m.Sessions,
+		RefreshToken:                 m.RefreshTokens,
+		UserSession:                  m.Users.Sessions,
+		UserRefreshToken:             m.Users.RefreshToken,
+		ActionModule:                 m.Actions.Modules,
+		ActionModuleVersion:          m.Actions.Modules.Versions,
+		GuardianPolicy:               m.Guardian.Policies,
+		GuardianEnrollment:           m.Guardian.Enrollments,
+		GuardianFactor:               m.Guardian.Factors,
+		GuardianFactorPhone:          m.Guardian.Factors.Phone,
+		GuardianFactorSms:            m.Guardian.Factors.Sms,
+		GuardianFactorPush:           m.Guardian.Factors.PushNotification,
+		GuardianFactorDuo:            m.Guardian.Factors.Duo.Settings,
+		NetworkACLKey:                m.Keys.NetworkACLs,
+		Connection:                   m.Connections,
+		ConnectionEnabledClient:      m.Connections.Clients,
 		Experiments:                  m.Experimentation.Experiments,
 		FeatureFlags:                 m.Experimentation.FeatureFlags,
 		Variations:                   m.Experimentation.FeatureFlags.Variations,
 		Segments:                     m.Experimentation.Segments,
+		ResourceServerV3:             m.ResourceServers,
 	}
 }
 

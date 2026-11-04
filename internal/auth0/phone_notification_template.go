@@ -1,4 +1,4 @@
-//go:generate mockgen -source=phone_notification_template.go -destination=mock/phone_notification_template_mock.go -package=mock
+//go:generate go tool mockgen -source=phone_notification_template.go -destination=mock/phone_notification_template_mock.go -package=mock
 
 package auth0
 

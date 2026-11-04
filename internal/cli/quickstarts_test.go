@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/golang/mock/gomock"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
@@ -943,16 +943,18 @@ func TestCreateQuickstartAPI_CreatesResourceServerAndGrant(t *testing.T) {
 			return nil
 		})
 
-	grantAPI := mock.NewMockClientGrantAPI(ctrl)
+	grantAPI := mock.NewMockClientGrantAPIV3(ctrl)
 	grantAPI.EXPECT().
 		Create(gomock.Any(), gomock.Any()).
-		Return(nil)
+		Return(nil, nil)
 
 	testCLI := &cli{
 		renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
 		api: &auth0.API{
 			ResourceServer: rsAPI,
-			ClientGrant:    grantAPI,
+		},
+		apiv3: &auth0.APIV3{
+			ClientGrant: grantAPI,
 		},
 	}
 
@@ -985,13 +987,15 @@ func TestCreateQuickstartAPI_NoLinkedApp_SkipsGrant(t *testing.T) {
 		})
 
 	// No grant creation expected when linkedAppClientID is empty.
-	grantAPI := mock.NewMockClientGrantAPI(ctrl)
+	grantAPI := mock.NewMockClientGrantAPIV3(ctrl)
 
 	testCLI := &cli{
 		renderer: &display.Renderer{MessageWriter: &bytes.Buffer{}, ResultWriter: &bytes.Buffer{}},
 		api: &auth0.API{
 			ResourceServer: rsAPI,
-			ClientGrant:    grantAPI,
+		},
+		apiv3: &auth0.APIV3{
+			ClientGrant: grantAPI,
 		},
 	}
 

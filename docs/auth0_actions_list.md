@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing actions. To create one, run: `auth0 actions create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 actions list [flags]
@@ -20,6 +23,10 @@ auth0 actions list [flags]
   auth0 actions ls --json
   auth0 actions ls --json-compact
   auth0 actions ls --csv
+  auth0 actions list --schema
+  auth0 actions list --schema --json
+  auth0 actions list --query '{"triggerId":"post-login"}'
+  auth0 actions list --query '{"deployed":"true"}' --json
 ```
 
 
@@ -29,12 +36,15 @@ auth0 actions list [flags]
       --csv            Output in csv format.
       --json           Output in json format.
       --json-compact   Output in compact json format.
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
@@ -49,6 +59,7 @@ auth0 actions list [flags]
 - [auth0 actions deploy](auth0_actions_deploy.md) - Deploy an action
 - [auth0 actions diff](auth0_actions_diff.md) - Show diff between two versions of an Actions
 - [auth0 actions list](auth0_actions_list.md) - List your actions
+- [auth0 actions modules](auth0_actions_modules.md) - Manage action modules
 - [auth0 actions open](auth0_actions_open.md) - Open the settings page of an action
 - [auth0 actions show](auth0_actions_show.md) - Show an action
 - [auth0 actions update](auth0_actions_update.md) - Update an action

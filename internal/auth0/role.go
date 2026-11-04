@@ -1,4 +1,4 @@
-//go:generate mockgen -source=role.go -destination=mock/roles_mock.go -package=mock
+//go:generate go tool mockgen -source=role.go -destination=mock/roles_mock.go -package=mock
 
 package auth0
 

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -84,7 +85,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv3 *auth0.API
 		case "auth0_client", "auth0_client_credentials":
 			fetchers = append(fetchers, &clientResourceFetcher{api})
 		case "auth0_client_grant":
-			fetchers = append(fetchers, &clientGrantResourceFetcher{api})
+			fetchers = append(fetchers, &clientGrantResourceFetcher{apiv3})
 		case "auth0_connection", "auth0_connection_clients":
 			fetchers = append(fetchers, &connectionResourceFetcher{api})
 		case "auth0_custom_domain":
@@ -98,7 +99,7 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv3 *auth0.API
 		case "auth0_flow_vault_connection":
 			fetchers = append(fetchers, &flowVaultConnectionResourceFetcher{api})
 		case "auth0_form":
-			fetchers = append(fetchers, &formResourceFetcher{api})
+			fetchers = append(fetchers, &formResourceFetcher{apiv3})
 		case "auth0_guardian":
 			fetchers = append(fetchers, &guardianResourceFetcher{})
 		case "auth0_log_stream":
@@ -129,6 +130,8 @@ func (i *terraformInputs) parseResourceFetchers(api *auth0.API, apiv3 *auth0.API
 			fetchers = append(fetchers, &triggerActionsResourceFetcher{api})
 		case "auth0_user_attribute_profile":
 			fetchers = append(fetchers, &userAttributeProfilesResourceFetcher{api})
+		case "auth0_token_exchange_profile":
+			fetchers = append(fetchers, &tokenExchangeProfileResourceFetcher{api})
 		default:
 			err = errors.Join(err, fmt.Errorf("unsupported resource type: %s", resource))
 		}
@@ -187,10 +190,17 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		}
 
 		var data importDataList
-		err = ansi.Spinner("Fetching data from Auth0", func() error {
+		fetch := func() error {
 			data, err = fetchImportData(cmd.Context(), cli, resources...)
 			return err
-		})
+		}
+		// The spinner writes progress frames to stderr, which would pollute the
+		// clean-stderr contract in agent mode, so run the work without it there.
+		if cli.renderer.AgentMode {
+			err = fetch()
+		} else {
+			err = ansi.Spinner("Fetching data from Auth0", fetch)
+		}
 		if err != nil {
 			return err
 		}
@@ -213,16 +223,34 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 		}
 
 		if terraformProviderCredentialsAreAvailable() {
-			err := checkTerraformProviderAndCLIDomainsMatch(cli.Config.DefaultTenant)
+			err := checkTerraformProviderAndCLIDomainsMatch(cli.tenant)
 			if err != nil {
 				return err
 			}
 
-			err = ansi.Spinner("Generating Terraform configuration", func() error {
+			generate := func() error {
 				return generateTerraformResourceConfig(cmd.Context(), inputs)
-			})
+			}
+			if cli.renderer.AgentMode {
+				err = generate()
+			} else {
+				err = ansi.Spinner("Generating Terraform configuration", generate)
+			}
 
 			if err != nil {
+				// The import config files were already written above; only the
+				// terraform install or `terraform plan` step failed. In agent mode
+				// every message below is suppressed, so emit a JSON object carrying the
+				// output location and a status instead of returning empty stdout with a
+				// success exit code (which would look like a clean success to an agent).
+				if cli.renderer.AgentMode {
+					status := "plan_failed"
+					if errors.Is(err, errTerraformInstallFailed) {
+						status = "terraform_install_failed"
+					}
+					return emitTerraformResultJSON(cli, inputs.OutputDIR, status, err.Error())
+				}
+
 				if errors.Is(err, errTerraformInstallFailed) {
 					cli.renderer.Warnf("%s\n\n", err)
 				} else {
@@ -232,6 +260,12 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 				cli.renderer.Warnf("Once the plan succeeds, run " + ansi.Cyan("./terraform apply") + " to complete the import.\n\n")
 				cli.renderer.Infof("The terraform binary and auth0_import.tf files can be deleted afterwards.\n")
 				return nil
+			}
+
+			if cli.renderer.AgentMode {
+				// Infof is suppressed in agent mode, so emit the output location as a
+				// JSON object on stdout instead of losing it entirely.
+				return emitTerraformResultJSON(cli, inputs.OutputDIR, "generated", "")
 			}
 
 			cli.renderer.Infof("Terraform resource config files generated successfully in: %s", inputs.OutputDIR)
@@ -245,6 +279,18 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 			return nil
 		}
 
+		if cli.renderer.AgentMode {
+			// The import config files were written, but no provider credentials were
+			// found to run terraform. Surface the location and status as JSON rather
+			// than the suppressed guidance below.
+			return emitTerraformResultJSON(
+				cli,
+				inputs.OutputDIR,
+				"credentials_missing",
+				"Terraform provider credentials not detected. Set the provider credentials, then run terraform init, plan and apply in the output directory.",
+			)
+		}
+
 		cli.renderer.Errorf("Terraform provider credentials not detected\n")
 		cli.renderer.Warnf(
 			"Refer to following guide on how to create a dedicated Auth0 client and configure credentials: " +
@@ -256,6 +302,26 @@ func generateTerraformCmdRun(cli *cli, inputs *terraformInputs) func(cmd *cobra.
 
 		return nil
 	}
+}
+
+// emitTerraformResultJSON writes a single machine-readable result object to
+// stdout for agent mode. The message is omitted when empty so a clean success
+// stays terse.
+func emitTerraformResultJSON(cli *cli, outputDir, status, message string) error {
+	details, err := json.Marshal(struct {
+		OutputDir string `json:"output_dir"`
+		Status    string `json:"status"`
+		Message   string `json:"message,omitempty"`
+	}{
+		OutputDir: outputDir,
+		Status:    status,
+		Message:   message,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to encode terraform generation details: %w", err)
+	}
+	cli.renderer.OutputPreformattedJSON(string(details))
+	return nil
 }
 
 func fetchImportData(ctx context.Context, cli *cli, fetchers ...resourceDataFetcher) (importDataList, error) {
@@ -326,7 +392,7 @@ func createMainFile(input *terraformInputs) error {
   required_providers {
     auth0 = {
       source  = "auth0/auth0"
-      version = ">= 1.0.0"
+      version = ">= 1.0.0, < 1.58.0"
     }
   }
 }
@@ -416,7 +482,7 @@ func checkTerraformProviderAndCLIDomainsMatch(currentCLIDomain string) error {
 	if providerDomain == currentCLIDomain {
 		return nil
 	}
-	return fmt.Errorf("terraform provider tenant domain %q does not match current CLI tenant %q", providerDomain, currentCLIDomain)
+	return usageError{err: fmt.Errorf("terraform provider tenant domain %q does not match current CLI tenant %q", providerDomain, currentCLIDomain), reason: "tenant_domain_mismatch"}
 }
 
 func deduplicateResourceNames(data importDataList) importDataList {

@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing APIs. To create one, run: `auth0 apis create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 apis list [flags]
@@ -21,6 +24,10 @@ auth0 apis list [flags]
   auth0 apis ls -n 100 --json
   auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv
+  auth0 apis list --schema
+  auth0 apis list --schema --json
+  auth0 apis list --query '{"identifiers":["https://my-api"]}'
+  auth0 apis list --query '{"identifiers":["https://my-api"]}' --json
 ```
 
 
@@ -31,12 +38,15 @@ auth0 apis list [flags]
       --json           Output in json format.
       --json-compact   Output in compact json format.
   -n, --number int     Number of APIs to retrieve. Minimum 1, maximum 1000. (default 100)
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
@@ -51,6 +61,7 @@ auth0 apis list [flags]
 - [auth0 apis list](auth0_apis_list.md) - List your APIs
 - [auth0 apis open](auth0_apis_open.md) - Open the settings page of an API
 - [auth0 apis scopes](auth0_apis_scopes.md) - Manage resources for API scopes
+- [auth0 apis search](auth0_apis_search.md) - Search your APIs (Early Access)
 - [auth0 apis show](auth0_apis_show.md) - Show an API
 - [auth0 apis update](auth0_apis_update.md) - Update an API
 

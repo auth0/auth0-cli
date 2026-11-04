@@ -8,7 +8,7 @@ fi
 
 segment=$( auth0 experimentation segments create \
   -n "integration-test-segment" \
-  -r '[{"match":{"connection":["MyConn"]}}]' \
+  -r '[{"match":{"country":["US"]}}]' \
   --json --no-input )
 
 mkdir -p ./test/integration/identifiers

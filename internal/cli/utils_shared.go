@@ -5,14 +5,19 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/pkg/browser"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -97,12 +102,14 @@ func runClientCredentialsFlow(
 }
 
 func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *management.Client, audience, organization string) error {
-	var list *management.ClientGrantList
+	var list *core.Page[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent]
 	if err := ansi.Waiting(func() (err error) {
-		list, err = cli.api.ClientGrant.List(
+		list, err = cli.apiv3.ClientGrant.List(
 			ctx,
-			management.Parameter("audience", audience),
-			management.Parameter("client_id", client.GetClientID()),
+			&managementv3.ListClientGrantsRequestParameters{
+				Audience: auth0.String(audience),
+				ClientID: auth0.String(client.GetClientID()),
+			},
 		)
 		return err
 	}); err != nil {
@@ -114,7 +121,7 @@ func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *manage
 		)
 	}
 
-	if len(list.ClientGrants) < 1 {
+	if len(list.Results) < 1 {
 		return fmt.Errorf(
 			"the %s application is not authorized to request access tokens for this API %s.\n\n"+
 				"Run: 'auth0 apps open %s' to open the dashboard and authorize the application",
@@ -124,8 +131,8 @@ func checkClientIsAuthorizedForAPI(ctx context.Context, cli *cli, client *manage
 		)
 	}
 
-	grant := list.ClientGrants[0]
-	if grant.GetOrganizationUsage() == "require" && organization == "" {
+	grant := list.Results[0]
+	if grant.GetOrganizationUsage() == managementv3.ClientGrantOrganizationUsageEnumRequire && organization == "" {
 		return fmt.Errorf(
 			"the client grant for %s requires an organization.\n\n"+
 				"Use the --organization flag to specify one",
@@ -172,7 +179,7 @@ func runLoginFlowPreflightChecks(cli *cli, c *management.Client) (abort bool) {
 func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName, audience, prompt string, scopes []string, customDomain string, customParams map[string]string) (*authutil.TokenResponse, error) {
 	var tokenResponse *authutil.TokenResponse
 
-	err := ansi.Spinner("Waiting for login flow to complete", func() error {
+	flow := func() error {
 		callbackAdded, err := addLocalCallbackURLToClient(ctx, cli.api.Client, c)
 		if err != nil {
 			return err
@@ -194,9 +201,17 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 			return err
 		}
 
-		if cli.noInput {
+		switch {
+		case cli.renderer.AgentMode:
+			// An agent has no browser to open, so emit the login URL as a JSON object
+			// on stdout for a human to complete in a browser. The browser then redirects
+			// to the local callback server the flow waits on below.
+			if err := emitURLJSON(cli, "login_url", loginURL); err != nil {
+				return err
+			}
+		case cli.noInput:
 			cli.renderer.Infof("Open the following URL in a browser: %s\n", loginURL)
-		} else {
+		default:
 			if err := browser.OpenURL(loginURL); err != nil {
 				return err
 			}
@@ -204,7 +219,7 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 
 		// Launch a HTTP server to wait for the callback to capture the auth
 		// code.
-		authCode, authState, err := authutil.WaitForBrowserCallback(cliLoginTestingCallbackAddr)
+		authCode, authState, err := authutil.WaitForBrowserCallback(ctx, cliLoginTestingCallbackAddr)
 		if err != nil {
 			return err
 		}
@@ -238,7 +253,16 @@ func runLoginFlow(ctx context.Context, cli *cli, c *management.Client, connName,
 		}()
 
 		return nil
-	})
+	}
+
+	// The spinner writes decorative frames to stderr, which agent mode keeps clean,
+	// so run the flow directly there and wrap it in the spinner only for humans.
+	var err error
+	if cli.renderer.AgentMode {
+		err = flow()
+	} else {
+		err = ansi.Spinner("Waiting for login flow to complete", flow)
+	}
 
 	return tokenResponse, err
 }
@@ -318,22 +342,58 @@ func containsStr(s []string, u string) bool {
 	return false
 }
 
-func openManageURL(cli *cli, tenant string, path string) {
+// emitURLJSON writes a single-field URL object to stdout for agent mode, e.g.
+// {"manage_url":"..."}. It centralizes the marshal-and-emit the URL openers and
+// docs commands share, so every site handles a marshal failure the same way
+// (returning the error) instead of some sites silently swallowing it.
+func emitURLJSON(cli *cli, key, url string) error {
+	details, err := json.Marshal(map[string]string{key: url})
+	if err != nil {
+		return fmt.Errorf("failed to encode %s: %w", key, err)
+	}
+	cli.renderer.OutputPreformattedJSON(string(details))
+	return nil
+}
+
+func openManageURL(cli *cli, tenant string, path string) error {
 	manageTenantURL := formatManageTenantURL(tenant, &cli.Config)
 	if len(manageTenantURL) == 0 || len(path) == 0 {
-		cli.renderer.Warnf("Failed to format the correct URL, please ensure you have run 'auth0 login' and try again.")
-		return
+		return dashboardURLUnavailableError(tenant)
 	}
 
 	settingsURL := fmt.Sprintf("%s%s", manageTenantURL, path)
 
+	if cli.renderer.AgentMode {
+		// An agent has no browser, so emit the dashboard URL as JSON on stdout rather
+		// than through Infof, which agent mode suppresses. Surface a marshal failure
+		// as the command error instead of exiting 0 with no output.
+		return emitURLJSON(cli, "manage_url", settingsURL)
+	}
+
 	if cli.noInput {
 		cli.renderer.Infof("Open the following URL in a browser: %s", settingsURL)
-		return
+		return nil
 	}
 
 	if err := browser.OpenURL(settingsURL); err != nil {
 		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", settingsURL)
+	}
+
+	return nil
+}
+
+// dashboardURLUnavailableError reports that a dashboard or builder link cannot be
+// built because the tenant's details are not saved locally (the expected state in
+// env auth mode). It is a hard error, not a warning, so an "open" command never
+// exits 0 with no output for an agent.
+func dashboardURLUnavailableError(tenant string) error {
+	return authError{
+		err: fmt.Errorf(
+			"cannot build the dashboard URL for tenant %q because its details are not saved locally; "+
+				"run 'auth0 login' to save them, or open the Auth0 dashboard in a browser manually",
+			tenant,
+		),
+		reason: "dashboard_url_unavailable",
 	}
 }
 
@@ -460,5 +520,281 @@ func parseFlexibleDate(input string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("invalid date format: use RFC3339, 'YYYY-MM-DD', or formats like 'yesterday', '-2d'")
+	return "", usageError{err: fmt.Errorf("invalid date format: use RFC3339, 'YYYY-MM-DD', or formats like 'yesterday', '-2d'"), reason: "invalid_flag_value"}
+}
+
+// stringMapToAny converts a string-keyed string map (as produced by a
+// StringToString flag) into the map[string]any shape the v3 SDK uses for
+// free-form metadata fields. A nil or empty input yields a non-nil empty map so
+// the caller sends "{}" (clear) rather than omitting the field.
+func stringMapToAny(in map[string]string) map[string]any {
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
+}
+
+// collectV3Pages drains a go-auth0 v3 cursor/offset-paginated endpoint into a
+// single slice, following pages until limit items are collected or the results
+// are exhausted. A limit <= 0 collects every page. The initial request and all
+// page fetches run inside the waiting spinner, so callers get one loading state
+// for the whole operation.
+//
+// It exists because the v1 getWithPagination helper is built on offset options
+// (management.Page/PerPage) and []interface{}, which are incompatible with the
+// generic core.Page[Cursor, T, R] iterator that every v3 list endpoint returns.
+func collectV3Pages[C comparable, T any, R any](
+	ctx context.Context,
+	limit int,
+	list func(ctx context.Context) (*core.Page[C, T, R], error),
+) ([]T, error) {
+	var items []T
+
+	err := ansi.Waiting(func() error {
+		page, err := list(ctx)
+		if err != nil {
+			return err
+		}
+
+		iter := page.Iterator()
+		for iter.Next(ctx) {
+			items = append(items, iter.Current())
+			if limit > 0 && len(items) >= limit {
+				break
+			}
+		}
+
+		return iter.Err()
+	})
+
+	return items, err
+}
+
+// --- Shared raw-JSON + builder helpers ---.
+//
+// Forms and Flows share a hybrid approach: they use the v3 SDK for list/delete
+// but send create/update/show through the raw HTTP layer, because the typed
+// request bodies drop provider-specific config in their union types. The helpers
+// below are the resource-agnostic pieces of that approach.
+
+// builderURL is the host for the Auth0 visual builders (Flows and Vault).
+// Both live on a dedicated host rather than under the main management dashboard.
+const builderURL = "https://forms.auth0.com"
+
+// rawJSONRequest sends a raw JSON request to the Management API and returns the
+// response body, surfacing API errors the same way the `api` command does.
+func (c *cli) rawJSONRequest(
+	ctx context.Context,
+	method string,
+	uri string,
+	body json.RawMessage,
+) (json.RawMessage, error) {
+	var payload interface{}
+	if len(body) > 0 {
+		payload = body
+	}
+
+	request, err := c.api.HTTPClient.NewRequest(ctx, method, uri, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	var out json.RawMessage
+	if err := ansi.Waiting(func() error {
+		response, err := c.api.HTTPClient.Do(request)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_ = response.Body.Close()
+		}()
+
+		data, err := io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+		if response.StatusCode >= http.StatusBadRequest {
+			return newAPIResponseError(response.StatusCode, response.Header, data)
+		}
+		out = data
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+// applyRawNameOverride sets the top-level "name" field when a non-empty override
+// is supplied, without deserializing the rest of the body.
+func applyRawNameOverride(body json.RawMessage, name string) (json.RawMessage, error) {
+	if name == "" {
+		return body, nil
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil, err
+	}
+	if obj == nil {
+		return nil, validationError{err: errors.New("body must be a JSON object"), reason: "malformed_json"}
+	}
+
+	encoded, err := json.Marshal(name)
+	if err != nil {
+		return nil, err
+	}
+	obj["name"] = encoded
+
+	return json.Marshal(obj)
+}
+
+func rejectRawNameField(body json.RawMessage, source string) error {
+	if len(body) == 0 {
+		return nil
+	}
+
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return nil
+	}
+	if _, ok := obj["name"]; ok {
+		return validationError{err: fmt.Errorf("the %s must not contain a top-level \"name\" field; set the name with --name instead", source), reason: "invalid_body"}
+	}
+
+	return nil
+}
+
+// rawJSONStringField extracts a top-level string field from a raw JSON object,
+// returning an empty string when the field is absent or null.
+func rawJSONStringField(body json.RawMessage, field string) (string, error) {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(body, &obj); err != nil {
+		return "", err
+	}
+	if obj == nil {
+		return "", validationError{err: errors.New("body must be a JSON object"), reason: "malformed_json"}
+	}
+
+	raw, ok := obj[field]
+	if !ok || string(raw) == "null" {
+		return "", nil
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", fmt.Errorf("%s must be a string: %w", field, err)
+	}
+	return value, nil
+}
+
+// editJSONBody opens an editor seeded with `seed` and unmarshals the result into
+// `target`, re-opening on invalid JSON so a typo never costs the user's edits.
+// `resource` names the object in prompts and error messages.
+func editJSONBody(cli *cli, resource, seed string, target interface{}) error {
+	content := seed
+	for {
+		var edited string
+		if err := openCreateEditor(&edited, content, resource+".*.json", nil, nil); err != nil {
+			return err
+		}
+
+		if err := json.Unmarshal([]byte(edited), target); err != nil {
+			cli.renderer.Warnf("The %s body is not valid JSON: %s", resource, err)
+			if !prompt.Confirm("Re-open the editor to fix it?") {
+				return fmt.Errorf("aborted; the %s was not saved", resource)
+			}
+			content = edited
+			continue
+		}
+
+		return nil
+	}
+}
+
+// openBuilderURL opens a Forms/Flows builder page in a browser, or prints the URL
+// when interactivity is disabled.
+func openBuilderURL(cli *cli, path string) error {
+	url := formatBuilderPageURL(cli.tenant, &cli.Config, path)
+	if url == "" {
+		return dashboardURLUnavailableError(cli.tenant)
+	}
+
+	if cli.renderer.AgentMode {
+		// An agent has no browser, so emit the builder URL as JSON on stdout rather
+		// than through Infof, which agent mode suppresses. Surface a marshal failure
+		// as the command error instead of exiting 0 with no output.
+		return emitURLJSON(cli, "builder_url", url)
+	}
+
+	if cli.noInput {
+		cli.renderer.Infof("Open the following URL in a browser: %s", url)
+		return nil
+	}
+
+	if err := browser.OpenURL(url); err != nil {
+		cli.renderer.Warnf("Couldn't open the URL, please do it manually: %s", url)
+	}
+
+	return nil
+}
+
+// formatBuilderPageURL builds a Forms/Flows builder URL for the given path,
+// deriving the region and tenant name from the configured tenant.
+func formatBuilderPageURL(tenant string, cfg *config.Config, path string) string {
+	if len(tenant) == 0 || len(path) == 0 {
+		return ""
+	}
+
+	s := strings.Split(tenant, ".")
+	if len(s) < 3 {
+		return ""
+	}
+
+	region := "us" // A PUS1 tenant looks like dev-tti06f6y.auth0.com (3 parts).
+	if len(s) > 3 {
+		region = s[len(s)-3]
+	}
+
+	tenantName := cfg.Tenants[tenant].Name
+	if len(tenantName) == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%s/tenants/%s/%s/%s", builderURL, region, tenantName, path)
+}
+
+// validateMinLength rejects a value set through flagName that is shorter than
+// minLength characters. An empty value passes, because callers treat it as not
+// provided. Characters are counted as runes to match JSON Schema minLength.
+func validateMinLength(flagName, value string, minLength int) error {
+	if value == "" || utf8.RuneCountInString(value) >= minLength {
+		return nil
+	}
+	return usageError{
+		err:    fmt.Errorf("--%s must be at least %d characters long", flagName, minLength),
+		reason: "invalid_flag_value",
+	}
+}
+
+// marshalToJSON renders a value as a compact JSON string for pre-filling an
+// editor on update. It returns an empty string if the value is nil or can't be
+// marshaled, so the editor simply opens blank.
+func marshalToJSON(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func sliceToSet(items []string) map[string]bool {
+	set := make(map[string]bool, len(items))
+	for _, item := range items {
+		set[item] = true
+	}
+	return set
 }

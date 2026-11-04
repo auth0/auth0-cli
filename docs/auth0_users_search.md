@@ -7,6 +7,8 @@ has_toc: false
 
 Search for users. To create one, run: `auth0 users create`.
 
+Use '--schema' to see available query parameters.
+
 ## Usage
 ```
 auth0 users search [flags]
@@ -22,6 +24,8 @@ auth0 users search [flags]
   auth0 users search -q name:"Bob" -s "name:1" --number 200
   auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv
+  auth0 users search --schema
+  auth0 users search --schema --json
 ```
 
 
@@ -38,6 +42,7 @@ auth0 users search [flags]
                                                                                 For example: email:"user123@*.com" OR (user_id:"user-id-123" AND name:"Bob")
                                                                                 
                                                                                  For more info: https://auth0.com/docs/users/user-search/user-search-query-syntax.
+      --schema                                                                  Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --sort string                                                             Field to sort by. Use 'field:order' where 'order' is '1' for ascending and '-1' for descending. e.g. 'created_at:1'.
 ```
 
@@ -45,6 +50,7 @@ auth0 users search [flags]
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
@@ -59,9 +65,11 @@ auth0 users search [flags]
 - [auth0 users delete](auth0_users_delete.md) - Delete a user
 - [auth0 users import](auth0_users_import.md) - Import users from schema
 - [auth0 users open](auth0_users_open.md) - Open the user's settings page
+- [auth0 users refresh-tokens](auth0_users_refresh-tokens.md) - Manage a user's refresh tokens
 - [auth0 users roles](auth0_users_roles.md) - Manage a user's roles
 - [auth0 users search](auth0_users_search.md) - Search for users
 - [auth0 users search-by-email](auth0_users_search-by-email.md) - Search for users
+- [auth0 users sessions](auth0_users_sessions.md) - Manage a user's sessions
 - [auth0 users show](auth0_users_show.md) - Show an existing user
 - [auth0 users update](auth0_users_update.md) - Update a user
 

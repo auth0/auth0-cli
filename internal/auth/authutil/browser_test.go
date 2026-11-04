@@ -1,6 +1,7 @@
 package authutil
 
 import (
+	"context"
 	_ "embed"
 	"io"
 	"net/http"
@@ -29,7 +30,7 @@ func TestWaitForBrowserCallback(t *testing.T) {
 			assert.Contains(t, body, "You can close the window and go back to the CLI to see the user info and tokens.")
 		})
 
-		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
+		code, state, callbackErr := WaitForBrowserCallback(context.Background(), "localhost:1234")
 		assert.NoError(t, callbackErr)
 		assert.Equal(t, "1234", code)
 		assert.Equal(t, "1234", state)
@@ -52,7 +53,7 @@ func TestWaitForBrowserCallback(t *testing.T) {
 			assert.Contains(t, body, "Failed to extract code from request, please try authenticating again")
 		})
 
-		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
+		code, state, callbackErr := WaitForBrowserCallback(context.Background(), "localhost:1234")
 		assert.Error(t, callbackErr)
 		assert.Equal(t, "", code)
 		assert.Equal(t, "", state)
@@ -73,9 +74,23 @@ func TestWaitForBrowserCallback(t *testing.T) {
 			_ = s.Close()
 		}()
 
-		code, state, callbackErr := WaitForBrowserCallback("localhost:1234")
+		code, state, callbackErr := WaitForBrowserCallback(context.Background(), "localhost:1234")
 
 		assert.EqualError(t, callbackErr, "listen tcp 127.0.0.1:1234: bind: address already in use")
+		assert.Equal(t, "", code)
+		assert.Equal(t, "", state)
+	})
+
+	t.Run("Aborts when the context is cancelled", func(t *testing.T) {
+		// No browser callback ever arrives, so without a bounded, cancelable
+		// wait this would hang. Cancelling the context must unblock it promptly
+		// with the context error instead of stranding the caller.
+		ctx, cancel := context.WithCancel(context.Background())
+		time.AfterFunc(500*time.Millisecond, cancel)
+
+		code, state, callbackErr := WaitForBrowserCallback(ctx, "localhost:1236")
+
+		assert.ErrorIs(t, callbackErr, context.Canceled)
 		assert.Equal(t, "", code)
 		assert.Equal(t, "", state)
 	})

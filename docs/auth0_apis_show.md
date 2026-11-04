@@ -7,6 +7,8 @@ has_toc: false
 
 Display the name, scopes, token lifetime, and other information about an API.
 
+To authorize an application to request tokens for this API, run: `auth0 client-grants create --client-id <client-id> --audience <api-identifier> --scopes "<scope1,scope2>"`.
+
 ## Usage
 ```
 auth0 apis show [flags]
@@ -33,6 +35,7 @@ auth0 apis show [flags]
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
@@ -47,6 +50,7 @@ auth0 apis show [flags]
 - [auth0 apis list](auth0_apis_list.md) - List your APIs
 - [auth0 apis open](auth0_apis_open.md) - Open the settings page of an API
 - [auth0 apis scopes](auth0_apis_scopes.md) - Manage resources for API scopes
+- [auth0 apis search](auth0_apis_search.md) - Search your APIs (Early Access)
 - [auth0 apis show](auth0_apis_show.md) - Show an API
 - [auth0 apis update](auth0_apis_update.md) - Update an API
 

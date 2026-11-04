@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
@@ -291,6 +291,32 @@ func TestUserRolesToRemovePickerOptions(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUserRolesNoInputGuard(t *testing.T) {
+	t.Run("add errors when --roles is missing in non-interactive mode", func(t *testing.T) {
+		cli := &cli{}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := addUserRolesCmd(cli)
+		cmd.SetArgs([]string{"auth0|some-user-id"})
+		// Mirror the root command, which relaxes required flags when no
+		// interactive terminal is available so RunE can report the missing input.
+		prepareInteractivity(cmd)
+
+		assert.EqualError(t, cmd.Execute(), "missing a required flag in non-interactive mode: --roles")
+	})
+
+	t.Run("remove errors when --roles is missing in non-interactive mode", func(t *testing.T) {
+		cli := &cli{}
+		cli.noInput = true // Non-interactive mode.
+
+		cmd := removeUserRolesCmd(cli)
+		cmd.SetArgs([]string{"auth0|some-user-id"})
+		prepareInteractivity(cmd)
+
+		assert.EqualError(t, cmd.Execute(), "missing a required flag in non-interactive mode: --roles")
+	})
 }
 
 func TestContainsRole(t *testing.T) {

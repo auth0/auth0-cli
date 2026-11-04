@@ -2,10 +2,13 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/google/uuid"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -18,7 +21,7 @@ var (
 		"auth0_email_provider", "auth0_email_template", "auth0_guardian", "auth0_log_stream", "auth0_network_acl", "auth0_organization",
 		"auth0_pages", "auth0_prompt", "auth0_prompt_custom_text", "auth0_prompt_screen_renderer", "auth0_resource_server", "auth0_role",
 		"auth0_self_service_profile", "auth0_tenant", "auth0_trigger_actions", "auth0_user_attribute_profile", "auth0_prompt_screen_partial",
-		"auth0_phone_notification_template",
+		"auth0_phone_notification_template", "auth0_token_exchange_profile",
 	}
 )
 
@@ -57,7 +60,7 @@ type (
 	}
 
 	clientGrantResourceFetcher struct {
-		api *auth0.API
+		apiv3 *auth0.APIV3
 	}
 
 	connectionResourceFetcher struct {
@@ -85,7 +88,7 @@ type (
 	}
 
 	formResourceFetcher struct {
-		api *auth0.API
+		apiv3 *auth0.APIV3
 	}
 
 	guardianResourceFetcher  struct{}
@@ -136,6 +139,10 @@ type (
 
 	phoneNotificationTemplateResourceFetcher struct {
 		apiv3 *auth0.APIV3
+	}
+
+	tokenExchangeProfileResourceFetcher struct {
+		api *auth0.API
 	}
 )
 
@@ -263,32 +270,25 @@ func (f *clientResourceFetcher) FetchData(ctx context.Context) (importDataList, 
 func (f *clientGrantResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	var page int
-	for {
-		grants, err := f.api.ClientGrant.List(
-			ctx,
-			management.Page(page),
-		)
-		if err != nil {
-			return nil, err
-		}
+	grants, err := f.apiv3.ClientGrant.List(ctx, &managementv3.ListClientGrantsRequestParameters{})
+	if err != nil {
+		return nil, err
+	}
 
-		for _, grant := range grants.ClientGrants {
-			identifier := grant.GetClientID()
-			if identifier == "" {
-				identifier = grant.GetDefaultFor()
-			}
-			data = append(data, importDataItem{
-				ResourceName: "auth0_client_grant." + sanitizeResourceName(identifier+"_"+grant.GetAudience()),
-				ImportID:     grant.GetID(),
-			})
+	iter := grants.Iterator()
+	for iter.Next(ctx) {
+		grant := iter.Current()
+		identifier := grant.GetClientID()
+		if identifier == "" {
+			identifier = string(grant.GetDefaultFor())
 		}
-
-		if !grants.HasNext() {
-			break
-		}
-
-		page++
+		data = append(data, importDataItem{
+			ResourceName: "auth0_client_grant." + sanitizeResourceName(identifier+"_"+grant.GetAudience()),
+			ImportID:     grant.GetID(),
+		})
+	}
+	if err := iter.Err(); err != nil {
+		return nil, err
 	}
 
 	return data, nil
@@ -438,16 +438,26 @@ func (f *flowVaultConnectionResourceFetcher) FetchData(ctx context.Context) (imp
 func (f *formResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
 	var data importDataList
 
-	forms, err := f.api.Form.List(ctx)
+	page, err := f.apiv3.Form.List(ctx, &managementv3.ListFormsRequestParameters{})
 	if err != nil {
 		return data, err
 	}
 
-	for _, form := range forms.Forms {
-		data = append(data, importDataItem{
-			ResourceName: "auth0_form." + sanitizeResourceName(form.GetName()),
-			ImportID:     form.GetID(),
-		})
+	for page != nil {
+		for _, form := range page.Results {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_form." + sanitizeResourceName(form.GetName()),
+				ImportID:     form.GetID(),
+			})
+		}
+
+		page, err = page.GetNextPage(ctx)
+		if errors.Is(err, core.ErrNoPages) {
+			break
+		}
+		if err != nil {
+			return data, err
+		}
 	}
 
 	return data, nil
@@ -810,6 +820,33 @@ func (f *userAttributeProfilesResourceFetcher) FetchData(ctx context.Context) (i
 		for _, profile := range profiles.UserAttributeProfiles {
 			data = append(data, importDataItem{
 				ResourceName: "auth0_user_attribute_profile." + sanitizeResourceName(profile.GetName()),
+				ImportID:     profile.GetID(),
+			})
+		}
+
+		if !profiles.HasNext() {
+			break
+		}
+
+		from = profiles.Next
+	}
+
+	return data, nil
+}
+
+func (f *tokenExchangeProfileResourceFetcher) FetchData(ctx context.Context) (importDataList, error) {
+	var data importDataList
+
+	from := ""
+	for {
+		profiles, err := f.api.TokenExchange.List(ctx, management.From(from))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, profile := range profiles.TokenExchangeProfiles {
+			data = append(data, importDataItem{
+				ResourceName: "auth0_token_exchange_profile." + sanitizeResourceName(profile.GetName()),
 				ImportID:     profile.GetID(),
 			})
 		}

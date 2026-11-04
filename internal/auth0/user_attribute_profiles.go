@@ -1,4 +1,4 @@
-//go:generate mockgen -source=user_attribute_profiles.go -destination=mock/user_attribute_profiles.go -package=mock
+//go:generate go tool mockgen -source=user_attribute_profiles.go -destination=mock/user_attribute_profiles.go -package=mock
 
 package auth0
 

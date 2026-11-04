@@ -11,6 +11,9 @@ To create interactively, use `auth0 experimentation segments create` with no fla
 
 To create non-interactively, supply name and rules through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 experimentation segments create [flags]
@@ -24,12 +27,22 @@ auth0 experimentation segments create [flags]
   auth0 experimentation segments create -n "Internal" -r '[{"match":{"domain":{"ends_with":["mycompany.com"]}}}]'
   auth0 experimentation segments create -n "US Chrome" -r '[{"match":{"country":["US"],"browser":{"contains":["Chrome"]}}}]'
   auth0 experimentation segments create -n "External non-US" -r '[{"match":{"domain":{"ends_with":["example.com"]}},"not_match":{"country":["US"]}}]'
+
+  # Discover the payload schema
+  auth0 experimentation segments create --schema
+  auth0 experimentation segments create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 experimentation segments create --data '{"name":"Internal","rules":[{"match":{"domain":{"ends_with":["mycompany.com"]}}}]}'
+  auth0 experimentation segments create --data @segment.json
+  cat segment.json | auth0 experimentation segments create
 ```
 
 
 ## Flags
 
 ```
+      --data string          JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string   Description of the segment.
       --json                 Output in json format.
       --json-compact         Output in compact json format.
@@ -37,13 +50,16 @@ auth0 experimentation segments create [flags]
   -r, --rules match          Rules for matching users, as a JSON array. Each rule has a match and/or `not_match` object that maps an attribute to a condition.
                              Attributes: client_id, connection, connection_type, organization_id, domain, device_type, browser, platform, user_agent, country, region.
                              Conditions: contains, starts_with, ends_with, exists, or a plain list ["a","b"] for an exact match.
+                             When omitted, an editor opens pre-filled with a commented template (// and /* */ comments are stripped on save).
                              Example: '[{"match":{"domain":{"ends_with":["example.com"]}}}]'
+      --schema               Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
 ## Inherited Flags
 
 ```
+      --agent-mode      Output JSON, disable prompts and colors. Auto-enabled for AI agents; set AUTH0_AGENT_MODE=false to disable.
       --debug           Enable debug mode.
       --no-color        Disable colors.
       --no-input        Disable interactivity.
