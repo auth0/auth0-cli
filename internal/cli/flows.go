@@ -103,6 +103,8 @@ func listFlowsCmd(cli *cli) *cobra.Command {
 		Number      int
 		Hydrate     bool
 		Synchronous bool
+		Schema      bool
+		Query       string
 	}
 
 	cmd := &cobra.Command{
@@ -110,13 +112,28 @@ func listFlowsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your flows",
-		Long:    "List your existing flows. To create one, run: `auth0 flows create`.",
+		Long: "List your existing flows. To create one, run: `auth0 flows create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 flows list
   auth0 flows ls
   auth0 flows ls --number 100
   auth0 flows ls --hydrate
-  auth0 flows ls --json`,
+  auth0 flows ls --json
+  auth0 flows list --schema
+  auth0 flows list --query '{"per_page":50,"synchronous":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/flows")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "flows",
+					SchemaCmd: "auth0 flows list",
+				}, inputs.Query)
+			}
+
 			params := &managementv3.ListFlowsRequestParameters{}
 			if inputs.Hydrate {
 				params.Hydrate = []*managementv3.ListFlowsRequestParametersHydrateEnum{
@@ -146,6 +163,8 @@ func listFlowsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -192,6 +211,8 @@ func createFlowCmd(cli *cli) *cobra.Command {
 		Name            string
 		File            string
 		ActionsTemplate bool
+		Data            string
+		Schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -202,12 +223,29 @@ func createFlowCmd(cli *cli) *cobra.Command {
 			"A name is required, supplied with `--name` or the interactive prompt. The actions graph " +
 			"is authored interactively or supplied with `--actions-file`; the file must contain only the " +
 			"actions body, not a name. " +
-			"Run `auth0 flows create --actions-template > flow.json` to generate an actions template.",
+			"Run `auth0 flows create --actions-template > flow.json` to generate an actions template.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload, including the name (validated against the schema before sending).",
 		Example: `  auth0 flows create
   auth0 flows create --name "My Flow"
   auth0 flows create --actions-template > flow.json
-  auth0 flows create --name "My Flow" --actions-file ./flow.json`,
+  auth0 flows create --name "My Flow" --actions-file ./action.json
+  auth0 flows create --schema
+  auth0 flows create --data '{"name":"My Flow","actions":[]}'
+  auth0 flows create --data @flow.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/flows")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createFlowFromJSON(cli, cmd, payload)
+			}
+
 			if inputs.ActionsTemplate {
 				cli.renderer.Warnf("Flow actions body. Save to a file and pass with --actions-file.")
 				cli.renderer.FlowExport(flowCreateExample)
@@ -250,7 +288,7 @@ func createFlowCmd(cli *cli) *cobra.Command {
 				}
 			}
 
-			rawBody, err := applyRawNameOverride(rawBody, inputs.Name)
+			rawBody, err = applyRawNameOverride(rawBody, inputs.Name)
 			if err != nil {
 				return fmt.Errorf("failed to parse flow body: %w", err)
 			}
@@ -268,15 +306,20 @@ func createFlowCmd(cli *cli) *cobra.Command {
 	flowActionsTemplate.RegisterBool(cmd, &inputs.ActionsTemplate, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
 
 func updateFlowCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID   string
-		Name string
-		File string
+		ID     string
+		Name   string
+		File   string
+		Data   string
+		Schema bool
 	}
 
 	cmd := &cobra.Command{
@@ -285,16 +328,33 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 		Short: "Update a flow",
 		Long: "Update a flow.\n\n" +
 			"Passing `--actions-file` replaces the flow's actions graph; the file must contain only the " +
-			"actions body, not a name. Passing `--name` renames the flow; omit it to keep the current name.",
+			"actions body, not a name. Passing `--name` renames the flow; omit it to keep the current name.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the JSON payload (validated against the schema before sending).",
 		Example: `  auth0 flows update <flow-id> --name "New Name"
-  auth0 flows update <flow-id> --actions-file ./flow.json`,
+  auth0 flows update <flow-id> --actions-file ./action.json
+  auth0 flows update --schema
+  auth0 flows update <flow-id> --data '{"name":"New Name"}'
+  auth0 flows update <flow-id> --data @flow.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPatch, "/flows/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
 				if err := flowID.Pick(cmd, &inputs.ID, cli.flowPickerOptions); err != nil {
 					return err
 				}
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateFlowFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			current, err := cli.flowRawGet(cmd.Context(), inputs.ID)
@@ -372,8 +432,39 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 	flowFile.RegisterStringU(cmd, &inputs.File, "")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createFlowFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	flow, err := runJSONWrite[json.RawMessage](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/flows",
+		URI:        cli.api.HTTPClient.URI("flows"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 flows create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create flow: %w", err)
+	}
+	return cli.renderer.FlowCreateRaw(*flow)
+}
+
+func updateFlowFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	flow, err := runJSONWrite[json.RawMessage](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/flows/{id}",
+		URI:        cli.api.HTTPClient.URI("flows", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 flows update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update flow with ID %q: %w", id, err)
+	}
+	return cli.renderer.FlowUpdateRaw(*flow)
 }
 
 func deleteFlowCmd(cli *cli) *cobra.Command {

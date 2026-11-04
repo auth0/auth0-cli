@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -39,6 +40,8 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 		datadogRegion string
 		piiConfig     string
 		filters       string
+		data          string
+		schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -55,8 +58,22 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams create datadog --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
-  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact`,
+  auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact
+  auth0 logs streams create datadog --schema
+  auth0 logs streams create datadog --data '{"name":"my-stream","sink":{"datadogRegion":"us","datadogApiKey":"<api-key>"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPost, "/log-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createLogStreamFromJSON(cli, cmd, logStreamTypeDatadog, payload)
+			}
+
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
@@ -120,6 +137,10 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	datadogAPIKey.RegisterString(cmd, &inputs.datadogAPIKey, "")
 	datadogRegion.RegisterString(cmd, &inputs.datadogRegion, "")
 
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
 }
 
@@ -131,6 +152,8 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 		filters       string
 		datadogAPIKey string
 		datadogRegion string
+		data          string
+		schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -147,8 +170,14 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams update datadog <log-stream-id> --name <name> --region <region> --api-key <api-key> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
-  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact`,
+  auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact
+  auth0 logs streams update datadog --schema
+  auth0 logs streams update datadog <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPatch, "/log-streams/{id}")
+			}
+
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeDatadog))
 				if err != nil {
@@ -168,6 +197,14 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 
 			if oldLogStream.GetType() != string(logStreamTypeDatadog) {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeDatadog))
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateLogStreamFromJSON(cli, cmd, logStreamTypeDatadog, inputs.id, payload)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
@@ -243,6 +280,10 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
 	datadogAPIKey.RegisterStringU(cmd, &inputs.datadogAPIKey, "")
 	datadogRegion.RegisterStringU(cmd, &inputs.datadogRegion, "")
+
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }

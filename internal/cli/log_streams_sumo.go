@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -27,6 +28,8 @@ func createLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 		sumoLogicSource string
 		piiConfig       string
 		filters         string
+		data            string
+		schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -43,8 +46,22 @@ func createLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
   auth0 logs streams create sumo --name <name> --source <source> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create sumo -n <name> -s <source>
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json
-  auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json-compact`,
+  auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json-compact
+  auth0 logs streams create sumo --schema
+  auth0 logs streams create sumo --data '{"name":"my-stream","sink":{"sumoSourceAddress":"https://endpoint.collection.sumologic.com/receiver/v1/http/<token>"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPost, "/log-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createLogStreamFromJSON(cli, cmd, logStreamTypeSumo, payload)
+			}
+
 			if err := logStreamName.Ask(cmd, &inputs.mame, nil); err != nil {
 				return err
 			}
@@ -102,6 +119,10 @@ func createLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 	logStreamFilters.RegisterString(cmd, &inputs.filters, "[]")
 	sumoLogicSource.RegisterString(cmd, &inputs.sumoLogicSource, "")
 
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
 }
 
@@ -112,6 +133,8 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 		sumoLogicSource string
 		piiConfig       string
 		filters         string
+		data            string
+		schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -128,8 +151,14 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
   auth0 logs streams update sumo <log-stream-id> --name <name> --source <source>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update sumo <log-stream-id> -n <name> -s <source> -c null
   auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json
-  auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json-compact`,
+  auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json-compact
+  auth0 logs streams update sumo --schema
+  auth0 logs streams update sumo <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPatch, "/log-streams/{id}")
+			}
+
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeSumo))
 				if err != nil {
@@ -149,6 +178,14 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 
 			if oldLogStream.GetType() != string(logStreamTypeSumo) {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeSumo))
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateLogStreamFromJSON(cli, cmd, logStreamTypeSumo, inputs.id, payload)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
@@ -213,6 +250,10 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
 	sumoLogicSource.RegisterStringU(cmd, &inputs.sumoLogicSource, "")
+
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }

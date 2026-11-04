@@ -30,12 +30,15 @@ auth0 logs streams update splunk [flags]
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s -c null
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json-compact
+  auth0 logs streams update splunk --schema
+  auth0 logs streams update splunk <log-stream-id> --data '{"status":"paused"}'
 ```
 
 
 ## Flags
 
 ```
+      --data string         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --domain string       The domain name of the splunk instance.
   -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
                             Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
@@ -47,6 +50,7 @@ auth0 logs streams update splunk [flags]
                              Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
                              (default "{}")
   -p, --port string         The port of the HTTP event collector.
+      --schema              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --secure              This should be set to 'false' when using self-signed certificates.
   -t, --token string        Splunk event collector token.
 ```

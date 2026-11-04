@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -49,6 +50,8 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 		splunkVerifyTLS bool
 		piiConfig       string
 		filters         string
+		data            string
+		schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -68,8 +71,22 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams create splunk --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams create splunk -n <name> -d <domain> -t <token> -p <port> -s
   auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json
-  auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json-compact`,
+  auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json-compact
+  auth0 logs streams create splunk --schema
+  auth0 logs streams create splunk --data '{"name":"my-stream","sink":{"splunkDomain":"example.splunkcloud.com","splunkToken":"<token>","splunkPort":"8088","splunkSecure":true}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPost, "/log-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createLogStreamFromJSON(cli, cmd, logStreamTypeSplunk, payload)
+			}
+
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
@@ -148,6 +165,10 @@ func createLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 	splunkPort.RegisterString(cmd, &inputs.splunkPort, "")
 	splunkVerifyTLS.RegisterBool(cmd, &inputs.splunkVerifyTLS, false)
 
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
 }
 
@@ -161,6 +182,8 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 		splunkVerifyTLS bool
 		piiConfig       string
 		filters         string
+		data            string
+		schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -180,8 +203,14 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
   auth0 log streams update splunk <log-stream-id> --name <name> --domain <domain> --token <token> --port <port> --secure=false
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s -c null
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
-  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json-compact`,
+  auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json-compact
+  auth0 logs streams update splunk --schema
+  auth0 logs streams update splunk <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPatch, "/log-streams/{id}")
+			}
+
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeSplunk))
 				if err != nil {
@@ -201,6 +230,14 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 
 			if oldLogStream.GetType() != string(logStreamTypeSplunk) {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeSplunk))
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateLogStreamFromJSON(cli, cmd, logStreamTypeSplunk, inputs.id, payload)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
@@ -287,6 +324,10 @@ func updateLogStreamsSplunkCmd(cli *cli) *cobra.Command {
 	splunkToken.RegisterStringU(cmd, &inputs.splunkToken, "")
 	splunkPort.RegisterStringU(cmd, &inputs.splunkPort, "")
 	splunkVerifyTLS.RegisterBoolU(cmd, &inputs.splunkVerifyTLS, false)
+
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }

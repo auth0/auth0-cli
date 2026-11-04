@@ -12,6 +12,9 @@ To create interactively, use `auth0 event-streams create` with no flags.
 To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags. 
 Only deployed actions can be used for action configuration
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload. It is sent as-is and validated by the API.
+
 ## Usage
 ```
 auth0 event-streams create [flags]
@@ -25,6 +28,9 @@ auth0 event-streams create [flags]
   auth0 event-streams create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
   auth0 event-streams create --name my-event-stream --type action --subscriptions "user.created" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+  auth0 event-streams create --schema
+  auth0 event-streams create --data '{"name":"my-event-stream","subscriptions":[{"event_type":"user.created"}],"destination":{"type":"eventbridge","configuration":{"aws_account_id":"325235643634","aws_region":"us-east-2"}}}'
+  auth0 event-streams create --data @event-stream.json
 ```
 
 
@@ -34,9 +40,11 @@ auth0 event-streams create [flags]
   -c, --configuration string    Configuration of the Event Stream. Formatted as JSON. 
                                 Webhook Example: {"webhook_endpoint":"https://my-webhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}} 
                                 Eventbridge Example: {"aws_account_id":"7832467231933","aws_region":"us-east-2"}
+      --data string             JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                    Output in json format.
       --json-compact            Output in compact json format.
   -n, --name string             Name of the Event Stream.
+      --schema                  Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --subscriptions strings   Subscriptions of the Event Stream. Formatted as comma separated string. Eg. user.created,user.updated
   -t, --type string             Type of the Event Stream. Eg: webhook, eventbridge etc
 ```
