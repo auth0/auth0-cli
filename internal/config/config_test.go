@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -21,6 +22,23 @@ func TestDefaultPath(t *testing.T) {
 	actualPath := defaultPath()
 
 	assert.Equal(t, expectedPath, actualPath)
+}
+
+func TestConfig_PluginsDir(t *testing.T) {
+	t.Run("it sits next to the config file", func(t *testing.T) {
+		dir := t.TempDir()
+		config := &Config{path: path.Join(dir, "auth0", "config.json")}
+
+		assert.Equal(t, filepath.Join(dir, "auth0", "plugins"), config.PluginsDir())
+		assert.Equal(t, path.Join(dir, "auth0", "config.json"), config.path, "the path is left alone")
+	})
+
+	t.Run("it sits next to the default config file", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+
+		assert.Equal(t, filepath.Join(home, ".config", "auth0", "plugins"), (&Config{}).PluginsDir())
+	})
 }
 
 func TestConfig_LoadFromDisk(t *testing.T) {

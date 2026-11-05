@@ -225,6 +225,17 @@ func (c *Config) ensureInstallIDAssigned() {
 	c.InstallID = uuid.NewString()
 }
 
+// PluginsDir returns the directory of the plugin store, which sits next to the
+// config file. It does not create the directory or change the config.
+func (c *Config) PluginsDir() string {
+	configPath := c.path
+	if configPath == "" {
+		configPath = defaultPath()
+	}
+
+	return filepath.Join(filepath.Dir(configPath), "plugins")
+}
+
 func (c *Config) loadFromDisk() error {
 	if c.path == "" {
 		c.path = defaultPath()
