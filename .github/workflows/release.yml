@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: homebrew-formula
-          path: auth0-cli/dist/homebrew/*.rb
+          path: auth0-cli/dist/homebrew/auth0.rb
           if-no-files-found: error
           overwrite: true
           retention-days: 5
@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: scoop-manifest
-          path: auth0-cli/dist/scoop/*.json
+          path: auth0-cli/dist/scoop/auth0.json
           if-no-files-found: error
           overwrite: true
           retention-days: 5
