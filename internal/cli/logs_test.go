@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,18 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/display"
 )
+
+// syncBuffer is a bytes.Buffer safe for the tail goroutine and renderer to write concurrently.
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
 
 func TestTailLogsCommand(t *testing.T) {
 	t.Run("it returns an error when it fails to get the logs on the first request", func(t *testing.T) {
@@ -123,8 +136,8 @@ API Operation              Update branding settings                             
 
 		cli := &cli{
 			renderer: &display.Renderer{
-				MessageWriter: &bytes.Buffer{},
-				ResultWriter:  &bytes.Buffer{},
+				MessageWriter: &syncBuffer{},
+				ResultWriter:  &syncBuffer{},
 			},
 			api: &auth0.API{Log: logsAPI},
 		}
