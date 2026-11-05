@@ -1,4 +1,6 @@
-import type { ApiClient } from "../api.js";
+import { ApiClient, ApiError } from "../api.js";
+import { scopeFixes } from "../scope-fixes.js";
+import { parseScopeGap } from "../setup/preflight.js";
 import type { Ui } from "../ui.js";
 import { auditPortal, Finding } from "./checks.js";
 import type { PortalSnapshot } from "./snapshot.js";
@@ -16,6 +18,8 @@ export interface ApplyResult {
   failed: number;
   // Fixes that were no longer needed by the time they ran.
   alreadyFixed: number;
+  // Scopes the failed fixes needed, so the fix for them is shown once at the end.
+  missingScopes: string[];
 }
 
 // Only errors are fixed. Warnings may be intentional, so they stay in the
@@ -32,7 +36,7 @@ export function findingKey(finding: Finding): string {
 
 export async function applyFixes(selected: Finding[], deps: ApplyDeps): Promise<ApplyResult> {
   const { ui } = deps;
-  const result: ApplyResult = { applied: 0, failed: 0, alreadyFixed: 0 };
+  const result: ApplyResult = { applied: 0, failed: 0, alreadyFixed: 0, missingScopes: [] };
 
   for (const finding of selected) {
     const fresh = auditPortal(await deps.readSnapshot()).find((candidate) => findingKey(candidate) === findingKey(finding));
@@ -50,6 +54,8 @@ export async function applyFixes(selected: Finding[], deps: ApplyDeps): Promise<
     } catch (error) {
       result.failed += 1;
       ui.error(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+      const gap = error instanceof ApiError ? parseScopeGap(label, error) : undefined;
+      if (gap) result.missingScopes.push(...(gap.requirement === "any" ? gap.scopes.slice(0, 1) : gap.scopes));
     }
   }
   return result;
@@ -67,7 +73,7 @@ export async function applyFixRounds(
   deps: ApplyDeps,
   chooseNext: (fixable: Finding[]) => Promise<Finding[]>,
 ): Promise<ApplyResult> {
-  const total: ApplyResult = { applied: 0, failed: 0, alreadyFixed: 0 };
+  const total: ApplyResult = { applied: 0, failed: 0, alreadyFixed: 0, missingScopes: [] };
   const attempted = new Set<string>();
   let pending = selected;
 
@@ -77,9 +83,17 @@ export async function applyFixRounds(
     total.applied += result.applied;
     total.failed += result.failed;
     total.alreadyFixed += result.alreadyFixed;
+    total.missingScopes.push(...result.missingScopes);
 
     const exposed = fixableFindings(auditPortal(await deps.readSnapshot())).filter((finding) => !attempted.has(findingKey(finding)));
     pending = exposed.length > 0 ? await chooseNext(exposed) : [];
+  }
+
+  total.missingScopes = [...new Set(total.missingScopes)].sort();
+  if (total.failed > 0) {
+    const scopes = total.missingScopes.length > 0 ? `, missing: ${total.missingScopes.join(", ")}` : "";
+    deps.ui.error(`${total.failed} fix(es) failed${scopes}`);
+    if (total.missingScopes.length > 0) for (const fix of scopeFixes(total.missingScopes)) deps.ui.detail(fix);
   }
   return total;
 }

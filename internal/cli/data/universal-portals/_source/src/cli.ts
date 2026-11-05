@@ -36,11 +36,13 @@ export async function main(argv: string[], env: NodeJS.ProcessEnv, io: IoStreams
   }
 
   if (args.command === "help") {
-    io.stdout.write(`${usage()}\n`);
+    io.stdout.write(`${usage(args.helpFor)}\n`);
     return 0;
   }
 
   const agentMode = args.json || env.AUTH0_AGENT_MODE === "1" || env.AUTH0_AGENT_MODE === "true";
+  // Agent mode keeps the terminal output quiet, so the result has to come as JSON on stdout.
+  if (agentMode) args = { ...args, json: true };
   const interactive = !args.noInput && !agentMode && io.isTTY;
   const ui = new Ui(
     io.stderr,

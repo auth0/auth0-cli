@@ -14,7 +14,12 @@ import { scopeFixes } from "../src/scope-fixes.js";
 import { toPortalSlug } from "../src/slug.js";
 import type { Prompter } from "../src/prompt.js";
 import { captureOutput } from "./capture-output.js";
+import { SETUP_PROBES } from "../src/setup/preflight.js";
 import { FakeTenant } from "./fake-tenant.js";
+
+// The writes a dry run may send: the permission probes, which the API rejects and which change nothing.
+const PROBE_WRITES = new Set(SETUP_PROBES.filter((probe) => probe.method !== "GET").map((probe) => `${probe.method} ${probe.path}`));
+const writesBeyondProbes = (calls: string[]) => calls.filter((call) => !call.startsWith("GET ") && !PROBE_WRITES.has(call));
 
 const DOMAIN = "acme.us.auth0.com";
 const ENV = {
@@ -104,6 +109,8 @@ test("audit takes exactly one portal ID, plus --organization and --strict", () =
 test("no command prints help", () => {
   assert.equal(parseSetupArgs([]).command, "help");
   assert.equal(parseSetupArgs(["--help"]).command, "help");
+  assert.equal(parseSetupArgs(["setup", "--help"]).helpFor, "setup");
+  assert.equal(parseSetupArgs(["audit", "-h"]).helpFor, "audit");
 });
 
 test("missingFlags names what a non-interactive run still needs", () => {
@@ -249,7 +256,7 @@ test("audit tells the user how to get a missing scope, for a user login and a cl
   const code = await main(["audit", portalId], ENV, io);
 
   assert.equal(code, 1);
-  assert.match(stderr(), /Signed in as a user: auth0 login --scopes read:portals/);
+  assert.match(stderr(), /Signed in as a user: auth0 login --scopes \S*read:portals/);
   assert.match(stderr(), /Signed in with client credentials: add read:portals to the application's Management API grant/);
 });
 
@@ -401,7 +408,7 @@ test("a dry run prints the plan as JSON and changes nothing in the tenant", asyn
   assert.equal(plan.portal.status, "created");
   assert.equal(plan.portal.url, `https://${DOMAIN}/portals/acme-account`);
   assert.ok(plan.requests.some((request: { method: string; path: string }) => request.method === "POST" && request.path === "portals"));
-  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), []);
+  assert.deepEqual(writesBeyondProbes(tenant.calls), [], "only the permission probes, which change nothing");
   assert.equal(tenant.portals.size + tenant.clients.size, 0);
 });
 
@@ -413,7 +420,7 @@ test("a dry run without --json writes its summary to stderr and nothing to stdou
   assert.equal(code, 0);
   assert.equal(stdout(), "");
   assert.match(stderr(), /Dry run complete/);
-  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), []);
+  assert.deepEqual(writesBeyondProbes(tenant.calls), [], "only the permission probes, which change nothing");
 });
 
 test("a dry run with missing flags gives the same usage error as a real run", async () => {
@@ -492,4 +499,26 @@ test("a --tenant that differs from the CLI's tenant stops the run before any API
   assert.equal(code, 2);
   assert.match(stderr(), /does not match the tenant/);
   assert.equal(tenant.calls.length, 0);
+});
+
+test("each command's --help shows only that command", async () => {
+  for (const [command, other] of [["setup", "audit"], ["audit", "setup"]]) {
+    const { io, stdout } = captureIo(fetchFor(new FakeTenant()));
+    assert.equal(await main([command, "--help"], ENV, io), 0);
+    assert.match(stdout(), new RegExp(`Usage: auth0 universal-portals ${command}`));
+    assert.doesNotMatch(stdout(), new RegExp(`Usage: auth0 universal-portals ${other}`));
+  }
+});
+
+test("AUTH0_AGENT_MODE prints the result as JSON on stdout without --json", async () => {
+  const tenant = new FakeTenant();
+  const { io, stdout } = captureIo(fetchFor(tenant));
+  const code = await main(
+    ["setup", "--dry-run", "--template", "consumer", "--name", "Acme Account"],
+    { ...ENV, AUTH0_AGENT_MODE: "true" },
+    io,
+  );
+
+  assert.equal(code, 0);
+  assert.equal(JSON.parse(stdout()).dryRun, true);
 });

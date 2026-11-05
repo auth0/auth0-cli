@@ -144,7 +144,8 @@ export class FakeTenant implements ApiClient {
       return undefined;
     }
     if (method === "PATCH" && parts[0] === "client-grants" && parts.length === 2) {
-      Object.assign(this.grants.get(parts[1]) ?? {}, body);
+      if (!this.grants.has(parts[1])) throw toApiError(404, { message: "The grant does not exist" });
+      Object.assign(this.grants.get(parts[1])!, body);
       return this.grants.get(parts[1]);
     }
 

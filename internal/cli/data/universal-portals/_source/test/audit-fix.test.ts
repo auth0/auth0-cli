@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
 import { runAudit } from "../src/audit/run.js";
-import { applyFixes, findingKey, fixableFindings } from "../src/audit/fix.js";
+import { applyFixes, applyFixRounds, findingKey, fixableFindings } from "../src/audit/fix.js";
 import { auditPortal } from "../src/audit/checks.js";
 import { fetchPortalSnapshot } from "../src/audit/snapshot.js";
 import { runSetup } from "../src/setup/run.js";
@@ -118,4 +118,21 @@ test("warnings are reported but never offered for fixing", async () => {
   const findings = auditPortal(await fetchPortalSnapshot(tenant, portalId, DOMAIN));
   assert.equal(fixableFindings(findings).length, 0, "warnings are never fixable");
   assert.ok(findings.some((finding) => finding.id === "P017" && finding.severity === "warning"));
+});
+
+test("fixes that fail for a missing scope are summed up once, with the login command", async () => {
+  const tenant = new FakeTenant();
+  const { portalId } = await createPortal(tenant);
+  tenant.portals.get(portalId)!.pages.default = undefined;
+  tenant.deny(`PATCH portals/${portalId}`, "Insufficient scope, expected any of: update:portals");
+
+  const captured = captureOutput();
+  const readSnapshot = () => fetchPortalSnapshot(tenant, portalId, DOMAIN);
+  const errors = fixableFindings(auditPortal(await readSnapshot())).filter((finding) => finding.severity === "error");
+  const result = await applyFixRounds(errors, { api: tenant, ui: new Ui(captured.stream, false, false), readSnapshot }, async () => []);
+
+  assert.ok(result.failed > 0);
+  assert.deepEqual(result.missingScopes, ["update:portals"]);
+  assert.match(captured.text(), /fix\(es\) failed, missing: update:portals/);
+  assert.match(captured.text(), /auth0 login --scopes \S*update:portals/);
 });

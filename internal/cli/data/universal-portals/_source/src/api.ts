@@ -44,7 +44,8 @@ export function createApiClient(baseUrl: string, token: string, fetchImpl: Fetch
 
 export function toApiError(status: number, body: unknown): ApiError {
   const record = isRecord(body) ? body : {};
-  const message = typeof record.message === "string" ? record.message : `HTTP ${status}`;
+  const text = typeof body === "string" ? body.trim() : "";
+  const message = typeof record.message === "string" ? record.message : text || `HTTP ${status}`;
   const errorCode = typeof record.errorCode === "string" ? record.errorCode : undefined;
   return new ApiError(status, errorCode, message, body);
 }

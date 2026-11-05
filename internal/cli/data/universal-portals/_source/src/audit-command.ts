@@ -30,23 +30,25 @@ export async function runAuditCommand(
     const fixable = fixableFindings(report.findings);
     const applyDeps = { api, ui, readSnapshot };
     let result = report;
+    let fixesFailed = 0;
 
     if (args.fix) {
       // Scripts: apply the errors the CLI can fix, without asking.
       const errors = fixable.filter((finding) => finding.severity === "error");
       if (errors.length > 0) {
         ui.section("Fix");
-        await applyFixRounds(errors, applyDeps, async (exposed) => exposed);
+        fixesFailed = (await applyFixRounds(errors, applyDeps, async (exposed) => exposed)).failed;
         result = await finalAudit(options, ui, api, context.tenantDomain);
       }
     } else if (prompter && fixable.length > 0) {
       const selected = await chooseFixes(prompter, fixable, ui);
       if (selected.length > 0) {
         ui.section("Fix");
-        await applyFixRounds(selected, applyDeps, async (exposed) => {
+        const applied = await applyFixRounds(selected, applyDeps, async (exposed) => {
           ui.detail("These errors appeared after the fixes above.");
           return chooseFixes(prompter, exposed, ui);
         });
+        fixesFailed = applied.failed;
         result = await finalAudit(options, ui, api, context.tenantDomain);
       }
     } else if (fixable.length > 0) {
@@ -54,7 +56,8 @@ export async function runAuditCommand(
     }
 
     if (args.json) io.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    return result.failed ? 1 : 0;
+    // A fix that failed fails the run, even when the final audit no longer sees the error.
+    return result.failed || fixesFailed > 0 ? 1 : 0;
   } catch (error) {
     if (error instanceof CancelledError && !args.json) {
       ui.warn("Cancelled. Fixes already applied stay in your tenant.");

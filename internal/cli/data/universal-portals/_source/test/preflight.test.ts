@@ -91,6 +91,20 @@ test("a 403 without a scope message is kept as unexpected, not as a scope gap", 
   assert.equal(result.unexpected[0].status, 403);
 });
 
+test("a 404 means the scope is present only for a probe on a fake resource", async () => {
+  const probes: Probe[] = [
+    { name: "update client grant", method: "PATCH", path: "client-grants/cgr_fake", body: {}, fakeTarget: true },
+    { name: "list portals", method: "GET", path: "portals" },
+  ];
+  const api = tenantWith({
+    "PATCH client-grants/cgr_fake": { status: 404, body: { message: "The grant does not exist" } },
+    "GET portals": { status: 404, body: { message: "Not Found" } },
+  });
+  const result = await runPreflight(api, probes, "acme.us.auth0.com");
+
+  assert.deepEqual(result.unexpected.map((issue) => issue.probe), ["list portals"]);
+});
+
 test("parseScopeGap ignores errors that are not 403", () => {
   const error = new ApiError(500, undefined, "expected any of: create:clients", {});
   assert.equal(parseScopeGap("create client", error), undefined);

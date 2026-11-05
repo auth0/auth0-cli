@@ -1,5 +1,5 @@
-// Management API scopes the plugin's session needs. The CLI proxy enforces this
-// list through its scope gate, so a scope missing here fails at the proxy.
+// Management API scopes the tool's session needs. The login command in scope-fixes.ts asks for all
+// of them, because a user login keeps only the scopes of its own --scopes flag.
 export const PLUGIN_SCOPES: string[] = [
   "read:clients",
   "create:clients",
@@ -14,6 +14,9 @@ export const PLUGIN_SCOPES: string[] = [
   "read:flows",
   "create:flows",
   "update:flows",
+  "read:flows_vault_connections",
+  "create:flows_vault_connections",
+  "update:flows_vault_connections",
   "read:forms",
   "create:forms",
   "read:portals",
@@ -23,7 +26,11 @@ export const PLUGIN_SCOPES: string[] = [
   "read:users",
   "read:organizations",
   "create:organizations",
+  "read:organization_members",
+  "create:organization_members",
+  "create:organization_connections",
   "read:connections",
   "read:roles",
   "create:roles",
+  "update:roles",
 ];

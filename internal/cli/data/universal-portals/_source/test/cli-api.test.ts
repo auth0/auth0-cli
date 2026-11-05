@@ -106,7 +106,7 @@ test("a 404 becomes an ApiError with the status, code and message from the API",
   assert.ok(error instanceof ApiError);
   assert.equal(error.status, 404);
   assert.equal(error.errorCode, "inexistent_client");
-  assert.equal(error.message, "The client does not exist");
+  assert.equal(error.message, "auth0 api GET clients/x returned HTTP 404: The client does not exist");
 });
 
 test("a 400 and a 409 keep their status and error code", async () => {
@@ -137,7 +137,7 @@ test("an API error body printed over several lines keeps its status, code and me
   const error = await failure(`\n=== acme.us.auth0.com error\n\n ▸    404: API request failed: ${body}.\n\n`);
 
   assert.ok(error instanceof ApiError);
-  assert.deepEqual([error.status, error.errorCode, error.message], [404, "inexistent_portal", "The portal does not exist"]);
+  assert.deepEqual([error.status, error.errorCode, error.message], [404, "inexistent_portal", "auth0 api GET clients/x returned HTTP 404: The portal does not exist"]);
 });
 
 test("a number that only ends in three digits is not read as a status", async () => {
@@ -152,7 +152,23 @@ test("a missing scope becomes the 403 the preflight already understands", async 
   assert.ok(error instanceof ApiError);
   assert.equal(error.status, 403);
   assert.equal(error.errorCode, "insufficient_scope");
-  assert.equal(error.message, "Insufficient scope, expected any of: read:portals");
+  assert.equal(error.message, "auth0 api GET clients/x returned HTTP 403: Insufficient scope, expected any of: read:portals");
+});
+
+test("a missing scope the CLI does not name is still a 403 about scopes", async () => {
+  const error = await failure("\n=== acme.us.auth0.com error\n\n ▸    Request failed because access token lacks scope: .\n\n");
+
+  assert.ok(error instanceof ApiError);
+  assert.deepEqual([error.status, error.errorCode], [403, "insufficient_scope"]);
+  assert.match(error.message, /The Auth0 CLI did not say which/);
+});
+
+test("a 403 with no JSON body keeps the CLI's text and names the request", async () => {
+  const error = await failure("\n=== acme.us.auth0.com error\n\n ▸    403: API request failed: Forbidden.\n\n");
+
+  assert.ok(error instanceof ApiError);
+  assert.equal(error.status, 403);
+  assert.equal(error.message, "auth0 api GET clients/x returned HTTP 403: Forbidden.");
 });
 
 test("an expired session or an unknown tenant asks the user to log in", async () => {

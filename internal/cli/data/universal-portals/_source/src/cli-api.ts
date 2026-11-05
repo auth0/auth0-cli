@@ -5,7 +5,7 @@
 
 import { spawn } from "node:child_process";
 
-import { ApiClient, HttpMethod, toApiError } from "./api.js";
+import { ApiClient, ApiError, HttpMethod, toApiError } from "./api.js";
 import { PluginError } from "./plugin-error.js";
 
 export interface CommandResult {
@@ -125,18 +125,23 @@ function explainFailure(stderr: string, what: string, tenant: string | undefined
   // An API error comes first: its body can quote any text, including a scope message. The body runs
   // to the end of the output, because the CLI prints it over several lines when it is long.
   const api = /(?<!\d)(\d{3}): API request failed: ([\s\S]*)$/.exec(stderr);
-  if (api) return toApiError(Number(api[1]), parseBody(api[2].trim()));
+  if (api) return withRequest(toApiError(Number(api[1]), parseBody(api[2].trim())), what);
 
   // The CLI keeps only the first missing scope and drops the API's body, so the message is rebuilt
-  // in the shape the permission check already reads.
+  // in the shape the permission check already reads. For an "all of" message the CLI names no
+  // scope at all ("lacks scope: ."), so the error says so instead of matching nothing.
   const scope = /lacks scope: ([A-Za-z0-9_:,-]+)/i.exec(stderr)?.[1];
-  if (scope) {
-    return toApiError(403, {
-      statusCode: 403,
-      error: "Forbidden",
-      errorCode: "insufficient_scope",
-      message: `Insufficient scope, expected any of: ${scope}`,
-    });
+  const unnamed = !scope && /lacks scope:\s*\./i.test(stderr);
+  if (scope || unnamed) {
+    return withRequest(
+      toApiError(403, {
+        statusCode: 403,
+        error: "Forbidden",
+        errorCode: "insufficient_scope",
+        message: scope ? `Insufficient scope, expected any of: ${scope}` : "Insufficient scope. The Auth0 CLI did not say which.",
+      }),
+      what,
+    );
   }
 
   if (SIGN_IN_PROBLEM.test(stderr)) {
@@ -144,6 +149,13 @@ function explainFailure(stderr: string, what: string, tenant: string | undefined
   }
 
   return new Error(`${what} failed: ${firstMessage(stderr)}`);
+}
+
+// Names the request in the message, so a failure after the permission check says what failed. The
+// scope message stays at the end, where parseScopeGap reads it.
+function withRequest(error: ApiError, what: string): ApiError {
+  const reason = error.message === `HTTP ${error.status}` ? "no message" : error.message;
+  return new ApiError(error.status, error.errorCode, `${what} returned HTTP ${error.status}: ${reason}`, error.body);
 }
 
 function loginRequired(message: string): PluginError {

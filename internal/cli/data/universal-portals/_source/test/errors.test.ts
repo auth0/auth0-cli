@@ -16,12 +16,7 @@ test("each error reports its own code, and the fixes it names", () => {
   assert.deepEqual(describeError(new BusinessAccessError("no user", ["Rerun with --user."])).details, {
     fixes: ["Rerun with --user."],
   });
-  assert.deepEqual(describeError(new MissingScopesError(["read:clients"], [])).details, {
-    fixes: [
-      "Signed in as a user: auth0 login --scopes read:clients",
-      "Signed in with client credentials: add read:clients to the application's Management API grant",
-    ],
-  });
+  assert.deepEqual(describeError(new MissingScopesError(["read:clients"], [])).details, { fixes: scopeFixes(["read:clients"]) });
 });
 
 test("an error with no fixes leaves fixes out of the JSON", () => {

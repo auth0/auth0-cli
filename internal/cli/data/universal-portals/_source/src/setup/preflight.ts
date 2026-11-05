@@ -1,8 +1,8 @@
 import { ApiClient, ApiError, HttpMethod } from "../api.js";
 import { PluginError } from "../plugin-error.js";
 
-// One request per capability setup needs. A 2xx or 400 means the scope is
-// present. A 403 names the scope it wants, so every gap is reported at once.
+// One request per capability setup needs. A 2xx or 400 (or a 404 for a fake target) means
+// the scope is present. A 403 names the scope it wants, so every gap is reported at once.
 // The create probes send an empty body. Checked on the live API on 2026-10-23:
 // each one returned 400 for the missing required property and created nothing.
 export interface Probe {
@@ -12,7 +12,16 @@ export interface Probe {
   body?: unknown;
   // Only used by the business template.
   businessOnly?: boolean;
+  // The path names a resource that does not exist, so a 404 also means the scope is present.
+  fakeTarget?: boolean;
 }
+
+// IDs shaped like real ones, for probes on a single resource. Nothing has these IDs, so the
+// probe can never change anything.
+const FAKE_GRANT = "cgr_preflight0000000";
+const FAKE_VAULT = "ac_preflight0000000000000";
+const FAKE_ORGANIZATION = "org_preflight0000000";
+const FAKE_ROLE = "rol_preflight0000000";
 
 export const SETUP_PROBES: Probe[] = [
   { name: "list resource servers", method: "GET", path: "resource-servers?per_page=1" },
@@ -21,8 +30,17 @@ export const SETUP_PROBES: Probe[] = [
   { name: "create client", method: "POST", path: "clients", body: {} },
   { name: "list client grants", method: "GET", path: "client-grants?per_page=1" },
   { name: "create client grant", method: "POST", path: "client-grants", body: {} },
+  // A rerun updates the grants and the vault connection it finds.
+  { name: "update client grant", method: "PATCH", path: `client-grants/${FAKE_GRANT}`, body: {}, fakeTarget: true },
   { name: "list vault connections", method: "GET", path: "flows/vault/connections" },
   { name: "create vault connection", method: "POST", path: "flows/vault/connections", body: {} },
+  {
+    name: "update vault connection",
+    method: "PATCH",
+    path: `flows/vault/connections/${FAKE_VAULT}`,
+    body: {},
+    fakeTarget: true,
+  },
   { name: "list forms", method: "GET", path: "forms?per_page=1" },
   { name: "import forms", method: "POST", path: "forms/import", body: {} },
   { name: "list portals", method: "GET", path: "portals" },
@@ -34,6 +52,33 @@ export const SETUP_PROBES: Probe[] = [
     businessOnly: true,
   },
   { name: "list organizations", method: "GET", path: "organizations?per_page=1", businessOnly: true },
+  // Business setup can create an organization and a role, then link the user and the connection.
+  { name: "create organization", method: "POST", path: "organizations", body: {}, businessOnly: true },
+  {
+    name: "enable organization connection",
+    method: "POST",
+    path: `organizations/${FAKE_ORGANIZATION}/enabled_connections`,
+    body: {},
+    businessOnly: true,
+    fakeTarget: true,
+  },
+  {
+    name: "add organization member",
+    method: "POST",
+    path: `organizations/${FAKE_ORGANIZATION}/members`,
+    body: {},
+    businessOnly: true,
+    fakeTarget: true,
+  },
+  { name: "create role", method: "POST", path: "roles", body: {}, businessOnly: true },
+  {
+    name: "add role permissions",
+    method: "POST",
+    path: `roles/${FAKE_ROLE}/permissions`,
+    body: {},
+    businessOnly: true,
+    fakeTarget: true,
+  },
 ];
 
 export interface ScopeGap {
@@ -83,6 +128,7 @@ export async function runPreflight(
     const { probe, error } = failure;
     if (!(error instanceof ApiError)) throw error;
     if (error.status === 400) continue;
+    if (error.status === 404 && probe.fakeTarget) continue;
     if (error.errorCode === "feature_not_enabled") throw new FeatureNotEnabledError(tenantDomain);
     const gap = parseScopeGap(probe.name, error);
     if (gap) {

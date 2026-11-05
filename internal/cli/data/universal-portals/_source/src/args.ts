@@ -11,6 +11,8 @@ export class UsageError extends PluginError {
 
 export interface ParsedSetupArgs {
   command: "setup" | "audit" | "help";
+  // With --help after a command name, the help shows only that command.
+  helpFor?: "setup" | "audit";
   portalId?: string;
   strict: boolean;
   fix?: boolean;
@@ -57,6 +59,7 @@ export function parseSetupArgs(argv: string[]): ParsedSetupArgs {
   if (values.help || first === undefined) {
     return {
       command: "help",
+      helpFor: first === "setup" || first === "audit" ? first : undefined,
       strict: false,
       tenant: globals.tenant,
       noColor: globals.noColor,
@@ -117,8 +120,8 @@ export function missingFlags(args: ParsedSetupArgs): string[] {
   return missing;
 }
 
-export function usage(): string {
-  return [
+export function usage(command?: "setup" | "audit"): string {
+  const setup = [
     "Usage: auth0 universal-portals setup [flags]",
     "",
     "Creates an Auth0 Portal with its application, forms and pages.",
@@ -133,7 +136,8 @@ export function usage(): string {
     "      --dry-run                   Show what setup would create, without changing the tenant.",
     "      --json                      Print the result as JSON on stdout.",
     "  -h, --help                      Show this help.",
-    "",
+  ];
+  const audit = [
     "Usage: auth0 universal-portals audit <portal-id> [flags]",
     "",
     "Checks a portal and its application against the setup defaults.",
@@ -144,7 +148,10 @@ export function usage(): string {
     "      --strict                    Also exit 1 when there are warnings.",
     "      --json                      Print the result as JSON on stdout.",
     "  -h, --help                      Show this help.",
-  ].join("\n");
+  ];
+  if (command === "setup") return setup.join("\n");
+  if (command === "audit") return audit.join("\n");
+  return [...setup, "", ...audit].join("\n");
 }
 
 function splitGlobalFlags(argv: string[]): { globals: { tenant?: string; noColor: boolean }; rest: string[] } {

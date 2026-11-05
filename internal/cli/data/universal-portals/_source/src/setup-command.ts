@@ -44,7 +44,7 @@ export async function runSetupCommand(
         prompt: prompter ?? unansweredPrompter(),
         interactive,
         tenantDomain: context.tenantDomain,
-        dryRun: planned !== undefined,
+        probeApi: tracked.api,
       });
       if (planned) return reportPlan(result, planned.requests(), args.json, io, ui);
       if (args.json) {
@@ -71,10 +71,9 @@ export async function runSetupCommand(
   }
 }
 
-// The statuses in a dry run are what a real run would report. Writes are not checked here, so
-// the note says so: a real run is the only check of the permissions for creating things.
-const DRY_RUN_NOTE =
-  "Dry run: nothing is created or changed. Statuses show what a real run would do. Write permissions are checked by a real run only.";
+// The statuses in a dry run are what a real run would report. The permission check runs for real,
+// because its probes are rejected and change nothing.
+const DRY_RUN_NOTE = "Dry run: nothing is created or changed. Statuses show what a real run would do.";
 
 // The result of a real run, plus the requests it would send in the order it would send them. The
 // portal is not opened, because nothing was created.

@@ -47,17 +47,30 @@ export class SlugRaceError extends PluginError {
   }
 }
 
+// When any one of several scopes is enough, the first is the one to ask for.
 export class MissingScopesError extends PluginError {
   constructor(
     readonly scopes: string[],
     readonly choices: ScopeGap[],
   ) {
+    const needs = [...scopes, ...choices.map((choice) => `one of ${choice.scopes.join(" or ")}`)];
     super(
-      scopes.length > 0
-        ? `The CLI session is missing ${scopes.length} scope(s): ${scopes.join(", ")}.`
-        : "The CLI session is missing a scope it needs.",
+      `The CLI session is missing ${needs.length} permission(s) setup needs: ${needs.join(", ")}. Nothing was created.`,
       "missing_scopes",
-      scopes.length > 0 ? scopeFixes(scopes) : undefined,
+      needs.length > 0 ? scopeFixes([...scopes, ...choices.map((choice) => choice.scopes[0])]) : undefined,
+    );
+  }
+}
+
+// A 403 that names no scope. The Management API sends one when Universal Portals is not enabled,
+// and the CLI can drop the reason, so setup stops here rather than after creating resources.
+export class PermissionCheckError extends PluginError {
+  constructor(probes: string[], tenantDomain: string) {
+    super(
+      `The Management API refused ${probes.map((probe) => `"${probe}"`).join(", ")} with HTTP 403 and gave no reason. ` +
+        `Nothing was created. Usually Universal Portals is not enabled for ${tenantDomain}, or the session is missing a permission.`,
+      "permission_check_failed",
+      ["Check that Universal Portals is enabled for this tenant.", ...scopeFixes([])],
     );
   }
 }
@@ -76,8 +89,9 @@ export interface SetupDeps {
   prompt: Prompter;
   interactive: boolean;
   tenantDomain: string;
-  // A dry run only reads, so the probes that send writes are skipped. Their scopes are not checked.
-  dryRun?: boolean;
+  // Sends the permission check. A dry run passes the real client here, because the probes
+  // change nothing. Defaults to api.
+  probeApi?: ApiClient;
 }
 
 export interface SetupResult {
@@ -94,10 +108,7 @@ export async function runSetup(options: SetupOptions, deps: SetupDeps): Promise<
   const resources: SetupResult["resources"] = [];
   const { ui, api, tenantDomain } = deps;
 
-  const probes = SETUP_PROBES.filter(
-    (probe) =>
-      (!probe.businessOnly || options.template === "business") && (!deps.dryRun || probe.method === "GET"),
-  );
+  const probes = SETUP_PROBES.filter((probe) => !probe.businessOnly || options.template === "business");
   await checkPermissions(probes, deps);
 
   let slug = options.slug;
@@ -222,20 +233,25 @@ export async function runSetup(options: SetupOptions, deps: SetupDeps): Promise<
 
 async function checkPermissions(probes: Probe[], deps: SetupDeps): Promise<void> {
   deps.ui.section("Permissions");
-  const result = await deps.ui.task("Checking permissions", () => runPreflight(deps.api, probes, deps.tenantDomain));
-  for (const issue of result.unexpected) {
-    deps.ui.warn(`Could not verify "${issue.probe}": ${issue.message} (HTTP ${issue.status})`);
-  }
+  const api = deps.probeApi ?? deps.api;
+  const result = await deps.ui.task("Checking permissions", () => runPreflight(api, probes, deps.tenantDomain));
+  const refused = result.unexpected.filter((issue) => issue.status === 403);
+  if (refused.length > 0) throw new PermissionCheckError(refused.map((issue) => issue.probe), deps.tenantDomain);
+
   const required = requiredMissingScopes(result);
   const choices = choiceGaps(result);
-  if (required.length === 0 && choices.length === 0) {
-    deps.ui.result("The CLI session has every permission setup needs");
-    return;
+  // The error lists the scopes and the fixes once, through reportError.
+  if (required.length > 0 || choices.length > 0) throw new MissingScopesError(required, choices);
+
+  for (const issue of result.unexpected) {
+    const status = issue.message.includes(String(issue.status)) ? "" : ` (HTTP ${issue.status})`;
+    deps.ui.warn(`Could not verify "${issue.probe}": ${issue.message}${status}`);
   }
-  deps.ui.error("The CLI session is missing permissions setup needs");
-  for (const scope of required) deps.ui.detail(scope);
-  for (const choice of choices) deps.ui.detail(`one of: ${choice.scopes.join(", ")}`);
-  throw new MissingScopesError(required, choices);
+  deps.ui.result(
+    result.unexpected.length > 0
+      ? "No permission is missing, but the checks above could not be verified"
+      : "The CLI session has every permission setup needs",
+  );
 }
 
 function resourceServersFor(template: TemplateId, tenantDomain: string): { name: string; identifier: string }[] {

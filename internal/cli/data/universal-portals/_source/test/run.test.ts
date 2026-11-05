@@ -4,12 +4,17 @@ import { test } from "node:test";
 import { CancelledError, type Prompter } from "../src/prompt.js";
 import { Ui } from "../src/ui.js";
 import { BusinessAccessError } from "../src/setup/business-types.js";
-import { MissingScopesError, runSetup, SetupDeps, SetupOptions } from "../src/setup/run.js";
+import { MissingScopesError, PermissionCheckError, runSetup, SetupDeps, SetupOptions } from "../src/setup/run.js";
 import { FORMS_VAULT_NAME } from "../src/setup/vault.js";
 import { FORMS_VAULT_SCOPES, MY_ACCOUNT_SCOPES, MY_ORGANIZATION_SCOPES } from "../src/setup/payload.js";
 import { CLIENT_SECRET_PLACEHOLDER, planWrites } from "../src/dry-run.js";
+import { SETUP_PROBES } from "../src/setup/preflight.js";
 import { FakeTenant } from "./fake-tenant.js";
 import { captureOutput } from "./capture-output.js";
+
+// The writes a dry run may send: the permission probes, which the API rejects and which change nothing.
+const PROBE_WRITES = new Set(SETUP_PROBES.filter((probe) => probe.method !== "GET").map((probe) => `${probe.method} ${probe.path}`));
+const writesBeyondProbes = (calls: string[]) => calls.filter((call) => !call.startsWith("GET ") && !PROBE_WRITES.has(call));
 
 const DOMAIN = "acme.us.auth0.com";
 
@@ -201,14 +206,51 @@ test("a taken slug is re-prompted when a terminal is available", async () => {
 test("missing scopes stop setup before anything is created and name what to grant", async () => {
   const tenant = new FakeTenant();
   tenant.deny("POST portals", "Insufficient scope, expected any of: create:portals");
-  tenant.deny("POST forms/import", "Insufficient scope, expected all of: create:forms,create:flows");
+  tenant.deny(
+    "POST forms/import",
+    "Insufficient scope, expected all of: create:forms,create:flows,create:flows_vault_connections,read:flows_vault_connections",
+  );
 
   await assert.rejects(runSetup(CONSUMER, harness(tenant).deps), (error: unknown) => {
     assert.ok(error instanceof MissingScopesError);
-    assert.deepEqual(error.scopes, ["create:flows", "create:forms", "create:portals"]);
+    assert.deepEqual(error.scopes, [
+      "create:flows",
+      "create:flows_vault_connections",
+      "create:forms",
+      "create:portals",
+      "read:flows_vault_connections",
+    ]);
     return true;
   });
   assert.equal(tenant.clients.size, 0, "preflight must run before any create");
+});
+
+test("a 403 that names no scope stops setup before anything is created", async () => {
+  const tenant = new FakeTenant();
+  tenant.failNext("GET portals", 403);
+  const { deps, output } = harness(tenant);
+
+  await assert.rejects(runSetup(CONSUMER, deps), (error: unknown) => {
+    assert.ok(error instanceof PermissionCheckError);
+    assert.match(error.message, /"list portals" with HTTP 403.*Nothing was created.*not enabled for acme\.us\.auth0\.com/);
+    return true;
+  });
+  assert.equal(tenant.clients.size + tenant.resourceServers.size, 0, "nothing is created after the refusal");
+  assert.doesNotMatch(output(), /every permission/, "a refused check is never reported as a pass");
+});
+
+test("missing scopes are listed once, by the error, with one login command", async () => {
+  const tenant = new FakeTenant();
+  tenant.deny("POST portals", "Insufficient scope, expected any of: create:portals");
+  const { deps, output } = harness(tenant);
+
+  await assert.rejects(runSetup(CONSUMER, deps), (error: unknown) => {
+    assert.ok(error instanceof MissingScopesError);
+    assert.match(error.message, /missing 1 permission\(s\) setup needs: create:portals\. Nothing was created\./);
+    assert.equal(error.fixes?.filter((fix) => fix.includes("auth0 login --scopes")).length, 1);
+    return true;
+  });
+  assert.doesNotMatch(output(), /create:portals/, "the scopes are not printed before the error reports them");
 });
 
 test("a custom domain is used for the portal URL and the back-channel logout", async () => {
@@ -399,13 +441,13 @@ test("leaving the organization empty puts a placeholder in the link", async () =
 test("a dry run reports what a new consumer portal would create and sends no writes", async () => {
   const tenant = new FakeTenant();
   const plan = planWrites(tenant);
-  const { deps } = harness(tenant, { api: plan.api, dryRun: true });
+  const { deps } = harness(tenant, { api: plan.api, probeApi: tenant });
   const result = await runSetup(CONSUMER, deps);
 
   assert.equal(result.portal.status, "created");
   assert.equal(result.application.status, "created");
   assert.ok(result.resources.every((resource) => resource.status === "created"));
-  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), [], "a dry run must not write");
+  assert.deepEqual(writesBeyondProbes(tenant.calls), [], "a dry run sends no write beyond the permission probes");
   assert.equal(tenant.portals.size + tenant.clients.size + tenant.forms.size + tenant.vaults.size, 0);
 
   const requests = plan.requests().map((request) => `${request.method} ${request.path}`);
@@ -415,7 +457,7 @@ test("a dry run reports what a new consumer portal would create and sends no wri
   assert.equal(
     plan.requests().filter((request) => JSON.stringify(request.body) === "{}").length,
     0,
-    "the permission probes that send writes are not sent in a dry run",
+    "the permission probes go to the tenant, not into the plan",
   );
 });
 
@@ -428,12 +470,12 @@ test("a dry run after setup reuses what exists and plans the portal with a place
   const callsBefore = tenant.calls.length;
 
   const plan = planWrites(tenant);
-  const { deps, output } = harness(tenant, { api: plan.api, dryRun: true });
+  const { deps, output } = harness(tenant, { api: plan.api, probeApi: tenant });
   const result = await runSetup(CONSUMER, deps);
 
   assert.equal(result.application.status, "reused");
   assert.equal(result.portal.status, "created");
-  assert.deepEqual(tenant.calls.slice(callsBefore).filter((call) => !call.startsWith("GET ")), []);
+  assert.deepEqual(writesBeyondProbes(tenant.calls.slice(callsBefore)), []);
 
   const planned = plan.requests();
   assert.ok(planned.some((request) => request.method === "PATCH" && request.path.startsWith("clients/")));
@@ -447,7 +489,7 @@ test("a dry run of a business portal plans its organization access and writes no
   const tenant = new FakeTenant();
   seedBusinessUser(tenant, { withOrg: true, withRole: false });
   const plan = planWrites(tenant);
-  const { deps } = harness(tenant, { api: plan.api, dryRun: true });
+  const { deps } = harness(tenant, { api: plan.api, probeApi: tenant });
   const result = await runSetup(
     { ...CONSUMER, template: "business", name: "Acme Admin", slug: "acme-admin", userQuery: "jane@acme.com" },
     deps,
@@ -455,7 +497,7 @@ test("a dry run of a business portal plans its organization access and writes no
 
   assert.equal(result.organization?.id, "org_1");
   assert.equal(result.organization?.hasRole, false);
-  assert.deepEqual(tenant.calls.filter((call) => !call.startsWith("GET ")), [], "a dry run must not write");
+  assert.deepEqual(writesBeyondProbes(tenant.calls), [], "a dry run sends no write beyond the permission probes");
   assert.equal(tenant.portals.size, 0);
   assert.ok(plan.requests().some((request) => request.path === "resource-servers"));
 });
