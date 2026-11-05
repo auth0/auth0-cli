@@ -1,0 +1,28 @@
+import type { ManagementClient } from "auth0";
+
+import type { Output } from "../lib/output";
+
+/** What a command gets when it runs. */
+export interface Context {
+  /** The arguments after the command name; the flags of the CLI are already removed. */
+  args: string[];
+  out: Output;
+  /** Aborted on Ctrl-C and SIGTERM. Pass it to every SDK call as `abortSignal`. */
+  signal: AbortSignal;
+  /** The SDK client for this run. It reads the environment the first time it is called. */
+  client: () => ManagementClient;
+}
+
+/**
+ * One command of the plugin. Every command also needs an entry under "commands"
+ * in plugin.json, with the Management API scopes it uses.
+ *
+ * A command named like the plugin is the root command, run as `auth0 __PLUGIN_NAME__`.
+ * Any other command is run as `auth0 __PLUGIN_NAME__ <name>`, and the CLI then
+ * passes the name as the first argument.
+ */
+export interface Command {
+  name: string;
+  help: string;
+  run(context: Context): Promise<void>;
+}

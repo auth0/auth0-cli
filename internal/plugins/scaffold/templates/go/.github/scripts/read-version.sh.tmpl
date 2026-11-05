@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Prints version, tag, tag-exists and release-exists as key=value lines for
+# $GITHUB_OUTPUT. A release exists when it holds checksums.txt and an archive
+# for every platform, so one that stopped half way counts as missing and the
+# workflow finishes it. Needs the git tags, and gh with GH_TOKEN and GH_REPO.
+set -euo pipefail
+
+# A semantic version without build metadata: the tag and the archive names carry it.
+semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
+
+version=$(jq -er '.version | strings' plugin.json) || {
+  echo "plugin.json has no version." >&2
+  exit 1
+}
+[[ $version =~ $semver ]] || {
+  echo "The version in plugin.json is not a semantic version such as 1.2.3 (no build metadata)." >&2
+  exit 1
+}
+tag="v$version"
+sha=${GITHUB_SHA:-$(git rev-parse HEAD)}
+
+tag_exists=false
+tag_sha=
+if tag_sha=$(git rev-parse -q --verify "refs/tags/$tag^{commit}"); then
+  tag_exists=true
+fi
+
+release_exists=false
+if out=$(gh release view "$tag" --json assets --jq '[.assets[].name]' 2>&1); then
+  wanted=$(jq '(.platforms | length) + 1' plugin.json)
+  if jq -e --argjson n "$wanted" 'index("checksums.txt") != null and length >= $n' <<<"$out" >/dev/null; then
+    release_exists=true
+  fi
+elif [[ $out != *"release not found"* ]]; then
+  echo "$out" >&2
+  exit 1
+fi
+
+# A tag somewhere else means plugin.json changed after the tag was made, and
+# building this commit under that tag would publish the wrong code.
+if [[ $release_exists == false && $tag_exists == true && $tag_sha != "$sha" ]]; then
+  echo "The tag $tag is at $tag_sha, but this run is for $sha. Raise the version in plugin.json, or re-run the workflow of the commit the tag points to." >&2
+  exit 1
+fi
+
+echo "version=$version"
+echo "tag=$tag"
+echo "tag-exists=$tag_exists"
+echo "release-exists=$release_exists"

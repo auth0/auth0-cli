@@ -1,0 +1,62 @@
+name: Release
+
+# Runs when a change to the version in plugin.json reaches main, which is what
+# merging the pull request from `make release` does. Run it by hand to finish a
+# release that failed half way.
+on:
+  push:
+    branches: [main]
+    paths: [plugin.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    # A manual run on another branch is skipped, and so is every job that needs it.
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.read.outputs.tag }}
+      release-exists: ${{ steps.read.outputs.release-exists }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # The tags are needed to see what exists.
+          persist-credentials: false
+      - id: read
+        uses: ./.github/actions/read-version
+
+  # When the release exists, this job is skipped and so is every job that needs it.
+  ci:
+    needs: version
+    if: needs.version.outputs.release-exists != 'true'
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: [version, ci]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Creates the tag, the release and the assets.
+    concurrency:
+      group: release-${{ needs.version.outputs.tag }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # GoReleaser reads the tag and the history.
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Tag the commit for GoReleaser
+        env:
+          TAG: ${{ needs.version.outputs.tag }}
+        run: git tag --force "$TAG" "$GITHUB_SHA"
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

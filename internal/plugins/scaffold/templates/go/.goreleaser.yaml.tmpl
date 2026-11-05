@@ -1,0 +1,55 @@
+# Builds what the Auth0 CLI installs: one archive per platform holding the
+# executable and plugin.json at its root, and checksums.txt with their SHA-256.
+version: 2
+
+project_name: __PLUGIN_NAME__
+
+builds:
+  - &build
+    id: default
+    main: .
+    binary: __PLUGIN_NAME__
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X example.com/__PLUGIN_NAME__/plugin.Version={{ .Version }}"]
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - {goos: windows, goarch: arm64}
+  # A static Go binary also runs on musl Linux; this build gives the CLI the
+  # separate linux-*-musl archives it looks for.
+  - <<: *build
+    id: musl
+    goos: [linux]
+    ignore: []
+
+archives:
+  - &archive
+    id: default
+    builds: [default]
+    formats: [tar.gz]
+    format_overrides:
+      - {goos: windows, formats: [zip]}
+    # The names of the platforms in plugin.json: darwin-arm64, linux-x64, windows-x64.
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}
+    # The CLI accepts only the executable and plugin.json, so no README or LICENSE.
+    files: [plugin.json]
+  - <<: *archive
+    id: musl
+    builds: [musl]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}-{{ if eq .Arch "amd64" }}x64{{ else }}{{ .Arch }}{{ end }}-musl
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github-native # GitHub writes the release notes.
+
+release:
+  # GitHub creates the tag at this commit when it does not exist yet.
+  target_commitish: "{{ .FullCommit }}"
+  # A second run replaces the assets of the first, which finishes a half-made release.
+  replace_existing_artifacts: true

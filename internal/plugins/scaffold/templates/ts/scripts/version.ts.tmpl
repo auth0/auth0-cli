@@ -1,0 +1,90 @@
+// The version rules of the release command.
+
+// A semantic version without build metadata.
+const semver =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?$/;
+
+/** Returns the version that request leads to: patch, minor, major or an exact version. */
+export function nextVersion(current: string, request: string): string {
+  const parts = semver.exec(current);
+  if (!parts) {
+    throw new Error(`the version "${current}" is not a semantic version such as 1.2.3`);
+  }
+  const [, major = "", minor = "", patch = "", prerelease = ""] = parts;
+
+  if (request === "patch" || request === "minor" || request === "major") {
+    if (prerelease) {
+      throw new Error(
+        `the current version ${current} is a prerelease, so "${request}" is ambiguous: give the exact version, for example ${major}.${minor}.${patch}`,
+      );
+    }
+    const up = (n: string) => (BigInt(n) + 1n).toString();
+    if (request === "major") return `${up(major)}.0.0`;
+    if (request === "minor") return `${major}.${up(minor)}.0`;
+    return `${major}.${minor}.${up(patch)}`;
+  }
+
+  if (!semver.test(request)) {
+    const hint = request.startsWith("v") && semver.test(request.slice(1)) ? ` Write ${request.slice(1)} without the v.` : "";
+    throw new Error(`"${request}" is not patch, minor, major or a semantic version such as 1.2.3 (no build metadata).${hint}`);
+  }
+  if (request === current) {
+    throw new Error(`${current} is already the current version`);
+  }
+  return request;
+}
+
+type Span = { value: string; start: number; end: number };
+
+const token = /"(?:[^"\\]|\\.)*"|[{[]|[}\]]/g;
+const colon = /^\s*:\s*/;
+const string = /^"(?:[^"\\]|\\.)*"/;
+
+// Finds the top-level "version" key. The file is valid JSON by now, so every
+// quote outside a string opens a string.
+function versionSpan(text: string): Span | undefined {
+  const doc: unknown = JSON.parse(text);
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc)) {
+    throw new Error("the file is not a JSON object");
+  }
+  const spans: Span[] = [];
+  let depth = 0;
+  for (const match of text.matchAll(token)) {
+    const [found = ""] = match;
+    const after = (match.index ?? 0) + found.length;
+    if (found === "{" || found === "[") depth++;
+    else if (found === "}" || found === "]") depth--;
+    else if (depth === 1 && JSON.parse(found) === "version") {
+      const key = colon.exec(text.slice(after));
+      if (!key) continue; // A string value, not a key.
+      const start = after + key[0].length;
+      const value = string.exec(text.slice(start));
+      if (!value) throw new Error('"version" is not a string');
+      spans.push({ value: JSON.parse(value[0]) as string, start, end: start + value[0].length });
+    }
+  }
+  if (spans.length > 1) throw new Error('the file has two "version" keys');
+  return spans[0];
+}
+
+/** Returns the top-level "version" of a JSON document, if it has one. */
+export function readVersion(text: string): string | undefined {
+  return versionSpan(text)?.value;
+}
+
+/** Replaces the top-level "version" and leaves every other character as it was. */
+export function setVersion(text: string, version: string): string {
+  if (!semver.test(version)) {
+    throw new Error(`"${version}" is not a semantic version`);
+  }
+  const span = versionSpan(text);
+  if (!span) {
+    throw new Error('the file has no "version" key');
+  }
+  const { start, end } = span;
+  const out = `${text.slice(0, start)}"${version}"${text.slice(end)}`;
+  if ((JSON.parse(out) as { version?: unknown }).version !== version) {
+    throw new Error('could not set "version" in the file');
+  }
+  return out;
+}
