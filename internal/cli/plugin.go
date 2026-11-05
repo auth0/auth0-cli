@@ -16,6 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/analytics"
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
@@ -430,6 +431,8 @@ func installPluginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			cli.trackPluginChange(analytics.PluginActionInstall, result)
+
 			op.say(result, view, false)
 			cli.renderer.PluginChange(*view)
 
@@ -533,9 +536,14 @@ func uninstallPluginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
-			if _, err := requireInstalled(svc.store, ref); err != nil {
+			installed, err := requireInstalled(svc.store, ref)
+			if err != nil {
 				return err
 			}
+
+			// The version that is active now is the one that goes away, so it is read
+			// before the plugin is removed.
+			removed := installed.Active
 
 			if !cli.force && cli.agentMode {
 				return errDestructiveNoConfirm
@@ -552,6 +560,8 @@ func uninstallPluginCmd(cli *cli) *cobra.Command {
 			if err != nil {
 				return err
 			}
+
+			cli.trackPlugin(analytics.PluginActionUninstall, ref.ID, analytics.PluginEvent{Version: removed})
 
 			cli.renderer.PluginUninstalled(ref.ID, freed)
 
@@ -1105,6 +1115,8 @@ func (o *pluginOperation) updateOne(ctx context.Context, ref pluginRef, opts sto
 		return err
 	}
 
+	o.cli.trackPluginChange(analytics.PluginActionUpdate, result)
+
 	o.say(result, view, true)
 	o.cli.renderer.PluginChange(*view)
 
@@ -1129,6 +1141,14 @@ func (o *pluginOperation) updateAll(ctx context.Context, opts store.Options) err
 	}
 
 	recordErr := o.consenter.Record(ctx, done...)
+
+	// Only the plugins that were updated are counted, and only when their approval
+	// was saved.
+	if recordErr == nil {
+		for _, result := range done {
+			o.cli.trackPluginChange(analytics.PluginActionUpdate, result)
+		}
+	}
 
 	var (
 		views  []display.PluginChangeResult
