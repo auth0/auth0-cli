@@ -174,6 +174,17 @@ func NewArtifact(platform plugins.Platform, url string, format registry.Artifact
 	}
 }
 
+// BinName returns the file name of the executable of the plugin with the given
+// short name on the platform. The registry requires one for Windows to end in
+// .exe.
+func BinName(platform plugins.Platform, name string) string {
+	if platform.OS() == "windows" {
+		return name + ".exe"
+	}
+
+	return name
+}
+
 // Package returns an archive of the given format that holds the binary and the
 // manifest of the record, under the names bin and plugin.json.
 func Package(id string, record registry.VersionRecord, format registry.ArtifactFormat, bin string, binary []byte) []byte {

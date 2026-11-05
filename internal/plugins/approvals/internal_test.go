@@ -30,7 +30,7 @@ func TestFailedRenameKeepsTheOldFile(t *testing.T) {
 
 	renameFile = func(string, string) error { return errors.New("disk is read only") }
 
-	t.Cleanup(func() { renameFile = os.Rename })
+	t.Cleanup(func() { renameFile = plugins.Rename })
 
 	require.ErrorContains(t, a.Approve(t.Context(), tenant, "auth0/checkmate", hashB), "disk is read only")
 

@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -25,7 +26,9 @@ func readValidManifest(t *testing.T) []byte {
 	data, err := os.ReadFile("testdata/valid-manifest.json")
 	require.NoError(t, err)
 
-	return data
+	// A checkout on Windows can turn the line breaks into CRLF, and the tests that
+	// edit the text look for the LF.
+	return bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 }
 
 // mutateManifest applies fn to the valid manifest and returns the new JSON.
