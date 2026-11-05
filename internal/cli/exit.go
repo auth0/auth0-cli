@@ -109,6 +109,11 @@ type pluginError struct {
 	// ExitCode is the code the plugin exited with, or zero when it did not exit by
 	// itself.
 	exitCode int
+
+	// DeniedCalls is the summary of the calls that the proxy of the run denied,
+	// and is empty when there were none. An agent reads it from the envelope,
+	// because in agent mode the CLI does not print it.
+	deniedCalls string
 }
 
 func (e pluginError) Error() string { return e.err.Error() }
@@ -117,10 +122,44 @@ func (e pluginError) Unwrap() error { return e.err }
 
 func (e pluginError) ErrorDetails() json.RawMessage {
 	details, err := json.Marshal(struct {
-		PluginID string `json:"pluginId"`
-		Version  string `json:"version"`
-		ExitCode int    `json:"exitCode,omitempty"`
-	}{e.pluginID, e.version, e.exitCode})
+		PluginID    string `json:"pluginId"`
+		Version     string `json:"version"`
+		ExitCode    int    `json:"exitCode,omitempty"`
+		DeniedCalls string `json:"deniedCalls,omitempty"`
+	}{e.pluginID, e.version, e.exitCode, e.deniedCalls})
+	if err != nil {
+		return nil
+	}
+
+	return details
+}
+
+// pluginNotInstalledError is the failure of a command that is not a command of
+// the CLI but is the name of a plugin in the registry. It tells how to install the
+// plugin. It classifies as "not_found", with the reason "plugin_not_installed",
+// and carries the plugin and the install command in the envelope's "details".
+type pluginNotInstalledError struct {
+	// The ID of the plugin, such as auth0/checkmate, the part of it that is typed
+	// as a command, and the command that installs it.
+	id      string
+	name    string
+	command string
+}
+
+// installCommand is the command that installs the plugin.
+func (e pluginNotInstalledError) installCommand() string {
+	return e.command
+}
+
+func (e pluginNotInstalledError) Error() string {
+	return fmt.Sprintf("Plugin %q is available. Install it with: %s", e.name, e.installCommand())
+}
+
+func (e pluginNotInstalledError) ErrorDetails() json.RawMessage {
+	details, err := json.Marshal(struct {
+		PluginID       string `json:"pluginId"`
+		InstallCommand string `json:"installCommand"`
+	}{e.id, e.installCommand()})
 	if err != nil {
 		return nil
 	}
@@ -154,6 +193,11 @@ func errorClass(err error) string {
 	var pluginErr pluginError
 	if errors.As(err, &pluginErr) {
 		return "plugin"
+	}
+
+	var notInstalledErr pluginNotInstalledError
+	if errors.As(err, &notInstalledErr) {
+		return "not_found"
 	}
 
 	if errors.Is(err, config.ErrInvalidToken) ||
@@ -243,6 +287,11 @@ func errorReason(err error) string {
 	var pluginErr pluginError
 	if errors.As(err, &pluginErr) {
 		return pluginErr.reason
+	}
+
+	var notInstalledErr pluginNotInstalledError
+	if errors.As(err, &notInstalledErr) {
+		return "plugin_not_installed"
 	}
 
 	if status, ok := managementHTTPStatus(err); ok {
