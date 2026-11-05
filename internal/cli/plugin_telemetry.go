@@ -15,6 +15,10 @@ import (
 type pluginRunIdentity struct {
 	id      string
 	version string
+
+	// Linked is true for a plugin that an author runs from a local build. Its
+	// name can be private and unreleased, so its runs are never counted.
+	linked bool
 }
 
 // trackablePlugin reports whether events may name the plugin. Only the plugins of
@@ -26,10 +30,10 @@ func trackablePlugin(id string) bool {
 
 // trackPluginRun sends the event of a plugin run: the plugin, its version and how
 // the run ended. Nothing else about the run is sent. A run that stopped before the
-// plugin was verified sends nothing.
+// plugin was verified sends nothing, and neither does a run of a linked plugin.
 func trackPluginRun(c *cli, executionErr error) {
 	run := c.pluginRun
-	if run == nil || run.version == "" {
+	if run == nil || run.version == "" || run.linked {
 		return
 	}
 
