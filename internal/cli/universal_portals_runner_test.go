@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -255,6 +256,49 @@ func TestEmbeddedUniversalPortalsScriptRuns(t *testing.T) {
 	assert.Equal(t, 0, code, stderr.String())
 	assert.Contains(t, stdout.String(), "Usage: auth0 universal-portals setup")
 	assert.Contains(t, stdout.String(), "audit")
+}
+
+func TestUniversalPortalsLoginCheck(t *testing.T) {
+	tests := []struct {
+		name        string
+		args        []string
+		wantChecked bool
+		wantTenant  string
+		wantNoInput bool
+	}{
+		{name: "help skips it", args: []string{"--help"}},
+		{name: "short help skips it", args: []string{"up_1", "-h"}},
+		{name: "it uses the default tenant", args: []string{"--name", "Acme"}, wantChecked: true, wantTenant: "default.us.auth0.com"},
+		{
+			name:        "it sees --tenant and --no-input",
+			args:        []string{"up_1", "--tenant", "other.eu.auth0.com", "--no-input"},
+			wantChecked: true,
+			wantTenant:  "other.eu.auth0.com",
+			wantNoInput: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := &cli{tenant: "default.us.auth0.com"}
+			checked := false
+			root := &cobra.Command{Use: "auth0", PersistentPreRunE: func(*cobra.Command, []string) error {
+				checked = true
+				return nil
+			}}
+			root.AddCommand(universalPortalsCmd(c))
+			setup, _, err := root.Find([]string{"universal-portals", "setup"})
+			require.NoError(t, err)
+
+			require.NoError(t, setup.Parent().PersistentPreRunE(setup, test.args))
+
+			assert.Equal(t, test.wantChecked, checked)
+			if test.wantChecked {
+				assert.Equal(t, test.wantTenant, c.tenant)
+				assert.Equal(t, test.wantNoInput, c.noInput)
+			}
+		})
+	}
 }
 
 func TestUniversalPortalsCommand(t *testing.T) {

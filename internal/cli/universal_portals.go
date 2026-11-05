@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,20 @@ func universalPortalsCmd(cli *cli) *cobra.Command {
 
 These commands run a tool that is built into the CLI. It needs Node.js 20.12 or newer, and it calls the
 Auth0 Management API as the tenant you are logged in to.`,
+	}
+
+	// Flag parsing is off for the tool's commands, so the login check would miss --tenant and
+	// --no-input, and would run for --help, which the tool prints without a tenant.
+	cmd.PersistentPreRunE = func(command *cobra.Command, args []string) error {
+		if slices.Contains(args, "--help") || slices.Contains(args, "-h") {
+			cli.executedCommandPath = command.CommandPath()
+			return nil
+		}
+		if tenant := universalPortalsTenantFlag(args); tenant != "" {
+			cli.tenant = tenant
+		}
+		cli.noInput = cli.noInput || slices.Contains(args, "--no-input")
+		return command.Root().PersistentPreRunE(command, args)
 	}
 
 	cmd.SetUsageTemplate(namespaceUsageTemplate())
