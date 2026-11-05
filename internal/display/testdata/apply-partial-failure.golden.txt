@@ -1,0 +1,17 @@
+Applying 16 changes
+  ✓ Tenant settings                        5 changes
+  ✗ API                                    failed
+      failed to update the API https://api.shop.example: 500 Internal Server
+      Error
+  - App Shop Web                           not run
+  - Guest grant https://api.shop.example   not run
+  - auth0-poppy.json                       not run
+
+Running the command again continues from here.
+To rerun:  auth0 poppy setup --company-domain shop.example \
+             --api https://api.shop.example \
+             --api-url https://api.shop.example=https://api.shop.example/openapi.json \
+             --app "Shop Web" --scope "refunds=Refund an order you placed." \
+             --scope "wishlist=Keep a list of things you want." \
+             --login-uri https://shop.example/login --guest-api-access \
+             --guest-scopes checkout,orders:read --yes

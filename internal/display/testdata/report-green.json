@@ -1,0 +1,145 @@
+{
+  "domain": "shop.example",
+  "protocol_version": "0.4",
+  "issuer": "https://auth.shop.example/",
+  "results": [
+    {
+      "id": "D1",
+      "spec": "3",
+      "level": "pass",
+      "message": "poppy.json is served over HTTPS at /.well-known/poppy.json"
+    },
+    {
+      "id": "D1",
+      "spec": "3",
+      "level": "pass",
+      "message": "protocol version 0.4 is one this CLI understands"
+    },
+    {
+      "id": "D1",
+      "spec": "3.1",
+      "level": "pass",
+      "message": "organization.domain is the serving host"
+    },
+    {
+      "id": "D1",
+      "spec": "3.1",
+      "level": "pass",
+      "message": "every URL in poppy.json is HTTPS"
+    },
+    {
+      "id": "D2",
+      "spec": "3.2",
+      "level": "pass",
+      "message": "the protected resource is https://shop.example"
+    },
+    {
+      "id": "D2",
+      "spec": "3.2",
+      "level": "pass",
+      "message": "the protected resource metadata names the issuer"
+    },
+    {
+      "id": "D3",
+      "spec": "3.2",
+      "level": "pass",
+      "message": "issuer matches https://auth.shop.example/"
+    },
+    {
+      "id": "D3",
+      "spec": "3.2",
+      "level": "pass",
+      "message": "protected_resources lists https://shop.example"
+    },
+    {
+      "id": "D3",
+      "spec": "4.2",
+      "level": "pass",
+      "message": "token, revocation, authorization and device endpoints are HTTPS"
+    },
+    {
+      "id": "D3",
+      "spec": "4.2",
+      "level": "pass",
+      "message": "supports the grants agents use (authorization code, refresh token, device code)"
+    },
+    {
+      "id": "D3",
+      "spec": "4.2",
+      "level": "pass",
+      "message": "returns iss in sign-in responses"
+    },
+    {
+      "id": "D3",
+      "spec": "4.2",
+      "level": "pass",
+      "message": "lists every scope of poppy.json"
+    },
+    {
+      "id": "D4",
+      "spec": "4.1",
+      "level": "pass",
+      "message": "accepts ES256 client assertions"
+    },
+    {
+      "id": "D4",
+      "spec": "4.1",
+      "level": "pass",
+      "message": "accepts PS384 client assertions"
+    },
+    {
+      "id": "D5",
+      "spec": "4.7",
+      "level": "pass",
+      "message": "every scope has a description"
+    },
+    {
+      "id": "D5",
+      "spec": "4.7",
+      "level": "pass",
+      "message": "every scope has valid hints"
+    },
+    {
+      "id": "D6",
+      "spec": "6",
+      "level": "pass",
+      "message": "the join page has a hidden code input"
+    },
+    {
+      "id": "D6",
+      "spec": "6",
+      "level": "pass",
+      "message": "the join cookie has the required attributes"
+    },
+    {
+      "id": "D6",
+      "spec": "6",
+      "level": "pass",
+      "message": "the join response is not cached"
+    },
+    {
+      "id": "D7",
+      "spec": "7",
+      "level": "pass",
+      "message": "https://api.shop.example/openapi.json is OpenAPI 3.1.0"
+    },
+    {
+      "id": "D7",
+      "spec": "7",
+      "level": "pass",
+      "message": "mcp endpoint listed: https://mcp.shop.example/mcp"
+    },
+    {
+      "id": "D15",
+      "spec": "3.1",
+      "level": "pass",
+      "message": "the web settings are valid"
+    },
+    {
+      "id": "D16",
+      "spec": "4.7",
+      "level": "pass",
+      "message": "poppy:browser-sign-in is listed in auth.scopes"
+    }
+  ]
+}

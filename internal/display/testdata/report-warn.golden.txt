@@ -1,0 +1,11 @@
+Doctor for shop.example                                             protocol 0.3
+Issuer https://shop.example/
+
+Auth0 issuer
+  ✓ issuer matches https://shop.example/
+
+Scopes
+  WARN scope_hints missing for checkout
+       FIX  auth0 poppy setup --hint checkout=changes:<none|reversible|irreversible>,personal_data:<true|false>
+
+1 warning, 1 passed.

@@ -1,0 +1,38 @@
+Doctor for shop.example                                             protocol 0.4
+Issuer https://auth.shop.example/
+
+Website files
+  ✓ poppy.json is served over HTTPS at /.well-known/poppy.json
+  ✓ protocol version 0.4 is one this CLI understands
+  ✓ organization.domain is the serving host
+  ✓ every URL in poppy.json is HTTPS
+  ✓ the protected resource is https://shop.example
+  ✓ the protected resource metadata names the issuer
+
+Auth0 issuer
+  ✓ issuer matches https://auth.shop.example/
+  ✓ protected_resources lists https://shop.example
+  ✓ token, revocation, authorization and device endpoints are HTTPS
+  ✓ supports the grants agents use (authorization code, refresh token, device
+    code)
+  ✓ returns iss in sign-in responses
+  ✓ lists every scope of poppy.json
+  ✓ accepts ES256 client assertions
+  ✓ accepts PS384 client assertions
+
+Scopes
+  ✓ every scope has a description
+  ✓ every scope has valid hints
+
+Browser sign-in
+  ✓ the join page has a hidden code input
+  ✓ the join cookie has the required attributes
+  ✓ the join response is not cached
+  ✓ the web settings are valid
+  ✓ poppy:browser-sign-in is listed in auth.scopes
+
+API
+  ✓ https://api.shop.example/openapi.json is OpenAPI 3.1.0
+  ✓ mcp endpoint listed: https://mcp.shop.example/mcp
+
+23 passed.

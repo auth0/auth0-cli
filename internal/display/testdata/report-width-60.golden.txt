@@ -1,0 +1,23 @@
+Doctor for a-very-long-company-domain.example.com protocol 0.3
+Issuer https://login.a-very-long-company-domain.example.com/
+
+Website files
+  ✓ poppy.json is served over HTTPS at
+    /.well-known/poppy.json
+
+Browser sign-in
+  WARN web.browser_session_endpoint is not published, so
+       agents cannot join a browser session
+
+API
+  FAIL https://api.shop.example/poppy/openapi.json returned
+       HTTP 503, and the document must be served with status
+       200 so that agents can read it
+       FIX  Serve the document at https://api.shop.example/poppy/openapi.json with status 200.
+
+Tenant
+  - skipped: you are logged in to a different tenant than
+    the one that serves shop.example. Log in to that tenant
+    to run these checks.
+
+1 failed, 1 warning, 1 passed, 1 skipped.

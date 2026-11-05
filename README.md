@@ -249,6 +249,16 @@ auth0 login --domain <domain> --client-id <client-id> --client-secret <client-se
 auth0 login --domain <domain> --client-id <client-id> --client-assertion-private-key <path-to-private-key / private-key> --client-assertion-signing-alg <signing-algorithm>
 ```
 
+### Extra scopes for `auth0 poppy agents`
+
+`auth0 poppy setup`, `config` and `doctor` work with the default login scopes. The `auth0 poppy agents` commands also need the `read:agents`, `create:agents` and `delete:agents` scopes, which are not requested by default because Agent as Principal is still in limited early access. If your tenant has it, log in again with them:
+
+```bash
+auth0 login --scopes read:agents,create:agents,delete:agents
+```
+
+If a scope is missing, the command stops before changing anything and prints the exact `auth0 login --scopes ...` command to run.
+
 ### Re-authentication
 
 When your access token expires, the CLI will prompt you to confirm whether to continue with your default tenant or select a different one:
@@ -282,6 +292,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 logout](https://auth0.github.io/auth0-cli/auth0_logout.html) - Log out of a tenant's session
 - [auth0 logs](https://auth0.github.io/auth0-cli/auth0_logs.html) - View tenant logs
 - [auth0 orgs](https://auth0.github.io/auth0-cli/auth0_orgs.html) - Manage resources for organizations
+- [auth0 poppy](https://auth0.github.io/auth0-cli/auth0_poppy.html) - (Experimental) Prepare your company for personal agents with the Personal Agent Protocol (Poppy)
 - [auth0 protection](https://auth0.github.io/auth0-cli/auth0_protection.html) - Manage resources for attack protection
 - [auth0 quickstarts](https://auth0.github.io/auth0-cli/auth0_quickstarts.html) - Quickstart support for getting bootstrapped
 - [auth0 refresh-tokens](https://auth0.github.io/auth0-cli/auth0_refresh-tokens.html) - Manage resources for refresh tokens
