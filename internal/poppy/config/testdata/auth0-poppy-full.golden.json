@@ -1,0 +1,81 @@
+{
+  "protocol_version": "0.4",
+  "supported_versions": {
+    "0.3": "https://shop.example/poppy/0.3.json"
+  },
+  "organization": {
+    "name": "Shop",
+    "domain": "shop.example",
+    "logo_uri": "https://shop.example/logo.png"
+  },
+  "auth": {
+    "issuer": "https://auth.shop.example/",
+    "disabled": false,
+    "scopes": {
+      "checkout": "Place orders and pay with your saved card. Can't be undone.",
+      "orders:read": "See your orders and their status. Read only.",
+      "poppy:browser-sign-in": "Use the website signed in, with the other access you approve"
+    },
+    "scope_hints": {
+      "checkout": {
+        "changes": "irreversible",
+        "personal_data": true
+      },
+      "orders:read": {
+        "changes": "none",
+        "personal_data": true
+      },
+      "poppy:browser-sign-in": {
+        "changes": "none",
+        "personal_data": false
+      }
+    }
+  },
+  "agent": {
+    "protocols": [
+      {
+        "type": "poppy",
+        "endpoint": "https://api.shop.example/poppy/conversations",
+        "access": "signed_in"
+      }
+    ]
+  },
+  "apis": [
+    {
+      "type": "openapi",
+      "url": "https://api.shop.example/openapi.json",
+      "description": "Orders, cart and checkout"
+    },
+    {
+      "type": "mcp",
+      "url": "https://mcp.shop.example/mcp",
+      "description": "Product search and sizing"
+    }
+  ],
+  "web": {
+    "browser_session_endpoint": "https://auth.shop.example/poppy/W1x9aBcD2eFgH3iJ/browser-session",
+    "unscoped": true
+  },
+  "feedback": {
+    "endpoint": "https://api.shop.example/poppy/feedback"
+  },
+  "excluded_tasks": {
+    "url": "https://shop.example/poppy/excluded-tasks.json"
+  },
+  "extensions": {
+    "shop.example/gift-wrap": [
+      {
+        "version": "2",
+        "endpoint": "https://api.shop.example/poppy/gift-wrap/v2"
+      },
+      {
+        "version": "1",
+        "endpoint": "https://api.shop.example/poppy/gift-wrap"
+      }
+    ]
+  },
+  "skill_index": {
+    "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+    "skills": []
+  }
+}

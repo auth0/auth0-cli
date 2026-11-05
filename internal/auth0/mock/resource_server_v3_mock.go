@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	auth0 "github.com/auth0/auth0-cli/internal/auth0"
 	management "github.com/auth0/go-auth0/v3/management"
 	core "github.com/auth0/go-auth0/v3/management/core"
 	option "github.com/auth0/go-auth0/v3/management/option"
@@ -43,6 +44,26 @@ func (m *MockResourceServerAPIV3) EXPECT() *MockResourceServerAPIV3MockRecorder 
 	return m.recorder
 }
 
+// List mocks base method.
+func (m *MockResourceServerAPIV3) List(ctx context.Context, request *management.ListResourceServerRequestParameters, opts ...option.RequestOption) (*auth0.ResourceServerPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].(*auth0.ResourceServerPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockResourceServerAPIV3MockRecorder) List(ctx, request any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceServerAPIV3)(nil).List), varargs...)
+}
+
 // Search mocks base method.
 func (m *MockResourceServerAPIV3) Search(ctx context.Context, request *management.SearchResourceServersRequestParameters, opts ...option.RequestOption) (*core.Page[*string, *management.ResourceServerSearchResponse, *management.SearchResourceServersResponseContent], error) {
 	m.ctrl.T.Helper()
@@ -61,4 +82,24 @@ func (mr *MockResourceServerAPIV3MockRecorder) Search(ctx, request any, opts ...
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockResourceServerAPIV3)(nil).Search), varargs...)
+}
+
+// Update mocks base method.
+func (m *MockResourceServerAPIV3) Update(ctx context.Context, id string, request *management.UpdateResourceServerRequestContent, opts ...option.RequestOption) (*management.UpdateResourceServerResponseContent, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Update", varargs...)
+	ret0, _ := ret[0].(*management.UpdateResourceServerResponseContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockResourceServerAPIV3MockRecorder) Update(ctx, id, request any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResourceServerAPIV3)(nil).Update), varargs...)
 }
