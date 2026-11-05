@@ -21,6 +21,11 @@ const (
 	// them.
 	skipDocsAnnotation = "skipDocs"
 
+	// The annotation with this key, set to "true" on a command, keeps the root
+	// pre-run hook from authenticating for the command. The command does its own
+	// checks first and logs in only when it needs a session.
+	skipAuthAnnotation = "skipAuth"
+
 	associatedCommandsFragment = `{{range .AssociatedCommands}}- [{{.CommandPath}}]({{ link .CommandPath }}) - {{.Short}}
 {{end}}`
 

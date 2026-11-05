@@ -380,6 +380,12 @@ func renderNamespaceJSONHelp(root *cobra.Command, args []string) bool {
 		return false
 	}
 
+	// A plugin command does not parse its flags, so a JSON flag on it is for the
+	// plugin to run with, not a request for help.
+	if target.Annotations[pluginCommandAnnotation] == "true" {
+		return false
+	}
+
 	// Cobra adds the --help/-h flag lazily during execution; add it now so a
 	// `--help --json` combination parses instead of tripping on "unknown flag: --help".
 	target.InitDefaultHelpFlag()

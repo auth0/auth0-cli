@@ -148,8 +148,9 @@ const (
 // reservedFlagNames lists the flags owned by the CLI itself. A plugin command
 // cannot declare a flag with one of these names.
 //
-// TODO: Read this list from the root command's persistent flags once the
-// dynamic plugin commands land (DXCDT-2605).
+// The list is static because the manifest validator cannot see the commands of
+// the CLI. A test in internal/cli fails when a persistent flag of the root
+// command, an output flag or help is missing from it.
 var reservedFlagNames = []string{
 	"tenant",
 	"json",
@@ -165,19 +166,19 @@ var reservedFlagNames = []string{
 // reservedFlagShorthands lists the single letter flags owned by the CLI
 // itself. A plugin command cannot declare a flag with one of these shorthands.
 // The CLI's persistent flags have no shorthand, so the only reserved one comes
-// from cobra's built-in help flag.
-//
-// TODO: Read this list from the root command's persistent flags once the
-// dynamic plugin commands land (DXCDT-2605).
+// from cobra's built-in help flag. A test in internal/cli fails when a flag of
+// the CLI gets another shorthand.
 var reservedFlagShorthands = []string{
 	"h",
 }
 
 // reservedEnvPrefixes lists the environment variable prefixes that the CLI
-// owns, so a plugin cannot ask for variables that start with them.
+// owns, so a plugin cannot ask for variables that start with them. AUTH0_ covers
+// the credentials of the CLI (AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET,
+// AUTH0_API_TOKEN), the settings it reads (AUTH0_CLI_) and the variables it sets
+// for plugins (AUTH0_PLUGIN_). The comparison ignores case.
 var reservedEnvPrefixes = []string{
-	"AUTH0_PLUGIN_",
-	"AUTH0_CLI_",
+	"AUTH0_",
 }
 
 // Manifest is the parsed content of a plugin.json file.
@@ -393,7 +394,7 @@ func (m *Manifest) semanticErrors() []string {
 
 		for j, env := range command.Permissions.Env {
 			reserved := slices.ContainsFunc(reservedEnvPrefixes, func(prefix string) bool {
-				return strings.HasPrefix(env.Name, prefix)
+				return strings.HasPrefix(strings.ToUpper(env.Name), prefix)
 			})
 			if reserved {
 				found.Addf("%s.name: %q uses a prefix reserved by the CLI (%s)",
