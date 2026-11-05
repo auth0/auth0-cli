@@ -156,6 +156,8 @@ var RequiredScopes = []string{
 	"read:guardian_factors", "update:guardian_factors",
 	"read:guardian_enrollments", "delete:guardian_enrollments", "create:guardian_enrollment_tickets",
 	"read:mfa_policies", "update:mfa_policies",
+	"read:client_credentials",
+	// "read:agents", "create:agents", "delete:agents",.
 	// "read:experimentation", "create:experimentation", "update:experimentation", "delete:experimentation",.
 }
 

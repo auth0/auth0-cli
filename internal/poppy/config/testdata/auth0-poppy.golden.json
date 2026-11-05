@@ -1,0 +1,39 @@
+{
+  "protocol_version": "0.4",
+  "organization": {
+    "name": "Shop",
+    "domain": "shop.example"
+  },
+  "auth": {
+    "issuer": "https://auth.shop.example/",
+    "scopes": {
+      "checkout": "Place orders and pay with your saved card. Can't be undone.",
+      "orders:read": "See your orders and their status. Read only.",
+      "poppy:browser-sign-in": "Use the website signed in, with the other access you approve"
+    },
+    "scope_hints": {
+      "checkout": {
+        "changes": "irreversible",
+        "personal_data": true
+      },
+      "orders:read": {
+        "changes": "none",
+        "personal_data": true
+      },
+      "poppy:browser-sign-in": {
+        "changes": "none",
+        "personal_data": false
+      }
+    }
+  },
+  "apis": [
+    {
+      "type": "openapi",
+      "url": "https://api.shop.example/openapi.json",
+      "description": "Orders, cart and checkout"
+    }
+  ],
+  "web": {
+    "browser_session_endpoint": "https://auth.shop.example/poppy/W1x9aBcD2eFgH3iJ/browser-session"
+  }
+}
