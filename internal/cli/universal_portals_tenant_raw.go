@@ -172,7 +172,7 @@ func (t *portalsTenant) ReadForm(ctx context.Context, id string) (portals.FormDe
 // ImportForm implements portals.FormStore.
 func (t *portalsTenant) ImportForm(ctx context.Context, document any) (portals.ImportedForm, error) {
 	data, err := t.rawJSON(ctx, http.MethodPost, "forms/import", document)
-	if err != nil {
+	if err := t.written(err); err != nil {
 		return portals.ImportedForm{}, err
 	}
 
@@ -270,7 +270,7 @@ func (t *portalsTenant) ReadPortal(ctx context.Context, id string) (portals.Port
 // CreatePortal implements portals.PortalStore.
 func (t *portalsTenant) CreatePortal(ctx context.Context, request portals.CreatePortalRequest) (portals.Portal, error) {
 	data, err := t.rawJSON(ctx, http.MethodPost, "portals", request)
-	if err != nil {
+	if err := t.written(err); err != nil {
 		return portals.Portal{}, err
 	}
 
@@ -286,7 +286,7 @@ func (t *portalsTenant) CreatePortal(ctx context.Context, request portals.Create
 func (t *portalsTenant) UpdatePortal(ctx context.Context, id string, patch portals.PortalPatch) error {
 	_, err := t.rawJSON(ctx, http.MethodPatch, "portals/"+id, patch)
 
-	return err
+	return t.written(err)
 }
 
 // Probe implements portals.Prober.

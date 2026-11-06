@@ -48,7 +48,7 @@ func (t *portalsTenant) CreateResourceServer(ctx context.Context, spec portals.R
 		server.TokenDialect = goauth0.String(spec.TokenDialect)
 	}
 
-	if err := t.api.ResourceServer.Create(ctx, server); err != nil {
+	if err := t.written(t.api.ResourceServer.Create(ctx, server)); err != nil {
 		return portals.ResourceServer{}, asPortalsError(err)
 	}
 
@@ -107,7 +107,7 @@ func (t *portalsTenant) ReadClientSecret(ctx context.Context, id string) (string
 // CreateClient implements portals.ClientStore.
 func (t *portalsTenant) CreateClient(ctx context.Context, settings portals.ClientSettings) (portals.Client, error) {
 	client := clientToSDK(settings)
-	if err := t.api.Client.Create(ctx, client); err != nil {
+	if err := t.written(t.api.Client.Create(ctx, client)); err != nil {
 		return portals.Client{}, asPortalsError(err)
 	}
 
@@ -116,7 +116,7 @@ func (t *portalsTenant) CreateClient(ctx context.Context, settings portals.Clien
 
 // UpdateClient implements portals.ClientStore.
 func (t *portalsTenant) UpdateClient(ctx context.Context, id string, settings portals.ClientSettings) error {
-	return asPortalsError(t.api.Client.Update(ctx, id, clientToSDK(settings)))
+	return asPortalsError(t.written(t.api.Client.Update(ctx, id, clientToSDK(settings))))
 }
 
 // clientToSDK maps the settings that are set. A setting left empty or nil is not sent.
@@ -324,7 +324,7 @@ func (t *portalsTenant) CreateClientGrant(ctx context.Context, spec portals.Clie
 	}
 
 	created, err := t.apiv3.ClientGrant.Create(ctx, request)
-	if err != nil {
+	if err := t.written(err); err != nil {
 		return portals.ClientGrant{}, asPortalsError(err)
 	}
 
@@ -340,7 +340,7 @@ func (t *portalsTenant) CreateClientGrant(ctx context.Context, spec portals.Clie
 func (t *portalsTenant) UpdateClientGrantScope(ctx context.Context, id string, scope []string) error {
 	_, err := t.apiv3.ClientGrant.Update(ctx, id, &managementv3.UpdateClientGrantRequestContent{Scope: scope})
 
-	return asPortalsError(err)
+	return asPortalsError(t.written(err))
 }
 
 // ListVaultConnections implements portals.VaultStore.
@@ -366,7 +366,7 @@ func (t *portalsTenant) CreateVaultConnection(ctx context.Context, name string, 
 		Setup: vaultSetupToSDK(setup),
 	}
 
-	if err := t.api.FlowVaultConnection.CreateConnection(ctx, connection); err != nil {
+	if err := t.written(t.api.FlowVaultConnection.CreateConnection(ctx, connection)); err != nil {
 		return portals.VaultConnection{}, asPortalsError(err)
 	}
 
@@ -375,9 +375,9 @@ func (t *portalsTenant) CreateVaultConnection(ctx context.Context, name string, 
 
 // UpdateVaultConnection implements portals.VaultStore.
 func (t *portalsTenant) UpdateVaultConnection(ctx context.Context, id string, setup portals.VaultSetup) error {
-	return asPortalsError(t.api.FlowVaultConnection.UpdateConnection(ctx, id, &management.FlowVaultConnection{
+	return asPortalsError(t.written(t.api.FlowVaultConnection.UpdateConnection(ctx, id, &management.FlowVaultConnection{
 		Setup: vaultSetupToSDK(setup),
-	}))
+	})))
 }
 
 func vaultSetupToSDK(setup portals.VaultSetup) *map[string]interface{} {

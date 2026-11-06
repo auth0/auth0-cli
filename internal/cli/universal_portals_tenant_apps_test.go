@@ -354,3 +354,103 @@ func TestPortalsTenant_Connections(t *testing.T) {
 		assert.Equal(t, []string{"auth0"}, server.received(http.MethodGet, "connections")[0].Query["strategy"])
 	})
 }
+
+func TestPortalsTenant_TracksWhetherItChangedTheTenant(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("reads and checks do not change it", func(t *testing.T) {
+		t.Parallel()
+
+		server, tenant := newPortalsServer(t)
+		server.reply(http.MethodGet, "resource-servers", 200, `{"resource_servers":[],"total":0}`)
+		server.reply(http.MethodPost, "clients", 400, `{"statusCode":400,"message":"Payload validation error"}`)
+
+		_, err := tenant.ListResourceServers(ctx)
+		require.NoError(t, err)
+		assert.Error(t, tenant.Probe(ctx, http.MethodPost, "clients", map[string]any{}))
+
+		assert.False(t, tenant.hasWritten())
+	})
+
+	t.Run("a request that failed did not change it", func(t *testing.T) {
+		t.Parallel()
+
+		server, tenant := newPortalsServer(t)
+		server.reply(http.MethodPost, "resource-servers", 409, `{"statusCode":409,"message":"already exists"}`)
+
+		_, err := tenant.CreateResourceServer(ctx, portals.ResourceServerSpec{Identifier: "https://acme/me/"})
+		require.Error(t, err)
+
+		assert.False(t, tenant.hasWritten())
+	})
+
+	writes := map[string]func(tenant *portalsTenant) error{
+		"a created resource server": func(tenant *portalsTenant) error {
+			_, err := tenant.CreateResourceServer(ctx, portals.ResourceServerSpec{Identifier: "https://acme/me/"})
+			return err
+		},
+		"a created application": func(tenant *portalsTenant) error {
+			_, err := tenant.CreateClient(ctx, portals.ClientSettings{Name: "Acme"})
+			return err
+		},
+		"an updated application": func(tenant *portalsTenant) error {
+			return tenant.UpdateClient(ctx, "cli_1", portals.ClientSettings{Name: "Acme"})
+		},
+		"a created grant": func(tenant *portalsTenant) error {
+			_, err := tenant.CreateClientGrant(ctx, portals.ClientGrantSpec{ClientID: "cli_1", Audience: "https://acme/me/"})
+			return err
+		},
+		"an updated grant": func(tenant *portalsTenant) error {
+			return tenant.UpdateClientGrantScope(ctx, "cgr_1", []string{"a"})
+		},
+		"a created vault connection": func(tenant *portalsTenant) error {
+			_, err := tenant.CreateVaultConnection(ctx, "Vault", portals.VaultSetup{})
+			return err
+		},
+		"an imported form": func(tenant *portalsTenant) error {
+			_, err := tenant.ImportForm(ctx, map[string]any{"form": map[string]any{"name": "Profile"}})
+			return err
+		},
+		"a created portal": func(tenant *portalsTenant) error {
+			_, err := tenant.CreatePortal(ctx, portals.CreatePortalRequest{Slug: "acme", Client: &portals.PortalClient{ClientID: "cli_1"}})
+			return err
+		},
+		"a created organization": func(tenant *portalsTenant) error {
+			_, err := tenant.CreateOrganization(ctx, portals.OrganizationSpec{Name: "acme"})
+			return err
+		},
+		"a member added to an organization": func(tenant *portalsTenant) error {
+			return tenant.AddOrganizationMember(ctx, "org_1", "auth0|a")
+		},
+		"a role assigned to a member": func(tenant *portalsTenant) error {
+			return tenant.AssignMemberRole(ctx, "org_1", "auth0|a", "rol_1")
+		},
+		"a created role": func(tenant *portalsTenant) error {
+			_, err := tenant.CreateRole(ctx, portals.RoleSpec{Name: "Admin"})
+			return err
+		},
+	}
+
+	for name, write := range writes {
+		t.Run(name+" changes it", func(t *testing.T) {
+			t.Parallel()
+
+			server, tenant := newPortalsServer(t)
+			for _, route := range []struct{ method, path string }{
+				{http.MethodPost, "resource-servers"}, {http.MethodPost, "clients"}, {http.MethodPatch, "clients/cli_1"},
+				{http.MethodPost, "client-grants"}, {http.MethodPatch, "client-grants/cgr_1"},
+				{http.MethodPost, "flows/vault/connections"}, {http.MethodPost, "forms/import"}, {http.MethodPost, "portals"},
+				{http.MethodPost, "organizations"}, {http.MethodPost, "organizations/org_1/members"},
+				{http.MethodPost, "organizations/org_1/members/auth0%7Ca/roles"}, {http.MethodPost, "roles"},
+			} {
+				server.reply(route.method, route.path, 200, `{"id":"x","client_id":"x","form":{"id":"ap_1"}}`)
+			}
+
+			require.NoError(t, write(tenant))
+
+			assert.True(t, tenant.hasWritten())
+		})
+	}
+}

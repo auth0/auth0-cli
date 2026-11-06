@@ -120,7 +120,7 @@ func (t *portalsTenant) CreateOrganization(ctx context.Context, spec portals.Org
 		DisplayName: goauth0.String(spec.DisplayName),
 	}
 
-	if err := t.api.Organization.Create(ctx, organization); err != nil {
+	if err := t.written(t.api.Organization.Create(ctx, organization)); err != nil {
 		return portals.Organization{}, asPortalsError(err)
 	}
 
@@ -168,15 +168,15 @@ func (t *portalsTenant) ListOrganizationConnections(ctx context.Context, id stri
 
 // EnableOrganizationConnection implements portals.OrganizationStore.
 func (t *portalsTenant) EnableOrganizationConnection(ctx context.Context, id, connectionID string) error {
-	return asPortalsError(t.api.Organization.AddConnection(ctx, id, &management.OrganizationConnection{
+	return asPortalsError(t.written(t.api.Organization.AddConnection(ctx, id, &management.OrganizationConnection{
 		ConnectionID:            goauth0.String(connectionID),
 		AssignMembershipOnLogin: goauth0.Bool(false),
-	}))
+	})))
 }
 
 // AddOrganizationMember implements portals.OrganizationStore.
 func (t *portalsTenant) AddOrganizationMember(ctx context.Context, id, userID string) error {
-	return asPortalsError(t.api.Organization.AddMembers(ctx, id, []string{userID}))
+	return asPortalsError(t.written(t.api.Organization.AddMembers(ctx, id, []string{userID})))
 }
 
 // ListMemberRoles implements portals.OrganizationStore.
@@ -203,7 +203,7 @@ func (t *portalsTenant) ListMemberRoles(ctx context.Context, id, userID string) 
 
 // AssignMemberRole implements portals.OrganizationStore.
 func (t *portalsTenant) AssignMemberRole(ctx context.Context, id, userID, roleID string) error {
-	return asPortalsError(t.api.Organization.AssignMemberRoles(ctx, id, userID, []string{roleID}))
+	return asPortalsError(t.written(t.api.Organization.AssignMemberRoles(ctx, id, userID, []string{roleID})))
 }
 
 // ListRoles implements portals.RoleStore.
@@ -235,7 +235,7 @@ func (t *portalsTenant) CreateRole(ctx context.Context, spec portals.RoleSpec) (
 		Description: goauth0.String(spec.Description),
 	}
 
-	if err := t.api.Role.Create(ctx, role); err != nil {
+	if err := t.written(t.api.Role.Create(ctx, role)); err != nil {
 		return portals.Role{}, asPortalsError(err)
 	}
 
@@ -277,5 +277,5 @@ func (t *portalsTenant) AddRolePermissions(ctx context.Context, roleID string, p
 		})
 	}
 
-	return asPortalsError(t.api.Role.AssociatePermissions(ctx, roleID, sdkPermissions))
+	return asPortalsError(t.written(t.api.Role.AssociatePermissions(ctx, roleID, sdkPermissions)))
 }

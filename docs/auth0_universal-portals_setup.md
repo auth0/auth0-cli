@@ -5,11 +5,9 @@ has_toc: false
 ---
 # auth0 universal-portals setup
 
-Provisions the Auth0 resources required by a Universal Portals application:
+Creates a Universal Portal with its application, forms and pages, and checks that the logged-in session has the permissions it needs before it creates anything.
 
-  - Auth0 My Account API and My Organization API (resource servers)
-  - A Regular Web App client with the required configuration
-  - Client grants for My Account API, My Organization API, and the Management API
+Running the command again after a failure resumes: what exists is reused.
 
 ## Usage
 ```
@@ -20,16 +18,20 @@ auth0 universal-portals setup [flags]
 
 ```
   auth0 universal-portals setup
-  auth0 universal-portals setup --name "Acme" --slug "acme"
-  auth0 up setup -n "Acme" -s "acme"
+  auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 up setup --no-input --template consumer --name "Acme Account" --json
 ```
 
 
 ## Flags
 
 ```
-  -n, --name string   Display name of the portal.
-  -s, --slug string   URL-friendly identifier for the portal (e.g. my-portal).
+      --json                  Output in json format.
+  -n, --name string           Name of the portal. Asked when omitted.
+  -o, --organization string   Business only: the ID or name of the organization, when the user has several.
+  -s, --slug string           URL slug of the portal, for example acme-account. Defaults to a slug made from the name.
+      --template string       Kind of portal: consumer, for end-users to manage their account, or business, for organization administrators to manage their organization. Asked when omitted.
+  -u, --user string           Business only: the email or user ID of the user who will test the portal.
 ```
 
 
@@ -46,6 +48,6 @@ auth0 universal-portals setup [flags]
 
 ## Related Commands
 
-- [auth0 universal-portals setup](auth0_universal-portals_setup.md) - Set up Auth0 resources for a Universal Portals application
+- [auth0 universal-portals setup](auth0_universal-portals_setup.md) - Set up a Universal Portal
 
 

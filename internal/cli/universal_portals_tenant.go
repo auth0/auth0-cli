@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/auth0/go-auth0/v3/management/core"
@@ -26,12 +27,28 @@ const (
 type portalsTenant struct {
 	api   *auth0.API
 	apiv3 *auth0.APIV3
+	// Set when a request that changes the tenant succeeded.
+	wrote atomic.Bool
 }
 
 var _ portals.API = (*portalsTenant)(nil)
 
 func newPortalsTenant(api *auth0.API, apiv3 *auth0.APIV3) *portalsTenant {
 	return &portalsTenant{api: api, apiv3: apiv3}
+}
+
+// written records that a request changed the tenant, when it succeeded, and returns its error.
+func (t *portalsTenant) written(err error) error {
+	if err == nil {
+		t.wrote.Store(true)
+	}
+
+	return err
+}
+
+// hasWritten reports whether any request that changes the tenant succeeded.
+func (t *portalsTenant) hasWritten() bool {
+	return t.wrote.Load()
 }
 
 // asPortalsError turns a failure of the SDK into a *portals.APIError, so the portals package reads
