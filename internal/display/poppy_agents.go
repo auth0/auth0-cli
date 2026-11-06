@@ -333,8 +333,13 @@ func (r *Renderer) PoppyRemoved(result *agents.RemoveResult, gone bool) {
 	r.PoppyRemoval(PoppyRemovalDone, result)
 
 	var notes []poppyEntry
-	if !gone {
-		notes = append(notes, poppyEntry{mark: markWarning, value: "This command does not revoke tokens already issued: access tokens stay valid until they expire."})
+
+	switch {
+	case gone:
+	case len(result.Kept) == 0:
+		notes = append(notes, poppyEntry{mark: markWarning, value: "The refresh tokens of the app were revoked with it. Access tokens already issued stay valid until they expire."})
+	default:
+		notes = append(notes, poppyEntry{mark: markWarning, value: "The agent app was kept, so its refresh tokens are not revoked. To cut the agent off completely, remove everything with --remove-all-grants. Access tokens already issued stay valid until they expire."})
 	}
 
 	if len(result.Kept) == 0 && !gone {

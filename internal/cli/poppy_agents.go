@@ -181,9 +181,9 @@ func poppyAgentsRemoveCmd(cli *cli) *cobra.Command {
 			"and does not touch the config file. When the agent has no other grants it also removes the agent record and the app, so registering " +
 			"the agent again creates a new app and its users must sign in again. When the app has other grants, " +
 			"only the Poppy access is removed and the other grants are listed, unless you pass `--remove-all-grants`; " +
-			"in a terminal you are asked which to do. This command does not revoke tokens already issued: access " +
-			"tokens stay valid until they expire. Use `--dry-run` to print what would be removed, and `--force` " +
-			"to skip the confirmation."),
+			"in a terminal you are asked which to do. Deleting the app revokes its refresh tokens; when the app is kept, " +
+			"its refresh tokens are not revoked. Access tokens already issued stay valid until they expire. " +
+			"Use `--dry-run` to print what would be removed, and `--force` to skip the confirmation."),
 		Example: `  auth0 poppy agents remove https://muse.example/agent.json
   auth0 poppy agents remove https://muse.example/agent.json --dry-run
   auth0 poppy agents remove <agent-id> --remove-all-grants --force`,
@@ -642,7 +642,7 @@ func runPoppyAgentsRemove(cmd *cobra.Command, cli *cli, inputs poppyRemoveInputs
 func askPoppyRemoval(screen *poppyScreen, choose bool) (proceed, everything bool, err error) {
 	if !choose {
 		proceed, err = screen.confirmAsk("Remove the agent",
-			"This removes the grants of the agent, and its record and app. Tokens already issued stay valid until they expire.", "Remove this agent?")
+			"This removes the grants of the agent, and its record and app. Deleting the app revokes its refresh tokens. Access tokens already issued stay valid until they expire.", "Remove this agent?")
 
 		return proceed, true, err
 	}
@@ -658,7 +658,7 @@ func askPoppyRemoval(screen *poppyScreen, choose bool) (proceed, everything bool
 	var picked int
 
 	err = screen.ask("Other grants of the agent app",
-		"The agent app has grants to APIs other than Poppy ones. Removing only the Poppy access leaves the app and those grants.", func() (err error) {
+		"The agent app has grants to APIs other than Poppy ones. Removing only the Poppy access leaves the app and those grants, and does not revoke the refresh tokens of the app.", func() (err error) {
 			picked, err = screen.asker.choose(screen, "What should be removed?", options, 0)
 
 			return err

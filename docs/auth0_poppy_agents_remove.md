@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 poppy agents remove
 
-(Experimental) Removes the agent's Poppy access: its grants to your Poppy APIs. It changes the tenant only, and does not touch the config file. When the agent has no other grants it also removes the agent record and the app, so registering the agent again creates a new app and its users must sign in again. When the app has other grants, only the Poppy access is removed and the other grants are listed, unless you pass `--remove-all-grants`; in a terminal you are asked which to do. This command does not revoke tokens already issued: access tokens stay valid until they expire. Use `--dry-run` to print what would be removed, and `--force` to skip the confirmation.
+(Experimental) Removes the agent's Poppy access: its grants to your Poppy APIs. It changes the tenant only, and does not touch the config file. When the agent has no other grants it also removes the agent record and the app, so registering the agent again creates a new app and its users must sign in again. When the app has other grants, only the Poppy access is removed and the other grants are listed, unless you pass `--remove-all-grants`; in a terminal you are asked which to do. Deleting the app revokes its refresh tokens; when the app is kept, its refresh tokens are not revoked. Access tokens already issued stay valid until they expire. Use `--dry-run` to print what would be removed, and `--force` to skip the confirmation.
 
 **Warning:** This command is experimental and is subject to change in future versions.
 

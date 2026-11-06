@@ -278,8 +278,18 @@ func TestPoppyRemoval(t *testing.T) {
 		r, out, _ := newAgentRenderer(OutputFormat(""))
 		r.PoppyRemoved(&agents.RemoveResult{Removed: []string{"the agent app"}}, false)
 
-		assert.Contains(t, out.String(), "!  This command does not revoke tokens already issued")
+		assert.Contains(t, out.String(), "!  The refresh tokens of the app were revoked with it. Access tokens already issued stay valid until they expire.")
 		assert.Contains(t, out.String(), "!  Registering the agent again creates a new app")
+	})
+
+	t.Run("a kept app says its refresh tokens are not revoked", func(t *testing.T) {
+		r, out, _ := newAgentRenderer(OutputFormat(""))
+		r.PoppyRemoved(&agents.RemoveResult{Removed: []string{"client grant cgr_1"}, Kept: []string{"agent app app_1"}}, false)
+
+		assert.Contains(t, out.String(), "!  The agent app was kept, so its refresh tokens are not revoked.")
+		assert.Contains(t, out.String(), "--remove-all-grants")
+		assert.NotContains(t, out.String(), "were revoked with it")
+		assert.NotContains(t, out.String(), "Registering the agent again")
 	})
 
 	t.Run("an agent that was gone gets no such notes", func(t *testing.T) {

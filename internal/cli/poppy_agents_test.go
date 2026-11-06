@@ -476,7 +476,7 @@ func TestPoppyAgentsRemove(t *testing.T) {
 			"  ok agent record "+poppyTestAgentID+"\n"+
 			"  ok agent app "+poppyTestClientID+"\n"+
 			"\n"+
-			"  !  This command does not revoke tokens already issued: access tokens stay valid until they expire.\n"+
+			"  !  The refresh tokens of the app were revoked with it. Access tokens already issued stay valid until they expire.\n"+
 			"  !  Registering the agent again creates a new app, so its users must sign in again.\n",
 			h.out.String())
 		assert.Empty(t, h.messages.String())
