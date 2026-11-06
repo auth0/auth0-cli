@@ -20,19 +20,30 @@ import (
 )
 
 func initializeManagementClient(tenantDomain string, accessToken string, invokerMetadata string) (*management.Management, error) {
+	return initializeManagementClientWith(tenantDomain, accessToken, customClientWithRetries(invokerMetadata))
+}
+
+// initializeManagementClientWith builds the client over an HTTP client of the caller, which is how a
+// command sees or changes the requests of the client.
+func initializeManagementClientWith(tenantDomain string, accessToken string, httpClient *http.Client) (*management.Management, error) {
 	client, err := management.New(
 		tenantDomain,
 		management.WithStaticToken(accessToken),
 		management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))),
 		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
 		management.WithNoRetries(),
-		management.WithClient(customClientWithRetries(invokerMetadata)),
+		management.WithClient(httpClient),
 	)
 
 	return client, err
 }
 
 func initializeManagementClientV3(tenantDomain string, accessToken string, invokerMetadata string) (*managementv3.Management, error) {
+	return initializeManagementClientV3With(tenantDomain, accessToken, customClientWithRetries(invokerMetadata))
+}
+
+// initializeManagementClientV3With is initializeManagementClientWith for the v3 client.
+func initializeManagementClientV3With(tenantDomain string, accessToken string, httpClient *http.Client) (*managementv3.Management, error) {
 	client, err := managementv3.New(
 		tenantDomain,
 		option.WithToken(accessToken),
@@ -42,7 +53,7 @@ func initializeManagementClientV3(tenantDomain string, accessToken string, invok
 		// Setting it to 1 to avoid retries from `go-auth0` since we have our own retry logic in the custom HTTP client.
 		// TODO: confirm this assumption, or check if this needs to be excluded like terraform provider.
 		option.WithMaxAttempts(1),
-		option.WithHTTPClient(customClientWithRetries(invokerMetadata)),
+		option.WithHTTPClient(httpClient),
 	)
 	return client, err
 }

@@ -58,7 +58,18 @@ type cli struct {
 	detectedAgent       string
 	executedCommandPath string
 
+	// What the Management API clients were built with, for a command that builds a client of its own.
+	apiAccess apiAccess
+
 	Config config.Config
+}
+
+// apiAccess is the tenant and the token the Management API clients were built with, and the metadata
+// they send with each request.
+type apiAccess struct {
+	domain          string
+	accessToken     string
+	invokerMetadata string
 }
 
 // setupWithAuthentication will fetch the tenant from the config.json
@@ -221,6 +232,7 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 
 	c.api = auth0.NewAPI(api)
 	c.apiv3 = auth0.NewAPIV3(apiv3)
+	c.apiAccess = apiAccess{domain: tenant.Domain, accessToken: accessToken, invokerMetadata: invokerMetadata}
 	return nil
 }
 

@@ -1,0 +1,83 @@
+{
+  "template": "consumer",
+  "portal": {
+    "id": "up_0000000000000000000014",
+    "slug": "acme-account",
+    "url": "https://acme.us.auth0.com/portals/acme-account",
+    "status": "created"
+  },
+  "application": {
+    "clientId": "00000000000000000000000000000003",
+    "status": "created"
+  },
+  "vault": {
+    "id": "ac_0000000000000000000007",
+    "status": "created"
+  },
+  "forms": {
+    "personalInfo": {
+      "id": "ap_0000000000000000000008",
+      "status": "created"
+    },
+    "communicationPreferences": {
+      "id": "ap_0000000000000000000010",
+      "status": "created"
+    },
+    "privacyConsent": {
+      "id": "ap_0000000000000000000012",
+      "status": "created"
+    }
+  },
+  "resources": [
+    {
+      "type": "resource_server",
+      "id": "000000000000000000000002",
+      "status": "created"
+    },
+    {
+      "type": "application",
+      "id": "00000000000000000000000000000003",
+      "status": "created"
+    },
+    {
+      "type": "client_grant",
+      "id": "cgr_0000000000000004",
+      "status": "created"
+    },
+    {
+      "type": "forms_vault_client",
+      "id": "00000000000000000000000000000005",
+      "status": "created"
+    },
+    {
+      "type": "forms_vault_grant",
+      "id": "cgr_0000000000000006",
+      "status": "created"
+    },
+    {
+      "type": "forms_vault",
+      "id": "ac_0000000000000000000007",
+      "status": "created"
+    },
+    {
+      "type": "form",
+      "id": "ap_0000000000000000000008",
+      "status": "created"
+    },
+    {
+      "type": "form",
+      "id": "ap_0000000000000000000010",
+      "status": "created"
+    },
+    {
+      "type": "form",
+      "id": "ap_0000000000000000000012",
+      "status": "created"
+    },
+    {
+      "type": "portal",
+      "id": "up_0000000000000000000014",
+      "status": "created"
+    }
+  ]
+}
