@@ -2,6 +2,7 @@ package portals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -166,10 +167,8 @@ func readSnapshot(ctx context.Context, api API, portalID, tenantDomain, organiza
 	failures := make([]error, len(reads))
 	forEachParallel(len(reads), func(index int) { failures[index] = reads[index]() })
 
-	for _, failure := range failures {
-		if failure != nil {
-			return snapshot{}, failure
-		}
+	if err := errors.Join(failures...); err != nil {
+		return snapshot{}, err
 	}
 
 	return result, nil
@@ -208,10 +207,8 @@ func (s *snapshot) readApplication(ctx context.Context, api API) error {
 		}
 	})
 
-	for _, failure := range failures {
-		if failure != nil {
-			return fmt.Errorf("read the grants and connections of application %q: %w", clientID, failure)
-		}
+	if err := errors.Join(failures...); err != nil {
+		return fmt.Errorf("read the grants and connections of application %q: %w", clientID, err)
 	}
 
 	s.Application = &client
@@ -251,10 +248,8 @@ func (s *snapshot) readForms(ctx context.Context, api API) error {
 		}
 	})
 
-	for _, failure := range failures {
-		if failure != nil {
-			return failure
-		}
+	if err := errors.Join(failures...); err != nil {
+		return err
 	}
 
 	s.Forms = statuses

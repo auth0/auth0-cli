@@ -216,6 +216,22 @@ func TestAudit_WhatItReports(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, portals.ScopeFixes([]string{"read:portals"}), portals.FixesOf(err))
 	})
+
+	t.Run("reads that fail together are all reported", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.FailNext("GET resource-servers", http.StatusInternalServerError)
+		portal.tenant.FailNext("GET custom-domains/default", http.StatusInternalServerError)
+
+		_, err := portals.Audit(context.Background(), portals.AuditOptions{PortalID: portal.portalID}, portals.AuditDeps{
+			API: portal.tenant, Reporter: &portalstest.Reporter{}, Prompter: &portalstest.Prompter{}, TenantDomain: tenantDomain,
+		})
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "resource servers")
+		assert.Contains(t, err.Error(), "custom domain")
+	})
 }
 
 func TestAudit_WhatItShows(t *testing.T) {
