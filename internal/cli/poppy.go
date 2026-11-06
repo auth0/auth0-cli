@@ -20,6 +20,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/iostream"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
 	"github.com/auth0/auth0-cli/internal/poppy/discovery"
 	"github.com/auth0/auth0-cli/internal/poppy/doctor"
@@ -52,13 +53,22 @@ type poppyAsker struct {
 
 var poppyAsk = poppyAsker{
 	canPrompt:  canPrompt,
-	erasable:   display.PoppyCanErase,
+	erasable:   poppyEraseHook(display.PoppyCanErase, iostream.IsMessagesTerminal),
 	interrupt:  handleInputError,
 	text:       terminalPoppyText,
 	confirm:    terminalPoppyConfirm,
 	choose:     terminalPoppyChoose,
 	chooseMany: terminalPoppyChooseMany,
 	guest:      terminalPoppyGuestPrompts,
+}
+
+// poppyEraseHook makes the hook that tells whether the lines of a question can be
+// taken back. The blocks and the erase sequences go to the writer, but survey
+// draws the questions on stderr. When stderr is redirected the rows of the
+// questions are in a file, and counting them would erase lines that are not ours,
+// so the writer must be erasable and stderr a terminal as well.
+func poppyEraseHook(writer func(w io.Writer) bool, stderr func() bool) func(w io.Writer) bool {
+	return func(w io.Writer) bool { return writer(w) && stderr() }
 }
 
 // errPoppyDoctorFailed is returned after the report is printed when a doctor check failed.
@@ -458,6 +468,11 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 	state, err := cli.readPoppyState(cmd.Context(), in.APIs, in.App, file)
 	if err != nil {
 		return err
+	}
+
+	// A file of another issuer is refused before any question is asked.
+	if err := setup.CheckIssuer(state, in); err != nil {
+		return poppySetupError(err)
 	}
 
 	if err := setup.Check(state, in); err != nil {
@@ -1021,6 +1036,11 @@ func runPoppyConfig(cmd *cobra.Command, cli *cli, flags setup.Flags) error {
 		return poppySetupError(err)
 	}
 
+	// A file of another issuer is refused before any hint is asked.
+	if err := setup.CheckIssuer(state, in); err != nil {
+		return poppySetupError(err)
+	}
+
 	unhinted := 0
 	if poppyAsk.canPrompt(cmd) {
 		if unhinted, err = askPoppyHints(screen, setup.HintScopes(state, in, false), &in); err != nil {
@@ -1293,8 +1313,19 @@ func (s *poppyScreen) leftOnScreen(rows ...string) {
 
 // terminalPoppyText asks for a line of text, with a default that Enter accepts.
 func terminalPoppyText(s *poppyScreen, label, def string) (string, error) {
+	question := "  " + label + "  "
+	if def != "" {
+		question += "(" + def + ") "
+	}
+
 	var answer string
 	if err := s.askPrompt(&survey.Input{Message: label, Default: def}, &answer); err != nil {
+		// Ctrl-C ends the line, so the cursor is on the row below the question.
+		// What was typed is not known, only the question is counted.
+		if errors.Is(err, terminal.InterruptErr) {
+			s.AddRows(s.Rows(question))
+		}
+
 		return "", err
 	}
 
@@ -1303,11 +1334,6 @@ func terminalPoppyText(s *poppyScreen, label, def string) (string, error) {
 	typed := answer
 	if typed == def {
 		typed = ""
-	}
-
-	question := "  " + label + "  "
-	if def != "" {
-		question += "(" + def + ") "
 	}
 
 	s.AddRows(s.Rows(question+typed) - s.Rows(question))

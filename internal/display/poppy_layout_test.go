@@ -206,11 +206,76 @@ func TestPoppyLineRows(t *testing.T) {
 		{name: "colors take no room", line: ansi.Bold(strings.Repeat("a", 80)), width: 80, want: 1},
 		{name: "wide characters count as one cell each", line: strings.Repeat("é", 80), width: 80, want: 1},
 		{name: "no width means no wrapping", line: strings.Repeat("a", 500), width: 0, want: 1},
+		{name: "twenty wide characters take two rows at width 20", line: strings.Repeat("日", 20), width: 20, want: 2},
+		{name: "ten wide characters fill a row of 20", line: strings.Repeat("日", 10), width: 20, want: 1},
+		{name: "colored wide characters", line: ansi.Bold(strings.Repeat("日", 11)), width: 20, want: 2},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			assert.Equal(t, test.want, poppyLineRows(test.line, test.width))
+		})
+	}
+}
+
+func TestPoppyCells(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want int
+	}{
+		{name: "empty", in: "", want: 0},
+		{name: "ascii", in: "hello", want: 5},
+		{name: "a check mark", in: "✓", want: 1},
+		{name: "an arrow", in: "→", want: 1},
+		{name: "an accented letter", in: "é", want: 1},
+		{name: "wide characters take two cells", in: "日本語", want: 6},
+		{name: "fullwidth forms take two cells", in: "ＡＢ", want: 4},
+		{name: "mixed", in: "ab 日本 → ok", want: 12},
+		{name: "colors take none", in: ansi.Bold("日本") + " ok", want: 7},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setColors(t, true)
+			assert.Equal(t, test.want, poppyCells(test.in))
+		})
+	}
+}
+
+func TestPoppyWrapCells(t *testing.T) {
+	l := PoppyLayout{Width: 20}
+
+	tests := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{
+			name: "a sentence of wide characters is cut at the width",
+			in:   "日本語の説明文です日本語の説明文です",
+			want: []string{"日本語の説明文です日", "本語の説明文です"},
+		},
+		{
+			name: "words of wide characters wrap on their gaps",
+			in:   "日本語の説明 文です 日本語の説明 文です",
+			want: []string{"日本語の説明 文です", "日本語の説明 文です"},
+		},
+		{
+			name: "ascii still wraps by characters",
+			in:   "aaaa bbbb cccc dddd eeee",
+			want: []string{"aaaa bbbb cccc dddd", "eeee"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			lines := l.wrap(test.in, 0)
+			assert.Equal(t, test.want, lines)
+
+			for _, line := range lines {
+				assert.LessOrEqual(t, poppyCells(line), 20, line)
+			}
 		})
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
@@ -122,7 +121,8 @@ func poppyScopesNoun(count int) string {
 func poppyNext(l PoppyLayout, steps ...[2]string) string {
 	var b strings.Builder
 
-	b.WriteString(ansi.Bold("Next") + "\n")
+	b.WriteString(ansi.Bold("Next"))
+	b.WriteString("\n")
 
 	for _, step := range steps {
 		b.WriteString(l.hang("  ", "  ", step[0]+"   "+step[1]))
@@ -308,7 +308,7 @@ func poppyHintNote(hints *config.Hints) string {
 func (s *PoppyScreen) ScopeRows(scopes []PoppyScopeChoice) []string {
 	nameWidth := 0
 	for _, scope := range scopes {
-		nameWidth = max(nameWidth, utf8.RuneCountInString(text.Line(scope.Name)))
+		nameWidth = max(nameWidth, poppyCells(text.Line(scope.Name)))
 	}
 
 	// The room taken by the focus mark, the checkbox and the gaps.
@@ -322,12 +322,12 @@ func (s *PoppyScreen) ScopeRows(scopes []PoppyScopeChoice) []string {
 
 		description := text.Line(scope.Description)
 		if note != "" {
-			description = text.Cap(description, max(room-utf8.RuneCountInString(note)-1, poppyMinWidth/2)) + " " + note
+			description = text.Cap(description, max(room-poppyCells(note)-1, poppyMinWidth/2)) + " " + note
 		} else {
 			description = text.Cap(description, max(room, poppyMinWidth/2))
 		}
 
-		rows[i] = name + strings.Repeat(" ", nameWidth-utf8.RuneCountInString(name)+2) + description
+		rows[i] = name + strings.Repeat(" ", nameWidth-poppyCells(name)+2) + description
 	}
 
 	return rows
@@ -489,14 +489,16 @@ func doctorHeader(b *strings.Builder, l PoppyLayout, r doctor.Report) {
 
 	if r.ProtocolVersion != "" {
 		right := "protocol " + text.Cap(text.Line(r.ProtocolVersion), poppyMaxMessageRunes)
-		gap := l.lineWidth() - utf8.RuneCountInString(left) - utf8.RuneCountInString(right)
+		gap := l.lineWidth() - poppyCells(left) - poppyCells(right)
 		b.WriteString(strings.Repeat(" ", max(gap, 1)))
 		b.WriteString(right)
 	}
 	b.WriteByte('\n')
 
 	if r.Issuer != "" {
-		b.WriteString("Issuer " + text.Cap(text.Line(r.Issuer), poppyMaxMessageRunes) + "\n")
+		b.WriteString("Issuer ")
+		b.WriteString(text.Cap(text.Line(r.Issuer), poppyMaxMessageRunes))
+		b.WriteString("\n")
 	}
 }
 
@@ -513,12 +515,18 @@ func doctorWriteResult(b *strings.Builder, l PoppyLayout, e doctorEntry) {
 		message = label + ": " + message
 	}
 
-	pad := strings.Repeat(" ", len(doctorIndent)+utf8.RuneCountInString(symbol)+1)
+	pad := strings.Repeat(" ", len(doctorIndent)+poppyCells(symbol)+1)
 	lines := l.wrap(message, len(pad))
 
-	b.WriteString(doctorIndent + colored + " " + lines[0] + "\n")
+	b.WriteString(doctorIndent)
+	b.WriteString(colored)
+	b.WriteString(" ")
+	b.WriteString(lines[0])
+	b.WriteString("\n")
 	for _, line := range lines[1:] {
-		b.WriteString(pad + line + "\n")
+		b.WriteString(pad)
+		b.WriteString(line)
+		b.WriteString("\n")
 	}
 
 	if e.Fix == "" {
@@ -528,7 +536,8 @@ func doctorWriteResult(b *strings.Builder, l PoppyLayout, e doctorEntry) {
 	if e.PlatformDependency {
 		fix += doctorPlatformNote
 	}
-	b.WriteString(pad + doctorFixLabel)
+	b.WriteString(pad)
+	b.WriteString(doctorFixLabel)
 	b.WriteString(strings.ReplaceAll(fix, "\n", "\n"+pad+strings.Repeat(" ", len(doctorFixLabel))))
 	b.WriteByte('\n')
 }
@@ -574,14 +583,17 @@ func (r *Renderer) PoppySetupResult(plan setup.Plan, report *doctor.Report, opts
 		var b strings.Builder
 
 		if !plan.Empty() {
-			b.WriteString("\n" + poppyApplyText(l, plan, setup.Outcome{Done: len(plan.Changes)}, opts))
+			b.WriteString("\n")
+			b.WriteString(poppyApplyText(l, plan, setup.Outcome{Done: len(plan.Changes)}, opts))
 		}
 
 		if report != nil {
-			b.WriteString("\n" + poppyDoctorAfterSetup(l, *report))
+			b.WriteString("\n")
+			b.WriteString(poppyDoctorAfterSetup(l, *report))
 		}
 
-		b.WriteString("\n" + poppySetupNext(l, opts.Inputs.CompanyDomain, opts.Inputs.Out, opts.Unhinted))
+		b.WriteString("\n")
+		b.WriteString(poppySetupNext(l, opts.Inputs.CompanyDomain, opts.Inputs.Out, opts.Unhinted))
 
 		return b.String()
 	})
@@ -593,11 +605,15 @@ func (r *Renderer) PoppySetupResult(plan setup.Plan, report *doctor.Report, opts
 func poppyDoctorAfterSetup(l PoppyLayout, report doctor.Report) string {
 	var b strings.Builder
 
-	b.WriteString(ansi.Bold("Checking your setup (auth0 poppy doctor)") + "\n")
-	b.WriteString("  " + report.Summary() + "\n")
+	b.WriteString(ansi.Bold("Checking your setup (auth0 poppy doctor)"))
+	b.WriteString("\n")
+	b.WriteString("  ")
+	b.WriteString(report.Summary())
+	b.WriteString("\n")
 
 	if problems := doctorProblems(l, report, "  "); problems != "" {
-		b.WriteString("\n" + problems)
+		b.WriteString("\n")
+		b.WriteString(problems)
 	}
 
 	b.WriteString("\n")
@@ -642,7 +658,9 @@ func poppyPlanText(l PoppyLayout, p setup.Plan, opts PoppySetupOptions) string {
 	b.WriteString("\n")
 	b.WriteString(poppyAnswers(l, p, opts.Inputs))
 
-	b.WriteString("\n" + poppySummary(p) + "\n")
+	b.WriteString("\n")
+	b.WriteString(poppySummary(p))
+	b.WriteString("\n")
 
 	for _, group := range poppyGroups(l, p) {
 		b.WriteString("\n")
@@ -661,7 +679,9 @@ func poppyPlanText(l PoppyLayout, p setup.Plan, opts PoppySetupOptions) string {
 	}
 
 	if opts.DryRun {
-		b.WriteString("\n" + poppyRerun(l, poppyToApplyLabel, opts) + "\n")
+		b.WriteString("\n")
+		b.WriteString(poppyRerun(l, poppyToApplyLabel, opts))
+		b.WriteString("\n")
 	}
 
 	return b.String()
@@ -678,9 +698,12 @@ func poppyHangAfter(l PoppyLayout, s, indent string) string {
 	lines := l.wrap(s, len(indent))
 
 	var b strings.Builder
-	b.WriteString(lines[0] + "\n")
+	b.WriteString(lines[0])
+	b.WriteString("\n")
 	for _, line := range lines[1:] {
-		b.WriteString(indent + line + "\n")
+		b.WriteString(indent)
+		b.WriteString(line)
+		b.WriteString("\n")
 	}
 
 	return b.String()
@@ -724,22 +747,26 @@ type poppyLabeled struct {
 func poppyWriteLabeled(b *strings.Builder, l PoppyLayout, labelWidth int, lines []poppyLabeled) {
 	for _, line := range lines {
 		symbol, colored := l.mark(line.mark)
-		pad := strings.Repeat(" ", max(l.markWidth()-utf8.RuneCountInString(symbol), 0))
-		label := line.label + strings.Repeat(" ", max(labelWidth-utf8.RuneCountInString(line.label), 0))
+		pad := strings.Repeat(" ", max(l.markWidth()-poppyCells(symbol), 0))
+		label := line.label + strings.Repeat(" ", max(labelWidth-poppyCells(line.label), 0))
 
 		plain := "  " + symbol + pad + " " + label
 		b.WriteString(l.hang(plain, "  "+colored+pad+" "+label, line.value))
 
-		indent := strings.Repeat(" ", utf8.RuneCountInString(plain))
+		indent := strings.Repeat(" ", poppyCells(plain))
 		for _, rest := range line.rest {
 			for _, wrapped := range l.wrap(rest, len(indent)) {
-				b.WriteString(indent + wrapped + "\n")
+				b.WriteString(indent)
+				b.WriteString(wrapped)
+				b.WriteString("\n")
 			}
 		}
 
 		for _, below := range line.below {
 			for _, wrapped := range l.wrap(below, len(poppyBelowIndent)) {
-				b.WriteString(poppyBelowIndent + wrapped + "\n")
+				b.WriteString(poppyBelowIndent)
+				b.WriteString(wrapped)
+				b.WriteString("\n")
 			}
 		}
 	}
@@ -780,7 +807,8 @@ func poppyChecked(l PoppyLayout, p setup.Plan, in setup.Inputs) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(ansi.Bold("Checked") + "\n")
+	b.WriteString(ansi.Bold("Checked"))
+	b.WriteString("\n")
 	poppyWriteLabeled(&b, l, poppyCheckedLabelWidth, lines)
 
 	return b.String()
@@ -833,13 +861,14 @@ func poppyHintsText(l PoppyLayout, in setup.Inputs) string {
 
 func poppyAnswersText(l PoppyLayout, rows []poppyAnswerRow) string {
 	var b strings.Builder
-	b.WriteString(ansi.Bold("Your answers") + "\n")
+	b.WriteString(ansi.Bold("Your answers"))
+	b.WriteString("\n")
 
 	for _, row := range rows {
-		label := "  " + row.label + strings.Repeat(" ", max(poppyAnswerLabelWidth-utf8.RuneCountInString(row.label), 0))
+		label := "  " + row.label + strings.Repeat(" ", max(poppyAnswerLabelWidth-poppyCells(row.label), 0))
 		b.WriteString(l.hang(label, label, row.value))
 
-		indent := strings.Repeat(" ", utf8.RuneCountInString(label))
+		indent := strings.Repeat(" ", poppyCells(label))
 		for _, more := range row.more {
 			b.WriteString(l.hang(indent, indent, more))
 		}
@@ -976,8 +1005,9 @@ func poppyGroup(l PoppyLayout, heading, note string, rows []poppyRow) string {
 
 	b.WriteString(ansi.Bold(heading))
 	if note != "" {
-		gap := l.lineWidth() - utf8.RuneCountInString(heading) - utf8.RuneCountInString(note)
-		b.WriteString(strings.Repeat(" ", max(gap, 2)) + ansi.Yellow(note))
+		gap := l.lineWidth() - poppyCells(heading) - poppyCells(note)
+		b.WriteString(strings.Repeat(" ", max(gap, 2)))
+		b.WriteString(ansi.Yellow(note))
 	}
 	b.WriteString("\n")
 
@@ -991,23 +1021,23 @@ func poppyGroup(l PoppyLayout, heading, note string, rows []poppyRow) string {
 func poppyWriteRows(b *strings.Builder, l PoppyLayout, rows []poppyRow) {
 	labelWidth, changeWidth := 0, 0
 	for _, r := range rows {
-		labelWidth = max(labelWidth, utf8.RuneCountInString(r.label))
-		changeWidth = max(changeWidth, min(utf8.RuneCountInString(r.change), poppyMaxChangeColumn))
+		labelWidth = max(labelWidth, poppyCells(r.label))
+		changeWidth = max(changeWidth, min(poppyCells(r.change), poppyMaxChangeColumn))
 	}
 	changeWidth += 2
 
 	for _, r := range rows {
 		symbol, colored := l.mark(r.mark)
-		pad := strings.Repeat(" ", max(l.markWidth()-utf8.RuneCountInString(symbol), 0))
-		label := r.label + strings.Repeat(" ", labelWidth-utf8.RuneCountInString(r.label)+2)
+		pad := strings.Repeat(" ", max(l.markWidth()-poppyCells(symbol), 0))
+		label := r.label + strings.Repeat(" ", labelWidth-poppyCells(r.label)+2)
 
 		plain := "  " + symbol + pad + " " + label
-		indent := strings.Repeat(" ", utf8.RuneCountInString(plain))
+		indent := strings.Repeat(" ", poppyCells(plain))
 		lines := l.wrap(r.change, len(indent))
 
 		last := lines[len(lines)-1]
-		sameLine := r.note != "" && len(lines) == 1 && utf8.RuneCountInString(last) <= changeWidth-2 &&
-			(l.Width == 0 || len(indent)+changeWidth+utf8.RuneCountInString(r.note) <= l.Width)
+		sameLine := r.note != "" && len(lines) == 1 && poppyCells(last) <= changeWidth-2 &&
+			(l.Width == 0 || len(indent)+changeWidth+poppyCells(r.note) <= l.Width)
 
 		for i, line := range lines {
 			prefix := indent
@@ -1016,19 +1046,23 @@ func poppyWriteRows(b *strings.Builder, l PoppyLayout, rows []poppyRow) {
 			}
 
 			if i == len(lines)-1 && sameLine {
-				line += strings.Repeat(" ", changeWidth-utf8.RuneCountInString(line)) + ansi.Faint(r.note)
+				line += strings.Repeat(" ", changeWidth-poppyCells(line)) + ansi.Faint(r.note)
 			}
 
-			b.WriteString(prefix + line + "\n")
+			b.WriteString(prefix)
+			b.WriteString(line)
+			b.WriteString("\n")
 		}
 
 		if r.note != "" && !sameLine {
 			column := indent
-			if l.Width == 0 || len(indent)+changeWidth+utf8.RuneCountInString(r.note) <= l.Width {
+			if l.Width == 0 || len(indent)+changeWidth+poppyCells(r.note) <= l.Width {
 				column += strings.Repeat(" ", changeWidth)
 			}
 
-			b.WriteString(column + ansi.Faint(r.note) + "\n")
+			b.WriteString(column)
+			b.WriteString(ansi.Faint(r.note))
+			b.WriteString("\n")
 		}
 	}
 }
@@ -1122,11 +1156,12 @@ func poppyStepLabel(p setup.Plan, c setup.Change) string {
 func poppyApplyText(l PoppyLayout, p setup.Plan, o setup.Outcome, opts PoppySetupOptions) string {
 	var b strings.Builder
 
-	b.WriteString(ansi.Bold("Applying "+PoppyChangeCount(p.Count())) + "\n")
+	b.WriteString(ansi.Bold("Applying " + PoppyChangeCount(p.Count())))
+	b.WriteString("\n")
 
 	labelWidth := 0
 	for _, change := range p.Changes {
-		labelWidth = max(labelWidth, utf8.RuneCountInString(poppyStepLabel(p, change)))
+		labelWidth = max(labelWidth, poppyCells(poppyStepLabel(p, change)))
 	}
 
 	lines := make([]poppyLabeled, len(p.Changes))
@@ -1154,7 +1189,8 @@ func poppyApplyText(l PoppyLayout, p setup.Plan, o setup.Outcome, opts PoppySetu
 
 	if o.Failure != nil {
 		b.WriteString("\nRunning the command again continues from here.\n")
-		b.WriteString(poppyRerun(l, poppyToRerunLabel, opts) + "\n")
+		b.WriteString(poppyRerun(l, poppyToRerunLabel, opts))
+		b.WriteString("\n")
 	}
 
 	return b.String()
@@ -1184,7 +1220,8 @@ func poppySetupNext(l PoppyLayout, domain, out string, unhinted int) string {
 
 	var b strings.Builder
 
-	b.WriteString(ansi.Bold("Next") + "\n")
+	b.WriteString(ansi.Bold("Next"))
+	b.WriteString("\n")
 
 	for i, step := range steps {
 		line := step[0]
@@ -1231,11 +1268,13 @@ func poppyConfigText(l PoppyLayout, in setup.Inputs, unchanged, headerShown bool
 		b.WriteString("\n")
 
 		if answers := poppyHintsText(l, in); answers != "" {
-			b.WriteString(answers + "\n")
+			b.WriteString(answers)
+			b.WriteString("\n")
 		}
 	}
 
-	b.WriteString(l.entries([]poppyEntry{{mark: markDone, label: text.Line(in.Out), value: result}}) + "\n")
+	b.WriteString(l.entries([]poppyEntry{{mark: markDone, label: text.Line(in.Out), value: result}}))
+	b.WriteString("\n")
 	b.WriteString(poppyNext(l, next...))
 
 	return b.String()

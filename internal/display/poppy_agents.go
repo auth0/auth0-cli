@@ -293,7 +293,9 @@ func (r *Renderer) PoppyRemoval(stage PoppyRemovalStage, result *agents.RemoveRe
 				b.WriteString("\n")
 			}
 
-			b.WriteString(ansi.Bold(heading) + "\n" + l.entries(entries))
+			b.WriteString(ansi.Bold(heading))
+			b.WriteString("\n")
+			b.WriteString(l.entries(entries))
 		}
 
 		removedMark, keptMark := markPlain, markPlain
@@ -309,7 +311,8 @@ func (r *Renderer) PoppyRemoval(stage PoppyRemovalStage, result *agents.RemoveRe
 				b.WriteString("\n")
 			}
 
-			b.WriteString(ansi.Bold("Other grants of the agent app stay. Remove them with:") + "\n")
+			b.WriteString(ansi.Bold("Other grants of the agent app stay. Remove them with:"))
+			b.WriteString("\n")
 			for _, grant := range result.RemainingGrants {
 				b.WriteString(l.hang("  ", "  ", "auth0 client-grants delete "+text.Quote(text.Line(grant.ID))+"   ("+text.Line(grant.Audience)+")"))
 			}

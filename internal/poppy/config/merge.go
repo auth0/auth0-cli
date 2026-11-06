@@ -69,6 +69,17 @@ type MergeOptions struct {
 	ForceConfig bool
 }
 
+// CheckIssuer returns an error that wraps ErrIssuerMismatch when the existing file
+// (which may be nil) has an issuer other than the given one, unless the options
+// allow overwriting it. Merge makes the same check.
+func CheckIssuer(existing *Config, issuer string, opts MergeOptions) error {
+	if existing != nil && existing.Issuer != "" && existing.Issuer != issuer && !opts.ForceConfig {
+		return fmt.Errorf("%w: the file has %q and the tenant has %q", ErrIssuerMismatch, existing.Issuer, issuer)
+	}
+
+	return nil
+}
+
 // Merge builds the config to write from the values derived from the tenant,
 // the existing file (which may be nil) and the inputs. It does not modify its
 // arguments.
@@ -96,8 +107,8 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 		return nil, errors.New("the values derived from the tenant are required")
 	}
 
-	if existing != nil && existing.Issuer != "" && existing.Issuer != derived.Issuer && !opts.ForceConfig {
-		return nil, fmt.Errorf("%w: the file has %q and the tenant has %q", ErrIssuerMismatch, existing.Issuer, derived.Issuer)
+	if err := CheckIssuer(existing, derived.Issuer, opts); err != nil {
+		return nil, err
 	}
 	if existing == nil {
 		existing = &Config{}

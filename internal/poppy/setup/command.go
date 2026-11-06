@@ -135,7 +135,8 @@ func FormatCommand(label string, parts []string, width int) string {
 
 	for _, part := range parts[1:] {
 		if utf8.RuneCountInString(line)+1+utf8.RuneCountInString(part)+2 > width {
-			b.WriteString(line + " \\\n")
+			b.WriteString(line)
+			b.WriteString(" \\\n")
 			line = indent + part
 
 			continue

@@ -6,9 +6,9 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"golang.org/x/term"
+	"golang.org/x/text/width"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -77,41 +77,60 @@ func (l PoppyLayout) lineWidth() int {
 func (l PoppyLayout) wrap(s string, indent int) []string {
 	width := max(l.Width-indent, poppyMinWidth)
 
-	if l.Width <= 0 || utf8.RuneCountInString(s) <= width {
+	if l.Width <= 0 || poppyCells(s) <= width {
 		return []string{strings.TrimSpace(s)}
 	}
 
 	return wrapWords(s, width)
 }
 
-// wrapWords breaks s into lines of at most width characters on word boundaries. A
-// word longer than a line is cut. It always returns at least one line.
+// wrapWords breaks s into lines of at most width cells on word boundaries. A word
+// longer than a line is cut. It always returns at least one line.
 func wrapWords(s string, width int) []string {
 	var (
 		lines []string
-		line  []rune
+		line  string
+		used  int
 	)
-	for _, word := range strings.Fields(s) {
-		w := []rune(word)
-
-		for len(w) > width {
-			if len(line) > 0 {
-				lines, line = append(lines, string(line)), nil
+	for word := range strings.FieldsSeq(s) {
+		for poppyCells(word) > width {
+			if used > 0 {
+				lines, line, used = append(lines, line), "", 0
 			}
-			lines, w = append(lines, string(w[:width])), w[width:]
+
+			var head string
+			head, word = splitCells(word, width)
+			lines = append(lines, head)
 		}
 
+		cells := poppyCells(word)
+
 		switch {
-		case len(line) == 0:
-			line = w
-		case len(line)+1+len(w) <= width:
-			line = append(append(line, ' '), w...)
+		case used == 0:
+			line, used = word, cells
+		case used+1+cells <= width:
+			line, used = line+" "+word, used+1+cells
 		default:
-			lines, line = append(lines, string(line)), w
+			lines, line, used = append(lines, line), word, cells
 		}
 	}
 
-	return append(lines, string(line))
+	return append(lines, line)
+}
+
+// splitCells cuts the longest start of s that fits in the given cells, and always
+// takes at least one rune.
+func splitCells(s string, cells int) (head, rest string) {
+	used := 0
+
+	for i, r := range s {
+		used += poppyRuneCells(r)
+		if used > cells && i > 0 {
+			return s[:i], s[i:]
+		}
+	}
+
+	return s, ""
 }
 
 // hang writes s wrapped to the layout after a prefix: the first line starts with
@@ -119,13 +138,17 @@ func wrapWords(s string, width int) []string {
 // the text sits in a column. Colored may hold the prefix with color codes; plain
 // is the same prefix without them. Each line ends with a newline.
 func (l PoppyLayout) hang(plain, colored, s string) string {
-	pad := strings.Repeat(" ", utf8.RuneCountInString(plain))
-	lines := l.wrap(s, utf8.RuneCountInString(plain))
+	pad := strings.Repeat(" ", poppyCells(plain))
+	lines := l.wrap(s, poppyCells(plain))
 
 	var b strings.Builder
-	b.WriteString(colored + lines[0] + "\n")
+	b.WriteString(colored)
+	b.WriteString(lines[0])
+	b.WriteString("\n")
 	for _, line := range lines[1:] {
-		b.WriteString(pad + line + "\n")
+		b.WriteString(pad)
+		b.WriteString(line)
+		b.WriteString("\n")
 	}
 
 	return b.String()
@@ -134,7 +157,7 @@ func (l PoppyLayout) hang(plain, colored, s string) string {
 // header is a title in bold at the left edge and a note at the right edge, on one
 // line that ends with a newline.
 func (l PoppyLayout) header(left, right string) string {
-	gap := l.lineWidth() - utf8.RuneCountInString(left) - utf8.RuneCountInString(right)
+	gap := l.lineWidth() - poppyCells(left) - poppyCells(right)
 
 	return ansi.Bold(left) + strings.Repeat(" ", max(gap, 1)) + right + "\n"
 }
@@ -223,21 +246,21 @@ type poppyEntry struct {
 func (l PoppyLayout) entries(entries []poppyEntry) string {
 	labelWidth := 0
 	for _, e := range entries {
-		labelWidth = max(labelWidth, utf8.RuneCountInString(e.label))
+		labelWidth = max(labelWidth, poppyCells(e.label))
 	}
 
 	var b strings.Builder
 
 	for _, e := range entries {
 		symbol, colored := l.mark(e.mark)
-		pad := strings.Repeat(" ", max(l.markWidth()-utf8.RuneCountInString(symbol), 0))
+		pad := strings.Repeat(" ", max(l.markWidth()-poppyCells(symbol), 0))
 
 		plain, shown := "  "+symbol+pad+" ", "  "+colored+pad+" "
 		if e.mark == markPlain && e.label == "" {
 			plain, shown = "  ", "  "
 		}
 		if e.label != "" {
-			label := e.label + strings.Repeat(" ", labelWidth-utf8.RuneCountInString(e.label)+2)
+			label := e.label + strings.Repeat(" ", labelWidth-poppyCells(e.label)+2)
 			plain, shown = plain+label, shown+label
 		}
 
@@ -310,6 +333,30 @@ func (b *poppyBlock) erase() error {
 	return err
 }
 
+// poppyCells is the number of cells that s takes on the screen: the color
+// sequences take none, and a character that is wide or fullwidth in East Asian
+// text takes two. Combining marks and emoji are not special cased, so they count
+// as one cell each, as they do for the other width math here.
+func poppyCells(s string) int {
+	cells := 0
+
+	for _, r := range ansiSequence.ReplaceAllString(s, "") {
+		cells += poppyRuneCells(r)
+	}
+
+	return cells
+}
+
+// poppyRuneCells is the number of cells that one character takes, see poppyCells.
+func poppyRuneCells(r rune) int {
+	switch width.LookupRune(r).Kind() {
+	case width.EastAsianWide, width.EastAsianFullwidth:
+		return 2
+	default:
+		return 1
+	}
+}
+
 // poppyLineRows is the number of screen rows that a line takes in a terminal of
 // the given width. A line of exactly the width takes one row, and so does an empty
 // line. A width of zero means the line is not wrapped.
@@ -318,7 +365,5 @@ func poppyLineRows(line string, width int) int {
 		return 1
 	}
 
-	cells := utf8.RuneCountInString(ansiSequence.ReplaceAllString(line, ""))
-
-	return max((cells+width-1)/width, 1)
+	return max((poppyCells(line)+width-1)/width, 1)
 }

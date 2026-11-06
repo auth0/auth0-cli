@@ -1309,6 +1309,96 @@ func TestPoppyConfigErrors(t *testing.T) {
 	})
 }
 
+func TestPoppyEraseHook(t *testing.T) {
+	tests := []struct {
+		name      string
+		stdout    bool
+		stderr    bool
+		wantErase bool
+	}{
+		{name: "both are terminals", stdout: true, stderr: true, wantErase: true},
+		{name: "stderr is redirected", stdout: true, stderr: false},
+		{name: "stdout is not a terminal", stdout: false, stderr: true},
+		{name: "neither is a terminal", stdout: false, stderr: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			hook := poppyEraseHook(
+				func(io.Writer) bool { return test.stdout },
+				func() bool { return test.stderr },
+			)
+
+			assert.Equal(t, test.wantErase, hook(io.Discard))
+		})
+	}
+}
+
+// TestPoppyIssuerMismatchAsksNothing checks that a file of another issuer is
+// refused before the first question, not after the last one.
+func TestPoppyIssuerMismatchAsksNothing(t *testing.T) {
+	// The golden file has the issuer of a custom domain, and these tenants have none.
+	configured := func() poppyTenantState { state := configuredPoppyTenant(); state.domains = nil; return state }
+	fresh := func() poppyTenantState { state := freshPoppyTenant(); state.domains = nil; return state }
+
+	setupArgs := func(t *testing.T, extra ...string) []string {
+		return freshSetupArgs(t, append([]string{"--out", goldenPoppyConfig(t), "--skip-doctor"}, extra...)...)
+	}
+	// Hints that the file lacks are what config would ask about.
+	configArgs := func(t *testing.T, extra ...string) []string {
+		path := goldenPoppyConfig(t)
+
+		cfg, err := config.Read(path)
+		require.NoError(t, err)
+
+		for name, scope := range cfg.Scopes {
+			scope.Hints = nil
+			cfg.Scopes[name] = scope
+		}
+		require.NoError(t, config.Write(path, cfg))
+
+		return append([]string{
+			"config", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", path,
+		}, extra...)
+	}
+
+	tests := []struct {
+		name   string
+		tenant func() poppyTenantState
+		args   func(t *testing.T, extra ...string) []string
+	}{
+		{name: "setup", tenant: fresh, args: setupArgs},
+		{name: "config", tenant: configured, args: configArgs},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Run("no question is asked", func(t *testing.T) {
+				h := newPoppySetupHarness(t, test.tenant())
+				h.allowWrites()
+
+				run := h.runPromptMode(t, modeTerminal, test.args(t))
+
+				assert.Empty(t, run.asked, "questions asked")
+
+				reason, _ := decodeCLIError(t, run.err)
+				assert.Equal(t, "issuer_mismatch", reason)
+				assert.ErrorIs(t, run.err, config.ErrIssuerMismatch)
+				assert.Contains(t, run.err.Error(), "Pass --force-config to overwrite it")
+			})
+
+			t.Run("--force-config goes on", func(t *testing.T) {
+				h := newPoppySetupHarness(t, test.tenant())
+				h.allowWrites()
+
+				run := h.runPromptMode(t, modeTerminal, test.args(t, "--force-config"))
+
+				require.NoError(t, run.err)
+			})
+		})
+	}
+}
+
 func TestPoppySetupError(t *testing.T) {
 	plain := errors.New("plain")
 

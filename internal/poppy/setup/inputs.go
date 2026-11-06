@@ -770,7 +770,8 @@ func scopeDescriptionRequired(undescribed []undescribedScope) *InputError {
 				break
 			}
 
-			b.WriteString("\n         " + flag(name))
+			b.WriteString("\n         ")
+			b.WriteString(flag(name))
 		}
 
 		fix = b.String()

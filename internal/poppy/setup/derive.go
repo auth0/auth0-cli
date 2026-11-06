@@ -77,6 +77,14 @@ func Ready(state *State, in Inputs) error {
 	return &NotReadyError{Problems: problems, Fix: "Run: auth0 poppy setup --company-domain " + cmp.Or(in.CompanyDomain, "<host>")}
 }
 
+// CheckIssuer returns the error that Derive and Build return when the existing
+// config file belongs to another issuer than the tenant, unless the inputs allow
+// overwriting it. It reads only the state, so a command can refuse before it asks
+// any question.
+func CheckIssuer(state *State, in Inputs) error {
+	return config.CheckIssuer(state.File, state.Issuer(), config.MergeOptions{ForceConfig: in.ForceConfig})
+}
+
 // Derive builds the content of the config file from the state and the inputs, as
 // the file will read once setup has made its changes. Values Auth0 does not
 // store come from the inputs, else from the existing file; when neither has one,
