@@ -309,17 +309,27 @@ func (a *portalAudit) application() bool {
 	if slices.Contains(app.GrantTypes, "client_credentials") {
 		remaining := slices.DeleteFunc(slices.Clone(app.GrantTypes), func(grant string) bool { return grant == "client_credentials" })
 
+		remedy := &Remedy{
+			Summary: "Turn off the client_credentials grant",
+			apply: func(ctx context.Context, api API) error {
+				return updateApplication(ctx, api, clientID, ClientSettings{GrantTypes: remaining})
+			},
+		}
+
+		// An update never sends an empty list, so with no grant left the change would be lost silently.
+		if len(remaining) == 0 {
+			remedy = &Remedy{
+				Summary: "Replace the client_credentials grant with the grants the portal signs in with",
+				Command: fmt.Sprintf(`auth0 api patch "clients/%s" --data '{"grant_types":["authorization_code","refresh_token"]}'`, clientID),
+			}
+		}
+
 		a.add(Finding{
 			ID:       "P010",
 			Severity: SeverityError,
 			Check:    "client credentials",
 			Message:  "The portal application has the client_credentials grant, which the setup guide says must be off.",
-			Remedy: &Remedy{
-				Summary: "Turn off the client_credentials grant",
-				apply: func(ctx context.Context, api API) error {
-					return updateApplication(ctx, api, clientID, ClientSettings{GrantTypes: remaining})
-				},
-			},
+			Remedy:   remedy,
 		})
 	}
 

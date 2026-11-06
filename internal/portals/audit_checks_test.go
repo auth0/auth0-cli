@@ -421,6 +421,24 @@ func TestAudit_ManagementAPIGrantsAreOneFinding(t *testing.T) {
 	assert.Equal(t, 1, found)
 }
 
+// Turning client_credentials off would leave the application with no grant at all, and an update
+// cannot send an empty list, so the fix would report success and change nothing.
+func TestAudit_ClientCredentialsAsTheOnlyGrantIsFixedByHand(t *testing.T) {
+	t.Parallel()
+
+	current := healthySnapshot()
+	current.Application.GrantTypes = []string{"client_credentials"}
+
+	finding := findingNamed(t, portals.AuditFindings(current), "P010")
+
+	assert.False(t, finding.CanFix(), "the CLI has no grant to leave the application with")
+	require.NotNil(t, finding.Remedy)
+	assert.Equal(t,
+		`auth0 api patch "clients/cli_1" --data '{"grant_types":["authorization_code","refresh_token"]}'`,
+		finding.Remedy.Command,
+	)
+}
+
 func TestAudit_FindingsAreJSON(t *testing.T) {
 	t.Parallel()
 
