@@ -354,7 +354,8 @@ func (t *Tenant) UpdateClient(_ context.Context, id string, settings portals.Cli
 	return nil
 }
 
-// mergeClientSettings copies the settings that are set over the current ones.
+// mergeClientSettings copies the settings that are set over the current ones. A list left empty is
+// not set, like in the requests of the real client, so it cannot clear the current one.
 func mergeClientSettings(current *portals.ClientSettings, changes portals.ClientSettings) {
 	if changes.Name != "" {
 		current.Name = changes.Name
@@ -392,15 +393,15 @@ func mergeClientSettings(current *portals.ClientSettings, changes portals.Client
 		current.RequireProofOfPossession = changes.RequireProofOfPossession
 	}
 
-	if changes.Callbacks != nil {
+	if len(changes.Callbacks) > 0 {
 		current.Callbacks = changes.Callbacks
 	}
 
-	if changes.AllowedLogoutURLs != nil {
+	if len(changes.AllowedLogoutURLs) > 0 {
 		current.AllowedLogoutURLs = changes.AllowedLogoutURLs
 	}
 
-	if changes.GrantTypes != nil {
+	if len(changes.GrantTypes) > 0 {
 		current.GrantTypes = changes.GrantTypes
 	}
 
