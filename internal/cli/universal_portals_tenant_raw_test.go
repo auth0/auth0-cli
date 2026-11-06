@@ -247,6 +247,65 @@ func firstKey(config map[string]any, key string) string {
 	return ""
 }
 
+// An id comes from the command line, so a character that means something in a URL must stay inside
+// its path segment and cannot change the route or add a query.
+func TestPortalsTenant_AnIdStaysOneSegment(t *testing.T) {
+	t.Parallel()
+
+	const (
+		id      = "up_x?y/../z"
+		escaped = "up_x%3Fy%2F..%2Fz"
+	)
+
+	tests := []struct {
+		name string
+		path string
+		call func(tenant *portalsTenant) error
+	}{
+		{
+			name: "reading a portal",
+			path: "portals/" + escaped,
+			call: func(tenant *portalsTenant) error {
+				_, err := tenant.ReadPortal(context.Background(), id)
+
+				return err
+			},
+		},
+		{
+			name: "updating a portal",
+			path: "portals/" + escaped,
+			call: func(tenant *portalsTenant) error {
+				return tenant.UpdatePortal(context.Background(), id, portals.PortalPatch{})
+			},
+		},
+		{
+			name: "reading a form",
+			path: "forms/" + escaped,
+			call: func(tenant *portalsTenant) error {
+				_, err := tenant.ReadForm(context.Background(), id)
+
+				return err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			server, tenant := newPortalsServer(t)
+			server.handle(http.MethodGet, tt.path, func(receivedRequest) (int, string) { return 404, `{"statusCode":404}` })
+			server.handle(http.MethodPatch, tt.path, func(receivedRequest) (int, string) { return 404, `{"statusCode":404}` })
+
+			_ = tt.call(tenant)
+
+			require.Len(t, server.requests, 1)
+			assert.Equal(t, tt.path, server.requests[0].Path)
+			assert.Empty(t, server.requests[0].Query, "the id adds no query")
+		})
+	}
+}
+
 func TestPortalsTenant_Probe(t *testing.T) {
 	t.Parallel()
 

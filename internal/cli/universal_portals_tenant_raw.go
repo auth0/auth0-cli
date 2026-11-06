@@ -23,17 +23,25 @@ import (
 const portalsRequestTimeout = 30 * time.Second
 
 // rawJSON sends a request that no typed client can send and returns the body of the response. The
-// path is relative to the Management API, and may carry a query.
+// path is relative to the Management API, and may carry a query. It is for paths the CLI wrote
+// itself: an id that came from the user goes through rawJSONAt.
 func (t *portalsTenant) rawJSON(ctx context.Context, method, path string, body any) (json.RawMessage, error) {
+	route, query, hasQuery := strings.Cut(path, "?")
+	if hasQuery {
+		query = "?" + query
+	}
+
+	return t.rawJSONAt(ctx, method, strings.Split(route, "/"), query, body)
+}
+
+// rawJSONAt is rawJSON for a route given as its segments, each escaped, so an id with a "/" or a "?"
+// stays one segment and cannot change the route or add a query. The query, if any, starts with "?".
+func (t *portalsTenant) rawJSONAt(ctx context.Context, method string, segments []string, query string, body any) (json.RawMessage, error) {
 	ctx, cancel := context.WithTimeout(ctx, portalsRequestTimeout)
 	defer cancel()
 
-	route, query, hasQuery := strings.Cut(path, "?")
-
-	uri := t.api.HTTPClient.URI(strings.Split(route, "/")...)
-	if hasQuery {
-		uri += "?" + query
-	}
+	route := strings.Join(segments, "/")
+	uri := t.api.HTTPClient.URI(segments...) + query
 
 	request, err := t.api.HTTPClient.NewRequest(ctx, method, uri, body)
 	if err != nil {
@@ -156,7 +164,7 @@ func (f formNodes) flowID() string {
 // ReadForm implements portals.FormStore. It reads the form raw, because a typed read fails on a
 // node type the SDK does not know.
 func (t *portalsTenant) ReadForm(ctx context.Context, id string) (portals.FormDetail, error) {
-	data, err := t.rawJSON(ctx, http.MethodGet, "forms/"+id, nil)
+	data, err := t.rawJSONAt(ctx, http.MethodGet, []string{"forms", id}, "", nil)
 	if err != nil {
 		return portals.FormDetail{}, err
 	}
@@ -254,7 +262,7 @@ func (t *portalsTenant) ListPortals(ctx context.Context) ([]portals.PortalSummar
 
 // ReadPortal implements portals.PortalStore.
 func (t *portalsTenant) ReadPortal(ctx context.Context, id string) (portals.Portal, error) {
-	data, err := t.rawJSON(ctx, http.MethodGet, "portals/"+id, nil)
+	data, err := t.rawJSONAt(ctx, http.MethodGet, []string{"portals", id}, "", nil)
 	if err != nil {
 		return portals.Portal{}, err
 	}
@@ -284,7 +292,7 @@ func (t *portalsTenant) CreatePortal(ctx context.Context, request portals.Create
 
 // UpdatePortal implements portals.PortalStore.
 func (t *portalsTenant) UpdatePortal(ctx context.Context, id string, patch portals.PortalPatch) error {
-	_, err := t.rawJSON(ctx, http.MethodPatch, "portals/"+id, patch)
+	_, err := t.rawJSONAt(ctx, http.MethodPatch, []string{"portals", id}, "", patch)
 
 	return t.written(err)
 }
