@@ -477,6 +477,25 @@ func (t *Tenant) UpdateClientGrantScope(_ context.Context, id string, scope []st
 	return nil
 }
 
+// DeleteClientGrant implements portals.ClientGrantStore.
+func (t *Tenant) DeleteClientGrant(_ context.Context, id string) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if err := t.begin("DELETE client-grants/" + id); err != nil {
+		return err
+	}
+
+	index := slices.IndexFunc(t.grants, func(grant portals.ClientGrant) bool { return grant.ID == id })
+	if index < 0 {
+		return notFound("The grant does not exist")
+	}
+
+	t.grants = slices.Delete(t.grants, index, index+1)
+
+	return nil
+}
+
 // ListVaultConnections implements portals.VaultStore.
 func (t *Tenant) ListVaultConnections(_ context.Context) ([]portals.VaultConnection, error) {
 	t.mu.Lock()

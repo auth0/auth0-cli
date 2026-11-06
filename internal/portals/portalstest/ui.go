@@ -152,6 +152,9 @@ func (r *Reporter) Ready(url string) { r.add("ready", url) }
 // Cancelled implements portals.Reporter.
 func (r *Reporter) Cancelled(message string) { r.add("cancelled", message) }
 
+// Newline implements portals.Reporter.
+func (r *Reporter) Newline() { r.add("newline") }
+
 // Table implements portals.Reporter.
 func (r *Reporter) Table(headers []string, rows [][]string) {
 	r.add("table", strings.Join(headers, ","))

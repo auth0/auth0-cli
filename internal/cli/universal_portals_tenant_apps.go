@@ -343,6 +343,11 @@ func (t *portalsTenant) UpdateClientGrantScope(ctx context.Context, id string, s
 	return asPortalsError(t.written(err))
 }
 
+// DeleteClientGrant implements portals.ClientGrantStore.
+func (t *portalsTenant) DeleteClientGrant(ctx context.Context, id string) error {
+	return asPortalsError(t.written(t.apiv3.ClientGrant.Delete(ctx, id)))
+}
+
 // ListVaultConnections implements portals.VaultStore.
 func (t *portalsTenant) ListVaultConnections(ctx context.Context) ([]portals.VaultConnection, error) {
 	list, err := t.api.FlowVaultConnection.GetConnectionList(ctx, management.Page(0), management.PerPage(portalsPageSize))

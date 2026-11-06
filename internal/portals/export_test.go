@@ -152,3 +152,77 @@ func AudiencesFor(template Template, tenantDomain string) map[string][]string {
 
 	return audiences
 }
+
+// The helpers below let the tests build a snapshot of a portal and look at what the audit and its
+// fixes do.
+
+// AuditSnapshot is everything the audit reads about a portal.
+type AuditSnapshot = snapshot
+
+// FormStatus is a form of a portal, and whether it exists.
+type FormStatus = formStatus
+
+// SnapshotOrganization is the organization a portal opens in.
+type SnapshotOrganization = snapshotOrganization
+
+// AuditFindings checks a snapshot.
+func AuditFindings(current AuditSnapshot) []Finding { return auditPortal(current) }
+
+// CanFix reports whether the CLI can fix the finding.
+func (f Finding) CanFix() bool { return f.canFix() }
+
+// Key identifies the finding.
+func (f Finding) Key() string { return f.key() }
+
+// FixableFindings returns the findings the CLI fixes.
+func FixableFindings(findings []Finding) []Finding { return fixableFindings(findings) }
+
+// FixSummary is what a pass of fixes did.
+type FixSummary struct {
+	Applied       int
+	Failed        int
+	AlreadyFixed  int
+	MissingScopes []string
+}
+
+// FindingsOf reads a portal and audits it.
+func FindingsOf(ctx context.Context, api API, tenantDomain, portalID string) ([]Finding, error) {
+	current, err := readSnapshot(ctx, api, portalID, tenantDomain, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return auditPortal(current), nil
+}
+
+func fixDepsFor(api API, reporter Reporter, tenantDomain, portalID string) fixDeps {
+	return fixDeps{
+		api:      api,
+		reporter: reporter,
+		read: func(ctx context.Context) (snapshot, error) {
+			return readSnapshot(ctx, api, portalID, tenantDomain, "")
+		},
+	}
+}
+
+// FixFindings applies the fixes of the findings.
+func FixFindings(ctx context.Context, api API, reporter Reporter, tenantDomain, portalID string, selected []Finding) (FixSummary, error) {
+	result, err := applyFixes(ctx, selected, fixDepsFor(api, reporter, tenantDomain, portalID))
+
+	return FixSummary{Applied: result.applied, Failed: result.failed, AlreadyFixed: result.alreadyFixed, MissingScopes: result.missingScopes}, err
+}
+
+// FixFindingRounds applies the fixes of the findings, and then those of the errors they exposed that
+// chooseNext picks.
+func FixFindingRounds(
+	ctx context.Context,
+	api API,
+	reporter Reporter,
+	tenantDomain, portalID string,
+	selected []Finding,
+	chooseNext func(exposed []Finding) ([]Finding, error),
+) (FixSummary, error) {
+	result, err := applyFixRounds(ctx, selected, fixDepsFor(api, reporter, tenantDomain, portalID), chooseNext)
+
+	return FixSummary{Applied: result.applied, Failed: result.failed, AlreadyFixed: result.alreadyFixed, MissingScopes: result.missingScopes}, err
+}

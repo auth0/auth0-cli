@@ -225,3 +225,40 @@ func (t *Tenant) RolePermissions(roleID string) []portals.Permission {
 
 	return nil
 }
+
+// ModifyPortal changes a portal without a request, for a test that needs a portal that broke.
+func (t *Tenant) ModifyPortal(id string, change func(portal *portals.Portal)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if index := slices.IndexFunc(t.portals, func(portal portals.Portal) bool { return portal.ID == id }); index >= 0 {
+		change(&t.portals[index])
+	}
+}
+
+// ModifyClient changes an application without a request, for a test that needs an application that
+// broke.
+func (t *Tenant) ModifyClient(id string, change func(client *portals.Client)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if index := slices.IndexFunc(t.clients, func(record clientRecord) bool { return record.ID == id }); index >= 0 {
+		change(&t.clients[index].Client)
+	}
+}
+
+// DeleteGrant removes a client grant without a request.
+func (t *Tenant) DeleteGrant(id string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.grants = slices.DeleteFunc(t.grants, func(grant portals.ClientGrant) bool { return grant.ID == id })
+}
+
+// DeleteResourceServer removes a resource server without a request.
+func (t *Tenant) DeleteResourceServer(id string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.resourceServers = slices.DeleteFunc(t.resourceServers, func(server portals.ResourceServer) bool { return server.ID == id })
+}

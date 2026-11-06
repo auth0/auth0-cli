@@ -278,6 +278,15 @@ func (t *portalsTerminal) Cancelled(message string) {
 	t.println("")
 }
 
+// Newline implements portals.Reporter.
+func (t *portalsTerminal) Newline() {
+	if t.silent {
+		return
+	}
+
+	t.message("")
+}
+
 // Table implements portals.Reporter. The widths follow the longest cell, and the first column is a
 // symbol colored by what it is.
 func (t *portalsTerminal) Table(headers []string, rows [][]string) {

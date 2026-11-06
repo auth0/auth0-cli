@@ -32,6 +32,7 @@ type ClientGrantStore interface {
 	ListClientGrants(ctx context.Context, clientID string) ([]ClientGrant, error)
 	CreateClientGrant(ctx context.Context, spec ClientGrantSpec) (ClientGrant, error)
 	UpdateClientGrantScope(ctx context.Context, id string, scope []string) error
+	DeleteClientGrant(ctx context.Context, id string) error
 }
 
 // VaultStore reads and writes the connections of the Flows vault.

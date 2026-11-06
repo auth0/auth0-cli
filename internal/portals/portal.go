@@ -1,5 +1,7 @@
 package portals
 
+import "encoding/json"
+
 // PortalSummary is a portal in the list of the tenant.
 type PortalSummary struct {
 	ID   string
@@ -48,18 +50,118 @@ type Pages struct {
 	Standard []Page `json:"standard,omitempty"`
 }
 
-// Page is a page of a portal.
+// Page is a page of a portal. A fix sends the pages back whole, so the fields the package does not
+// know are kept and sent as they were.
 type Page struct {
-	Title      string      `json:"title"`
-	Slug       string      `json:"slug"`
-	Components []Component `json:"components,omitempty"`
+	Title      string
+	Slug       string
+	Components []Component
+
+	extra map[string]json.RawMessage
 }
 
 // Component is a block of a page. The config depends on the type, and a section holds its
-// blocks in config.children.
+// blocks in config.children. The fields the package does not know are kept.
 type Component struct {
-	Type   string         `json:"type"`
-	Config map[string]any `json:"config,omitempty"`
+	Type   string
+	Config map[string]any
+
+	extra map[string]json.RawMessage
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (p *Page) UnmarshalJSON(data []byte) error {
+	known, extra, err := splitFields(data, "title", "slug", "components")
+	if err != nil {
+		return err
+	}
+
+	*p = Page{extra: extra}
+
+	return decodeFields(known, map[string]any{"title": &p.Title, "slug": &p.Slug, "components": &p.Components})
+}
+
+// MarshalJSON implements json.Marshaler.
+func (p Page) MarshalJSON() ([]byte, error) {
+	fields := map[string]any{"title": p.Title, "slug": p.Slug}
+	if p.Components != nil {
+		fields["components"] = p.Components
+	}
+
+	return joinFields(fields, p.extra)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *Component) UnmarshalJSON(data []byte) error {
+	known, extra, err := splitFields(data, "type", "config")
+	if err != nil {
+		return err
+	}
+
+	*c = Component{extra: extra}
+
+	return decodeFields(known, map[string]any{"type": &c.Type, "config": &c.Config})
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c Component) MarshalJSON() ([]byte, error) {
+	fields := map[string]any{"type": c.Type}
+	if c.Config != nil {
+		fields["config"] = c.Config
+	}
+
+	return joinFields(fields, c.extra)
+}
+
+// splitFields separates the fields of an object that the package knows from the others.
+func splitFields(data []byte, names ...string) (known, extra map[string]json.RawMessage, err error) {
+	var all map[string]json.RawMessage
+	if err := json.Unmarshal(data, &all); err != nil {
+		return nil, nil, err
+	}
+
+	known = map[string]json.RawMessage{}
+
+	for _, name := range names {
+		if value, found := all[name]; found {
+			known[name] = value
+
+			delete(all, name)
+		}
+	}
+
+	if len(all) == 0 {
+		all = nil
+	}
+
+	return known, all, nil
+}
+
+func decodeFields(fields map[string]json.RawMessage, targets map[string]any) error {
+	for name, target := range targets {
+		if value, found := fields[name]; found {
+			if err := json.Unmarshal(value, target); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// joinFields encodes the fields of the package together with the ones it kept.
+func joinFields(fields map[string]any, extra map[string]json.RawMessage) ([]byte, error) {
+	merged := make(map[string]any, len(fields)+len(extra))
+
+	for name, value := range extra {
+		merged[name] = value
+	}
+
+	for name, value := range fields {
+		merged[name] = value
+	}
+
+	return json.Marshal(merged)
 }
 
 // CustomCode is the custom code of a portal.

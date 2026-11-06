@@ -427,6 +427,9 @@ func TestPortalsTenant_TracksWhetherItChangedTheTenant(t *testing.T) {
 		"a role assigned to a member": func(tenant *portalsTenant) error {
 			return tenant.AssignMemberRole(ctx, "org_1", "auth0|a", "rol_1")
 		},
+		"a deleted grant": func(tenant *portalsTenant) error {
+			return tenant.DeleteClientGrant(ctx, "cgr_1")
+		},
 		"a created role": func(tenant *portalsTenant) error {
 			_, err := tenant.CreateRole(ctx, portals.RoleSpec{Name: "Admin"})
 			return err
@@ -440,7 +443,7 @@ func TestPortalsTenant_TracksWhetherItChangedTheTenant(t *testing.T) {
 			server, tenant := newPortalsServer(t)
 			for _, route := range []struct{ method, path string }{
 				{http.MethodPost, "resource-servers"}, {http.MethodPost, "clients"}, {http.MethodPatch, "clients/cli_1"},
-				{http.MethodPost, "client-grants"}, {http.MethodPatch, "client-grants/cgr_1"},
+				{http.MethodPost, "client-grants"}, {http.MethodPatch, "client-grants/cgr_1"}, {http.MethodDelete, "client-grants/cgr_1"},
 				{http.MethodPost, "flows/vault/connections"}, {http.MethodPost, "forms/import"}, {http.MethodPost, "portals"},
 				{http.MethodPost, "organizations"}, {http.MethodPost, "organizations/org_1/members"},
 				{http.MethodPost, "organizations/org_1/members/auth0%7Ca/roles"}, {http.MethodPost, "roles"},

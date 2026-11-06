@@ -59,6 +59,8 @@ type Reporter interface {
 	Ready(url string)
 	// Cancelled closes the output when the person cancels.
 	Cancelled(message string)
+	// Newline leaves a blank line.
+	Newline()
 	// Table shows rows under a header. The first column is a symbol.
 	Table(headers []string, rows [][]string)
 	// Task runs work behind a spinner when there is a terminal.
