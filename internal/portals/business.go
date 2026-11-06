@@ -2,6 +2,7 @@ package portals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -736,15 +737,22 @@ func (r *setupRun) rolesGranting(ctx context.Context, scopes []string) ([]Role, 
 		return nil, fmt.Errorf("list the roles: %w", err)
 	}
 
+	// Each read fills the slot of its own role, and the roles keep the order the tenant lists them in.
+	granted := make([][]string, len(tenantRoles))
+	failures := make([]error, len(tenantRoles))
+
+	forEachParallel(len(tenantRoles), func(index int) {
+		granted[index], failures[index] = r.permissionsOf(ctx, tenantRoles[index].ID)
+	})
+
+	if err := errors.Join(failures...); err != nil {
+		return nil, err
+	}
+
 	var matches []Role
 
-	for _, role := range tenantRoles {
-		granted, err := r.permissionsOf(ctx, role.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		if !slices.ContainsFunc(scopes, func(scope string) bool { return !slices.Contains(granted, scope) }) {
+	for index, role := range tenantRoles {
+		if !slices.ContainsFunc(scopes, func(scope string) bool { return !slices.Contains(granted[index], scope) }) {
 			matches = append(matches, role)
 		}
 	}

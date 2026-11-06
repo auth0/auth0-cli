@@ -5,7 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -831,4 +834,62 @@ func TestSetup_TheRoleOfTheTestUser(t *testing.T) {
 		assert.Len(t, tenant.Roles(), 1, "no second role with the same name")
 		assert.Len(t, tenant.RolePermissions("rol_portal"), len(portals.MyOrganizationScopes()), "the permission it had is not added again")
 	})
+}
+
+// rendezvousTenant makes the permission reads of the roles named "rol_slow_*" wait for each other: a
+// read returns once another one is in flight, or after the timeout. Reads sent one after the other
+// can never meet, so the tenant tells whether they went out together.
+type rendezvousTenant struct {
+	*portalstest.Tenant
+
+	inFlight atomic.Int32
+	met      chan struct{}
+	once     sync.Once
+}
+
+func (r *rendezvousTenant) ListRolePermissions(ctx context.Context, roleID string) ([]portals.Permission, error) {
+	if strings.HasPrefix(roleID, "rol_slow_") {
+		if r.inFlight.Add(1) > 1 {
+			r.once.Do(func() { close(r.met) })
+		}
+
+		select {
+		case <-r.met:
+		case <-time.After(500 * time.Millisecond):
+		}
+
+		r.inFlight.Add(-1)
+	}
+
+	return r.Tenant.ListRolePermissions(ctx, roleID)
+}
+
+// A tenant can have many roles, and looking for the ones that fix a warning reads the permissions of
+// each, so the reads go out together like the other reads of setup and the audit.
+func TestSetup_TheRolesThatFixAWarningAreReadTogether(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	seedUser(tenant, "auth0|a", "jane@acme.com")
+	seedOrganization(tenant, "org_1", "acme", "auth0|a")
+	tenant.AddRole(portals.Role{ID: "rol_reader", Name: "Organization - Reader"}, permissionsOf([]string{"read:my_org:details"})...)
+	tenant.AssignRole("org_1", "auth0|a", "rol_reader")
+
+	for _, id := range []string{"rol_slow_1", "rol_slow_2", "rol_slow_3"} {
+		tenant.AddRole(portals.Role{ID: id, Name: "Other " + id}, permissionsOf([]string{"read:my_org:details"})...)
+	}
+
+	gated := &rendezvousTenant{Tenant: tenant, met: make(chan struct{})}
+	deps, _, _ := interactiveDeps(tenant, answers{confirms: []bool{false}})
+	deps.API = gated
+
+	_, err := setupBusiness(tenant, businessOptions("auth0|a"), deps)
+
+	require.NoError(t, err)
+
+	select {
+	case <-gated.met:
+	default:
+		t.Fatal("the permissions of the roles were read one after the other")
+	}
 }
