@@ -250,3 +250,58 @@ func TestTenant_ReturnsCopies(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "profile", read.Pages.Default)
 }
+
+func TestPrompter(t *testing.T) {
+	t.Parallel()
+
+	t.Run("a question nobody answers fails the test", func(t *testing.T) {
+		t.Parallel()
+
+		prompter := &portalstest.Prompter{}
+
+		_, askErr := prompter.Ask("Name", "", "")
+		_, confirmErr := prompter.Confirm("Sure?", true)
+		_, chooseErr := prompter.Choose("Which?", nil)
+		_, checklistErr := prompter.Checklist("Which ones?", nil)
+
+		for _, err := range []error{askErr, confirmErr, chooseErr, checklistErr} {
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unexpected question")
+		}
+
+		assert.Equal(t, []string{"Name", "Sure?", "Which?", "Which ones?"}, prompter.Questions())
+	})
+
+	t.Run("a question with an answer gets it", func(t *testing.T) {
+		t.Parallel()
+
+		prompter := &portalstest.Prompter{
+			AskFunc: func(_, defaultValue, _ string) (string, error) { return defaultValue + "!", nil },
+		}
+
+		answer, err := prompter.Ask("Name", "Acme", "")
+
+		require.NoError(t, err)
+		assert.Equal(t, "Acme!", answer)
+	})
+}
+
+func TestReporter(t *testing.T) {
+	t.Parallel()
+
+	reporter := &portalstest.Reporter{}
+
+	reporter.Section("Forms")
+	reporter.Item("Profile", "created")
+	reporter.Warn("The slug is taken.")
+	require.NoError(t, reporter.Task("Creating portal", func() error { return nil }))
+
+	assert.Equal(t, []string{
+		"section: Forms",
+		"item: Profile | created",
+		"warn: The slug is taken.",
+		"task: Creating portal",
+	}, reporter.Lines())
+	assert.True(t, reporter.Contains("warn", "slug"))
+	assert.False(t, reporter.Contains("error", "slug"))
+}
