@@ -80,3 +80,29 @@ func TestPortal_APortalKeepsItsPagesWhenReadAndSent(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"pages":{"default":"profile","standard":[{"title":"Profile","slug":"profile","hidden":true}]}}`, string(sent))
 }
+
+func TestPortal_APageThatCannotBeReadSaysWhichField(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		json  string
+		field string
+	}{
+		{name: "a title that is not text", json: `{"title":5,"slug":"profile"}`, field: "title"},
+		{name: "components that are not a list", json: `{"title":"Profile","slug":"profile","components":"none"}`, field: "components"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var page portals.Page
+
+			err := json.Unmarshal([]byte(tt.json), &page)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.field)
+		})
+	}
+}

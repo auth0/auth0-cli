@@ -1,6 +1,11 @@
 package portals
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"maps"
+	"slices"
+)
 
 // PortalSummary is a portal in the list of the tenant.
 type PortalSummary struct {
@@ -138,10 +143,11 @@ func splitFields(data []byte, names ...string) (known, extra map[string]json.Raw
 }
 
 func decodeFields(fields map[string]json.RawMessage, targets map[string]any) error {
-	for name, target := range targets {
+	// The fields are read in the order of their names, so the error is always the same one.
+	for _, name := range slices.Sorted(maps.Keys(targets)) {
 		if value, found := fields[name]; found {
-			if err := json.Unmarshal(value, target); err != nil {
-				return err
+			if err := json.Unmarshal(value, targets[name]); err != nil {
+				return fmt.Errorf("read the %q of the portal: %w", name, err)
 			}
 		}
 	}
