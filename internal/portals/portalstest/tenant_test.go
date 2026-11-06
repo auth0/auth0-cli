@@ -305,3 +305,17 @@ func TestReporter(t *testing.T) {
 	assert.True(t, reporter.Contains("warn", "slug"))
 	assert.False(t, reporter.Contains("error", "slug"))
 }
+
+func TestTenant_AProbeDoesNotUseUpTheFailureMeantForTheRealRequest(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	tenant := portalstest.New()
+	tenant.FailNext("POST forms/import", http.StatusInternalServerError)
+
+	probeErr := tenant.Probe(ctx, http.MethodPost, "forms/import", map[string]any{})
+	_, importErr := tenant.ImportForm(ctx, map[string]any{"form": map[string]any{"name": "Profile"}})
+
+	assert.True(t, portals.IsStatus(probeErr, http.StatusBadRequest), "the probe is a validation error, as on the real API")
+	assert.True(t, portals.IsStatus(importErr, http.StatusInternalServerError), "the failure is still there for the real request")
+}

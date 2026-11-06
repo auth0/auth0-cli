@@ -164,3 +164,67 @@ func FixesOf(err error) []string {
 
 	return nil
 }
+
+// UsageError is a command that cannot run as asked, for example a slug the API would refuse.
+type UsageError struct {
+	Message string
+	// Hints are the steps that resolve it.
+	Hints []string
+}
+
+func (e *UsageError) Error() string { return e.Message }
+
+// Fixes returns the steps that resolve the error.
+func (e *UsageError) Fixes() []string { return e.Hints }
+
+// NameInUseError means an application with the name exists and was not created by this setup, so it
+// is never reused.
+type NameInUseError struct {
+	Name string
+}
+
+func (e *NameInUseError) Error() string {
+	return fmt.Sprintf(
+		"An application named %q already exists and was not created by this setup. Rename or delete it, then rerun",
+		e.Name,
+	)
+}
+
+// SlugTakenError means another portal uses the slug.
+type SlugTakenError struct {
+	Slug string
+}
+
+func (e *SlugTakenError) Error() string {
+	return fmt.Sprintf("The portal slug %q is already used by another portal", e.Slug)
+}
+
+// SlugRaceError means another portal took the slug while setup was running. Setup checks the slug
+// before it creates anything, so this is a race, and the rerun needs a new name and slug.
+type SlugRaceError struct {
+	Slug string
+}
+
+func (e *SlugRaceError) Error() string {
+	return fmt.Sprintf("The slug %q was taken while setup was running. Rerun with a different --name and --slug", e.Slug)
+}
+
+// ClientSecretUnreadableError means the secret of an application could not be read, which takes the
+// read:client_keys scope.
+type ClientSecretUnreadableError struct {
+	ClientID string
+}
+
+func (e *ClientSecretUnreadableError) Error() string {
+	return fmt.Sprintf("Could not read the client secret of application %q. The session needs read:client_keys", e.ClientID)
+}
+
+// Fixes returns how to get the scope.
+func (e *ClientSecretUnreadableError) Fixes() []string {
+	return ScopeFixes([]string{"read:client_keys"})
+}
+
+// asSlugTaken reports whether err is a *SlugTakenError.
+func asSlugTaken(err error) (*SlugTakenError, bool) {
+	return errors.AsType[*SlugTakenError](err)
+}

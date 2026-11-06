@@ -1,0 +1,137 @@
+{
+  "version": "4.0.0",
+  "form": {
+    "name": "Privacy settings (Universal Portals)",
+    "languages": {
+      "primary": "en"
+    },
+    "nodes": [
+      {
+        "id": "step_y0Ri",
+        "type": "STEP",
+        "coordinates": {
+          "x": 500,
+          "y": 0
+        },
+        "config": {
+          "components": [
+            {
+              "id": "data_sharing",
+              "category": "FIELD",
+              "type": "BOOLEAN",
+              "label": "Data sharing",
+              "hint": "<p>Allow app usage data to improve features. <a href=\"https://auth0.com\" target=\"_blank\">Learn more.</a></p>",
+              "required": true,
+              "sensitive": false,
+              "config": {
+                "default_value": false
+              }
+            },
+            {
+              "id": "profile_visibility",
+              "category": "FIELD",
+              "type": "BOOLEAN",
+              "label": "Profile visibility",
+              "hint": "<p>Show my profile in search results. <a href=\"https://auth0.com\" target=\"_blank\">Learn more.</a></p>",
+              "required": true,
+              "sensitive": false,
+              "config": {
+                "default_value": false
+              }
+            },
+            {
+              "id": "location_tracking",
+              "category": "FIELD",
+              "type": "BOOLEAN",
+              "label": "Location tracking",
+              "hint": "<p>Allow location tracking for personalized recommendations. <a href=\"https://auth0.com\" target=\"_blank\">Learn more.</a></p>",
+              "required": true,
+              "sensitive": false,
+              "config": {
+                "default_value": false
+              }
+            },
+            {
+              "id": "ad_personalization",
+              "category": "FIELD",
+              "type": "BOOLEAN",
+              "label": "Ad personalization",
+              "hint": "<p>Use my data to personalize ads. <a href=\"https://auth0.com\" target=\"_blank\">Learn more.</a></p>",
+              "required": true,
+              "sensitive": false,
+              "config": {
+                "default_value": false
+              }
+            },
+            {
+              "id": "next_button_aB8e",
+              "category": "BLOCK",
+              "type": "NEXT_BUTTON",
+              "config": {
+                "text": "Update"
+              }
+            }
+          ],
+          "next_node": "flow_AB1r"
+        }
+      },
+      {
+        "id": "flow_AB1r",
+        "type": "FLOW",
+        "coordinates": {
+          "x": 988,
+          "y": 9
+        },
+        "config": {
+          "flow_id": "#FLOW-1#",
+          "next_node": "$ending"
+        }
+      }
+    ],
+    "start": {
+      "next_node": "step_y0Ri",
+      "coordinates": {
+        "x": 202,
+        "y": 247
+      }
+    },
+    "ending": {
+      "resume_flow": true,
+      "coordinates": {
+        "x": 1445,
+        "y": 247
+      }
+    }
+  },
+  "flows": {
+    "#FLOW-1#": {
+      "name": "Update privacy settings",
+      "actions": [
+        {
+          "id": "update_user_uOZW",
+          "type": "AUTH0",
+          "action": "UPDATE_USER",
+          "allow_failure": false,
+          "mask_output": false,
+          "params": {
+            "connection_id": "#CONN-1#",
+            "user_id": "{{context.user.user_id}}",
+            "changes": {
+              "app_metadata": {
+                "data_sharing": "{{fields.data_sharing}}",
+                "location_tracking": "{{fields.location_tracking}}",
+                "ad_personalization": "{{fields.ad_personalization}}",
+                "profile_visibility": "{{fields.profile_visibility}}"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "connections": {
+    "#CONN-1#": {
+      "id": "$VAULT_CONNECTION_ID"
+    }
+  }
+}

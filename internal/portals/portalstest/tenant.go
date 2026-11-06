@@ -146,12 +146,26 @@ func (t *Tenant) Writes() []string {
 
 // begin records a request and returns the error it must fail with, if any. The caller holds the lock.
 func (t *Tenant) begin(key string) error {
+	if err := t.record(key); err != nil {
+		return err
+	}
+
+	return t.takeFailure(key)
+}
+
+// record records a request and returns the scope error if the request is denied.
+func (t *Tenant) record(key string) error {
 	t.calls = append(t.calls, key)
 
 	if message, denied := t.denials[key]; denied {
 		return &portals.APIError{Status: http.StatusForbidden, Code: "insufficient_scope", Message: message}
 	}
 
+	return nil
+}
+
+// takeFailure returns the failure set for the request, once.
+func (t *Tenant) takeFailure(key string) error {
 	if status, failing := t.failures[key]; failing {
 		delete(t.failures, key)
 		return &portals.APIError{Status: status, Message: "simulated failure"}
@@ -1037,17 +1051,22 @@ func (t *Tenant) Probe(_ context.Context, method, path string, body any) error {
 	defer t.mu.Unlock()
 
 	key := method + " " + strings.SplitN(path, "?", 2)[0]
-	if err := t.begin(key); err != nil {
+	if err := t.record(key); err != nil {
 		return err
 	}
 
 	// Like the real API, a create with an empty body is a validation error and not a success.
-	// Preflight relies on this to tell a present scope from a missing one.
+	// Preflight relies on this to tell a present scope from a missing one. The check comes before
+	// the failures a test sets, so a probe never uses up the failure meant for the real request.
 	if method == http.MethodPost && isEmptyBody(body) {
 		return &portals.APIError{
 			Status:  http.StatusBadRequest,
 			Message: "Payload validation error: 'Missing required property'",
 		}
+	}
+
+	if err := t.takeFailure(key); err != nil {
+		return err
 	}
 
 	if method != http.MethodGet && strings.Contains(path, "preflight") {
