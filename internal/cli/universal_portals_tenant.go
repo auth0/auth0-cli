@@ -67,13 +67,16 @@ func asPortalsError(err error) error {
 		// The text of the error is "<status> <reason>: <message>", and the reason has no colon.
 		_, message, _ := strings.Cut(v1.Error(), ": ")
 
-		return &portals.APIError{Status: v1.Status(), Code: v1.Code(), Message: message}
+		return &portals.APIError{Status: v1.Status(), Code: v1.Code(), Message: message, Err: v1}
 	}
 
 	if v3, ok := errors.AsType[*core.APIError](err); ok {
 		_, body, _ := strings.Cut(v3.Error(), ": ")
 
-		return apiErrorFromBody(v3.StatusCode, []byte(body))
+		apiErr := apiErrorFromBody(v3.StatusCode, []byte(body))
+		apiErr.Err = v3
+
+		return apiErr
 	}
 
 	return err
@@ -81,7 +84,11 @@ func asPortalsError(err error) error {
 
 // apiErrorFromBody builds the error of a response from its status and body.
 func apiErrorFromBody(status int, body []byte) *portals.APIError {
-	apiErr := &portals.APIError{Status: status, Message: strings.TrimSpace(string(body))}
+	apiErr := &portals.APIError{
+		Status:  status,
+		Message: strings.TrimSpace(string(body)),
+		Err:     core.NewAPIError(status, nil, errors.New(strings.TrimSpace(string(body)))),
+	}
 
 	var parsed struct {
 		ErrorCode string `json:"errorCode"`

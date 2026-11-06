@@ -58,12 +58,15 @@ func universalPortalsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "universal-portals",
 		Aliases: []string{"up"},
-		Short:   "Set up Universal Portals",
-		Long:    "Set up Auth0 Universal Portals.",
+		Short:   "Set up and audit Universal Portals",
+		Long:    "Set up and audit Auth0 Universal Portals.",
 	}
 
 	cmd.SetUsageTemplate(namespaceUsageTemplate())
-	cmd.AddCommand(universalPortalsSetupCmd(cli))
+	cmd.AddCommand(
+		universalPortalsSetupCmd(cli),
+		universalPortalsAuditCmd(cli),
+	)
 
 	return cmd
 }

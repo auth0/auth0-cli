@@ -50,6 +50,7 @@ auth0 universal-portals setup [flags]
 
 ## Related Commands
 
+- [auth0 universal-portals audit](auth0_universal-portals_audit.md) - Check a Universal Portal
 - [auth0 universal-portals setup](auth0_universal-portals_setup.md) - Set up a Universal Portal
 
 

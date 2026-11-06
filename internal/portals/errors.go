@@ -16,7 +16,12 @@ type APIError struct {
 	Code string
 	// Message is the message the API returned, if any.
 	Message string
+	// Err is the error of the client that made the request, kept so the CLI can classify the failure.
+	Err error
 }
+
+// Unwrap returns the error of the client that made the request.
+func (e *APIError) Unwrap() error { return e.Err }
 
 func (e *APIError) Error() string {
 	switch {

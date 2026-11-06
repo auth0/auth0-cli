@@ -8,12 +8,15 @@ package portalstest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/auth0/go-auth0/v3/management/core"
 
 	"github.com/auth0/auth0-cli/internal/portals"
 )
@@ -158,7 +161,7 @@ func (t *Tenant) record(key string) error {
 	t.calls = append(t.calls, key)
 
 	if message, denied := t.denials[key]; denied {
-		return &portals.APIError{Status: http.StatusForbidden, Code: "insufficient_scope", Message: message}
+		return withCause(&portals.APIError{Status: http.StatusForbidden, Code: "insufficient_scope", Message: message})
 	}
 
 	return nil
@@ -168,7 +171,7 @@ func (t *Tenant) record(key string) error {
 func (t *Tenant) takeFailure(key string) error {
 	if status, failing := t.failures[key]; failing {
 		delete(t.failures, key)
-		return &portals.APIError{Status: status, Message: "simulated failure"}
+		return withCause(&portals.APIError{Status: status, Message: "simulated failure"})
 	}
 
 	return nil
@@ -185,12 +188,20 @@ func (t *Tenant) newID(kind string) string {
 	return fmt.Sprintf("%s%0*d", shape.prefix, shape.length, t.nextID)
 }
 
+// withCause gives an error the SDK error that the clients of the CLI keep in it, so the CLI classifies
+// the failures of the fake as it does those of the API.
+func withCause(apiErr *portals.APIError) *portals.APIError {
+	apiErr.Err = core.NewAPIError(apiErr.Status, nil, errors.New(apiErr.Message))
+
+	return apiErr
+}
+
 func notFound(message string) error {
-	return &portals.APIError{Status: http.StatusNotFound, Message: message}
+	return withCause(&portals.APIError{Status: http.StatusNotFound, Message: message})
 }
 
 func conflict(message string) error {
-	return &portals.APIError{Status: http.StatusConflict, Message: message}
+	return withCause(&portals.APIError{Status: http.StatusConflict, Message: message})
 }
 
 // clone copies a value completely, so a caller cannot change the tenant through what it was given.
@@ -604,10 +615,10 @@ func (t *Tenant) ReadForm(_ context.Context, id string) (portals.FormDetail, err
 	}
 
 	if !formIDPattern.MatchString(id) {
-		return portals.FormDetail{}, &portals.APIError{
+		return portals.FormDetail{}, withCause(&portals.APIError{
 			Status:  http.StatusBadRequest,
 			Message: "The provided input does not satisfy the expected schema",
-		}
+		})
 	}
 
 	index := slices.IndexFunc(t.forms, func(form formRecord) bool { return form.ID == id })
@@ -693,11 +704,11 @@ func (t *Tenant) CreatePortal(_ context.Context, request portals.CreatePortalReq
 
 	for _, portal := range t.portals {
 		if portal.Slug == request.Slug {
-			return portals.Portal{}, &portals.APIError{
+			return portals.Portal{}, withCause(&portals.APIError{
 				Status:  http.StatusConflict,
 				Code:    "portal_conflict",
 				Message: "Slug already in use",
-			}
+			})
 		}
 	}
 
@@ -1078,10 +1089,10 @@ func (t *Tenant) Probe(_ context.Context, method, path string, body any) error {
 	// Preflight relies on this to tell a present scope from a missing one. The check comes before
 	// the failures a test sets, so a probe never uses up the failure meant for the real request.
 	if method == http.MethodPost && isEmptyBody(body) {
-		return &portals.APIError{
+		return withCause(&portals.APIError{
 			Status:  http.StatusBadRequest,
 			Message: "Payload validation error: 'Missing required property'",
-		}
+		})
 	}
 
 	if err := t.takeFailure(key); err != nil {
