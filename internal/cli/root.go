@@ -488,6 +488,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 help",
 		"auth0 login",
 		"auth0 logout",
+		"auth0 poppy doctor",
 		"auth0 tenants use",
 		"auth0 tenants list",
 		"auth0 agent skills install",
@@ -627,6 +628,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(guardianCmd(cli))
 	rootCmd.AddCommand(experimentationCmd(cli))
 	rootCmd.AddCommand(universalPortalsCmd(cli))
+	rootCmd.AddCommand(poppyCmd(cli))
 
 	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))
@@ -682,7 +684,10 @@ func renderErrorMessage(display *display.Renderer, err error) {
 			[]rune{unicode.ToUpper(rawErrorMessage[0])},
 			rawErrorMessage[1:]...,
 		),
-	) + "."
+	)
+	if !strings.HasSuffix(humanReadableErrorMessage, ".") {
+		humanReadableErrorMessage += "."
+	}
 
 	display.Errorf(humanReadableErrorMessage)
 

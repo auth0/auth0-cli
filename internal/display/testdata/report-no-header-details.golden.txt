@@ -1,0 +1,6 @@
+Doctor for shop.example
+
+Auth0 issuer
+  ✓ issuer matches https://shop.example/
+
+1 passed.

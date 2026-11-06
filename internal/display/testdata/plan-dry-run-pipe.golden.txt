@@ -1,0 +1,46 @@
+Poppy setup for shop.example                          tenant tenant.us.auth0.com
+Dry run: nothing will be changed.
+
+Checked
+  ✓ API       https://api.shop.example
+  ✓ Web app   Shop Web (first party)
+  ✓ Scopes    all described  (refunds, wishlist from your --scope)
+  ! Issuer    https://tenant.us.auth0.com/
+              The tenant has no verified custom domain, so agents will see the Auth0 domain tenant.us.auth0.com as the issuer. Changing the issuer later signs every user out.
+
+Your answers
+  OpenAPI URL   https://api.shop.example/openapi.json
+  Login route   https://shop.example/login
+  Guest access  2 scopes on https://api.shop.example
+                orders:read, checkout
+
+Plan: 16 changes, 5 of them affect every app on the tenant
+
+Tenant settings                                               ⚠ affects all apps
+  ~ CIMD support                off → on
+  ~ iss in sign-in redirects    off → on                  every app's redirects
+  ~ resource parameter profile  audience → compatibility
+  ~ default audience            none → https://api.shop.example
+                                                          apps that send no audience
+  + company domain              https://shop.example
+
+API https://api.shop.example
+  ~ scope refunds                none → "Refund an order you placed."
+  + scope poppy:browser-sign-in  "Use the website signed in, with the other access you approve"
+  + scope wishlist               "Keep a list of things you want."
+  ~ offline access               off → on
+  ~ agent subject claims         off → auth0-v1
+  ~ Poppy API                    off → on
+  ~ guest policy                 none → require_client_grant
+
+App Shop Web
+  ~ login route   none → https://shop.example/login
+  ~ browser join  off → on
+
+Guest grant
+  + https://api.shop.example  scopes: orders:read, checkout
+
+File
+  + auth0-poppy.json  new
+
+To apply:  auth0 poppy setup --company-domain shop.example --api https://api.shop.example --api-url https://api.shop.example=https://api.shop.example/openapi.json --app "Shop Web" --scope "refunds=Refund an order you placed." --scope "wishlist=Keep a list of things you want." --login-uri https://shop.example/login --guest-api-access --guest-scopes checkout,orders:read

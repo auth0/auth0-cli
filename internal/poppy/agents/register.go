@@ -48,11 +48,13 @@ func (e *InvalidDocumentError) Error() string {
 
 	fmt.Fprintf(&b, "the agent metadata document at %s is not valid:", e.URL)
 	for _, violation := range e.Violations {
-		b.WriteString("\n  " + violation)
+		b.WriteString("\n  ")
+		b.WriteString(violation)
 	}
 
 	if slices.ContainsFunc(e.Violations, aboutKeys) {
-		b.WriteString("\n" + ecKeysNote)
+		b.WriteString("\n")
+		b.WriteString(ecKeysNote)
 	}
 
 	return b.String()

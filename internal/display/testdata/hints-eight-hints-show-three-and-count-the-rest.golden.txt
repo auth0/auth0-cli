@@ -1,0 +1,5 @@
+Your answers
+  Hints         export: none, personal data
+                orders:read: none
+                profile: none, personal data
+                (5 more scopes not shown here)

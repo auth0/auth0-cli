@@ -16,6 +16,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/poppy/doctor"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -57,6 +58,9 @@ type cli struct {
 	agentMode           bool
 	detectedAgent       string
 	executedCommandPath string
+
+	// The options of the doctor checks that run at the end of poppy setup.
+	poppyDoctor doctor.Options
 
 	Config config.Config
 }

@@ -24,6 +24,12 @@ func IsOutputTerminal() bool {
 	return isatty.IsTerminal(Output.Fd())
 }
 
+// IsMessagesTerminal tells whether the messages stream, where the prompts are
+// drawn, is a terminal.
+func IsMessagesTerminal() bool {
+	return isatty.IsTerminal(Messages.Fd())
+}
+
 // PipedInput reads all data available on stdin when stdin is not a terminal (a
 // pipe or redirect). It returns an empty slice on an interactive terminal. A read
 // failure is returned as an error rather than a panic, so a broken pipe on the

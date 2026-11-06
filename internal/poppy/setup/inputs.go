@@ -85,6 +85,8 @@ type Flags struct {
 	GuestScopes    []string
 	GuestAllScopes bool
 	ForceConfig    bool
+	// WebUnscoped is the web.unscoped flag. Nil means it was not passed.
+	WebUnscoped *bool
 }
 
 // Inputs holds the validated values of the flags and of the answers to the
@@ -114,6 +116,10 @@ type Inputs struct {
 	// is set, else no guest grant.
 	GuestScopes map[string][]string
 	ForceConfig bool
+	// WebUnscoped is the owner's answer for web.unscoped, from the flag or from
+	// the question. Nil means it was not given, and the config file's value is
+	// kept.
+	WebUnscoped *bool
 }
 
 // Parse validates the flag values. Missing required values are not an error
@@ -127,6 +133,11 @@ func (f Flags) Parse() (Inputs, error) {
 		GuestAPIAccess: f.GuestAPIAccess,
 		GuestAllScopes: f.GuestAllScopes,
 		ForceConfig:    f.ForceConfig,
+	}
+
+	if f.WebUnscoped != nil {
+		unscoped := *f.WebUnscoped
+		in.WebUnscoped = &unscoped
 	}
 
 	for _, name := range f.GuestScopes {
@@ -770,7 +781,8 @@ func scopeDescriptionRequired(undescribed []undescribedScope) *InputError {
 				break
 			}
 
-			b.WriteString("\n         " + flag(name))
+			b.WriteString("\n         ")
+			b.WriteString(flag(name))
 		}
 
 		fix = b.String()

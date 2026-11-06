@@ -1,0 +1,9 @@
+Doctor for shop.example                                             protocol 0.3
+Issuer https://shop.example/
+
+Scopes
+  FAIL scope \x1b[2J\x1b[31mred forged line
+       FIX  run \x1b]0;title\x07
+            then \x0d check
+
+1 failed, 0 passed.

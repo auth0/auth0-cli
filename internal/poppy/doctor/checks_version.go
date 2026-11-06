@@ -116,7 +116,7 @@ func checkBrowserSignIn(doc *discovery.Poppy, issuer *discovery.AuthorizationSer
 
 	if isTrue(doc.Web.Unscoped) {
 		c.warn("D16", specBrowserJoin, "web.unscoped is true: check by hand that the description of "+scope+" says it gives full account access",
-			"Describe "+scope+" as access to everything the account can do on the website.")
+			"Describe "+scope+" as full access to the account on the website, for example \"Browse the website, and see and do anything your account can do there\".")
 	}
 
 	if doc.Web.BrowserSessionEndpoint == "" || isTrue(doc.Web.Disabled) || doc.Auth.Disabled {

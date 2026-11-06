@@ -61,6 +61,9 @@ type Inputs struct {
 	APIDescriptions map[string]string
 	// Hints holds scope hints by scope name.
 	Hints map[string]Hints
+	// WebUnscoped is the owner's answer for web.unscoped. Nil means it was not
+	// given, and the existing file's value is kept.
+	WebUnscoped *bool
 }
 
 // MergeOptions changes how Merge behaves.
@@ -69,14 +72,26 @@ type MergeOptions struct {
 	ForceConfig bool
 }
 
+// CheckIssuer returns an error that wraps ErrIssuerMismatch when the existing file
+// (which may be nil) has an issuer other than the given one, unless the options
+// allow overwriting it. Merge makes the same check.
+func CheckIssuer(existing *Config, issuer string, opts MergeOptions) error {
+	if existing != nil && existing.Issuer != "" && existing.Issuer != issuer && !opts.ForceConfig {
+		return fmt.Errorf("%w: the file has %q and the tenant has %q", ErrIssuerMismatch, existing.Issuer, issuer)
+	}
+
+	return nil
+}
+
 // Merge builds the config to write from the values derived from the tenant,
 // the existing file (which may be nil) and the inputs. It does not modify its
 // arguments.
 //
 // The result is always at the current protocol version, so a file written at an
 // older supported version is upgraded. The web.unscoped and web.disabled settings
-// of the existing file are kept, because only the website owner knows them, and
-// so is every member of the file that the CLI does not use, such as agent,
+// of the existing file are kept, because only the website owner knows them, except
+// that an input for web.unscoped (the owner's answer) overrides the file's value.
+// So is every member of the file that the CLI does not use, such as agent,
 // feedback or extensions.
 //
 // Tenant-derived values always win over the existing file. For values Auth0
@@ -96,8 +111,8 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 		return nil, errors.New("the values derived from the tenant are required")
 	}
 
-	if existing != nil && existing.Issuer != "" && existing.Issuer != derived.Issuer && !opts.ForceConfig {
-		return nil, fmt.Errorf("%w: the file has %q and the tenant has %q", ErrIssuerMismatch, existing.Issuer, derived.Issuer)
+	if err := CheckIssuer(existing, derived.Issuer, opts); err != nil {
+		return nil, err
 	}
 	if existing == nil {
 		existing = &Config{}
@@ -117,6 +132,7 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 		Web: Web{
 			BrowserSessionEndpoint: existing.Web.BrowserSessionEndpoint,
 			Unscoped:               existing.Web.Unscoped,
+			UnscopedSet:            existing.Web.UnscopedSet,
 			Disabled:               existing.Web.Disabled,
 		},
 		extra: existing.extra.clone(),
@@ -137,6 +153,10 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 
 	if out.Issuer != "" && in.ClientID != "" {
 		out.Web.BrowserSessionEndpoint = BrowserSessionEndpoint(out.Issuer, in.ClientID)
+	}
+
+	if in.WebUnscoped != nil {
+		out.Web.Unscoped, out.Web.UnscopedSet = *in.WebUnscoped, true
 	}
 
 	for name, scope := range existing.Scopes {

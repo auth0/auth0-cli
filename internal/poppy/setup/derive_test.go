@@ -89,6 +89,47 @@ func TestDeriveErrors(t *testing.T) {
 	})
 }
 
+func TestCheckIssuer(t *testing.T) {
+	tests := []struct {
+		name    string
+		change  func(state *State, in *Inputs)
+		wantErr bool
+	}{
+		{name: "the file has the issuer of the tenant", change: func(*State, *Inputs) {}},
+		{name: "there is no file", change: func(state *State, _ *Inputs) { state.File = nil }},
+		{name: "the file has no issuer", change: func(state *State, _ *Inputs) { state.File.Issuer = "" }},
+		{name: "the file has another issuer", change: func(state *State, _ *Inputs) { state.CustomDomain = "login.other.example" }, wantErr: true},
+		{
+			name: "another issuer is allowed with force",
+			change: func(state *State, in *Inputs) {
+				state.CustomDomain = "login.other.example"
+				in.ForceConfig = true
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state, in := configuredState(t), configuredInputs()
+			test.change(state, &in)
+
+			err := CheckIssuer(state, in)
+
+			if !test.wantErr {
+				assert.NoError(t, err)
+
+				return
+			}
+
+			require.ErrorIs(t, err, config.ErrIssuerMismatch)
+
+			_, deriveErr := Derive(state, in)
+			require.Error(t, deriveErr)
+			assert.Equal(t, deriveErr.Error(), err.Error(), "the same error as Derive")
+		})
+	}
+}
+
 func TestReady(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -67,6 +67,10 @@ func Command(in Inputs, opts CommandOptions) []string {
 
 	parts = append(parts, guestFlags(in)...)
 
+	if in.WebUnscoped != nil {
+		parts = append(parts, fmt.Sprintf("--web-unscoped=%t", *in.WebUnscoped))
+	}
+
 	if in.ForceConfig {
 		parts = append(parts, "--force-config")
 	}
@@ -135,7 +139,8 @@ func FormatCommand(label string, parts []string, width int) string {
 
 	for _, part := range parts[1:] {
 		if utf8.RuneCountInString(line)+1+utf8.RuneCountInString(part)+2 > width {
-			b.WriteString(line + " \\\n")
+			b.WriteString(line)
+			b.WriteString(" \\\n")
 			line = indent + part
 
 			continue

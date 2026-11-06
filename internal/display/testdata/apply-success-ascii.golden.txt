@@ -1,0 +1,6 @@
+Applying 16 changes
+  ok Tenant settings                        5 changes
+  ok API                                    7 changes
+  ok App Shop Web                           2 changes
+  ok Guest grant https://api.shop.example   1 change
+  ok auth0-poppy.json                       written

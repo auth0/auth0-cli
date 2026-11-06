@@ -116,10 +116,15 @@ type API struct {
 type Web struct {
 	BrowserSessionEndpoint string
 	// Unscoped and Disabled are the web.unscoped and web.disabled settings of
-	// poppy.json (protocol 0.4). Only the owner of the website knows them, so
-	// the CLI never sets them: it keeps what an existing file has.
+	// poppy.json (protocol 0.4). Only the owner of the website knows them. The
+	// CLI sets Unscoped only from the owner's answer (a flag or a question) and
+	// otherwise keeps what an existing file has. It never sets Disabled.
 	Unscoped bool
 	Disabled bool
+	// UnscopedSet tells that the file has the web.unscoped member, or that the CLI
+	// set it, so that an explicit false differs from an absent member. A true
+	// Unscoped is always written, whatever UnscopedSet says.
+	UnscopedSet bool
 }
 
 // BrowserSessionEndpoint returns the browser join address for a web app. The

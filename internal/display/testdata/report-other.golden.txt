@@ -1,0 +1,11 @@
+Doctor for shop.example                                             protocol 0.3
+Issuer https://shop.example/
+
+Auth0 issuer
+  ✓ issuer matches https://shop.example/
+
+Other
+  ✓ a check this CLI does not know
+  WARN a result without an ID
+
+1 warning, 2 passed.
