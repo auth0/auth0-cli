@@ -205,3 +205,66 @@ func TestPortalsTenant_Roles(t *testing.T) {
 		server.received(http.MethodPost, "roles/rol_1/permissions")[0].Body,
 	)
 }
+
+// A dry run answers every read about something it would create, such as an organization, with an empty
+// object, and counts on each listing reading that as an empty list.
+func TestPortalsTenant_AnEmptyObjectIsAnEmptyList(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+		list func(tenant *portalsTenant) (int, error)
+	}{
+		{
+			name: "the roles of a member",
+			path: "organizations/org_new/members/auth0%7Cabc/roles",
+			list: func(tenant *portalsTenant) (int, error) {
+				roles, err := tenant.ListMemberRoles(context.Background(), "org_new", "auth0|abc")
+
+				return len(roles), err
+			},
+		},
+		{
+			name: "the connections of an organization",
+			path: "organizations/org_new/enabled_connections",
+			list: func(tenant *portalsTenant) (int, error) {
+				ids, err := tenant.ListOrganizationConnections(context.Background(), "org_new")
+
+				return len(ids), err
+			},
+		},
+		{
+			name: "the permissions of a role",
+			path: "roles/rol_new/permissions",
+			list: func(tenant *portalsTenant) (int, error) {
+				permissions, err := tenant.ListRolePermissions(context.Background(), "rol_new")
+
+				return len(permissions), err
+			},
+		},
+		{
+			name: "the connections of an application",
+			path: "clients/cli_new/connections",
+			list: func(tenant *portalsTenant) (int, error) {
+				connections, err := tenant.ListClientConnections(context.Background(), "cli_new")
+
+				return len(connections), err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			server, tenant := newPortalsServer(t)
+			server.reply(http.MethodGet, tt.path, 200, `{}`)
+
+			count, err := tt.list(tenant)
+
+			require.NoError(t, err)
+			assert.Zero(t, count)
+		})
+	}
+}

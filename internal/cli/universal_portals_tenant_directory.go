@@ -152,6 +152,11 @@ func (t *portalsTenant) ListOrganizationConnections(ctx context.Context, id stri
 			return nil, false, err
 		}
 
+		// A dry run answers a read about an organization it would create with an empty object.
+		if list == nil {
+			return nil, false, nil
+		}
+
 		return list.OrganizationConnections, list.HasNext(), nil
 	})
 	if err != nil {
@@ -185,6 +190,11 @@ func (t *portalsTenant) ListMemberRoles(ctx context.Context, id, userID string) 
 		list, err := t.api.Organization.MemberRoles(ctx, id, userID, opts...)
 		if err != nil {
 			return nil, false, err
+		}
+
+		// A dry run answers a read about an organization it would create with an empty object.
+		if list == nil {
+			return nil, false, nil
 		}
 
 		return list.Roles, list.HasNext(), nil
@@ -248,6 +258,11 @@ func (t *portalsTenant) ListRolePermissions(ctx context.Context, roleID string) 
 		list, err := t.api.Role.Permissions(ctx, roleID, opts...)
 		if err != nil {
 			return nil, false, err
+		}
+
+		// A dry run answers a read about a role it would create with an empty object.
+		if list == nil {
+			return nil, false, nil
 		}
 
 		return list.Permissions, list.HasNext(), nil
