@@ -111,10 +111,6 @@ func Setup(ctx context.Context, options SetupOptions, deps SetupDeps) (SetupResu
 		}
 	}
 
-	if options.Template != TemplateConsumer {
-		return SetupResult{}, &UsageError{Message: "the business template is not available yet"}
-	}
-
 	run := &setupRun{options: options, deps: deps, tenant: deps.TenantDomain}
 
 	return run.execute(ctx)
@@ -162,11 +158,28 @@ func (r *setupRun) execute(ctx context.Context) (SetupResult, error) {
 		}
 	}
 
+	// A run that cannot ask has to be told the user up front.
+	if options.Template == TemplateBusiness && options.UserQuery == "" && !r.deps.Interactive {
+		return SetupResult{}, &BusinessAccessError{
+			Message: "A Business portal needs the user who will test it",
+			Hints:   []string{"Rerun with --user <email or user id>."},
+		}
+	}
+
 	appName := portalName(options.Name)
 
 	slug, err := r.availableSlug(ctx, options.Slug, appName)
 	if err != nil {
 		return SetupResult{}, err
+	}
+
+	// The test user, or the organization of the link, is settled before anything is created.
+	var link testLink
+
+	if options.Template == TemplateBusiness {
+		if link, err = r.chooseTestLink(ctx); err != nil {
+			return SetupResult{}, err
+		}
 	}
 
 	host, err := resolvePortalHost(ctx, r.deps.API, r.tenant)
@@ -193,12 +206,16 @@ func (r *setupRun) execute(ctx context.Context) (SetupResult, error) {
 		return SetupResult{}, err
 	}
 
+	if link.isPlaceholder {
+		r.report().Info(fmt.Sprintf("Replace %s in the link with the organization ID to test with.", organizationPlaceholder))
+	}
+
 	return SetupResult{
 		Template: options.Template,
 		Portal: PortalResult{
 			ID:     portal.value.ID,
 			Slug:   portal.value.Slug,
-			URL:    portalURL(host.domain, portal.value.Slug, ""),
+			URL:    portalURL(host.domain, portal.value.Slug, link.organizationID),
 			Status: portal.status,
 		},
 		Application: ApplicationResult{ClientID: client.value.clientID, Status: client.status},
@@ -208,7 +225,8 @@ func (r *setupRun) execute(ctx context.Context) (SetupResult, error) {
 			CommunicationPreferences: formResult(forms[FormCommunicationPreferences]),
 			PrivacyConsent:           formResult(forms[FormPrivacyConsent]),
 		},
-		Resources: r.resources,
+		Resources:    r.resources,
+		Organization: link.result(),
 	}, nil
 }
 
@@ -607,4 +625,13 @@ func AskForMissing(options SetupOptions, prompter Prompter) (SetupOptions, error
 	}
 
 	return options, nil
+}
+
+// result is the organization of the result of setup, set when a test user was chosen.
+func (l testLink) result() *OrganizationResult {
+	if l.access == nil {
+		return nil
+	}
+
+	return &OrganizationResult{ID: l.access.organizationID, Name: l.access.organizationName, HasRole: l.access.hasOrganizationRole}
 }

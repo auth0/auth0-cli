@@ -228,3 +228,16 @@ func (e *ClientSecretUnreadableError) Fixes() []string {
 func asSlugTaken(err error) (*SlugTakenError, bool) {
 	return errors.AsType[*SlugTakenError](err)
 }
+
+// BusinessAccessError means the user who will test a business portal cannot be used, or has no
+// access to an organization. Setup checks it before it creates anything.
+type BusinessAccessError struct {
+	Message string
+	// Hints are the steps that resolve it.
+	Hints []string
+}
+
+func (e *BusinessAccessError) Error() string { return e.Message }
+
+// Fixes returns the steps that resolve the error.
+func (e *BusinessAccessError) Fixes() []string { return e.Hints }
