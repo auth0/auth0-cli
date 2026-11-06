@@ -70,7 +70,7 @@ func TestPoppyCommands(t *testing.T) {
 			path: []string{"poppy", "setup"},
 			flags: []string{
 				"company-domain", "api", "api-url", "app", "scope", "hint", "name", "login-uri", "out",
-				"dry-run", "yes", "skip-doctor", "guest-api-access", "guest-scopes", "guest-all-scopes", "force-config", "json", "json-compact",
+				"dry-run", "yes", "skip-doctor", "guest-api-access", "guest-scopes", "guest-all-scopes", "web-unscoped", "force-config", "json", "json-compact",
 			},
 		},
 		{
@@ -78,7 +78,7 @@ func TestPoppyCommands(t *testing.T) {
 			path: []string{"poppy", "config"},
 			flags: []string{
 				"company-domain", "api", "api-url", "app", "hint", "name", "out",
-				"force-config", "json", "json-compact",
+				"web-unscoped", "force-config", "json", "json-compact",
 			},
 		},
 		{
@@ -588,6 +588,16 @@ func installPoppyAsker(t *testing.T, mode poppyPromptMode) *[]string {
 			},
 			all: func() (bool, error) {
 				asked = append(asked, "guest scopes")
+
+				return true, nil
+			},
+			note: func(string, ...any) {},
+		}
+	}
+	poppyAsk.web = func(*poppyScreen) poppyWebPrompts {
+		return poppyWebPrompts{
+			unscoped: func() (bool, error) {
+				asked = append(asked, "web access")
 
 				return true, nil
 			},
@@ -2358,7 +2368,7 @@ func checkPoppySetupPromptRows(t *testing.T, tenant poppyTenantState, extra []st
 func TestPoppySetupPromptRule(t *testing.T) {
 	const plan = "Poppy setup for shop.example"
 
-	asks := []string{"hints", "guest access", "guest scopes", "confirm"}
+	asks := []string{"hints", "guest access", "guest scopes", "web access", "confirm"}
 
 	checkPoppySetupPromptRows(t, freshPoppyTenant(), []string{"--skip-doctor"}, []poppyPromptRow{
 		{name: "terminal", mode: modeTerminal, asked: asks, text: "Applying"},
@@ -2377,7 +2387,7 @@ func TestPoppySetupPromptRuleScopeDescription(t *testing.T) {
 		missing = "FIX  Pass --scope 'checkout=<what this lets an agent do>'."
 	)
 
-	asks := []string{"text Text", "hints", "confirm"}
+	asks := []string{"text Text", "hints", "web access", "confirm"}
 
 	tenant := freshPoppyTenant()
 	tenant.server.Scopes[1].Description = nil
@@ -2399,7 +2409,7 @@ func TestPoppySetupPromptRuleGuestScopes(t *testing.T) {
 		missing = "pass --guest-scopes or --guest-all-scopes"
 	)
 
-	asks := []string{"hints", "guest scopes"}
+	asks := []string{"hints", "guest scopes", "web access"}
 
 	checkPoppySetupPromptRows(t, freshPoppyTenant(), []string{"--skip-doctor", "--yes", "--guest-api-access"}, []poppyPromptRow{
 		{name: "terminal", mode: modeTerminal, asked: asks, text: "Applying"},
@@ -2414,10 +2424,11 @@ func TestPoppySetupPromptRuleGuestScopes(t *testing.T) {
 
 func TestPoppyConfigPromptRule(t *testing.T) {
 	// A terminal is asked about the hints of the scopes, and the test terminal
-	// cannot take the question back, so it stays on the screen.
+	// cannot take the question back, so it stays on the screen. Then it is asked
+	// about web.unscoped, as the file has no value for it.
 	const question = "Hints for your scopes"
 
-	asks := []string{"hints"}
+	asks := []string{"hints", "web access"}
 
 	tests := []poppyPromptRow{
 		{name: "terminal", mode: modeTerminal, asked: asks, text: "written"},

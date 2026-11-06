@@ -5,7 +5,7 @@ has_toc: false
 ---
 # auth0 poppy config
 
-(Experimental) Rebuilds the config file from the tenant without changing the tenant, so CI and deploys can refresh it safely. It reads the tenant, adds the values Auth0 does not store, and writes the file. If the tenant is not set up for Poppy, it exits with an error naming the missing setting. The config file is for one website, so with several company domains pass `--company-domain` to pick the one this app serves. The file is a protocol 0.4 `poppy.json` document and nothing else, so your web SDK can serve it as `/.well-known/poppy.json`. A file written for 0.3 is upgraded, and members of the file that the CLI does not use are kept. The file holds no API identifier and no web app, so without `--api` the APIs are the Poppy APIs of the tenant that the `apis` entries of the existing file are at, and without `--app` the web app is the only app of the tenant that has the browser join on. When that does not settle on one, the command stops and asks for `--api` or `--app`.
+(Experimental) Rebuilds the config file from the tenant without changing the tenant, so CI and deploys can refresh it safely. It reads the tenant, adds the values Auth0 does not store, and writes the file. If the tenant is not set up for Poppy, it exits with an error naming the missing setting. The config file is for one website, so with several company domains pass `--company-domain` to pick the one this app serves. The file is a protocol 0.4 `poppy.json` document and nothing else, so your web SDK can serve it as `/.well-known/poppy.json`. A file written for 0.3 is upgraded, and members of the file that the CLI does not use are kept. In a terminal it asks whether signing in to the browser gives an agent full access to the user's account on your website (`web.unscoped`), unless you pass `--web-unscoped` or the file already has a value. The file holds no API identifier and no web app, so without `--api` the APIs are the Poppy APIs of the tenant that the `apis` entries of the existing file are at, and without `--app` the web app is the only app of the tenant that has the browser join on. When that does not settle on one, the command stops and asks for `--api` or `--app`.
 
 **Warning:** This command is experimental and is subject to change in future versions.
 
@@ -36,6 +36,7 @@ auth0 poppy config [flags]
       --json-compact            Output in compact json format.
       --name string             The Company's name for the config file. When registering an agent, the agent's name.
       --out string              Path of the config file. (default "auth0-poppy.json")
+      --web-unscoped            Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. auth0 poppy doctor then reminds you to check the description of poppy:browser-sign-in. Asked in a terminal when the config file has no value.
 ```
 
 

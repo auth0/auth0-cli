@@ -960,3 +960,41 @@ func TestPoppyChangeCount(t *testing.T) {
 	assert.Equal(t, "1 change", PoppyChangeCount(1))
 	assert.Equal(t, "3 changes", PoppyChangeCount(3))
 }
+
+func TestPoppyWebAnswers(t *testing.T) {
+	yes, no := true, false
+
+	tests := []struct {
+		name string
+		in   setup.Inputs
+		want string
+	}{
+		{name: "not given, no row", in: setup.Inputs{}},
+		{name: "true", in: setup.Inputs{WebUnscoped: &yes}, want: "  Web access    web.unscoped true\n"},
+		{name: "false", in: setup.Inputs{WebUnscoped: &no}, want: "  Web access    web.unscoped false\n"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := poppyHintsText(unicode80, test.in)
+
+			if test.want == "" {
+				assert.Empty(t, got)
+
+				return
+			}
+
+			assert.Equal(t, "Your answers\n"+test.want, got)
+		})
+	}
+
+	t.Run("the plan lists it among the answers", func(t *testing.T) {
+		state, in := poppyRichTenant(t)
+		in.WebUnscoped = &yes
+
+		out := poppyPlanText(unicode80, poppyBuildPlan(t, state, in), PoppySetupOptions{Inputs: in, DryRun: true})
+
+		assert.Contains(t, out, "  Web access    web.unscoped true\n")
+		assert.Contains(t, out, "--web-unscoped=true", "the command to apply repeats the answer")
+	})
+}

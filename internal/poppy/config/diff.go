@@ -91,8 +91,8 @@ func flatten(c *Config) map[string]string {
 
 	set("web.browser_session_endpoint", c.Web.BrowserSessionEndpoint)
 
-	if c.Web.Unscoped {
-		set("web.unscoped", "true")
+	if c.Web.UnscopedSet || c.Web.Unscoped {
+		set("web.unscoped", strconv.FormatBool(c.Web.Unscoped))
 	}
 
 	if c.Web.Disabled {

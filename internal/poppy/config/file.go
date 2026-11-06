@@ -50,7 +50,7 @@ type fileDoc struct {
 	Web *struct {
 		BrowserSessionEndpoint string `json:"browser_session_endpoint"`
 		Disabled               bool   `json:"disabled"`
-		Unscoped               bool   `json:"unscoped"`
+		Unscoped               *bool  `json:"unscoped"`
 	} `json:"web"`
 }
 
@@ -108,7 +108,12 @@ func decode(data []byte) (*Config, error) {
 	}
 
 	if doc.Web != nil {
-		cfg.Web = Web{BrowserSessionEndpoint: doc.Web.BrowserSessionEndpoint, Disabled: doc.Web.Disabled, Unscoped: doc.Web.Unscoped}
+		cfg.Web = Web{
+			BrowserSessionEndpoint: doc.Web.BrowserSessionEndpoint,
+			Disabled:               doc.Web.Disabled,
+			Unscoped:               doc.Web.Unscoped != nil && *doc.Web.Unscoped,
+			UnscopedSet:            doc.Web.Unscoped != nil,
+		}
 		cfg.extra.web = without(rawObjectOf(top["web"]), webOrder...)
 		cfg.extra.emptyWeb = cfg.Web == Web{} && cfg.extra.web == nil
 	}
@@ -325,8 +330,8 @@ func (c *Config) webOut(put putFunc) rawMembers {
 		put(m, "disabled", true)
 	}
 
-	if c.Web.Unscoped {
-		put(m, "unscoped", true)
+	if c.Web.Unscoped || c.Web.UnscopedSet {
+		put(m, "unscoped", c.Web.Unscoped)
 	}
 
 	return rawMembers{m, webOrder}

@@ -67,6 +67,10 @@ func Command(in Inputs, opts CommandOptions) []string {
 
 	parts = append(parts, guestFlags(in)...)
 
+	if in.WebUnscoped != nil {
+		parts = append(parts, fmt.Sprintf("--web-unscoped=%t", *in.WebUnscoped))
+	}
+
 	if in.ForceConfig {
 		parts = append(parts, "--force-config")
 	}

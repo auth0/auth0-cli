@@ -844,14 +844,15 @@ func poppyAnswers(l PoppyLayout, p setup.Plan, in setup.Inputs) string {
 
 	rows = append(rows, poppyGuestAnswers(p, in)...)
 	rows = append(rows, poppyHintAnswers(in)...)
+	rows = append(rows, poppyWebAnswers(in)...)
 
 	return poppyAnswersText(l, rows)
 }
 
 // poppyHintsText is the answers block of a run that has no plan, with only the
-// hints. It is empty when there are no hints.
+// hints and the answer about the website. It is empty when there are neither.
 func poppyHintsText(l PoppyLayout, in setup.Inputs) string {
-	rows := poppyHintAnswers(in)
+	rows := append(poppyHintAnswers(in), poppyWebAnswers(in)...)
 	if len(rows) == 0 {
 		return ""
 	}
@@ -909,6 +910,16 @@ func poppyHintAnswers(in setup.Inputs) []poppyAnswerRow {
 	}
 
 	return []poppyAnswerRow{{label: "Hints", value: lines[0], more: lines[1:]}}
+}
+
+// poppyWebAnswers says what the owner decided about web.unscoped, when this run was
+// given a value for it, by a flag or by an answer.
+func poppyWebAnswers(in setup.Inputs) []poppyAnswerRow {
+	if in.WebUnscoped == nil {
+		return nil
+	}
+
+	return []poppyAnswerRow{{label: "Web access", value: fmt.Sprintf("web.unscoped %t", *in.WebUnscoped)}}
 }
 
 // poppyGuestAnswers says what the run decided about the guest grant: the scopes of

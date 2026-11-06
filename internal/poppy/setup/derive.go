@@ -46,6 +46,17 @@ func (s *State) CompanyDomain(in Inputs) (domain string, choices []string) {
 	return "", hosts
 }
 
+// AsksWebUnscoped tells whether web.unscoped is still a question for the owner: it
+// was not given as an input, and the config file has no value for it. A file that
+// says false was answered already.
+func (s *State) AsksWebUnscoped(in Inputs) bool {
+	if in.WebUnscoped != nil {
+		return false
+	}
+
+	return s.File == nil || (!s.File.Web.UnscopedSet && !s.File.Web.Unscoped)
+}
+
 // Ready checks that the tenant is set up for Poppy, for the settings that the
 // config file depends on: the company domain is listed, each API has Poppy on and
 // the browser join is on. It returns a *NotReadyError naming every setting that
@@ -140,6 +151,7 @@ func derive(state *State, in Inputs, scopes map[string]apiScopes) (*config.Confi
 		APIs:             given,
 		APIDescriptions:  descriptions,
 		Hints:            in.Hints,
+		WebUnscoped:      in.WebUnscoped,
 	}, config.MergeOptions{ForceConfig: in.ForceConfig})
 
 	var ambiguous *config.AmbiguousAPIError

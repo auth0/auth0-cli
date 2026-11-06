@@ -61,6 +61,9 @@ type Inputs struct {
 	APIDescriptions map[string]string
 	// Hints holds scope hints by scope name.
 	Hints map[string]Hints
+	// WebUnscoped is the owner's answer for web.unscoped. Nil means it was not
+	// given, and the existing file's value is kept.
+	WebUnscoped *bool
 }
 
 // MergeOptions changes how Merge behaves.
@@ -86,8 +89,9 @@ func CheckIssuer(existing *Config, issuer string, opts MergeOptions) error {
 //
 // The result is always at the current protocol version, so a file written at an
 // older supported version is upgraded. The web.unscoped and web.disabled settings
-// of the existing file are kept, because only the website owner knows them, and
-// so is every member of the file that the CLI does not use, such as agent,
+// of the existing file are kept, because only the website owner knows them, except
+// that an input for web.unscoped (the owner's answer) overrides the file's value.
+// So is every member of the file that the CLI does not use, such as agent,
 // feedback or extensions.
 //
 // Tenant-derived values always win over the existing file. For values Auth0
@@ -128,6 +132,7 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 		Web: Web{
 			BrowserSessionEndpoint: existing.Web.BrowserSessionEndpoint,
 			Unscoped:               existing.Web.Unscoped,
+			UnscopedSet:            existing.Web.UnscopedSet,
 			Disabled:               existing.Web.Disabled,
 		},
 		extra: existing.extra.clone(),
@@ -148,6 +153,10 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 
 	if out.Issuer != "" && in.ClientID != "" {
 		out.Web.BrowserSessionEndpoint = BrowserSessionEndpoint(out.Issuer, in.ClientID)
+	}
+
+	if in.WebUnscoped != nil {
+		out.Web.Unscoped, out.Web.UnscopedSet = *in.WebUnscoped, true
 	}
 
 	for name, scope := range existing.Scopes {

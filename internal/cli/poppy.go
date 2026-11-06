@@ -49,6 +49,7 @@ type poppyAsker struct {
 	choose     func(s *poppyScreen, message string, options []string, def int) (int, error)
 	chooseMany func(s *poppyScreen, message string, options []string, defaults []int) ([]int, error)
 	guest      func(s *poppyScreen) poppyGuestPrompts
+	web        func(s *poppyScreen) poppyWebPrompts
 }
 
 var poppyAsk = poppyAsker{
@@ -60,6 +61,7 @@ var poppyAsk = poppyAsker{
 	choose:     terminalPoppyChoose,
 	chooseMany: terminalPoppyChooseMany,
 	guest:      terminalPoppyGuestPrompts,
+	web:        terminalPoppyWebPrompts,
 }
 
 // poppyEraseHook makes the hook that tells whether the lines of a question can be
@@ -153,6 +155,11 @@ var (
 		Name:     "Guest All Scopes",
 		LongForm: "guest-all-scopes",
 		Help:     "The guest grant carries every scope of the API. Only affects the guest grant; use --scope (singular) to describe scopes. Needs --guest-api-access. Mutually exclusive with --guest-scopes.",
+	}
+	poppyWebUnscoped = Flag{
+		Name:     "Web Unscoped",
+		LongForm: "web-unscoped",
+		Help:     "Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. auth0 poppy doctor then reminds you to check the description of poppy:browser-sign-in. Asked in a terminal when the config file has no value.",
 	}
 	poppyForceConfig = Flag{
 		Name:     "Force Config",
@@ -388,8 +395,9 @@ type poppySetupOptions struct {
 
 func poppySetupCmd(cli *cli) *cobra.Command {
 	var (
-		flags setup.Flags
-		opts  poppySetupOptions
+		flags       setup.Flags
+		opts        poppySetupOptions
+		webUnscoped bool
 	)
 
 	cmd := &cobra.Command{
@@ -407,6 +415,8 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 			"setup, because your website may not serve the config file until you deploy it. With `--guest-api-access` the " +
 			"guest grant carries only the scopes you choose, with `--guest-scopes` or `--guest-all-scopes`; in a terminal " +
 			"setup asks, and it also asks whether to let signed-out guests use the API when no guest grant exists yet. " +
+			"It also asks whether your website treats `poppy:browser-sign-in` as the account's full access on the website, " +
+			"which sets `web.unscoped` in the config file, unless you pass `--web-unscoped` or the file already has a value. " +
 			"Setup adds the scope `poppy:browser-sign-in` to each API when it is missing, with a default description " +
 			"unless you give one with `--scope`; every other scope offered to agents needs a description, which a terminal asks for " +
 			"and otherwise comes from `--scope <name>=<description>`."),
@@ -415,6 +425,8 @@ func poppySetupCmd(cli *cli) *cobra.Command {
   auth0 poppy setup --company-domain shop.example --api https://api.shop.example --app "Shop Web" --guest-api-access --guest-scopes orders:read --yes
   auth0 poppy setup --company-domain shop.example --api https://api.shop.example --app "Shop Web" --api-url https://api.shop.example=https://api.shop.example/openapi.json --login-uri https://shop.example/login --hint checkout=changes:irreversible,personal_data:true --yes`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			flags.WebUnscoped = poppyBoolIfChanged(cmd, poppyWebUnscoped.LongForm, webUnscoped)
+
 			return runPoppySetup(cmd, cli, flags, opts)
 		},
 	}
@@ -434,6 +446,7 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 	poppyGuestAPIAccess.RegisterBool(cmd, &flags.GuestAPIAccess, false)
 	poppyGuestScopes.RegisterStringSlice(cmd, &flags.GuestScopes, nil)
 	poppyGuestAllScopes.RegisterBool(cmd, &flags.GuestAllScopes, false)
+	poppyWebUnscoped.RegisterBool(cmd, &webUnscoped, false)
 	poppyForceConfig.RegisterBool(cmd, &flags.ForceConfig, false)
 	registerPoppyOutputFlags(cmd, cli)
 	cmd.MarkFlagsMutuallyExclusive(poppyGuestScopes.LongForm, poppyGuestAllScopes.LongForm)
@@ -503,6 +516,10 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 	}
 
 	if err := choosePoppyGuestScopes(poppyAsk.canPrompt(cmd), poppyAsk.guest(screen), state, &in); err != nil {
+		return err
+	}
+
+	if err := askPoppyWebUnscoped(poppyAsk.canPrompt(cmd), poppyAsk.web(screen), state, &in); err != nil {
 		return err
 	}
 
@@ -892,6 +909,54 @@ func askPoppyGuestScopes(prompts poppyGuestPrompts, state *setup.State, in *setu
 	return nil
 }
 
+// The wording of the question about web.unscoped. The text is the question
+// itself; the note follows a Yes.
+const (
+	poppyWebUnscopedTitle = "Website access"
+	poppyWebUnscopedText  = "Does your website treat poppy:browser-sign-in as the account's full access on the website? If yes, web.unscoped is set to true."
+	poppyWebUnscopedNote  = "Make sure the description of poppy:browser-sign-in says so, for example \"Browse the website, and see and do anything your account can do there\". auth0 poppy doctor reminds you."
+)
+
+// poppyWebPrompts are the questions about the website. Tests replace them.
+type poppyWebPrompts struct {
+	// Unscoped asks whether the browser join gives an agent full account access.
+	unscoped func() (bool, error)
+	// Note tells the user something that is not an error.
+	note func(format string, args ...any)
+}
+
+func terminalPoppyWebPrompts(s *poppyScreen) poppyWebPrompts {
+	return poppyWebPrompts{
+		note: s.Note,
+		unscoped: func() (bool, error) {
+			return s.confirmAsk(poppyWebUnscopedTitle, "", poppyWebUnscopedText)
+		},
+	}
+}
+
+// askPoppyWebUnscoped asks, in a terminal, whether the browser join gives an agent
+// full access to the account of the user on the website. The answer goes into the
+// inputs as if --web-unscoped had given it. Nothing is asked when the flag was
+// passed or the config file already has a value.
+func askPoppyWebUnscoped(interactive bool, prompts poppyWebPrompts, state *setup.State, in *setup.Inputs) error {
+	if !interactive || !state.AsksWebUnscoped(*in) {
+		return nil
+	}
+
+	unscoped, err := prompts.unscoped()
+	if err != nil {
+		return err
+	}
+
+	in.WebUnscoped = &unscoped
+
+	if unscoped {
+		prompts.note("%s", poppyWebUnscopedNote)
+	}
+
+	return nil
+}
+
 // poppyGuestScopesRequiredError lists the scopes on offer, with their hints, for
 // a caller that cannot be asked.
 func poppyGuestScopesRequiredError(state *setup.State, in setup.Inputs) error {
@@ -958,7 +1023,10 @@ func poppySetupError(err error) error {
 }
 
 func poppyConfigCmd(cli *cli) *cobra.Command {
-	var flags setup.Flags
+	var (
+		flags       setup.Flags
+		webUnscoped bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "config",
@@ -970,7 +1038,9 @@ func poppyConfigCmd(cli *cli) *cobra.Command {
 			"file is for one website, so with several company domains pass `--company-domain` to pick the one this " +
 			"app serves. The file is a protocol 0.4 `poppy.json` document and nothing else, so your web SDK can " +
 			"serve it as `/.well-known/poppy.json`. A file written for 0.3 is upgraded, and members of the file that " +
-			"the CLI does not use are kept. The file holds no API identifier and no web app, so without `--api` the " +
+			"the CLI does not use are kept. In a terminal it asks whether signing in to the browser gives an agent full " +
+			"access to the user's account on your website (`web.unscoped`), unless you pass `--web-unscoped` or the file " +
+			"already has a value. The file holds no API identifier and no web app, so without `--api` the " +
 			"APIs are the Poppy APIs of the tenant that the `apis` entries of the existing file are at, and without " +
 			"`--app` the web app is the only app of the tenant that has the browser join on. When that does not " +
 			"settle on one, the command stops and asks for `--api` or `--app`."),
@@ -978,6 +1048,8 @@ func poppyConfigCmd(cli *cli) *cobra.Command {
   auth0 poppy config --company-domain shop.example --out ./config/auth0-poppy.json
   auth0 poppy config --company-domain shop.example --api https://api.shop.example --app "Shop Web" --json`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			flags.WebUnscoped = poppyBoolIfChanged(cmd, poppyWebUnscoped.LongForm, webUnscoped)
+
 			return runPoppyConfig(cmd, cli, flags)
 		},
 	}
@@ -989,10 +1061,21 @@ func poppyConfigCmd(cli *cli) *cobra.Command {
 	poppyHint.RegisterStringArray(cmd, &flags.Hints, nil)
 	poppyName.RegisterString(cmd, &flags.Name, "")
 	poppyOut.RegisterString(cmd, &flags.Out, config.DefaultFileName)
+	poppyWebUnscoped.RegisterBool(cmd, &webUnscoped, false)
 	poppyForceConfig.RegisterBool(cmd, &flags.ForceConfig, false)
 	registerPoppyOutputFlags(cmd, cli)
 
 	return cmd
+}
+
+// poppyBoolIfChanged returns the value of a bool flag, or nil when the flag was
+// not passed, so that a flag set to false differs from one left out.
+func poppyBoolIfChanged(cmd *cobra.Command, name string, value bool) *bool {
+	if !cmd.Flags().Changed(name) {
+		return nil
+	}
+
+	return &value
 }
 
 func runPoppyConfig(cmd *cobra.Command, cli *cli, flags setup.Flags) error {
@@ -1046,6 +1129,10 @@ func runPoppyConfig(cmd *cobra.Command, cli *cli, flags setup.Flags) error {
 		if unhinted, err = askPoppyHints(screen, setup.HintScopes(state, in, false), &in); err != nil {
 			return err
 		}
+	}
+
+	if err := askPoppyWebUnscoped(poppyAsk.canPrompt(cmd), poppyAsk.web(screen), state, &in); err != nil {
+		return err
 	}
 
 	cfg, err := setup.Derive(state, in)
