@@ -2,6 +2,7 @@ package portals_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"strings"
@@ -87,8 +88,9 @@ func TestSetup_TheResultIsTheJSONTheToolPrinted(t *testing.T) {
 
 	result := runSetup(t, portalstest.New(), consumerOptions())
 
-	got, err := result.JSON()
+	got, err := json.MarshalIndent(result, "", "  ")
 	require.NoError(t, err)
+	got = append(got, '\n')
 
 	want, err := os.ReadFile("testdata/consumer-setup.json")
 	require.NoError(t, err)

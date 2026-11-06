@@ -2,7 +2,6 @@ package portals
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -577,16 +576,6 @@ func portalURL(host, slug, organizationID string) string {
 	}
 
 	return address + "?organization=" + value
-}
-
-// JSON returns the result as indented JSON with a newline at the end, the way the command prints it.
-func (r SetupResult) JSON() ([]byte, error) {
-	data, err := json.MarshalIndent(r, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("encode the result of setup: %w", err)
-	}
-
-	return append(data, '\n'), nil
 }
 
 // AskForMissing asks for the choices that were not given, before anything is checked or created:
