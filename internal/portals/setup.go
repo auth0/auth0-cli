@@ -103,16 +103,53 @@ type OrganizationResult struct {
 // run left half done. Every resource is looked for by a stable key before it is created, and the
 // portal comes last, so rerunning the same command resumes.
 func Setup(ctx context.Context, options SetupOptions, deps SetupDeps) (SetupResult, error) {
-	if !options.Template.IsValid() {
-		return SetupResult{}, &UsageError{
-			Message: fmt.Sprintf("unknown template %q", options.Template),
-			Hints:   []string{"Use --template consumer or --template business."},
-		}
+	options, err := checkOptions(options, deps.Interactive)
+	if err != nil {
+		return SetupResult{}, err
 	}
 
 	run := &setupRun{options: options, deps: deps, tenant: deps.TenantDomain}
 
 	return run.execute(ctx)
+}
+
+// checkOptions tells what is wrong in the options before anything is sent, even the check of the
+// permissions, and returns them with the slug that was left empty made from the name.
+func checkOptions(options SetupOptions, interactive bool) (SetupOptions, error) {
+	if !options.Template.IsValid() {
+		return options, &UsageError{
+			Message: fmt.Sprintf("unknown template %q: use consumer or business", options.Template),
+			Hints:   []string{"Use --template consumer or --template business."},
+		}
+	}
+
+	if strings.TrimSpace(options.Name) == "" {
+		return options, &UsageError{
+			Message: "A portal needs a name",
+			Hints:   []string{"Use --name with the name of the portal."},
+		}
+	}
+
+	if options.Slug == "" {
+		options.Slug = SlugFromName(options.Name)
+	}
+
+	if !IsValidSlug(options.Slug) {
+		return options, &UsageError{
+			Message: fmt.Sprintf("The slug %q must match %s", options.Slug, SlugPattern),
+			Hints:   []string{"Use --slug with lowercase letters, digits and hyphens, starting with a letter."},
+		}
+	}
+
+	// A run that cannot ask has to be told the user up front.
+	if options.Template == TemplateBusiness && options.UserQuery == "" && !interactive {
+		return options, &BusinessAccessError{
+			Message: "A Business portal needs the user who will test it",
+			Hints:   []string{"Rerun with --user <email or user id>."},
+		}
+	}
+
+	return options, nil
 }
 
 // setupRun is one run of Setup.
@@ -148,21 +185,6 @@ func (r *setupRun) execute(ctx context.Context) (SetupResult, error) {
 
 	if err := r.checkPermissions(ctx); err != nil {
 		return SetupResult{}, err
-	}
-
-	if !IsValidSlug(options.Slug) {
-		return SetupResult{}, &UsageError{
-			Message: fmt.Sprintf("The slug %q must match %s", options.Slug, SlugPattern),
-			Hints:   []string{"Use --slug with lowercase letters, digits and hyphens, starting with a letter."},
-		}
-	}
-
-	// A run that cannot ask has to be told the user up front.
-	if options.Template == TemplateBusiness && options.UserQuery == "" && !r.deps.Interactive {
-		return SetupResult{}, &BusinessAccessError{
-			Message: "A Business portal needs the user who will test it",
-			Hints:   []string{"Rerun with --user <email or user id>."},
-		}
 	}
 
 	appName := portalName(options.Name)

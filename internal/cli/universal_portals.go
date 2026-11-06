@@ -81,23 +81,15 @@ type universalPortalsSetupInputs struct {
 	DryRun       bool
 }
 
-// options turns the flags into the options of setup, and checks them.
-func (i universalPortalsSetupInputs) options() (portals.SetupOptions, error) {
-	template := portals.Template(i.Template)
-	if i.Template != "" && !template.IsValid() {
-		return portals.SetupOptions{}, usageError{
-			err:    fmt.Errorf("unknown template %q: use consumer or business", i.Template),
-			reason: "invalid_input",
-		}
-	}
-
+// options turns the flags into the options of setup. Setup checks them.
+func (i universalPortalsSetupInputs) options() portals.SetupOptions {
 	return portals.SetupOptions{
-		Template:     template,
+		Template:     portals.Template(i.Template),
 		Name:         i.Name,
 		Slug:         i.Slug,
 		UserQuery:    i.User,
 		Organization: i.Organization,
-	}, nil
+	}
 }
 
 // missingForNoPrompt returns the flags a run that cannot ask has to be given.
@@ -187,10 +179,7 @@ func runUniversalPortalsSetupOn(
 	inputs universalPortalsSetupInputs,
 	target portalsSetupTarget,
 ) error {
-	options, err := inputs.options()
-	if err != nil {
-		return err
-	}
+	options := inputs.options()
 
 	interactive := canPrompt(cmd)
 	if missing := inputs.missingForNoPrompt(); !interactive && len(missing) > 0 {
@@ -295,10 +284,6 @@ func executeUniversalPortalsSetup(ctx context.Context, run universalPortalsSetup
 		if options, err = portals.AskForMissing(options, run.deps.Prompter); err != nil {
 			return portals.SetupResult{}, err
 		}
-	}
-
-	if options.Slug == "" {
-		options.Slug = portals.SlugFromName(options.Name)
 	}
 
 	return portals.Setup(ctx, options, run.deps)

@@ -460,6 +460,9 @@ func TestSetup_TheFormsVaultIsRefreshedWhenItsGrantGainsAScope(t *testing.T) {
 	assert.True(t, reporter.Contains("item", "Forms vault refreshed with the updated permissions"))
 }
 
+// What a person can get wrong in the options is told before anything is sent, even before the check
+// of the permissions: a session that lacks a scope should not have to fix it only to be told about a
+// typo in the slug.
 func TestSetup_RejectsWhatItCannotRun(t *testing.T) {
 	t.Parallel()
 
@@ -467,16 +470,31 @@ func TestSetup_RejectsWhatItCannotRun(t *testing.T) {
 		name    string
 		options portals.SetupOptions
 		want    string
+		wantErr any
 	}{
 		{
 			name:    "a slug the API would refuse",
 			options: portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme", Slug: "Not Valid"},
 			want:    `The slug "Not Valid" must match ^[a-z][a-z0-9-]{0,99}$`,
+			wantErr: new(*portals.UsageError),
 		},
 		{
 			name:    "a template nobody knows",
 			options: portals.SetupOptions{Template: "enterprise", Name: "Acme", Slug: "acme"},
-			want:    `unknown template "enterprise"`,
+			want:    `unknown template "enterprise": use consumer or business`,
+			wantErr: new(*portals.UsageError),
+		},
+		{
+			name:    "a name that is blank",
+			options: portals.SetupOptions{Template: portals.TemplateConsumer, Name: "  ", Slug: "acme"},
+			want:    "A portal needs a name",
+			wantErr: new(*portals.UsageError),
+		},
+		{
+			name:    "a business portal with nobody to ask for the user",
+			options: portals.SetupOptions{Template: portals.TemplateBusiness, Name: "Acme", Slug: "acme"},
+			want:    "A Business portal needs the user who will test it",
+			wantErr: new(*portals.BusinessAccessError),
 		},
 	}
 
@@ -489,11 +507,9 @@ func TestSetup_RejectsWhatItCannotRun(t *testing.T) {
 
 			_, err := portals.Setup(context.Background(), tt.options, deps)
 
-			var usage *portals.UsageError
-			require.ErrorAs(t, err, &usage)
+			require.ErrorAs(t, err, tt.wantErr)
 			assert.Equal(t, tt.want, err.Error())
-			assert.Empty(t, tenant.Clients())
-			assert.Empty(t, tenant.Portals())
+			assert.Empty(t, tenant.Calls(), "nothing is sent, not even a check of the permissions")
 		})
 	}
 }
@@ -584,4 +600,17 @@ func TestAskForMissing(t *testing.T) {
 
 		assert.ErrorIs(t, err, portals.ErrCancelled)
 	})
+}
+
+func TestSetup_ASlugLeftEmptyIsMadeFromTheName(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	deps, _, _ := newSetupDeps(tenant)
+
+	result, err := portals.Setup(context.Background(), portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme Account"}, deps)
+
+	require.NoError(t, err)
+	assert.Equal(t, "acme-account", tenant.Portals()[0].Slug)
+	assert.Equal(t, portals.StatusCreated, result.Portal.Status)
 }
