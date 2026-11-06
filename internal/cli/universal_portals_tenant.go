@@ -110,7 +110,7 @@ func listPages[T any](
 ) ([]T, error) {
 	var all []T
 
-	for page := 0; page < portalsMaxPages; page++ {
+	for page := range portalsMaxPages {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}

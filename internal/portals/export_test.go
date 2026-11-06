@@ -119,7 +119,7 @@ func BuildFormDocuments(vaultConnectionID string) (map[FormKey]map[string]any, e
 // FormIDs are the IDs of the forms a template uses.
 type FormIDs = formIDs
 
-// Template is the pages of a kind of portal.
+// PortalTemplate is the pages of a kind of portal.
 type PortalTemplate = portalTemplate
 
 func TemplateFor(template Template, forms FormIDs) (PortalTemplate, error) {

@@ -4,6 +4,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -36,8 +37,21 @@ func TestForEachParallel(t *testing.T) {
 		started.Add(maxParallel)
 
 		go func() {
-			// The first calls wait here until the limit is reached, which proves they run together.
-			started.Wait()
+			// The first calls wait here until the limit is reached, which proves they run together. If
+			// they never reach it the test fails, and the calls are let go so it does not hang.
+			reached := make(chan struct{})
+
+			go func() {
+				started.Wait()
+				close(reached)
+			}()
+
+			select {
+			case <-reached:
+			case <-time.After(5 * time.Second):
+				t.Error("the calls did not run at once")
+			}
+
 			close(release)
 		}()
 

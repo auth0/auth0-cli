@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 )
 
@@ -122,22 +123,12 @@ func formIDsOf(portal Portal) []string {
 			continue
 		}
 
-		if id, _ := component.Config["form_id"].(string); id != "" && !containsString(ids, id) {
+		if id, _ := component.Config["form_id"].(string); id != "" && !slices.Contains(ids, id) {
 			ids = append(ids, id)
 		}
 	}
 
 	return ids
-}
-
-func containsString(values []string, value string) bool {
-	for _, candidate := range values {
-		if candidate == value {
-			return true
-		}
-	}
-
-	return false
 }
 
 const formComponentType = "page:component:auth0:form"
@@ -153,10 +144,10 @@ func readSnapshot(ctx context.Context, api API, portalID, tenantDomain, organiza
 	result := snapshot{TenantDomain: tenantDomain, Portal: portal}
 
 	reads := []func() error{
-		func() (err error) { return result.readApplication(ctx, api) },
-		func() (err error) { return result.readResourceServers(ctx, api) },
-		func() (err error) { return result.readForms(ctx, api) },
-		func() (err error) { return result.readCustomDomain(ctx, api) },
+		func() error { return result.readApplication(ctx, api) },
+		func() error { return result.readResourceServers(ctx, api) },
+		func() error { return result.readForms(ctx, api) },
+		func() error { return result.readCustomDomain(ctx, api) },
 	}
 
 	if organizationID != "" {

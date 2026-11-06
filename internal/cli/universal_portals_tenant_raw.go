@@ -74,7 +74,7 @@ func (t *portalsTenant) rawJSONAt(ctx context.Context, method string, segments [
 func rawList[T any](ctx context.Context, t *portalsTenant, route, key string) ([]T, error) {
 	var all []T
 
-	for page := 0; page < portalsMaxPages; page++ {
+	for page := range portalsMaxPages {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
