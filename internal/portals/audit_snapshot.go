@@ -42,7 +42,7 @@ type snapshotOrganization struct {
 
 // host returns where the portal is served from: the custom domain when it is ready.
 func (s snapshot) host() string {
-	if s.CustomDomain != nil && s.CustomDomain.Status == "ready" {
+	if s.CustomDomain != nil && s.CustomDomain.IsReady() {
 		return s.CustomDomain.Domain
 	}
 

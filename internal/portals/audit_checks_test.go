@@ -329,6 +329,26 @@ func TestAudit_TheRulesThatAreNotBrokenStayQuiet(t *testing.T) {
 		assert.Contains(t, finding.Message, "https://auth.acme.com/portals/auth/callback")
 	})
 
+	t.Run("a custom domain that is ready but has no name is not where the portal is served", func(t *testing.T) {
+		t.Parallel()
+
+		current := healthySnapshot()
+		current.CustomDomain = &portals.CustomDomain{Status: "ready"}
+
+		// Setup uses the tenant domain for it, so the callback of a portal that setup made is right.
+		assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P012")
+	})
+
+	t.Run("custom code without a custom domain says the tenant has none", func(t *testing.T) {
+		t.Parallel()
+
+		current := healthySnapshot()
+		current.Portal.CustomCode = &portals.CustomCode{Head: "<script></script>"}
+
+		finding := findingNamed(t, portals.AuditFindings(current), "P008")
+		assert.Contains(t, finding.Message, "the tenant has no custom domain")
+	})
+
 	t.Run("custom code is fine once the tenant has a custom domain", func(t *testing.T) {
 		t.Parallel()
 

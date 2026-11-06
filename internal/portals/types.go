@@ -132,6 +132,9 @@ type CustomDomain struct {
 	Status string
 }
 
+// IsReady reports whether the portal is served from the domain: it is verified, and it has a name.
+func (d CustomDomain) IsReady() bool { return d.Status == "ready" && d.Domain != "" }
+
 // User is a user of the tenant.
 type User struct {
 	ID    string

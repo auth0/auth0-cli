@@ -571,7 +571,7 @@ func resolvePortalHost(ctx context.Context, store CustomDomainStore, tenantDomai
 		return portalHost{}, fmt.Errorf("read the custom domain: %w", err)
 	}
 
-	if custom.Status == "ready" && custom.Domain != "" {
+	if custom.IsReady() {
 		return portalHost{domain: custom.Domain, isCustom: true}, nil
 	}
 

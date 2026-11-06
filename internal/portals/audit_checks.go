@@ -277,7 +277,7 @@ func (a *portalAudit) formsAndCustomCode() {
 			ID:       "P008",
 			Severity: SeverityWarning,
 			Check:    "custom code",
-			Message:  "Custom code is set, but the tenant has no ready custom domain, so it is never injected.",
+			Message:  "Custom code is set, but the tenant has no custom domain, so it is never injected.",
 			Remedy:   &Remedy{Summary: "Set up a custom domain, or remove the custom code"},
 		})
 	}

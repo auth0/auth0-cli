@@ -78,7 +78,7 @@ func createPortalApplication(ctx context.Context, api API, current snapshot, use
 		template:       template,
 		tenantDomain:   current.TenantDomain,
 		host:           current.host(),
-		isCustomDomain: current.CustomDomain != nil && current.CustomDomain.Status == "ready",
+		isCustomDomain: current.CustomDomain != nil && current.CustomDomain.IsReady(),
 	})
 	if err != nil {
 		return err
