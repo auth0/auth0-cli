@@ -262,3 +262,18 @@ func TestAnsiPortalsStyle_KeepsTheText(t *testing.T) {
 
 	assert.Contains(t, style.link("https://example.com", "text"), "text")
 }
+
+func TestPortalsTerminal_Newline(t *testing.T) {
+	t.Parallel()
+
+	terminal, out := newTestTerminal(plainPortalsStyle(), false)
+
+	terminal.Newline()
+	terminal.Warn("after")
+
+	assert.Equal(t, "│\n▲  after\n", out.String(), "a blank line is the bare rail, with nothing after it")
+
+	silent, silentOut := newTestTerminal(plainPortalsStyle(), true)
+	silent.Newline()
+	assert.Empty(t, silentOut.String())
+}

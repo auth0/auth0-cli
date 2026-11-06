@@ -284,7 +284,7 @@ func (t *portalsTerminal) Newline() {
 		return
 	}
 
-	t.message("")
+	t.println(t.rail())
 }
 
 // Table implements portals.Reporter. The widths follow the longest cell, and the first column is a
