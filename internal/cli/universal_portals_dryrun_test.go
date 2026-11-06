@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -386,4 +387,107 @@ func TestReportPortalsPlan(t *testing.T) {
 
 		assert.Contains(t, run.results.String(), `"requests": []`)
 	})
+}
+
+// The business template is the one that creates an organization, enables a connection for it and adds
+// a member. The organization the plan makes does not exist, so the reads that follow its creation are
+// answered from the plan.
+func TestPortalsDryRun_SetupOfABusinessPortalThatCreatesAnOrganization(t *testing.T) {
+	server, tls, access := newDryRunServer(t)
+
+	server.reply(http.MethodGet, "users", 200, `{"start":0,"limit":50,"length":1,"total":1,"users":[{"user_id":"auth0|a","email":"jane@acme.com","name":"jane"}]}`)
+	server.reply(http.MethodGet, "users/auth0%7Ca/organizations", 200, `{"organizations":[],"total":0}`)
+	server.reply(http.MethodGet, "organizations", 200, `{"organizations":[],"total":0}`)
+	server.reply(http.MethodGet, "roles", 200, `{"roles":[],"total":0}`)
+	server.reply(http.MethodGet, "connections", 200, `{"connections":[{"id":"con_db","name":"Username-Password-Authentication","strategy":"auth0"}]}`)
+
+	// The checks of the permissions that only a business portal needs.
+	server.reply(http.MethodPost, "organizations", 400, `{"statusCode":400,"message":"Payload validation error"}`)
+	server.reply(http.MethodPost, "roles", 400, `{"statusCode":400,"message":"Payload validation error"}`)
+
+	for _, path := range []string{
+		"organizations/org_preflight0000000/enabled_connections",
+		"organizations/org_preflight0000000/members",
+		"roles/rol_preflight0000000/permissions",
+	} {
+		server.reply(http.MethodPost, path, 404, `{"statusCode":404,"message":"Not found"}`)
+	}
+
+	dry, plan, checker := newTenantsOver(t, tls, access)
+	deps, _ := dryRunDeps(dry, checker)
+	deps.Interactive = true
+
+	// The user belongs to no organization, so setup offers to create one, and then a role.
+	asks := []string{"Acme Admins", "acme-admins"}
+	confirms := []bool{true, false}
+
+	deps.Prompter = &portalstest.Prompter{
+		AskFunc: func(question, _, _ string) (string, error) {
+			if len(asks) == 0 {
+				return "", errors.New("unexpected question: " + question)
+			}
+
+			answer := asks[0]
+			asks = asks[1:]
+
+			return answer, nil
+		},
+		ChooseFunc: func(question string, options []portals.Choice) (int, error) {
+			for index, option := range options {
+				if strings.Contains(option.Label, "None of these") {
+					return index, nil
+				}
+			}
+
+			return 0, errors.New("unexpected choice: " + question)
+		},
+		ConfirmFunc: func(question string, _ bool) (bool, error) {
+			if len(confirms) == 0 {
+				return false, errors.New("unexpected confirmation: " + question)
+			}
+
+			answer := confirms[0]
+			confirms = confirms[1:]
+
+			return answer, nil
+		},
+	}
+
+	result, err := portals.Setup(context.Background(), portals.SetupOptions{
+		Template: portals.TemplateBusiness, Name: "Acme Admin", Slug: "acme-admin", UserQuery: "jane@acme.com",
+	}, deps)
+
+	require.NoError(t, err)
+	assert.Equal(t, "<new:organizations:1>", result.Organization.ID)
+
+	var steps []string
+	for _, request := range plan.planned() {
+		steps = append(steps, request.Method+" "+request.Path)
+	}
+
+	assert.Equal(t, []string{
+		"POST organizations",
+		"POST organizations/<new:organizations:1>/enabled_connections",
+		"POST organizations/<new:organizations:1>/members",
+		"POST resource-servers",
+		"POST resource-servers",
+		"POST clients",
+		"POST client-grants",
+		"POST client-grants",
+		"POST clients",
+		"POST client-grants",
+		"POST flows/vault/connections",
+		"POST forms/import",
+		"POST forms/import",
+		"POST forms/import",
+		"POST portals",
+	}, steps)
+
+	// A write that was sent would be a second request to the route. The one the tenant got is the check
+	// of the permissions, which carries an empty body.
+	for _, path := range []string{"organizations", "roles"} {
+		posts := server.received(http.MethodPost, path)
+		require.Len(t, posts, 1, "POST "+path)
+		assert.JSONEq(t, `{}`, posts[0].Body, "POST "+path)
+	}
 }
