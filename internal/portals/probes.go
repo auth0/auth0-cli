@@ -19,10 +19,12 @@ type Probe struct {
 // The IDs of the probes on a single resource are shaped like real ones, and nothing has them, so a
 // probe can never change anything.
 const (
+	fakeClientID       = "cli_preflight0000000"
 	fakeGrantID        = "cgr_preflight0000000"
 	fakeVaultID        = "ac_preflight0000000000000"
 	fakeOrganizationID = "org_preflight0000000"
 	fakeRoleID         = "rol_preflight0000000"
+	fakeUserID         = "auth0|preflight0000000000"
 )
 
 // SetupProbes returns the checks setup runs before it creates anything, for the template. The
@@ -35,7 +37,8 @@ func SetupProbes(template Template) []Probe {
 		{Name: "create client", Method: http.MethodPost, Path: "clients", Body: map[string]any{}},
 		{Name: "list client grants", Method: http.MethodGet, Path: "client-grants?per_page=1"},
 		{Name: "create client grant", Method: http.MethodPost, Path: "client-grants", Body: map[string]any{}},
-		// A rerun updates the grants and the vault connection it finds.
+		// A rerun updates the application, the grants and the vault connection it finds.
+		{Name: "update client", Method: http.MethodPatch, Path: "clients/" + fakeClientID, Body: map[string]any{}, FakeTarget: true},
 		{Name: "update client grant", Method: http.MethodPatch, Path: "client-grants/" + fakeGrantID, Body: map[string]any{}, FakeTarget: true},
 		{Name: "list vault connections", Method: http.MethodGet, Path: "flows/vault/connections"},
 		{Name: "create vault connection", Method: http.MethodPost, Path: "flows/vault/connections", Body: map[string]any{}},
@@ -65,6 +68,14 @@ func SetupProbes(template Template) []Probe {
 			Name:         "add organization member",
 			Method:       http.MethodPost,
 			Path:         "organizations/" + fakeOrganizationID + "/members",
+			Body:         map[string]any{},
+			BusinessOnly: true,
+			FakeTarget:   true,
+		},
+		{
+			Name:         "assign a role to a member",
+			Method:       http.MethodPost,
+			Path:         "organizations/" + fakeOrganizationID + "/members/" + fakeUserID + "/roles",
 			Body:         map[string]any{},
 			BusinessOnly: true,
 			FakeTarget:   true,

@@ -207,6 +207,7 @@ func newDryRunServer(t *testing.T) (*portalsServer, *httptest.Server, apiAccess)
 		server.reply(http.MethodPost, path, 400, `{"statusCode":400,"message":"Payload validation error"}`)
 	}
 
+	server.reply(http.MethodPatch, "clients/cli_preflight0000000", 404, `{"statusCode":404,"message":"The client does not exist"}`)
 	server.reply(http.MethodPatch, "client-grants/cgr_preflight0000000", 404, `{"statusCode":404,"message":"The grant does not exist"}`)
 	server.reply(http.MethodPatch, "flows/vault/connections/ac_preflight0000000000000", 404, `{"statusCode":404,"message":"Connection not found"}`)
 
@@ -408,6 +409,7 @@ func TestPortalsDryRun_SetupOfABusinessPortalThatCreatesAnOrganization(t *testin
 	for _, path := range []string{
 		"organizations/org_preflight0000000/enabled_connections",
 		"organizations/org_preflight0000000/members",
+		"organizations/org_preflight0000000/members/auth0%7Cpreflight0000000000/roles",
 		"roles/rol_preflight0000000/permissions",
 	} {
 		server.reply(http.MethodPost, path, 404, `{"statusCode":404,"message":"Not found"}`)
