@@ -294,9 +294,7 @@ func (r *setupRun) availableSlug(ctx context.Context, slug, appName string) (str
 		}
 
 		if !r.deps.Interactive {
-			return "", &UsageError{
-				Message: fmt.Sprintf("The slug %q is already used by another portal. Rerun with a different --slug", current),
-			}
+			return "", &SlugTakenError{Slug: current}
 		}
 
 		r.report().Warn(fmt.Sprintf("The slug %q is already taken.", current))

@@ -204,6 +204,26 @@ func TestSetupCommand_ErrorsAreClassified(t *testing.T) {
 		assert.Equal(t, "name_in_use", errorReason(err))
 	})
 
+	t.Run("a slug another portal uses is a validation error that says how to resolve it", func(t *testing.T) {
+		t.Parallel()
+
+		run := newSetupRun(true)
+		run.tenant.AddPortal(portals.Portal{ID: "up_other", Slug: "acme-account", Name: "Other"})
+
+		err := run.run(consumerInputs)
+
+		require.Error(t, err)
+		assert.Equal(t, "validation", errorClass(err))
+		assert.Equal(t, "slug_taken", errorReason(err))
+
+		var details struct {
+			Fixes []string `json:"fixes"`
+		}
+		require.NoError(t, json.Unmarshal(buildErrorEnvelope(err).Error.Details, &details))
+		assert.Contains(t, details.Fixes, "Rerun with a different --slug")
+		assert.Empty(t, run.tenant.Clients(), "nothing is created before the slug is checked")
+	})
+
 	t.Run("a feature that is not enabled is reported as such", func(t *testing.T) {
 		t.Parallel()
 

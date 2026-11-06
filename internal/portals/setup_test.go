@@ -226,8 +226,9 @@ func TestSetup_ATakenSlug(t *testing.T) {
 
 		_, err := portals.Setup(context.Background(), consumerOptions(), deps)
 
-		var usage *portals.UsageError
-		require.ErrorAs(t, err, &usage)
+		var taken *portals.SlugTakenError
+		require.ErrorAs(t, err, &taken)
+		assert.Equal(t, "acme-account", taken.Slug)
 		assert.Contains(t, err.Error(), "already used by another portal")
 		assert.Empty(t, tenant.Clients())
 		assert.Empty(t, tenant.Grants())
@@ -248,8 +249,9 @@ func TestSetup_ATakenSlug(t *testing.T) {
 
 		_, err := portals.Setup(context.Background(), consumerOptions(), deps)
 
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "already used by another portal")
+		var taken *portals.SlugTakenError
+		require.ErrorAs(t, err, &taken)
+		assert.Equal(t, "acme-account", taken.Slug)
 	})
 
 	t.Run("is asked again when there is a terminal", func(t *testing.T) {

@@ -204,6 +204,9 @@ func (e *SlugTakenError) Error() string {
 	return fmt.Sprintf("The portal slug %q is already used by another portal", e.Slug)
 }
 
+// Fixes returns how to resolve the error.
+func (e *SlugTakenError) Fixes() []string { return []string{"Rerun with a different --slug"} }
+
 // SlugRaceError means another portal took the slug while setup was running. Setup checks the slug
 // before it creates anything, so this is a race, and the rerun needs a new name and slug.
 type SlugRaceError struct {
