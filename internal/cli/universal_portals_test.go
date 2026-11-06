@@ -234,6 +234,94 @@ func TestSetupCommand_ErrorsAreClassified(t *testing.T) {
 	})
 }
 
+// The class and the reason of an error are what a script reads from the JSON envelope, so each error
+// of the portals package keeps its own.
+func TestPortalsCommandError_EachErrorHasItsOwnReason(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		err        error
+		wantClass  string
+		wantReason string
+		wantFixes  []string
+	}{
+		{
+			name:       "an input the command cannot run with",
+			err:        &portals.UsageError{Message: "bad slug"},
+			wantClass:  "usage",
+			wantReason: "invalid_input",
+		},
+		{
+			name:       "a user who cannot test a business portal",
+			err:        &portals.BusinessAccessError{Message: "no access", Hints: []string{"Add the user to an organization"}},
+			wantClass:  "validation",
+			wantReason: "business_access",
+			wantFixes:  []string{"Add the user to an organization"},
+		},
+		{
+			name:       "an application that setup did not create",
+			err:        &portals.NameInUseError{Name: "Acme"},
+			wantClass:  "validation",
+			wantReason: "name_in_use",
+		},
+		{
+			name:       "a slug another portal uses",
+			err:        &portals.SlugTakenError{Slug: "acme"},
+			wantClass:  "validation",
+			wantReason: "slug_taken",
+			wantFixes:  []string{"Rerun with a different --slug"},
+		},
+		{
+			name:       "a slug taken while setup runs",
+			err:        &portals.SlugRaceError{Slug: "acme"},
+			wantClass:  "validation",
+			wantReason: "slug_race",
+		},
+		{
+			name:       "a secret that needs a scope",
+			err:        &portals.ClientSecretUnreadableError{ClientID: "cli_1"},
+			wantClass:  "auth",
+			wantReason: "missing_scopes",
+			wantFixes:  portals.ScopeFixes([]string{"read:client_keys"}),
+		},
+		{
+			name:       "a check refused with no reason",
+			err:        &portals.PermissionCheckError{Probes: []string{"create portal"}, Tenant: portalsTestTenant},
+			wantClass:  "auth",
+			wantReason: "permission_check_failed",
+			wantFixes:  []string{"Check that Universal Portals is enabled for this tenant."},
+		},
+		{
+			name:       "a feature that is not enabled",
+			err:        &portals.FeatureNotEnabledError{Tenant: portalsTestTenant},
+			wantClass:  "auth",
+			wantReason: "feature_not_enabled",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := portalsCommandError(tt.err, false)
+
+			assert.Equal(t, tt.wantClass, errorClass(err))
+			assert.Equal(t, tt.wantReason, errorReason(err))
+
+			if tt.wantFixes == nil {
+				return
+			}
+
+			var details struct {
+				Fixes []string `json:"fixes"`
+			}
+			require.NoError(t, json.Unmarshal(buildErrorEnvelope(err).Error.Details, &details))
+			assert.Subset(t, details.Fixes, tt.wantFixes)
+		})
+	}
+}
+
 func TestSetupCommand_AFailureAfterAWriteSaysHowToResume(t *testing.T) {
 	t.Parallel()
 
