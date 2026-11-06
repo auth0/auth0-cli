@@ -52,7 +52,9 @@ func (r *setupRun) run(inputs universalPortalsSetupInputs) error {
 	cmd := &cobra.Command{}
 	cmd.SetContext(context.Background())
 
-	return runUniversalPortalsSetupOn(cmd, r.cli, inputs, writeTrackingTenant{Tenant: r.tenant})
+	tracked := writeTrackingTenant{Tenant: r.tenant}
+
+	return runUniversalPortalsSetupOn(cmd, r.cli, inputs, portalsSetupTarget{api: tracked, hasWritten: tracked.hasWritten})
 }
 
 var consumerInputs = universalPortalsSetupInputs{Template: "consumer", Name: "Acme Account", Slug: "acme-account"}
@@ -289,4 +291,61 @@ func TestReportPortalsCancelled(t *testing.T) {
 			assert.Equal(t, tt.want, out.String())
 		})
 	}
+}
+
+func TestSetupCommand_DryRun(t *testing.T) {
+	t.Parallel()
+
+	planned := func() []plannedRequest {
+		return []plannedRequest{{Method: "POST", Path: "portals", Body: map[string]any{"slug": "acme-account"}}}
+	}
+
+	runDry := func(run *setupRun, inputs universalPortalsSetupInputs) error {
+		cmd := &cobra.Command{}
+		cmd.SetContext(context.Background())
+
+		tracked := writeTrackingTenant{Tenant: run.tenant}
+
+		return runUniversalPortalsSetupOn(cmd, run.cli, inputs, portalsSetupTarget{api: tracked, hasWritten: tracked.hasWritten, planned: planned})
+	}
+
+	t.Run("a person is told it is a dry run, and gets a summary and no portal to open", func(t *testing.T) {
+		t.Parallel()
+
+		run := newSetupRun(false)
+
+		require.NoError(t, runDry(run, consumerInputs))
+
+		assert.Contains(t, run.messages.String(), "●  Dry run: nothing is created or changed. Statuses show what a real run would do.")
+		assert.Contains(t, run.messages.String(), "Dry run complete. 1 request(s) would change the tenant.")
+		assert.Contains(t, run.messages.String(), "Run the same command without --dry-run to set up the portal.")
+		assert.NotContains(t, run.messages.String(), "Open portal:")
+		assert.Empty(t, run.results.String())
+	})
+
+	t.Run("JSON is the result with dryRun and the plan", func(t *testing.T) {
+		t.Parallel()
+
+		run := newSetupRun(true)
+
+		require.NoError(t, runDry(run, consumerInputs))
+
+		var printed map[string]any
+		require.NoError(t, json.Unmarshal(run.results.Bytes(), &printed))
+		assert.Equal(t, true, printed["dryRun"])
+		assert.Contains(t, printed, "portal")
+		assert.Len(t, printed["requests"], 1)
+		assert.Empty(t, run.messages.String())
+	})
+
+	t.Run("the flags are checked as in a real run", func(t *testing.T) {
+		t.Parallel()
+
+		run := newSetupRun(true)
+
+		err := runDry(run, universalPortalsSetupInputs{DryRun: true})
+
+		require.Error(t, err)
+		assert.Equal(t, "missing_required_flags", errorReason(err))
+	})
 }

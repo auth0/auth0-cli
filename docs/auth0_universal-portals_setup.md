@@ -19,6 +19,7 @@ auth0 universal-portals setup [flags]
 ```
   auth0 universal-portals setup
   auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 universal-portals setup --template consumer --name "Acme Account" --dry-run
   auth0 up setup --no-input --template consumer --name "Acme Account" --json
 ```
 
@@ -26,6 +27,7 @@ auth0 universal-portals setup [flags]
 ## Flags
 
 ```
+      --dry-run               Show what setup would create, without changing the tenant.
       --json                  Output in json format.
   -n, --name string           Name of the portal. Asked when omitted.
   -o, --organization string   Business only: the ID or name of the organization, when the user has several.

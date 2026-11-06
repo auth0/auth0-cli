@@ -40,6 +40,11 @@ var (
 		ShortForm: "u",
 		Help:      "Business only: the email or user ID of the user who will test the portal.",
 	}
+	upDryRun = Flag{
+		Name:     "Dry Run",
+		LongForm: "dry-run",
+		Help:     "Show what setup would create, without changing the tenant.",
+	}
 	upOrganization = Flag{
 		Name:      "Organization",
 		LongForm:  "organization",
@@ -70,6 +75,7 @@ type universalPortalsSetupInputs struct {
 	Slug         string
 	User         string
 	Organization string
+	DryRun       bool
 }
 
 // options turns the flags into the options of setup, and checks them.
@@ -122,6 +128,7 @@ func universalPortalsSetupCmd(cli *cli) *cobra.Command {
 Running the command again after a failure resumes: what exists is reused.`,
 		Example: `  auth0 universal-portals setup
   auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 universal-portals setup --template consumer --name "Acme Account" --dry-run
   auth0 up setup --no-input --template consumer --name "Acme Account" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUniversalPortalsSetup(cmd, cli, inputs)
@@ -133,20 +140,40 @@ Running the command again after a failure resumes: what exists is reused.`,
 	upSlug.RegisterString(cmd, &inputs.Slug, "")
 	upUser.RegisterString(cmd, &inputs.User, "")
 	upOrganization.RegisterString(cmd, &inputs.Organization, "")
+	upDryRun.RegisterBool(cmd, &inputs.DryRun, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
 	return cmd
 }
 
-// portalsBackend is the tenant a command works on, and whether it changed it.
-type portalsBackend interface {
-	portals.API
-	hasWritten() bool
+// portalsSetupTarget is the tenant setup works on.
+type portalsSetupTarget struct {
+	api portals.API
+	// The checks of the permissions are sent here. It defaults to api.
+	prober portals.Prober
+	// Whether a request changed the tenant.
+	hasWritten func() bool
+	// The requests a dry run kept. It is nil for a real run.
+	planned func() []plannedRequest
 }
 
-// runUniversalPortalsSetup runs setup on the tenant of the CLI.
+// runUniversalPortalsSetup runs setup on the tenant of the CLI. A dry run reads from the tenant and
+// keeps the requests that would change it.
 func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, inputs universalPortalsSetupInputs) error {
-	return runUniversalPortalsSetupOn(cmd, cli, inputs, newPortalsTenant(cli.api, cli.apiv3))
+	tenant := newPortalsTenant(cli.api, cli.apiv3)
+	target := portalsSetupTarget{api: tenant, hasWritten: tenant.hasWritten}
+
+	if inputs.DryRun {
+		dryTenant, plan, err := dryRunTenant(cli.apiAccess)
+		if err != nil {
+			return err
+		}
+
+		// The checks of the permissions go to the tenant: they are rejected, and change nothing.
+		target = portalsSetupTarget{api: dryTenant, prober: tenant, hasWritten: tenant.hasWritten, planned: plan.planned}
+	}
+
+	return runUniversalPortalsSetupOn(cmd, cli, inputs, target)
 }
 
 // runUniversalPortalsSetupOn runs setup. It takes over the interrupt from the root command for the
@@ -155,7 +182,7 @@ func runUniversalPortalsSetupOn(
 	cmd *cobra.Command,
 	cli *cli,
 	inputs universalPortalsSetupInputs,
-	tenant portalsBackend,
+	target portalsSetupTarget,
 ) error {
 	options, err := inputs.options()
 	if err != nil {
@@ -180,8 +207,10 @@ func runUniversalPortalsSetupOn(
 
 	result, err := executeUniversalPortalsSetup(ctx, universalPortalsSetup{
 		options: options,
+		dryRun:  target.planned != nil,
 		deps: portals.SetupDeps{
-			API:          tenant,
+			API:          target.api,
+			Prober:       target.prober,
 			Reporter:     reporter,
 			Prompter:     portalsPrompter{},
 			Interactive:  interactive,
@@ -193,12 +222,19 @@ func runUniversalPortalsSetupOn(
 	stop()
 
 	if interrupted {
-		reportPortalsCancelled(reporter, tenant.hasWritten())
+		reportPortalsCancelled(reporter, target.hasWritten())
 		os.Exit(exitInterrupted)
 	}
 
 	if err != nil {
-		return portalsCommandError(err, tenant.hasWritten())
+		return portalsCommandError(err, target.hasWritten())
+	}
+
+	// A dry run created nothing, so there is no portal to open.
+	if target.planned != nil {
+		reportPortalsPlan(cli, reporter, result, target.planned())
+
+		return nil
 	}
 
 	if cli.json {
@@ -216,15 +252,37 @@ func runUniversalPortalsSetupOn(
 	return nil
 }
 
+// reportPortalsPlan shows the result of a dry run: the result of a real run, and the requests it
+// would send in the order it would send them.
+func reportPortalsPlan(cli *cli, reporter portals.Reporter, result portals.SetupResult, planned []plannedRequest) {
+	if planned == nil {
+		planned = []plannedRequest{}
+	}
+
+	if cli.json {
+		cli.renderer.JSONResult(dryRunResult{DryRun: true, SetupResult: result, Requests: planned})
+
+		return
+	}
+
+	reporter.Result(fmt.Sprintf("Dry run complete. %d request(s) would change the tenant.", len(planned)))
+	reporter.Detail("Run the same command without --dry-run to set up the portal.")
+}
+
 // universalPortalsSetup is one run of setup.
 type universalPortalsSetup struct {
 	options portals.SetupOptions
 	deps    portals.SetupDeps
+	dryRun  bool
 }
 
 // executeUniversalPortalsSetup shows the title, asks for what is missing, and sets the portal up.
 func executeUniversalPortalsSetup(ctx context.Context, run universalPortalsSetup) (portals.SetupResult, error) {
 	run.deps.Reporter.Banner("Universal Portals setup", run.deps.TenantDomain)
+
+	if run.dryRun {
+		run.deps.Reporter.Info("Dry run: nothing is created or changed. Statuses show what a real run would do.")
+	}
 
 	options := run.options
 
