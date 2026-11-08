@@ -597,6 +597,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
+	rootCmd.AddCommand(agentsCmd(cli))
 	rootCmd.AddCommand(aculCmd(cli))
 	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))

@@ -227,6 +227,21 @@ var (
 		LongForm: "organization-discovery-methods",
 		Help:     "Comma-separated list of methods for discovering organizations during the 'pre_login_prompt'. Possible values: 'email', 'organization_name'. Requires --organization-require-behavior=pre_login_prompt.",
 	}
+	appAgentID = Flag{
+		Name:     "Agent ID",
+		LongForm: "agent-id",
+		Help:     "ID of the agent (agt_...) to link the application to (Early Access). An application can be linked to at most one agent; linking to another agent moves the link.",
+	}
+	appUnlinkAgent = Flag{
+		Name:     "Unlink Agent",
+		LongForm: "unlink-agent",
+		Help:     "Remove the application's link to its agent (Early Access).",
+	}
+	appListAgentID = Flag{
+		Name:     "Agent ID",
+		LongForm: "agent-id",
+		Help:     "Only list applications linked to this agent ID (Early Access).",
+	}
 )
 
 // validateAppOrganizationFlags mirrors the one cross-field dependency the
@@ -357,6 +372,7 @@ func listAppsCmd(cli *cli) *cobra.Command {
 		Number        int
 		Schema        bool
 		Query         string
+		AgentID       string
 	}
 
 	cmd := &cobra.Command{
@@ -375,6 +391,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv
+  auth0 apps list --agent-id <agent-id>
   auth0 apps list --schema
   auth0 apps list --schema --json
   auth0 apps list --query '{"app_type":"spa"}'
@@ -398,7 +415,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 			list, err := getWithPagination(
 				inputs.Number,
 				func(opts ...management.RequestOption) (result []interface{}, hasNext bool, err error) {
-					opts = append(opts, management.Parameter("is_global", "false"))
+					// The agent_id filter can't be combined with other filters, so it replaces is_global.
+					if inputs.AgentID != "" {
+						opts = append(opts, management.Parameter("agent_id", inputs.AgentID))
+					} else {
+						opts = append(opts, management.Parameter("is_global", "false"))
+					}
 					res, apiErr := cli.api.Client.List(cmd.Context(), opts...)
 					if apiErr != nil {
 						return nil, false, apiErr
@@ -431,8 +453,10 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 
 	revealSecrets.RegisterBool(cmd, &inputs.RevealSecrets, false)
 	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	appListAgentID.RegisterString(cmd, &inputs.AgentID, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
+	markQueryFilterExclusive(cmd, appListAgentID.LongForm)
 
 	return cmd
 }
@@ -568,6 +592,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 		OrganizationUsage        string
 		OrganizationRequire      string
 		OrganizationDiscovery    []string
+		AgentID                  string
 		Data                     string
 		Schema                   bool
 	}
@@ -598,6 +623,7 @@ func createAppCmd(cli *cli) *cobra.Command {
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
   auth0 apps create --name myapp --type regular --organization-usage require --organization-require-behavior pre_login_prompt --organization-discovery-methods email,organization_name
+  auth0 apps create --name my-agent-app --type m2m --agent-id <agent-id>
 
   # Discover the payload schema
   auth0 apps create --schema
@@ -787,6 +813,10 @@ func createAppCmd(cli *cli) *cobra.Command {
 				a.OrganizationDiscoveryMethods = &discoveryMethods
 			}
 
+			if appAgentID.IsSet(cmd) {
+				a.AgentID = &inputs.AgentID
+			}
+
 			// Set grants.
 			if len(inputs.Grants) > 0 {
 				a.GrantTypes = apiGrantsFor(inputs.Grants)
@@ -831,6 +861,7 @@ func createAppCmd(cli *cli) *cobra.Command {
 	appOrganizationUsage.RegisterString(cmd, &inputs.OrganizationUsage, "")
 	appOrganizationRequireBehavior.RegisterString(cmd, &inputs.OrganizationRequire, "")
 	appOrganizationDiscoveryMethods.RegisterStringSlice(cmd, &inputs.OrganizationDiscovery, nil)
+	appAgentID.RegisterString(cmd, &inputs.AgentID, "")
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	markDataExclusive(cmd)
@@ -860,6 +891,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
 		OrganizationUsage      string
 		OrganizationRequire    string
 		OrganizationDiscovery  []string
+		AgentID                string
+		UnlinkAgent            bool
 		Data                   string
 		Schema                 bool
 	}
@@ -887,6 +920,8 @@ func updateAppCmd(cli *cli) *cobra.Command {
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps update <app-id> --redirection-policy allow_always
   auth0 apps update <app-id> --organization-usage require --organization-require-behavior pre_login_prompt
+  auth0 apps update <app-id> --agent-id <agent-id>
+  auth0 apps update <app-id> --unlink-agent
 
   # Discover the payload schema
   auth0 apps update --schema
@@ -1114,6 +1149,19 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.OrganizationDiscoveryMethods = &discoveryMethods
 			}
 
+			if appAgentID.IsSet(cmd) {
+				a.AgentID = &inputs.AgentID
+			}
+
+			// The v1 SDK omits a nil agent_id, so unlinking needs an explicit null PATCH.
+			if inputs.UnlinkAgent {
+				if err := ansi.Waiting(func() error {
+					return cli.api.HTTPClient.Request(cmd.Context(), http.MethodPatch, cli.api.HTTPClient.URI("clients", inputs.ID), map[string]interface{}{"agent_id": nil})
+				}); err != nil {
+					return fmt.Errorf("failed to unlink agent from application with ID %q: %w", inputs.ID, err)
+				}
+			}
+
 			if err := ansi.Waiting(func() error {
 				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
 			}); err != nil {
@@ -1147,6 +1195,9 @@ func updateAppCmd(cli *cli) *cobra.Command {
 	appOrganizationUsage.RegisterStringU(cmd, &inputs.OrganizationUsage, "")
 	appOrganizationRequireBehavior.RegisterStringU(cmd, &inputs.OrganizationRequire, "")
 	appOrganizationDiscoveryMethods.RegisterStringSliceU(cmd, &inputs.OrganizationDiscovery, nil)
+	appAgentID.RegisterStringU(cmd, &inputs.AgentID, "")
+	appUnlinkAgent.RegisterBool(cmd, &inputs.UnlinkAgent, false)
+	cmd.MarkFlagsMutuallyExclusive(appAgentID.LongForm, appUnlinkAgent.LongForm)
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	markDataExclusive(cmd)

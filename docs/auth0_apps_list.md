@@ -25,6 +25,7 @@ auth0 apps list [flags]
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv
+  auth0 apps list --agent-id <agent-id>
   auth0 apps list --schema
   auth0 apps list --schema --json
   auth0 apps list --query '{"app_type":"spa"}'
@@ -35,13 +36,14 @@ auth0 apps list [flags]
 ## Flags
 
 ```
-      --csv              Output in csv format.
-      --json             Output in json format.
-      --json-compact     Output in compact json format.
-  -n, --number int       Number of apps to retrieve. Minimum 1, maximum 1000. (default 100)
-  -q, --query string     Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
-  -r, --reveal-secrets   Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
-      --schema           Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
+      --agent-id string   Only list applications linked to this agent ID (Early Access).
+      --csv               Output in csv format.
+      --json              Output in json format.
+      --json-compact      Output in compact json format.
+  -n, --number int        Number of apps to retrieve. Minimum 1, maximum 1000. (default 100)
+  -q, --query string      Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+  -r, --reveal-secrets    Display the application secrets ('signing_keys', 'client_secret') as part of the command output.
+      --schema            Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
