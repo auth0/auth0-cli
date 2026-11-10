@@ -1,5 +1,6 @@
 // Package scaffold writes a new plugin project: a plugin.json generated from the
-// typed manifest, and the files of a starter project for one language.
+// typed manifest, a starter dev-policy.json for the scopes it declares, and the
+// files of a starter project for one language.
 //
 // A template tree holds one project root per language, go/ and ts/. A file named
 // X.tmpl is written as X, and a file without the suffix is written as it is. Three
@@ -11,6 +12,7 @@ package scaffold
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/plugins"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 )
@@ -42,6 +45,10 @@ const (
 
 	// The file that is generated, so a template tree cannot hold it.
 	manifestName = "plugin.json"
+
+	// The prefix of the paths of the Management API, which the starter rules of the
+	// dev policy are under.
+	apiPrefix = "/api/v2/"
 
 	// The limits of one project in a template tree. They are checked before
 	// anything is written, and they hold for the tree inside the CLI as well, so a
@@ -65,6 +72,13 @@ var (
 
 	// A token that is left after the replacement is a typo in a template.
 	leftoverToken = regexp.MustCompile(`__[A-Z][A-Z_]*__`)
+
+	// The pattern of a scope that has starter rules: a verb and a resource.
+	scopePattern = regexp.MustCompile(`^(read|create|update|delete):([a-z][a-z0-9_]*)$`)
+
+	// The token of the README section about dev-policy.json, which is replaced by
+	// the section when the project has that file, and dropped when it does not.
+	devPolicyToken = "__DEV_POLICY_SECTION__"
 
 	// The function that moves the finished directory into place, which tests
 	// replace to make it fail.
@@ -151,6 +165,11 @@ func Create(opts Options, templates fs.FS) ([]string, error) {
 	}
 
 	files, err := opts.render(tree, manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	files, err = opts.withDevPolicy(files)
 	if err != nil {
 		return nil, err
 	}
@@ -284,6 +303,108 @@ func (o Options) manifest() ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// withDevPolicy adds the starter dev-policy.json to the files, unless the template
+// tree has a file of that name, which is the author's own and is kept as it is, or
+// the scopes give no rule.
+func (o Options) withDevPolicy(files []file) ([]file, error) {
+	if slices.ContainsFunc(files, func(f file) bool { return strings.EqualFold(f.path, devpolicy.FileName) }) {
+		return files, nil
+	}
+
+	policy, ok, err := o.devPolicy()
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return files, nil
+	}
+
+	files = append(files, file{path: devpolicy.FileName, data: policy})
+	slices.SortFunc(files, func(a, b file) int { return strings.Compare(a.path, b.path) })
+
+	return files, nil
+}
+
+// SkippedScopes returns the scopes that get no starter rule in dev-policy.json,
+// sorted and without repeats: the ones that are not a verb (read, create, update
+// or delete) and a resource of the form read:clients.
+func (o Options) SkippedScopes() []string {
+	var skipped []string
+
+	for _, scope := range sortedScopes(o.Scopes) {
+		if !scopePattern.MatchString(scope) {
+			skipped = append(skipped, scope)
+		}
+	}
+
+	return skipped
+}
+
+// sortedScopes returns the scopes sorted and without repeats.
+func sortedScopes(scopes []string) []string {
+	return slices.Compact(slices.Sorted(slices.Values(scopes)))
+}
+
+// devPolicy returns the content of the starter dev-policy.json: for each scope of
+// the first command, the calls of the Management API that the scope is named for.
+// A scope that is not a verb and a resource of the form read:clients is skipped.
+// It reports false, and no content, when no scope gives a rule. The policy is
+// checked the way a link checks it before it is returned.
+func (o Options) devPolicy() ([]byte, bool, error) {
+	var rules []registry.ScopeRule
+
+	for _, scope := range sortedScopes(o.Scopes) {
+		match := scopePattern.FindStringSubmatch(scope)
+		if match == nil {
+			continue
+		}
+
+		path := apiPrefix + strings.ReplaceAll(match[2], "_", "-")
+		anyOf := []string{scope}
+
+		switch match[1] {
+		case "read":
+			rules = append(rules,
+				registry.ScopeRule{Method: "GET", Path: path, AnyOf: anyOf},
+				registry.ScopeRule{Method: "GET", Path: path + "/{id}", AnyOf: anyOf},
+			)
+		case "create":
+			rules = append(rules, registry.ScopeRule{Method: "POST", Path: path, AnyOf: anyOf})
+		case "update":
+			rules = append(rules, registry.ScopeRule{Method: "PATCH", Path: path + "/{id}", AnyOf: anyOf})
+		case "delete":
+			rules = append(rules, registry.ScopeRule{Method: "DELETE", Path: path + "/{id}", AnyOf: anyOf})
+		}
+	}
+
+	if len(rules) == 0 {
+		return nil, false, nil
+	}
+
+	slices.SortFunc(rules, func(a, b registry.ScopeRule) int {
+		return cmp.Or(strings.Compare(a.Path, b.Path), strings.Compare(a.Method, b.Method))
+	})
+
+	policy := devpolicy.File{Rules: rules}
+
+	if _, err := policy.Index(); err != nil {
+		return nil, false, inputf("%s would not be valid: %s", devpolicy.FileName, strings.ReplaceAll(err.Error(), "\n", "; "))
+	}
+
+	var out bytes.Buffer
+
+	encoder := json.NewEncoder(&out)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+
+	if err := encoder.Encode(policy); err != nil {
+		return nil, false, fmt.Errorf("cannot write %s: %w", devpolicy.FileName, err)
+	}
+
+	return out.Bytes(), true, nil
+}
+
 // engines returns the requirement on the CLI that runs the plugin, which is the
 // version of this CLI or a later one. It is nil for a build that has no version.
 func engines(cliVersion string) *plugins.Engines {
@@ -405,11 +526,25 @@ func readFile(root fs.FS, path string) ([]byte, error) {
 // render replaces the tokens in the files, drops the template suffix from their
 // names, adds plugin.json and sorts the result by path.
 func (o Options) render(tree []file, manifest []byte) ([]file, error) {
-	replacer := strings.NewReplacer(
+	section, err := o.devPolicySection(tree)
+	if err != nil {
+		return nil, err
+	}
+
+	pairs := []string{
 		"__PLUGIN_NAME__", o.Name,
 		"__COMMAND__", o.Command,
 		"__LICENSE__", o.License,
-	)
+	}
+
+	if section == "" {
+		// The section goes with the blank line after it.
+		pairs = append(pairs, devPolicyToken+"\n\n", "")
+	}
+
+	pairs = append(pairs, devPolicyToken, section)
+
+	replacer := strings.NewReplacer(pairs...)
 
 	files := make([]file, 0, len(tree)+1)
 	files = append(files, file{path: manifestName, data: manifest})
@@ -446,7 +581,7 @@ func (o Options) render(tree []file, manifest []byte) ([]file, error) {
 
 		text := replacer.Replace(string(f.data))
 		if token := leftoverToken.FindString(text); token != "" {
-			return nil, inputf("%s has the token %s, which is not one of __PLUGIN_NAME__, __COMMAND__ and __LICENSE__", f.path, token)
+			return nil, inputf("%s has the token %s, which is not one of __PLUGIN_NAME__, __COMMAND__, __LICENSE__ and __DEV_POLICY_SECTION__", f.path, token)
 		}
 
 		files = append(files, file{path: path, data: []byte(text)})
@@ -455,6 +590,30 @@ func (o Options) render(tree []file, manifest []byte) ([]file, error) {
 	slices.SortFunc(files, func(a, b file) int { return strings.Compare(a.path, b.path) })
 
 	return files, nil
+}
+
+// devPolicySection returns the README section about dev-policy.json, or an empty
+// text when the project has no such file: the one of the template tree, or the
+// starter one that Create writes when a scope gives a rule.
+func (o Options) devPolicySection(tree []file) (string, error) {
+	own := slices.ContainsFunc(tree, func(f file) bool {
+		return strings.EqualFold(strings.TrimSuffix(f.path, templateSuffix), devpolicy.FileName)
+	})
+
+	if !own {
+		_, ok, err := o.devPolicy()
+		if err != nil {
+			return "", err
+		}
+
+		if !ok {
+			return "", nil
+		}
+	}
+
+	return "## Local development policy\n\n" +
+		"`dev-policy.json` lists the Management API calls that each scope allows. It holds starter rules for the scopes the CLI recognizes, which are read, create, update and delete of a resource. A scope it does not recognize needs a rule that you add by hand. Run `auth0 plugin dev validate` to check that every scope in `plugin.json` has a rule. " +
+		"The file is not signed, and only a linked build in dev mode reads it, so a published plugin never uses it. Edit it when the plugin calls a route the starter rules do not cover. Any change needs a new `auth0 plugin approve " + o.Name + "`.", nil
 }
 
 // checkTarget returns the absolute path of the directory to write, and whether it
