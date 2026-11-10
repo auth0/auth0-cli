@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -14,6 +15,11 @@ import (
 
 const (
 	docsPath = "./docs/"
+
+	// The annotation with this key, set to "true" on a command, keeps the command
+	// and everything below it out of the generated docs and out of the links to
+	// them.
+	skipDocsAnnotation = "skipDocs"
 
 	associatedCommandsFragment = `{{range .AssociatedCommands}}- [{{.CommandPath}}]({{ link .CommandPath }}) - {{.Short}}
 {{end}}`
@@ -169,6 +175,11 @@ type page struct {
 // GenerateDocs will generate the documentation
 // for all the commands under the ./docs folder.
 func GenerateDocs() error {
+	return GenMarkdownTree(newDocsRoot(), docsPath)
+}
+
+// newDocsRoot returns the command tree that the docs are generated from.
+func newDocsRoot() *cobra.Command {
 	baseCmd := &cobra.Command{
 		Use:   "auth0",
 		Short: rootShort,
@@ -179,12 +190,20 @@ func GenerateDocs() error {
 	addPersistentFlags(baseCmd, cli)
 	addSubCommands(baseCmd, cli)
 
-	return GenMarkdownTree(baseCmd, docsPath)
+	return baseCmd
+}
+
+// documentedCommands returns the commands that have a page in the docs, which is
+// all of them except those that are marked with skipDocsAnnotation.
+func documentedCommands(commands []*cobra.Command) []*cobra.Command {
+	return slices.DeleteFunc(slices.Clone(commands), func(c *cobra.Command) bool {
+		return c.Annotations[skipDocsAnnotation] == "true"
+	})
 }
 
 // GenMarkdownTree is the same as GenMarkdownTree, but with linkHandler.
 func GenMarkdownTree(cmd *cobra.Command, dir string) error {
-	for _, c := range cmd.Commands() {
+	for _, c := range documentedCommands(cmd.Commands()) {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
 		}
@@ -222,7 +241,7 @@ func GenerateHomepage(cmd *cobra.Command, w io.Writer) error {
 
 	pageData := page{
 		CommandPath:        cmd.CommandPath(),
-		AssociatedCommands: cmd.Commands(),
+		AssociatedCommands: documentedCommands(cmd.Commands()),
 	}
 
 	return GeneratePage(w, "homepageTemplate", templateBody, pageData)
@@ -233,7 +252,7 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 	templateBody := fmt.Sprintf(parentPageTemplate, associatedCommandsFragment)
 
 	hasRunnableChildren := false
-	for _, c := range cmd.Commands() {
+	for _, c := range documentedCommands(cmd.Commands()) {
 		if c.Runnable() {
 			hasRunnableChildren = true
 		}
@@ -248,7 +267,7 @@ func GenerateParentPage(cmd *cobra.Command, w io.Writer) error {
 		Name:                cmd.CommandPath(),
 		Description:         cmd.Long,
 		CommandPath:         cmd.CommandPath(),
-		AssociatedCommands:  cmd.Commands(),
+		AssociatedCommands:  documentedCommands(cmd.Commands()),
 		ParentCommandPath:   parentCommand,
 		HasRunnableChildren: hasRunnableChildren,
 	}
@@ -262,7 +281,7 @@ func GenerateCommandPage(cmd *cobra.Command, w io.Writer) error {
 
 	parentCommand := cmd.Parent()
 
-	associatedCommands := parentCommand.Commands()
+	associatedCommands := documentedCommands(parentCommand.Commands())
 	if parentCommand.Name() == "auth0" {
 		associatedCommands = nil
 	}
