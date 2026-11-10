@@ -368,29 +368,19 @@ func detectFromCsproj(content string) (framework, qsType string, found bool) {
 func detectJavaFramework(content string) string {
 	lower := strings.ToLower(content)
 	switch {
-	case strings.Contains(lower, "mvc-auth-commons"):
-		return "java-mvc"
-	case containsAnyOf(lower, "spring-boot", "springframework.boot"):
+	case strings.Contains(lower, "spring-boot") ||
+		strings.Contains(lower, "springframework.boot"):
 		return "spring-boot"
-	// Full Java EE / Jakarta EE platform or EE-only APIs (the Jakarta EE 9+ BOM is
-	// jakarta.platform:jakarta.jakartaee-api).
-	case containsAnyOf(lower, "javaee-api", "jakartaee-api", "jakarta.platform", "javax.ee", "jakarta.ee",
-		"security.enterprise", "microprofile"):
+	case strings.Contains(lower, "javax.ee") ||
+		strings.Contains(lower, "jakarta.ee") ||
+		strings.Contains(lower, "javax.servlet") ||
+		strings.Contains(lower, "jakarta.servlet") ||
+		// Jakarta.platform:jakarta.jakartaee-api is the standard BOM for Jakarta EE 9+.
+		strings.Contains(lower, "jakarta.platform"):
 		return "java-ee"
-	case containsAnyOf(lower, "javax.servlet", "jakarta.servlet"):
-		return "java-mvc"
 	default:
 		return "vanilla-java"
 	}
-}
-
-func containsAnyOf(s string, substrings ...string) bool {
-	for _, sub := range substrings {
-		if strings.Contains(s, sub) {
-			return true
-		}
-	}
-	return false
 }
 
 func isExpoProject(dir string) bool {

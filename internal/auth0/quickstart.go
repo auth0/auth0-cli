@@ -686,36 +686,6 @@ var QuickstartConfigs = map[string]AppConfig{
 		},
 		Strategy: FileOutputStrategy{Path: "src/main/resources/application.yml", Format: "yaml"},
 	},
-	"regular:java-mvc:maven": {
-		EnvValues: map[string]string{
-			"AUTH0_DOMAIN":        DetectionSub,
-			"AUTH0_CLIENT_ID":     DetectionSub,
-			"AUTH0_CLIENT_SECRET": DetectionSub,
-		},
-		RequestParams: RequestParams{
-			AppType:           "regular_web",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
-			Name:              DetectionSub,
-			CallbackPath:      "/callback",
-		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
-	},
-	"regular:java-mvc:gradle": {
-		EnvValues: map[string]string{
-			"AUTH0_DOMAIN":        DetectionSub,
-			"AUTH0_CLIENT_ID":     DetectionSub,
-			"AUTH0_CLIENT_SECRET": DetectionSub,
-		},
-		RequestParams: RequestParams{
-			AppType:           "regular_web",
-			Callbacks:         []string{DetectionSub},
-			AllowedLogoutURLs: []string{DetectionSub},
-			Name:              DetectionSub,
-			CallbackPath:      "/callback",
-		},
-		Strategy: FileOutputStrategy{Path: ".env", Format: "dotenv"},
-	},
 	"regular:aspnet-mvc:none": {
 		EnvValues: map[string]string{
 			"Auth0:Domain":       DetectionSub,

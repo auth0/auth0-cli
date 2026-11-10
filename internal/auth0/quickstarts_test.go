@@ -102,26 +102,6 @@ func TestFrameworkSupportedBuildTools_WebpackVariants(t *testing.T) {
 	assert.Equal(t, []string{"none"}, FrameworkBuildTools["regular:tanstack-start"])
 }
 
-func TestJavaMVCQuickstartConfigs(t *testing.T) {
-	assert.Equal(t, []string{"gradle", "maven"}, FrameworkBuildTools["regular:java-mvc"])
-	for _, key := range []string{"regular:java-mvc:maven", "regular:java-mvc:gradle"} {
-		t.Run(key, func(t *testing.T) {
-			cfg, ok := QuickstartConfigs[key]
-			require.True(t, ok, "missing config %q", key)
-			assert.Equal(t, FileOutputStrategy{Path: ".env", Format: "dotenv"}, cfg.Strategy)
-			assert.Equal(t, "regular_web", cfg.RequestParams.AppType)
-			assert.Equal(t, "/callback", cfg.RequestParams.CallbackPath)
-			assert.Empty(t, cfg.RequestParams.WebOrigins)
-			keys := make([]string, 0, len(cfg.EnvValues))
-			for k := range cfg.EnvValues {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			assert.Equal(t, []string{"AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "AUTH0_DOMAIN"}, keys)
-		})
-	}
-}
-
 func TestNewQuickstartConfigs(t *testing.T) {
 	tests := []struct {
 		key              string
@@ -171,7 +151,7 @@ func TestNewQuickstartConfigs(t *testing.T) {
 	})
 
 	t.Run("out-of-scope configs are absent", func(t *testing.T) {
-		for _, key := range []string{"spa:react:cra", "regular:java-mvc:none"} {
+		for _, key := range []string{"spa:react:cra"} {
 			_, ok := QuickstartConfigs[key]
 			assert.False(t, ok, "%q must not exist", key)
 		}

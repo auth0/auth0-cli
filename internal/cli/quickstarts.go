@@ -933,6 +933,13 @@ func collectAPIInputs(cmd *cobra.Command, cli *cli, inputs *SetupInputs) error {
 			inputs.TokenLifetime = strconv.Itoa(apiDefaultTokenLifetime)
 		}
 	}
+	// Reject what the API would reject, before the app is created and orphaned.
+	if lifetime, err := strconv.Atoi(inputs.TokenLifetime); err == nil && lifetime > apiMaxTokenLifetime {
+		return usageError{
+			err:    fmt.Errorf("invalid token lifetime %d: must be at most %d seconds (30 days)", lifetime, apiMaxTokenLifetime),
+			reason: "invalid_flag_value",
+		}
+	}
 
 	// Signing algorithm.
 	if inputs.SigningAlg == "" {
@@ -2043,7 +2050,7 @@ func mergeDotenv(existing []byte, values map[string]string) (merged []byte, repl
 			if loc[2] >= 0 {
 				prefix = "export "
 			}
-			out = append(out, prefix+dotenvLine(key, value)+eol)
+			out = append(out, prefix+dotenvLine(key, value)+dotenvInlineComment(lines, i, last, loc[1])+eol)
 		}
 		i = last + 1
 	}
@@ -2085,6 +2092,47 @@ func dotenvValueEnd(lines []string, i, offset int) int {
 		}
 	}
 	return i
+}
+
+// dotenvInlineComment returns the trailing " # comment" of the value assigned on lines[i..last]
+// (offset is where the value starts on lines[i]), or "" if there is none.
+func dotenvInlineComment(lines []string, i, last, offset int) string {
+	line := strings.TrimSuffix(lines[i], "\r")
+	if offset > len(line) {
+		return ""
+	}
+	rest := strings.TrimLeft(line[offset:], " \t")
+
+	var tail string
+	switch {
+	case rest == "":
+		return ""
+	case rest[0] == '"' || rest[0] == '\'' || rest[0] == '`':
+		closing := strings.TrimSuffix(lines[last], "\r")
+		start := 0
+		if last == i {
+			closing, start = rest, 1
+		}
+		k := indexClosingQuote(closing[start:], rest[0])
+		if k < 0 {
+			return ""
+		}
+		tail = strings.TrimLeft(closing[start+k+1:], " \t")
+	case rest[0] == '#':
+		tail = rest
+	default: // Unquoted: a comment starts at the first '#' preceded by whitespace.
+		for k := 1; k < len(rest); k++ {
+			if rest[k] == '#' && (rest[k-1] == ' ' || rest[k-1] == '\t') {
+				tail = rest[k:]
+				break
+			}
+		}
+	}
+
+	if !strings.HasPrefix(tail, "#") {
+		return ""
+	}
+	return " " + strings.TrimRight(tail, " \t")
 }
 
 // indexClosingQuote returns the index of the first unescaped quote in s, or -1.

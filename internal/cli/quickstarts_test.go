@@ -1230,11 +1230,34 @@ func TestMergeDotenv(t *testing.T) {
 			want:     "BROKEN='oops\nAUTH0_DOMAIN=\"new\"\nFOO=bar\n",
 		},
 		{
-			// Documented limitation: a replaced line is regenerated, so its inline comment is dropped.
-			name:     "inline comment on a replaced line is dropped but full-line comments stay",
+			name:     "inline comment on an unquoted replaced value is kept",
 			existing: "# keep me\nAUTH0_DOMAIN=old # my tenant\n",
 			values:   map[string]string{"AUTH0_DOMAIN": "new"},
-			want:     "# keep me\nAUTH0_DOMAIN=\"new\"\n",
+			want:     "# keep me\nAUTH0_DOMAIN=\"new\" # my tenant\n",
+		},
+		{
+			name:     "inline comment after a quoted replaced value is kept, a # inside quotes is not a comment",
+			existing: "AUTH0_DOMAIN=\"old#x\"   # my tenant\nAUTH0_CLIENT_ID='a # b'\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new", "AUTH0_CLIENT_ID": "id"},
+			want:     "AUTH0_DOMAIN=\"new\" # my tenant\nAUTH0_CLIENT_ID=\"id\"\n",
+		},
+		{
+			name:     "a # without leading whitespace in an unquoted value is not a comment",
+			existing: "AUTH0_DOMAIN=old#frag\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new"},
+			want:     "AUTH0_DOMAIN=\"new\"\n",
+		},
+		{
+			name:     "inline comment after a multi-line quoted replaced value is kept",
+			existing: "AUTH0_SECRET=\"line1\nline2\" # rotated\nFOO=bar\n",
+			values:   map[string]string{"AUTH0_SECRET": "s"},
+			want:     "AUTH0_SECRET=\"s\" # rotated\nFOO=bar\n",
+		},
+		{
+			name:     "inline comment on a replaced CRLF line keeps the CRLF ending",
+			existing: "AUTH0_DOMAIN=old # my tenant\r\nFOO=bar\r\n",
+			values:   map[string]string{"AUTH0_DOMAIN": "new"},
+			want:     "AUTH0_DOMAIN=\"new\" # my tenant\r\nFOO=bar\r\n",
 		},
 		{
 			name:     "owned key with spaces around = is matched",
@@ -2267,6 +2290,29 @@ func TestExecuteSetupQuickstart_APIAlreadyExistsIsClassified(t *testing.T) {
 	assert.Equal(t, "usage", errorClass(err))
 	assert.Equal(t, "api_exists", errorReason(err))
 	assert.Contains(t, err.Error(), "https://my-api")
+}
+
+// The token lifetime is checked before any app or API is created, so nothing is orphaned.
+func TestExecuteSetupQuickstart_TokenLifetimeAboveMaxFailsFast(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	ctrl := gomock.NewController(t)
+	rsAPI := mock.NewMockResourceServerAPI(ctrl)
+	rsAPI.EXPECT().Read(gomock.Any(), gomock.Any()).Return(nil, errors.New("404 Not Found"))
+
+	c, _, _ := newQSTestCLI(display.OutputFormatJSON, true, &auth0.API{ResourceServer: rsAPI}, nil)
+	cmd := newQSSetupCmd(t, c, "--api", "--linked-app-id", "linked-cid", "--name", "My API", "--identifier", "https://my-api")
+	inputs := &SetupInputs{
+		API: true, LinkedAppID: "linked-cid", Name: "My API", Identifier: "https://my-api",
+		SigningAlg: "RS256", TokenLifetime: "99999999",
+	}
+
+	err := executeSetupQuickstart(cmd, c, inputs, false)
+	require.Error(t, err)
+	assert.Equal(t, "usage", errorClass(err))
+	assert.Equal(t, "invalid_flag_value", errorReason(err))
+	assert.Contains(t, err.Error(), "2592000")
 }
 
 // -- permissions of files that now hold a secret --.

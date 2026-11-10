@@ -406,14 +406,14 @@ func TestDetectProject_VanillaJava_Maven(t *testing.T) {
 	assert.Equal(t, "maven", got.BuildTool)
 }
 
-// A plain servlet app (servlet API only, no Auth0 SDK) is detected as java-mvc.
-func TestDetectProject_JavaMVC_JaxServletOnly(t *testing.T) {
+// Auth0 qs setup --app --type regular --framework java-ee.
+func TestDetectProject_JavaEE_JaxServlet(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pom.xml", `<project><dependency><groupId>javax.servlet</groupId></dependency></project>`)
 
 	got := DetectProject(dir)
 	assert.True(t, got.Detected)
-	assert.Equal(t, "java-mvc", got.Framework)
+	assert.Equal(t, "java-ee", got.Framework)
 	assert.Equal(t, "regular", got.Type)
 	assert.Equal(t, "maven", got.BuildTool)
 }
@@ -426,12 +426,12 @@ func TestDetectProject_JavaEE_JakartaEE(t *testing.T) {
 	assert.Equal(t, "java-ee", got.Framework)
 }
 
-func TestDetectProject_JavaMVC_JakartaServletOnly(t *testing.T) {
+func TestDetectProject_JavaEE_JakartaServlet(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, dir, "pom.xml", `<project><dependency><groupId>jakarta.servlet</groupId></dependency></project>`)
 
 	got := DetectProject(dir)
-	assert.Equal(t, "java-mvc", got.Framework)
+	assert.Equal(t, "java-ee", got.Framework)
 }
 
 func TestDetectProject_JavaEE_JaxEE(t *testing.T) {
@@ -460,34 +460,6 @@ func TestDetectProject_SpringBoot_Gradle(t *testing.T) {
 
 	got := DetectProject(dir)
 	assert.Equal(t, "spring-boot", got.Framework)
-	assert.Equal(t, "gradle", got.BuildTool)
-}
-
-// Auth0 qs setup --app --type regular --framework java-mvc (servlet app with mvc-auth-commons).
-func TestDetectProject_JavaMVC_Maven(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "pom.xml", `<project><dependencies>
-<dependency><groupId>javax.servlet</groupId><artifactId>javax.servlet-api</artifactId></dependency>
-<dependency><groupId>com.auth0</groupId><artifactId>mvc-auth-commons</artifactId><version>1.12.0</version></dependency>
-</dependencies></project>`)
-
-	got := DetectProject(dir)
-	assert.True(t, got.Detected)
-	assert.Equal(t, "java-mvc", got.Framework)
-	assert.Equal(t, "regular", got.Type)
-	assert.Equal(t, "maven", got.BuildTool)
-}
-
-func TestDetectProject_JavaMVC_Gradle(t *testing.T) {
-	dir := t.TempDir()
-	writeTestFile(t, dir, "build.gradle", `dependencies {
-    implementation 'javax.servlet:javax.servlet-api:4.0.1'
-    implementation 'com.auth0:mvc-auth-commons:1.12.0'
-}`)
-
-	got := DetectProject(dir)
-	assert.True(t, got.Detected)
-	assert.Equal(t, "java-mvc", got.Framework)
 	assert.Equal(t, "gradle", got.BuildTool)
 }
 
@@ -1122,47 +1094,14 @@ func TestDetectJavaFramework(t *testing.T) {
 			wantFw:  "java-ee",
 		},
 		{
-			name:    "javax_servlet_only",
-			content: `<dependency><groupId>javax.servlet</groupId><artifactId>javax.servlet-api</artifactId></dependency>`,
-			wantFw:  "java-mvc",
-		},
-		{
-			name:    "jakarta_servlet_only",
-			content: `<dependency><groupId>jakarta.servlet</groupId><artifactId>jakarta.servlet-api</artifactId></dependency>`,
-			wantFw:  "java-mvc",
-		},
-		{
-			name:    "servlet_only_gradle",
-			content: `dependencies { compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0' }`,
-			wantFw:  "java-mvc",
-		},
-		{
-			name:    "javaee_api",
-			content: `<dependency><groupId>javax</groupId><artifactId>javaee-api</artifactId></dependency>`,
+			name:    "javax_servlet",
+			content: `<dependency><groupId>javax.servlet</groupId></dependency>`,
 			wantFw:  "java-ee",
 		},
 		{
-			name: "jakarta_platform_with_servlet_stays_java_ee",
-			content: `<dependency><groupId>jakarta.servlet</groupId><artifactId>jakarta.servlet-api</artifactId></dependency>
-<dependency><groupId>jakarta.platform</groupId><artifactId>jakarta.jakartaee-api</artifactId></dependency>`,
-			wantFw: "java-ee",
-		},
-		{
-			name: "servlet_with_ee_security_api_stays_java_ee",
-			content: `<dependency><groupId>javax.servlet</groupId></dependency>
-<dependency><groupId>javax.security.enterprise</groupId><artifactId>javax.security.enterprise-api</artifactId></dependency>`,
-			wantFw: "java-ee",
-		},
-		{
-			name:    "microprofile",
-			content: `<dependency><groupId>org.eclipse.microprofile.config</groupId></dependency>`,
+			name:    "jakarta_servlet",
+			content: `<dependency><groupId>jakarta.servlet</groupId></dependency>`,
 			wantFw:  "java-ee",
-		},
-		{
-			name: "mvc_auth_commons_beats_ee_platform",
-			content: `<dependency><groupId>jakarta.platform</groupId><artifactId>jakarta.jakartaee-api</artifactId></dependency>
-<dependency><groupId>com.auth0</groupId><artifactId>mvc-auth-commons</artifactId></dependency>`,
-			wantFw: "java-mvc",
 		},
 		{
 			name:    "vanilla_java_plain_pom",
@@ -1173,23 +1112,6 @@ func TestDetectJavaFramework(t *testing.T) {
 			name:    "spring_boot_gradle_dependency",
 			content: `implementation("org.springframework.boot:spring-boot-starter-web")`,
 			wantFw:  "spring-boot",
-		},
-		{
-			name:    "java_mvc_pom",
-			content: `<dependency><groupId>com.auth0</groupId><artifactId>mvc-auth-commons</artifactId><version>1.12.0</version></dependency>`,
-			wantFw:  "java-mvc",
-		},
-		{
-			name:    "java_mvc_gradle",
-			content: `implementation 'com.auth0:mvc-auth-commons:1.12.0'`,
-			wantFw:  "java-mvc",
-		},
-		{
-			// Servlet apps always declare the servlet API; mvc-auth-commons must win over java-ee.
-			name: "java_mvc_beats_servlet_dependency",
-			content: `<dependency><groupId>javax.servlet</groupId><artifactId>javax.servlet-api</artifactId></dependency>
-<dependency><groupId>com.auth0</groupId><artifactId>mvc-auth-commons</artifactId></dependency>`,
-			wantFw: "java-mvc",
 		},
 	}
 
@@ -1298,7 +1220,6 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"spring-boot", 3000},
 		{"java-ee", 8080},
 		{"vanilla-java", 8080},
-		{"java-mvc", 3000},
 		// Regular - default 3000.
 		{"nextjs", 3000},
 		{"nuxt", 3000},
@@ -1357,7 +1278,6 @@ func TestFrameworksForType(t *testing.T) {
 		assert.Contains(t, fws, "vanilla-java")
 		assert.Contains(t, fws, "java-ee")
 		assert.Contains(t, fws, "spring-boot")
-		assert.Contains(t, fws, "java-mvc")
 		assert.Contains(t, fws, "aspnet-mvc")
 		assert.Contains(t, fws, "aspnet-blazor")
 		assert.Contains(t, fws, "aspnet-owin")
@@ -1559,19 +1479,6 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "vanilla-java", BuildTool: "maven", Port: 8080},
 			wantKey:       "regular:vanilla-java:maven",
 			wantBuildTool: "maven",
-		},
-		// Auth0 qs setup --app --type regular --framework java-mvc --build-tool maven|gradle.
-		{
-			name:          "regular java-mvc maven",
-			inputs:        SetupInputs{App: true, Type: "regular", Framework: "java-mvc", BuildTool: "maven", Port: 3000},
-			wantKey:       "regular:java-mvc:maven",
-			wantBuildTool: "maven",
-		},
-		{
-			name:          "regular java-mvc gradle",
-			inputs:        SetupInputs{App: true, Type: "regular", Framework: "java-mvc", BuildTool: "gradle", Port: 3000},
-			wantKey:       "regular:java-mvc:gradle",
-			wantBuildTool: "gradle",
 		},
 		// Auth0 qs setup --app --type regular --framework java-ee.
 		{
