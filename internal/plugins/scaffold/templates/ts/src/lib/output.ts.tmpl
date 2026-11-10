@@ -1,0 +1,58 @@
+import { outputFlags } from "./env";
+
+/**
+ * Decides how a command prints. The rule for every command: the result goes to
+ * stdout, as JSON when the user asked for it and as a table otherwise, and
+ * everything else (notes, errors) goes to stderr. Scripts and agents read
+ * stdout, so keep it free of anything but the result.
+ */
+export class Output {
+  constructor(
+    readonly json: boolean,
+    readonly compact: boolean,
+    private readonly stdout: (text: string) => void,
+    private readonly stderr: (text: string) => void,
+  ) {}
+
+  /** Reads the output flags of the CLI. */
+  static fromEnv(): Output {
+    const { json, compact } = outputFlags();
+    return new Output(
+      json,
+      compact,
+      (text) => process.stdout.write(text),
+      (text) => process.stderr.write(text),
+    );
+  }
+
+  /** Writes a line to stdout. */
+  print(line: string): void {
+    this.stdout(`${line}\n`);
+  }
+
+  /** Writes a note for people to stderr, such as "No clients found.". */
+  note(line: string): void {
+    this.stderr(`${line}\n`);
+  }
+
+  /** Writes a value as JSON, indented unless --json-compact was used. */
+  printJson(value: unknown): void {
+    this.print(JSON.stringify(value, null, this.compact ? undefined : 2));
+  }
+
+  /** Writes rows as a table with aligned columns. */
+  printTable(header: string[], rows: string[][]): void {
+    const all = [header, ...rows];
+    const widths = header.map((_, i) => Math.max(...all.map((row) => (row[i] ?? "").length)));
+    for (const row of all) {
+      this.print(row.map((cell, i) => (i === row.length - 1 ? cell : cell.padEnd((widths[i] ?? 0) + 2))).join(""));
+    }
+  }
+
+  /** Waits until everything written so far has left the process. */
+  async flush(): Promise<void> {
+    for (const stream of [process.stdout, process.stderr]) {
+      await new Promise<void>((resolve) => stream.write("", () => resolve()));
+    }
+  }
+}

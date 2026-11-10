@@ -1,0 +1,247 @@
+// Command release raises the version in plugin.json on a release branch,
+// commits, pushes and opens a pull request, which runs the Release workflow
+// when merged. It uses your own git and gh, so your credentials apply.
+//
+// Usage: go run ./scripts/release [--dry-run] patch|minor|major|X.Y.Z
+package main
+
+import (
+	"bytes"
+	"errors"
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+)
+
+const manifest = "plugin.json"
+
+func main() {
+	dryRun := flag.Bool("dry-run", false, "print the steps and change nothing")
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: go run ./scripts/release [--dry-run] patch|minor|major|X.Y.Z")
+	}
+	flag.Parse()
+
+	if flag.NArg() != 1 {
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	if err := release(flag.Arg(0), *dryRun); err != nil {
+		fmt.Fprintln(os.Stderr, "release:", err)
+		os.Exit(1)
+	}
+}
+
+func release(request string, dryRun bool) error {
+	for _, tool := range [][2]string{{"git", "https://git-scm.com"}, {"gh", "https://cli.github.com"}} {
+		if _, err := exec.LookPath(tool[0]); err != nil {
+			return fmt.Errorf("%s is not installed. Install it from %s", tool[0], tool[1])
+		}
+	}
+
+	if _, err := run("gh", "auth", "status"); err != nil {
+		return fmt.Errorf("gh is not logged in. Run: gh auth login\n%w", err)
+	}
+
+	base, err := defaultBranch()
+	if err != nil {
+		return err
+	}
+
+	if err := checkBranch(base); err != nil {
+		return err
+	}
+
+	doc, err := os.ReadFile(manifest)
+	if err != nil {
+		return err
+	}
+
+	current, err := readVersion(doc)
+	if err != nil {
+		return fmt.Errorf("%s: %w", manifest, err)
+	}
+
+	version, err := nextVersion(current, request)
+	if err != nil {
+		return err
+	}
+
+	tag, branch := "v"+version, "release/v"+version
+
+	if err := checkFree(tag, branch); err != nil {
+		return err
+	}
+
+	updated, err := setVersion(doc, version)
+	if err != nil {
+		return fmt.Errorf("%s: %w", manifest, err)
+	}
+
+	fmt.Printf("Releasing %s (now %s) from %s:\n  create branch %s, set the version in %s,\n  commit \"chore: release %s\", push and open the pull request \"Release %s\"\n",
+		version, current, base, branch, manifest, tag, tag)
+
+	if dryRun {
+		fmt.Println("Dry run: nothing was changed.")
+
+		return nil
+	}
+
+	return publish(base, branch, tag, updated)
+}
+
+// publish creates the branch and the pull request. Before the push, a failure
+// restores the repository.
+func publish(base, branch, tag string, updated []byte) (err error) {
+	if _, err := run("git", "switch", "-c", branch); err != nil {
+		return err
+	}
+
+	pushed := false
+
+	defer func() {
+		if err != nil && !pushed {
+			_, _ = run("git", "restore", "--staged", "--worktree", "--", manifest)
+			_, _ = run("git", "switch", base)
+			_, _ = run("git", "branch", "-D", branch)
+		}
+	}()
+
+	info, err := os.Stat(manifest)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(manifest, updated, info.Mode().Perm()); err != nil {
+		return err
+	}
+
+	for _, args := range [][]string{
+		{"add", "--", manifest},
+		{"commit", "-m", "chore: release " + tag},
+		{"push", "--set-upstream", "origin", branch},
+	} {
+		if _, err := run("git", args...); err != nil {
+			return err
+		}
+	}
+
+	pushed = true
+
+	body := "Merging this pull request releases " + tag + ": the Release workflow tests, builds, tags and publishes it."
+
+	url, err := run("gh", "pr", "create", "--base", base, "--head", branch, "--title", "Release "+tag, "--body", body)
+	if err != nil {
+		return fmt.Errorf("the branch %s is pushed but the pull request was not opened. Open it with: gh pr create --head %s\n%w", branch, branch, err)
+	}
+
+	if _, err := run("git", "switch", base); err != nil {
+		return err
+	}
+
+	fmt.Printf("%s\nMerge the pull request to publish %s.\n", url, tag)
+
+	return nil
+}
+
+func defaultBranch() (string, error) {
+	out, err := run("git", "ls-remote", "--symref", "origin", "HEAD")
+	if err != nil {
+		return "", err
+	}
+
+	first, _, _ := strings.Cut(out, "\n")
+
+	ref, ok := strings.CutPrefix(first, "ref: refs/heads/")
+	if !ok {
+		return "", errors.New("origin did not say which branch is its default branch")
+	}
+
+	name, _, _ := strings.Cut(ref, "\t")
+
+	return name, nil
+}
+
+// checkBranch requires a clean checkout of the default branch, level with origin.
+func checkBranch(base string) error {
+	current, err := run("git", "branch", "--show-current")
+	if err != nil {
+		return err
+	}
+
+	if current != base {
+		return fmt.Errorf("you are on %q. Switch to %s first: git switch %s", current, base, base)
+	}
+
+	changes, err := run("git", "status", "--porcelain", "--untracked-files=no")
+	if err != nil {
+		return err
+	}
+
+	if changes != "" {
+		return fmt.Errorf("there are uncommitted changes. Commit or stash them first:\n%s", changes)
+	}
+
+	head, err := run("git", "rev-parse", "HEAD")
+	if err != nil {
+		return err
+	}
+
+	remote, err := run("git", "ls-remote", "origin", "refs/heads/"+base)
+	if err != nil {
+		return err
+	}
+
+	if tip, _, _ := strings.Cut(remote, "\t"); tip != head {
+		return fmt.Errorf("%s is not level with origin/%s (here %.8s, origin %.8s). Run git pull or git push first", base, base, head, tip)
+	}
+
+	return nil
+}
+
+// checkFree refuses a tag or branch that exists here or on origin.
+func checkFree(tag, branch string) error {
+	tagRef, branchRef := "refs/tags/"+tag, "refs/heads/"+branch
+
+	local, err := run("git", "for-each-ref", "--format=%(refname)", tagRef, branchRef)
+	if err != nil {
+		return err
+	}
+
+	remote, err := run("git", "ls-remote", "origin", tagRef, branchRef)
+	if err != nil {
+		return err
+	}
+
+	// Remote lines are "<sha><tab><ref>", plus ^{} on an annotated tag.
+	for _, line := range strings.Split(local+"\n"+remote, "\n") {
+		ref := strings.TrimSuffix(line[strings.LastIndex(line, "\t")+1:], "^{}")
+		if ref == tagRef || ref == branchRef {
+			return fmt.Errorf("%s already exists, here or on origin. Pick another version, or delete it first", ref)
+		}
+	}
+
+	return nil
+}
+
+// run executes a command and returns its trimmed output; an error carries its stderr.
+func run(name string, args ...string) (string, error) {
+	var stdout, stderr bytes.Buffer
+
+	cmd := exec.Command(name, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, &stdout, &stderr
+
+	if err := cmd.Run(); err != nil {
+		message := strings.TrimSpace(stderr.String())
+		if message == "" {
+			message = err.Error()
+		}
+
+		return "", fmt.Errorf("%s %s: %s", name, args[0], message)
+	}
+
+	return strings.TrimSpace(stdout.String()), nil
+}

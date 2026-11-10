@@ -1,0 +1,18 @@
+// Entry point of the plugin. The Auth0 CLI starts it when someone runs
+// `auth0 __PLUGIN_NAME__`. This file only wires things together: the commands are in
+// src/commands/, and what they share (environment, SDK client, output, errors)
+// is in src/lib/.
+import { createClient } from "./lib/client";
+import { Output } from "./lib/output";
+import { signalContext } from "./lib/plugin";
+import { run } from "./run";
+
+const out = Output.fromEnv();
+const code = await run(process.argv.slice(2), {
+  out,
+  signal: signalContext(),
+  client: () => createClient(),
+});
+
+await out.flush();
+process.exit(code);

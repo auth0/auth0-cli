@@ -1,0 +1,49 @@
+import { ManagementError } from "auth0";
+
+import type { Output } from "./output";
+import { Exit, name } from "./plugin";
+
+/** The message that the CLI proxy writes when a call needs a scope that plugin.json does not declare. Auth0 never says it. */
+const proxyDeniedText = "did not declare scope";
+
+/** The arguments were wrong. The exit code is 2. */
+export class UsageError extends Error {}
+
+/**
+ * Prints an error to stderr and returns the exit code for it: 2 for wrong
+ * usage and 1 for anything else. This is the one place that decides what an
+ * error looks like, so change it here.
+ */
+export function reportError(out: Output, error: unknown): number {
+  if (error instanceof UsageError) {
+    out.note(`error: ${error.message}\nRun \`auth0 ${name} --help\` for usage.`);
+    return Exit.usage;
+  }
+
+  if (error instanceof ManagementError) {
+    out.note(apiErrorText(error));
+  } else {
+    out.note(`error: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  return Exit.error;
+}
+
+/** Turns an error response of the Management API into text. The API answers with {statusCode, error, message, errorCode}. */
+function apiErrorText(error: ManagementError): string {
+  // The call got no answer: a refused connection, a TLS error, a timeout.
+  if (error.statusCode === undefined) {
+    return `error: could not reach the CLI proxy: ${error.message}`;
+  }
+
+  const body = error.body as { message?: unknown } | undefined;
+  const message = typeof body?.message === "string" ? body.message : "no details";
+
+  if (error.statusCode === 403 && message.includes(proxyDeniedText)) {
+    return (
+      `error: the CLI blocked this call.\n  ${message}\n` +
+      "Declare the scope under permissions.scopes of the command in plugin.json, " +
+      `then approve the new permissions with: auth0 plugin approve ${name}`
+    );
+  }
+  return `error: the API answered ${error.statusCode}: ${message}`;
+}
