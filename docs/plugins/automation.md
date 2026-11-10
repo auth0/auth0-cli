@@ -116,6 +116,7 @@ A few rules apply:
 
 - A pin is checked by `install`, `update` and every run. With a matching pin, `install` and `update` do not ask, and the result has `"approvalRequired": false`.
 - A pin matches the hash and nothing else. If a new version of the plugin asks for different permissions, the hash changes, and the pin no longer matches. The run then fails with `plugin_not_approved` until you review the new permissions and update the pin.
+- For a plugin linked in dev mode, `info` shows a hash that also covers the exact bytes of `dev-policy.json`, and a pin must use that hash. Editing the file changes the hash, so the pin no longer matches.
 - You can list more than one pin, for example to cover a rollout: `auth0/checkmate@sha256:<hash>,auth0/checkmate@sha256:<other hash>`. Each entry needs the full ID with the registry name, as in `auth0/checkmate`.
 - A pin is never written to `approvals.json`.
 - An invalid value is an error, not an empty list, so a typo cannot look like having no pins:

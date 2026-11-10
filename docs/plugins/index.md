@@ -32,7 +32,7 @@ The first command shows you what the plugin asks for, and it installs the plugin
 
 Plugins are Experimental, so commands, output and file formats can change between releases. The rest of the design is in place, and these parts are still being built:
 
-- **Registry root.** The CLI checks the signed registry metadata against a root of trust built into the binary. That root is not in the CLI yet, so no build can install or run a plugin from the registry. A linked build stops at the same check. Plugins open to the public once the root is in place.
+- **Registry root.** The CLI checks the signed registry metadata against a root of trust built into the binary. That root is not in the CLI yet, so no build can install or run a plugin from the registry, and an installed plugin stops at this check. A build that you link with `auth0 plugin dev link` in dev mode does not use the registry. It runs against a local `dev-policy.json` that you write, see [Building a plugin](building.md#the-dev-policy). Plugins open to the public once the root is in place.
 - **Signed releases.** The release workflows do not sign archives or record build attestations yet. The CLI will verify both once they are added.
 - **Catalog.** A plugin must be listed in the registry catalog before `auth0 plugin install` can find it. A GitHub release alone does not list it.
 - **Per-run tokens.** Plugins currently use the same kind of session as the CLI, through the local proxy, and the proxy limits them to the scopes each command declares. Tokens scoped to a single run are planned.
