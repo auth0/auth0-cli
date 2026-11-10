@@ -87,7 +87,7 @@ Use "auth0 commands" for an overview of every command, and add --json to any --h
 		ansi.Bold("Usage:"),
 		ansi.Bold("Aliases:"),
 		ansi.Bold("Examples:"),
-		ansi.Bold("Available Resources:"),
+		ansi.Bold(coreGroupTitle),
 		ansi.Bold("Flags:"),
 		ansi.Bold("Global Flags:"),
 		ansi.Bold("Additional help topics:"),

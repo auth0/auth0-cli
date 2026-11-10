@@ -1243,6 +1243,11 @@ type pluginService struct {
 	// no terminal.
 	interactive func(cmd *cobra.Command) bool
 
+	// OutputTerminals says whether stdout and stderr are terminals, which the hint
+	// about plugin updates needs. When it is nil, the real streams are checked.
+	// Tests set it, because they have no terminal.
+	outputTerminals func() bool
+
 	// Confirmer asks the person a yes or no question. When it is nil, the prompt
 	// of the CLI is used. Tests set it for the same reason.
 	confirmer func(message string) bool
