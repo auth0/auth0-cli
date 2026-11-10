@@ -46,9 +46,10 @@ type Verified struct {
 // because another account or process could then rewrite the file after it was
 // hashed. The plugins directory and the directories between it and the version
 // directory must be real directories and not links, and not writable by the
-// group or by everyone either. The checks of write access and hard links are
-// skipped on Windows, which controls access with ACLs. Any difference is a *VerificationError, and nothing falls back to
-// unverified files. The whole executable is hashed every time, without a
+// group or by everyone either. The check of write access is skipped on Windows,
+// which controls access with ACLs, and the hard link check is not. Any
+// difference is a *VerificationError, and nothing falls back to unverified
+// files. The whole executable is hashed every time, without a
 // shortcut based on its size or modification time, because those can be set to
 // anything.
 //
@@ -188,7 +189,9 @@ func (s *Store) verifyVersion(id string, e *entry, version string) (Verified, er
 			return fail("%s is not a directory", path)
 		}
 
-		if reason := unsafeFile(info); reason != "" {
+		// A directory has no open file and needs none: unsafeFile reads nothing
+		// else for it.
+		if reason := unsafeFile(nil, info); reason != "" {
 			return fail("%s %s", path, reason)
 		}
 	}
@@ -278,7 +281,7 @@ func openRegular(path string) (*os.File, error) {
 		return nil, fmt.Errorf("%s %w", path, errNotRegular)
 	}
 
-	if reason := unsafeFile(after); reason != "" {
+	if reason := unsafeFile(file, after); reason != "" {
 		_ = file.Close()
 
 		return nil, fmt.Errorf("%s %s", path, reason)

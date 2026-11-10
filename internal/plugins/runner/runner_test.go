@@ -9,12 +9,9 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -60,7 +57,7 @@ var helperModes = map[string]func(args []string){
 	// while, in case a test leaves it behind.
 	"beat": func(args []string) {
 		if len(args) > 1 && args[1] == "ignore-term" {
-			signal.Ignore(syscall.SIGTERM)
+			ignoreStop()
 		}
 
 		_ = os.WriteFile(filepath.Join(args[0], "beat"), []byte("0"), 0o600)
@@ -78,8 +75,7 @@ var helperModes = map[string]func(args []string){
 	// Spawn <dir> [ignore-term] starts a grandchild that beats, and waits to be
 	// stopped itself.
 	"spawn": func(args []string) {
-		child := exec.Command(executable(), append([]string{"beat"}, args...)...)
-		child.Env = []string{"GO_WANT_HELPER=1"}
+		child := helperChild(append([]string{"beat"}, args...)...)
 
 		if err := child.Start(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -92,8 +88,7 @@ var helperModes = map[string]func(args []string){
 	// Daemon exits at once and leaves a process behind that keeps its output
 	// open.
 	"daemon": func([]string) {
-		child := exec.Command(executable(), "pause")
-		child.Env = []string{"GO_WANT_HELPER=1"}
+		child := helperChild("pause")
 		child.Stdout = os.Stdout
 		child.Stderr = os.Stderr
 
@@ -101,6 +96,15 @@ var helperModes = map[string]func(args []string){
 			exitHelper(3)
 		}
 	},
+}
+
+// helperChild returns a command that runs a mode of the test binary with a
+// minimal environment, for a helper that starts a process of its own.
+func helperChild(args ...string) *exec.Cmd {
+	child := exec.Command(executable(), args...)
+	child.Env = []string{"GO_WANT_HELPER=1"}
+
+	return child
 }
 
 func executable() string {
@@ -167,6 +171,15 @@ func requireStopped(t *testing.T, dir string) {
 	time.Sleep(300 * time.Millisecond)
 
 	assert.Equal(t, before, beats(t, dir), "the process is still running")
+}
+
+// requireStoppedByRun fails when Run took about as long as the helper processes
+// live. Without it a tree that was never stopped passes requireStopped, because
+// Run only returns when the helpers have ended on their own.
+func requireStoppedByRun(t *testing.T, started time.Time) {
+	t.Helper()
+
+	require.Less(t, time.Since(started), 30*time.Second, "Run did not stop the process tree, it waited for the processes to end")
 }
 
 func TestRun_Results(t *testing.T) {
@@ -330,7 +343,8 @@ func TestRun_DoesNotStart(t *testing.T) {
 
 		err := Run(t.Context(), spec)
 
-		require.ErrorIs(t, err, fs.ErrNotExist)
+		// Windows reports a missing file as a failed lookup of the program.
+		require.True(t, errors.Is(err, fs.ErrNotExist) || errors.Is(err, exec.ErrNotFound), "got %v", err)
 
 		var exit *ExitError
 		assert.False(t, errors.As(err, &exit))
@@ -382,10 +396,6 @@ func TestRun_Timeout(t *testing.T) {
 func TestRun_TimeoutStopsTheWholeTree(t *testing.T) {
 	t.Parallel()
 
-	if runtime.GOOS == "windows" {
-		t.Skip("the process tree is only stopped on Unix until DXCDT-2610")
-	}
-
 	dir := t.TempDir()
 
 	// The limit is long because a process can take a second to start when the
@@ -393,19 +403,18 @@ func TestRun_TimeoutStopsTheWholeTree(t *testing.T) {
 	spec := helper("spawn", dir)
 	spec.Timeout = 3 * time.Second
 
+	started := time.Now()
+
 	var timeout *TimeoutError
 	require.ErrorAs(t, Run(t.Context(), spec), &timeout)
 	require.FileExists(t, filepath.Join(dir, "ready"), "the grandchild did not start before the timeout")
+	requireStoppedByRun(t, started)
 
 	requireStopped(t, dir)
 }
 
 func TestRun_CancelStopsTheWholeTree(t *testing.T) {
 	t.Parallel()
-
-	if runtime.GOOS == "windows" {
-		t.Skip("the process tree is only stopped on Unix until DXCDT-2610")
-	}
 
 	dir := t.TempDir()
 
@@ -417,18 +426,17 @@ func TestRun_CancelStopsTheWholeTree(t *testing.T) {
 		cancel()
 	}()
 
+	started := time.Now()
+
 	var interrupted *InterruptedError
 	require.ErrorAs(t, Run(ctx, helper("spawn", dir)), &interrupted)
+	requireStoppedByRun(t, started)
 
 	requireStopped(t, dir)
 }
 
 func TestRun_KillsWhatIgnoresTheRequestToStop(t *testing.T) {
 	t.Parallel()
-
-	if runtime.GOOS == "windows" {
-		t.Skip("a request to stop is a kill on Windows")
-	}
 
 	// Both start a process that beats and ignores the request to stop. The first
 	// is the plugin itself, the second one it started.

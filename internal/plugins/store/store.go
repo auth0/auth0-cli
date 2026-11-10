@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/filelock"
@@ -154,7 +155,7 @@ type Result struct {
 
 // The functions that the store uses to move files into place, which tests
 // replace to make them fail.
-var renameFile = os.Rename
+var renameFile = plugins.Rename
 
 // The functions that tests replace to see what the store reads: readDir lists a
 // version directory when the size of a plugin is added up, and currentPlatform
@@ -165,10 +166,18 @@ var (
 )
 
 // pluginPath returns where the directory of a plugin is, or an error when the
-// ID is not safe to use as a path.
+// ID is not safe to use as a path. Both parts of the ID become directory names,
+// so neither may be a name that Windows reserves, even on a system where that
+// would work: a plugin that installs here can then be installed everywhere.
 func (s *Store) pluginPath(id string) (string, error) {
 	if !idPattern.MatchString(id) {
 		return "", fmt.Errorf("%q is not a plugin ID in the form registry/name", id)
+	}
+
+	for _, part := range strings.Split(id, "/") {
+		if reason := badFileName(part); reason != "" {
+			return "", fmt.Errorf("%q is not a plugin ID in the form registry/name: %q cannot be a directory name because %s", id, part, reason)
+		}
 	}
 
 	return filepath.Join(s.Dir, storeDirName, filepath.FromSlash(id)), nil
