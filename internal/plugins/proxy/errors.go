@@ -74,6 +74,9 @@ type rejection struct {
 	// scope is why it was denied. The summary names it.
 	scope string
 
+	// Unmatched is set when no rule of the scope table matched the call.
+	unmatched bool
+
 	// The header holds headers that go with the answer, such as Allow.
 	header http.Header
 }
