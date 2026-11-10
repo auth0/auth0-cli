@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -17,6 +19,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 )
 
 // stubExecutable is the executable of a build that is linked or checked but never
@@ -58,6 +61,20 @@ func (b devBuild) save(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(b.Dir, devlink.ManifestName), data, 0o600))
 }
 
+// fixturePolicy is a dev policy with the two rules of the scope table that the
+// fixture index serves.
+const fixturePolicy = `{"rules":[
+	{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]},
+	{"method":"GET","path":"/api/v2/users","anyOf":["read:users"]}
+]}`
+
+// writePolicy writes the dev policy of the build, in its directory.
+func (b devBuild) writePolicy(t *testing.T, content string) {
+	t.Helper()
+
+	require.NoError(t, os.WriteFile(filepath.Join(b.Dir, devpolicy.FileName), []byte(content), 0o600))
+}
+
 // writeManifestText replaces the manifest of the build with the text.
 func (b devBuild) writeManifestText(t *testing.T, text string) {
 	t.Helper()
@@ -97,11 +114,14 @@ func (e *pluginEnv) linksPath() string {
 	return filepath.Join(e.Dir, devlink.FileName)
 }
 
-// approveBuild records the approval of a person for the permissions of the build.
+// approveBuild records the approval of a person for the permissions of the build
+// and for the dev policy that it has now.
 func (e *pluginEnv) approveBuild(build devBuild) {
 	e.t.Helper()
 
-	require.NoError(e.t, e.svc.approvals.Approve(context.Background(), pluginTestTenant, build.Manifest.ID, build.Manifest.PermissionsHash()))
+	hash, _ := linkedHash(&devlink.Build{Dir: build.Dir, Manifest: &build.Manifest})
+
+	require.NoError(e.t, e.svc.approvals.Approve(context.Background(), pluginTestTenant, build.Manifest.ID, hash))
 }
 
 // samePath fails unless two paths are the same file, whatever links their
@@ -245,6 +265,53 @@ func TestLinkPluginCmd(t *testing.T) {
 		assert.Equal(t, true, e.jsonObject()["approvalRequired"])
 	})
 
+	t.Run("asks again when the approval was for the manifest alone", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+
+		require.NoError(t, e.svc.approvals.Approve(context.Background(), pluginTestTenant, build.Manifest.ID, build.Manifest.PermissionsHash()))
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--tenant", pluginTestTenant, "--json"))
+		assert.Equal(t, true, e.jsonObject()["approvalRequired"])
+	})
+
+	t.Run("does not ask again when the approval covers the dev policy", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+		e.approveBuild(build)
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--tenant", pluginTestTenant, "--json"))
+		assert.Equal(t, false, e.jsonObject()["approvalRequired"])
+	})
+
+	t.Run("asks again when the dev policy changed since the approval", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+		e.approveBuild(build)
+		build.writePolicy(t, fixturePolicy+"\n")
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--tenant", pluginTestTenant, "--json"))
+		assert.Equal(t, true, e.jsonObject()["approvalRequired"])
+	})
+
+	t.Run("covers the dev policy that --policy names", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		other := filepath.Join(t.TempDir(), "policy.json")
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy), 0o600))
+
+		file, err := devpolicy.Load(other)
+		require.NoError(t, err)
+
+		require.NoError(t, e.svc.approvals.Approve(context.Background(), pluginTestTenant, build.Manifest.ID, devpolicy.ConsentHash(build.Manifest.PermissionsHash(), file)))
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--policy", other, "--tenant", pluginTestTenant, "--json"))
+		assert.Equal(t, false, e.jsonObject()["approvalRequired"])
+	})
+
 	t.Run("says how to approve when there is no tenant", func(t *testing.T) {
 		e := newDevEnv(t)
 		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
@@ -323,6 +390,92 @@ func TestLinkPluginCmd(t *testing.T) {
 	})
 }
 
+func TestLinkPluginCmd_DevPolicy(t *testing.T) {
+	missingNote := "There is no dev-policy.json in "
+
+	t.Run("a dev policy in the directory is checked and needs no note", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--tenant", pluginTestTenant))
+
+		assert.NotContains(t, e.stderr.String(), missingNote)
+		assert.Equal(t, map[string]devlink.Link{pluginTestID: {Path: build.Dir, Bin: build.Bin}}, e.links(), "the file in the directory is not recorded")
+	})
+
+	t.Run("without a dev policy the link is made and the note says how to make one", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--tenant", pluginTestTenant))
+
+		out := e.stderr.String()
+		assert.Contains(t, out, missingNote+build.Dir)
+		assert.Contains(t, out, "a linked plugin does not run without one")
+		assert.Contains(t, out, `"rules"`)
+		assert.Contains(t, out, "--policy <file>")
+		assert.Equal(t, map[string]devlink.Link{pluginTestID: {Path: build.Dir, Bin: build.Bin}}, e.links())
+		assert.Empty(t, e.stdout.String())
+	})
+
+	t.Run("a policy file that was given is recorded as an absolute path", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+
+		other := filepath.Join(build.Dir, "rules", "policy.json")
+		require.NoError(t, os.MkdirAll(filepath.Dir(other), 0o700))
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy), 0o600))
+
+		t.Chdir(build.Dir)
+
+		require.NoError(t, e.run("plugin", "dev", "link", "--policy", filepath.Join("rules", "policy.json")))
+
+		link := e.links()[pluginTestID]
+		assert.True(t, filepath.IsAbs(link.Policy), link.Policy)
+		samePath(t, other, link.Policy)
+		assert.NotContains(t, e.stderr.String(), missingNote, "a file that was given needs no note")
+	})
+
+	t.Run("a policy file that was given wins over the one in the directory", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":`)
+
+		other := filepath.Join(t.TempDir(), "policy.json")
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy), 0o600))
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--policy", other))
+
+		assert.Equal(t, map[string]devlink.Link{pluginTestID: {Path: build.Dir, Bin: build.Bin, Policy: other}}, e.links())
+	})
+
+	t.Run("linking again without --policy drops the policy that was named", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+
+		other := filepath.Join(t.TempDir(), "policy.json")
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy), 0o600))
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--policy", other))
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir))
+
+		assert.Empty(t, e.links()[pluginTestID].Policy)
+	})
+
+	t.Run("the JSON result has no policy", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+
+		require.NoError(t, e.run("plugin", "dev", "link", build.Dir, "--tenant", pluginTestTenant, "--json"))
+
+		object := e.jsonObject()
+		assert.NotContains(t, object, "policy")
+		assert.ElementsMatch(t, []string{"id", "version", "path", "bin", "banner", "approvalRequired", "approveCommand"}, slices.Collect(maps.Keys(object)))
+	})
+}
+
 func TestLinkPluginCmd_Refusals(t *testing.T) {
 	tests := []struct {
 		name string
@@ -372,6 +525,59 @@ func TestLinkPluginCmd_Refusals(t *testing.T) {
 				return []string{build.Dir}
 			},
 			want: []string{"is not valid", "version:", "auth0 plugin dev validate {dir}"},
+		},
+		{
+			name: "a dev policy in the directory that is not JSON",
+			prepare: func(t *testing.T, build devBuild) []string {
+				build.writePolicy(t, `{"rules":`)
+
+				return []string{build.Dir}
+			},
+			want: []string{"the dev policy is not valid", filepath.Join("{dir}", devpolicy.FileName)},
+		},
+		{
+			name: "a dev policy in the directory with an unknown field",
+			prepare: func(t *testing.T, build devBuild) []string {
+				build.writePolicy(t, `{"rules":[{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]}],"extra":1}`)
+
+				return []string{build.Dir}
+			},
+			want: []string{"the dev policy is not valid", "extra"},
+		},
+		{
+			name: "a dev policy in the directory with no rules",
+			prepare: func(t *testing.T, build devBuild) []string {
+				build.writePolicy(t, `{"rules":[]}`)
+
+				return []string{build.Dir}
+			},
+			want: []string{"the dev policy is not valid", "no rule"},
+		},
+		{
+			name: "a dev policy in the directory with a rule the registry would refuse",
+			prepare: func(t *testing.T, build devBuild) []string {
+				build.writePolicy(t, `{"rules":[{"method":"GET","path":"/clients","anyOf":["read:clients"]}]}`)
+
+				return []string{build.Dir}
+			},
+			want: []string{"the dev policy is not valid", "scopeTable.rules[0].path"},
+		},
+		{
+			name: "a policy file that was given and is not there",
+			prepare: func(t *testing.T, build devBuild) []string {
+				return []string{build.Dir, "--policy", filepath.Join(build.Dir, "missing.json")}
+			},
+			want: []string{"there is no dev policy", "missing.json"},
+		},
+		{
+			name: "a policy file that was given and is not valid",
+			prepare: func(t *testing.T, build devBuild) []string {
+				other := filepath.Join(build.Dir, "other.json")
+				require.NoError(t, os.WriteFile(other, []byte(`{"rules":[]}`), 0o600))
+
+				return []string{build.Dir, "--policy", other}
+			},
+			want: []string{"the dev policy is not valid", "other.json"},
 		},
 		{
 			name: "a name of a core command",
@@ -773,6 +979,119 @@ func TestValidatePluginCmd(t *testing.T) {
 	})
 }
 
+func TestValidatePluginCmd_DevPolicy(t *testing.T) {
+	// The fixture plugin declares read:clients and read:users.
+	tests := []struct {
+		name   string
+		policy string // Empty for no file.
+		want   []display.PluginProblem
+	}{
+		{name: "a dev policy that covers the scopes", policy: fixturePolicy},
+		{name: "no dev policy"},
+		{
+			name:   "a dev policy that cannot be used",
+			policy: `{"rules":`,
+			want:   []display.PluginProblem{{Path: "dev-policy.json", Message: "the dev policy is not valid"}},
+		},
+		{
+			name:   "a dev policy with no rule",
+			policy: `{"rules":[]}`,
+			want:   []display.PluginProblem{{Path: "dev-policy.json", Message: "rules lists no rule"}},
+		},
+		{
+			name:   "a scope that no rule allows",
+			policy: `{"rules":[{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]}]}`,
+			want:   []display.PluginProblem{{Path: "dev-policy.json", Message: "scope read:users is declared in plugin.json but no rule allows it"}},
+		},
+		{
+			name: "a rule that no declared scope uses",
+			policy: `{"rules":[
+				{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]},
+				{"method":"GET","path":"/api/v2/users","anyOf":["read:users"]},
+				{"method":"DELETE","path":"/api/v2/clients/{id}","anyOf":["delete:clients"]}
+			]}`,
+			want: []display.PluginProblem{{Path: "dev-policy.json", Message: "rule DELETE /api/v2/clients/{id} allows only scopes that plugin.json does not declare"}},
+		},
+		{
+			name:   "a rule that one declared scope uses is enough",
+			policy: `{"rules":[{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients","read:users"]}]}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			e := newDevEnv(t)
+			build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+
+			if test.policy != "" {
+				build.writePolicy(t, test.policy)
+			}
+
+			// The policy is looked for next to the manifest, whether the path names the
+			// directory or the file.
+			for _, path := range []string{build.Dir, filepath.Join(build.Dir, devlink.ManifestName)} {
+				e.stdout.Reset()
+				e.stderr.Reset()
+
+				err := e.run("plugin", "dev", "validate", path, "--json")
+
+				if len(test.want) == 0 {
+					require.NoError(t, err)
+					assert.JSONEq(t, `{"valid":true,"problems":[]}`, e.stdout.String())
+
+					continue
+				}
+
+				require.Error(t, err)
+				assertValidationError(t, err, "plugin_manifest_invalid")
+
+				var got display.PluginValidation
+				require.NoError(t, json.Unmarshal(e.stdout.Bytes(), &got), e.stdout.String())
+
+				assert.False(t, got.Valid)
+				require.Len(t, got.Problems, len(test.want))
+
+				for n, want := range test.want {
+					assert.Equal(t, want.Path, got.Problems[n].Path)
+					assert.Contains(t, got.Problems[n].Message, want.Message)
+				}
+			}
+		})
+	}
+
+	t.Run("problems only in the dev policy are not blamed on the manifest", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":`)
+
+		err := e.run("plugin", "dev", "validate", build.Dir, "--json")
+
+		require.EqualError(t, err, "the dev policy has 1 problem")
+		assertValidationError(t, err, "plugin_manifest_invalid")
+	})
+
+	t.Run("the problems of the manifest and of the dev policy are listed together", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "1.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":`)
+		build.writeManifestText(t, `{"id":"Bad","version":"1","apiVersion":1,"description":"d","owner":{"team":"t","bugs":"https://example.com"},"platforms":["linux-x64"],"commands":[{"name":"a","description":"d"}],"extra":true}`)
+
+		err := e.run("plugin", "dev", "validate", build.Dir, "--json")
+
+		require.EqualError(t, err, "the plugin has 4 problems")
+
+		var got display.PluginValidation
+		require.NoError(t, json.Unmarshal(e.stdout.Bytes(), &got), e.stdout.String())
+
+		paths := []string{}
+		for _, problem := range got.Problems {
+			paths = append(paths, problem.Path)
+		}
+
+		assert.Contains(t, paths, "dev-policy.json")
+	})
+}
+
 func TestSplitProblem(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -944,5 +1263,51 @@ func TestVerifiedLinked(t *testing.T) {
 	assert.Equal(t, build.Dir, verified.Dir)
 	assert.Equal(t, build.Bin, verified.Bin)
 	assert.Equal(t, filepath.Join(build.Dir, devlink.ManifestName), verified.ManifestPath)
-	assert.Equal(t, build.Manifest.PermissionsHash(), verified.PermissionsHash, "the hash is that of the manifest just read")
+	assert.Equal(t, build.Manifest.PermissionsHash(), verified.PermissionsHash, "without a dev policy the hash is that of the manifest just read")
+
+	t.Run("the hash covers the dev policy", func(t *testing.T) {
+		build.writePolicy(t, fixturePolicy)
+
+		file, err := devpolicy.Load(filepath.Join(build.Dir, devpolicy.FileName))
+		require.NoError(t, err)
+
+		assert.Equal(t, devpolicy.ConsentHash(build.Manifest.PermissionsHash(), file), verifiedLinked(opened).PermissionsHash)
+	})
+
+	t.Run("the hash covers the dev policy that the link names", func(t *testing.T) {
+		other := filepath.Join(t.TempDir(), "policy.json")
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy+"\n"), 0o600))
+
+		named, err := devlink.Link{Path: build.Dir, Bin: build.Bin, Policy: other}.Open(pluginTestID)
+		require.NoError(t, err)
+
+		file, err := devpolicy.Load(other)
+		require.NoError(t, err)
+
+		assert.Equal(t, devpolicy.ConsentHash(build.Manifest.PermissionsHash(), file), verifiedLinked(named).PermissionsHash)
+		assert.NotEqual(t, verifiedLinked(opened).PermissionsHash, verifiedLinked(named).PermissionsHash)
+	})
+
+	t.Run("a dev policy that cannot be read leaves the hash of the manifest", func(t *testing.T) {
+		build.writePolicy(t, `{"rules":`)
+
+		assert.Equal(t, build.Manifest.PermissionsHash(), verifiedLinked(opened).PermissionsHash)
+	})
+
+	t.Run("a dev policy that loads but that the registry would refuse leaves the hash of the manifest", func(t *testing.T) {
+		// The path has no /api/v2 prefix, so the file is read but the scope table is not valid.
+		build.writePolicy(t, `{"rules":[{"method":"GET","path":"/clients","anyOf":["read:clients"]}]}`)
+
+		file, err := devpolicy.Load(filepath.Join(build.Dir, devpolicy.FileName))
+		require.NoError(t, err)
+
+		_, err = file.Index()
+		require.Error(t, err, "the file must load and be refused by Index for this case to mean anything")
+
+		hash, used := linkedHash(opened)
+
+		assert.Equal(t, build.Manifest.PermissionsHash(), hash)
+		assert.Nil(t, used)
+		assert.Equal(t, build.Manifest.PermissionsHash(), verifiedLinked(opened).PermissionsHash)
+	})
 }

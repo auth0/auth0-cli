@@ -8,6 +8,7 @@ import (
 	"maps"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/proxy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/runner"
@@ -717,7 +719,8 @@ func (p *pluginCommand) namespace(cmd *cobra.Command) error {
 //     linked plugin there is nothing to compare with, so its manifest and
 //     executable are read and checked as they are, and it needs dev mode.
 //  3. The registry index is current enough, and does not revoke this version. A
-//     linked plugin is not in the index, so it cannot be revoked.
+//     linked plugin is not in the index, so it cannot be revoked, and it runs
+//     against its dev policy instead of the registry index.
 //  4. The command can run the way it was called: a terminal when it is
 //     interactive, and the output it was asked for.
 //  5. The tenant approved the permissions of the plugin.
@@ -785,7 +788,15 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 		}
 	}
 
-	index, err := p.loadIndex(ctx, svc, verified.Version)
+	// A linked build is in no registry, so the rules it runs against come from its
+	// dev policy and the registry is not asked.
+	var index *registry.Index
+	if p.link != nil {
+		index, err = p.devIndex(verified)
+	} else {
+		index, err = p.loadIndex(ctx, svc, verified.Version)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -881,7 +892,12 @@ func (p *pluginCommand) run(cmd *cobra.Command, spec plugins.Command, lead []str
 		scopes = command.Permissions.Scopes
 	}
 
-	gate, err := proxy.Start(runCtx, proxy.Config{PluginID: p.id, Domain: tenant, Tokens: session, Policy: policy, Scopes: scopes, Transport: svc.transport})
+	cfg := proxy.Config{PluginID: p.id, Domain: tenant, Tokens: session, Policy: policy, Scopes: scopes, Transport: svc.transport}
+	if p.link != nil {
+		cfg.DevPolicyFile = devpolicy.PathFor(p.link.Path, p.link.Policy)
+	}
+
+	gate, err := proxy.Start(runCtx, cfg)
 	if err != nil {
 		return err
 	}
@@ -1005,6 +1021,52 @@ func (p *pluginCommand) loadIndex(ctx context.Context, svc *pluginService, versi
 	return index, nil
 }
 
+// devIndex returns the index that a linked build runs against, made from its dev
+// policy: the scope rules and secret fields that the proxy enforces, and nothing
+// else. It is not signed, and it is read only for a linked build, which needs dev
+// mode. A build with no dev policy, or with one that cannot be used, does not run,
+// and there is no fallback to a looser policy.
+func (p *pluginCommand) devIndex(verified store.Verified) (*registry.Index, error) {
+	path := devpolicy.PathFor(p.link.Path, p.link.Policy)
+
+	refuse := func(reason string, err error) error {
+		return validationError{
+			err:    fmt.Errorf("%s %s was not run, because its dev policy cannot be used: %w", plugins.NameOf(p.id), plugins.SafeText(verified.Version), err),
+			reason: reason,
+		}
+	}
+
+	file, err := devpolicy.Load(path)
+	if errors.Is(err, devpolicy.ErrMissing) {
+		return nil, refuse("plugin_dev_policy_missing", err)
+	}
+
+	if err != nil {
+		return nil, refuse("plugin_dev_policy_invalid", err)
+	}
+
+	index, err := file.Index()
+	if err != nil {
+		return nil, refuse("plugin_dev_policy_invalid", err)
+	}
+
+	// The approval covers the exact bytes of the dev policy. The file that was just
+	// read must be the one that the checks of the run saw, or it changed in between
+	// and the rules in hand were never approved.
+	if devpolicy.ConsentHash(verified.Manifest.PermissionsHash(), file) != verified.PermissionsHash {
+		return nil, validationError{
+			err:    fmt.Errorf("%s changed while the plugin was starting. Run it again", plugins.SafeText(filepath.Base(path))),
+			reason: "plugin_changed",
+		}
+	}
+
+	if !p.cli.wantsJSONError() {
+		p.cli.renderer.Warnf("Using the dev policy at %s. It is not signed and applies to this linked build only.", plugins.SafeText(path))
+	}
+
+	return index, nil
+}
+
 // checkRevoked fails when the registry revoked this version of the plugin. A
 // linked build is not in the index, so there is nothing to revoke.
 func (p *pluginCommand) checkRevoked(index *registry.Index, version string) error {
@@ -1082,6 +1144,10 @@ func (p *pluginCommand) checkApproval(svc *pluginService, tenant string, verifie
 	err := svc.approvals.Check(tenant, p.id, verified.PermissionsHash)
 
 	if _, notApproved := errors.AsType[*approvals.NotApprovedError](err); notApproved {
+		if p.link != nil {
+			err = fmt.Errorf("%w. A linked plugin needs a new approval when its permissions or its %s change. Approving a linked build replaces the approval of an installed copy of the same plugin on this tenant", err, devpolicy.FileName)
+		}
+
 		return validationError{err: err, reason: "plugin_not_approved"}
 	}
 

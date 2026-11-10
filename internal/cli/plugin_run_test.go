@@ -36,6 +36,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/proxy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/registry/registrytest"
@@ -2983,6 +2984,7 @@ func (r *runEnv) linkFixture(version string, commands []plugins.Command) devBuil
 	require.NoError(r.t, err)
 
 	build := writeDevBuild(r.t, version, commands, binary)
+	build.writePolicy(r.t, fixturePolicy)
 	r.link(build)
 
 	return build
@@ -3042,7 +3044,10 @@ func TestPluginRun_Linked(t *testing.T) {
 		require.NoError(t, r.exec("checkmate"))
 		assert.Contains(t, r.stderr.String(), linkedBanner(pluginTestID, "2.0.0", build.Dir), "the linked build ran")
 
+		// The approval of the build covers its dev policy, so it replaced the one of the
+		// installed copy.
 		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+		r.approve()
 		require.NoError(t, r.exec("checkmate"))
 
 		assert.NotContains(t, r.stderr.String(), "linked build", "the installed plugin runs again")
@@ -3165,12 +3170,108 @@ func TestPluginRun_Linked(t *testing.T) {
 		assert.False(t, r.started())
 	})
 
-	t.Run("keeps the index of the registry", func(t *testing.T) {
+	t.Run("runs without the registry, with its dev policy", func(t *testing.T) {
 		r := newRunEnv(t, fixtureCommands(), func(b *registrytest.IndexBuilder) {
 			b.SetExpires(time.Date(2026, time.October, 1, 13, 0, 0, 0, time.UTC))
 		})
 		build := r.linkFixture("2.0.0", fixtureCommands())
 		r.approveBuild(build)
+
+		// The index is expired and cannot be fetched, and the client is gone, so a
+		// run that asked the registry for anything would fail or panic.
+		r.Now = r.Now.Add(2 * time.Hour)
+		r.server.Fail("/index.json", http.StatusServiceUnavailable)
+		r.svc.client = nil
+
+		before := r.server.Requests("/index.json")
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/clients"))
+
+		assert.Contains(t, r.stdout.String(), "status=200")
+		assert.Equal(t, before, r.server.Requests("/index.json"), "the registry was not asked")
+		assert.Equal(t, 1, strings.Count(r.stderr.String(), "Using the dev policy at "+filepath.Join(build.Dir, devpolicy.FileName)+". It is not signed and applies to this linked build only."))
+	})
+
+	t.Run("prints the dev policy line right after the banner", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		require.NoError(t, r.exec("checkmate"))
+
+		banner := linkedBanner(pluginTestID, "2.0.0", build.Dir)
+		line := "Using the dev policy at " + filepath.Join(build.Dir, devpolicy.FileName)
+
+		bannerAt := strings.Index(r.stderr.String(), banner)
+		lineAt := strings.Index(r.stderr.String(), line)
+
+		require.GreaterOrEqual(t, bannerAt, 0)
+		require.Greater(t, lineAt, bannerAt)
+		assert.Equal(t, 1, strings.Count(r.stderr.String(), line), "once")
+		assert.NotContains(t, r.stderr.String()[bannerAt+len(banner):lineAt], "Plugin ", "nothing comes between them")
+	})
+
+	t.Run("reads the dev policy that the link names", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		// The policy of the directory is no longer there, only the one that is named.
+		require.NoError(t, os.Remove(filepath.Join(build.Dir, devpolicy.FileName)))
+
+		other := filepath.Join(t.TempDir(), "elsewhere.json")
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy), 0o600))
+		require.NoError(t, devlink.Links{Dir: r.Dir}.Add(context.Background(), pluginTestID, devlink.Link{Path: build.Dir, Bin: build.Bin, Policy: other}))
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/clients"))
+
+		assert.Contains(t, r.stdout.String(), "status=200")
+		assert.Contains(t, r.stderr.String(), "Using the dev policy at "+other)
+	})
+
+	t.Run("does not run without a dev policy", func(t *testing.T) {
+		r, build := newLinked(t)
+		require.NoError(t, os.Remove(filepath.Join(build.Dir, devpolicy.FileName)))
+
+		err := r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_dev_policy_missing")
+		assert.Contains(t, err.Error(), devpolicy.FileName)
+		assert.Contains(t, err.Error(), "auth0 plugin dev link --policy <file>")
+		assert.NotContains(t, r.stderr.String(), "Using the dev policy")
+		assert.Zero(t, r.logins)
+	})
+
+	t.Run("does not run with a dev policy that cannot be used", func(t *testing.T) {
+		tests := []struct {
+			name    string
+			content string
+		}{
+			{"not JSON", `{"rules":`},
+			{"an unknown field", `{"rules":[{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]}],"extra":1}`},
+			{"a duplicate key", `{"rules":[],"rules":[]}`},
+			{"no rules", `{"rules":[]}`},
+			{"a rule the registry would refuse", `{"rules":[{"method":"GET","path":"/clients","anyOf":["read:clients"]}]}`},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				r, build := newLinked(t)
+				build.writePolicy(t, test.content)
+
+				err := r.exec("checkmate")
+
+				assertRefused(t, r, err, "plugin_dev_policy_invalid")
+				assert.Contains(t, err.Error(), filepath.Join(build.Dir, devpolicy.FileName))
+				assert.NotContains(t, r.stderr.String(), "Using the dev policy")
+				assert.Zero(t, r.logins)
+			})
+		}
+	})
+
+	t.Run("an installed plugin still needs the registry", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands(), func(b *registrytest.IndexBuilder) {
+			b.SetExpires(time.Date(2026, time.October, 1, 13, 0, 0, 0, time.UTC))
+		})
+		r.approve()
 
 		r.Now = r.Now.Add(2 * time.Hour)
 		r.server.Fail("/index.json", http.StatusServiceUnavailable)
@@ -3181,6 +3282,292 @@ func TestPluginRun_Linked(t *testing.T) {
 		assert.Equal(t, "plugin_registry_unavailable", errorReason(err))
 		assert.False(t, r.started())
 		assert.Zero(t, r.logins)
+	})
+
+	t.Run("a dev policy does not apply to the installed plugin", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands(), func(b *registrytest.IndexBuilder) {
+			b.SetExpires(time.Date(2026, time.October, 1, 13, 0, 0, 0, time.UTC))
+		})
+		r.approve()
+
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		r.approveBuild(build)
+
+		r.Now = r.Now.Add(2 * time.Hour)
+		r.server.Fail("/index.json", http.StatusServiceUnavailable)
+
+		require.NoError(t, r.exec("checkmate"))
+		assert.True(t, r.started(), "the linked build runs from its dev policy")
+
+		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+
+		err := r.exec("checkmate")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_registry_unavailable", errorReason(err), "the installed copy is held to the registry")
+		assert.NotContains(t, r.stderr.String(), "Using the dev policy")
+	})
+
+	t.Run("says how to fix a call that no rule matches", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/roles"))
+
+		assert.Contains(t, r.stdout.String(), "status=403")
+		assert.Contains(t, r.stderr.String(), `Add to `+filepath.Join(build.Dir, devpolicy.FileName)+`: { "method": "GET", "path": "/api/v2/roles", "anyOf": ["<scope>"] }`)
+		assert.Empty(t, r.tenant.seen())
+	})
+
+	t.Run("says how to fix a call whose scope is not declared", func(t *testing.T) {
+		r, _ := newLinked(t)
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/users"))
+
+		assert.Contains(t, r.stderr.String(), `Declare "read:users" under permissions.scopes in plugin.json.`)
+		assert.NotContains(t, r.stderr.String(), "Add to ")
+	})
+
+	t.Run("the approval covers the exact dev policy", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		approved := r.approvedHashes(pluginTestID)[pluginTestTenant]
+		assert.NotEqual(t, build.Manifest.PermissionsHash(), approved, "the approval is not that of the manifest alone")
+
+		// A rule is swapped for one on another resource while the permissions of
+		// plugin.json stay the same.
+		build.writePolicy(t, strings.Replace(fixturePolicy, `"/api/v2/users"`, `"/api/v2/roles"`, 1))
+
+		err := r.exec("checkmate", "--mode=call", "--path=/api/v2/roles")
+
+		assertRefused(t, r, err, "plugin_not_approved")
+		assert.Contains(t, err.Error(), "A linked plugin needs a new approval when its permissions or its dev-policy.json change")
+		assert.Contains(t, err.Error(), "auth0 plugin approve auth0/checkmate --tenant "+pluginTestTenant)
+		assert.Zero(t, r.logins, "a build that is not approved never starts a login")
+
+		// Putting the file back as it was needs no new approval.
+		build.writePolicy(t, fixturePolicy)
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/clients"))
+		assert.Contains(t, r.stdout.String(), "status=200")
+	})
+
+	t.Run("approving a linked build replaces the approval of the installed copy", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		installed := r.record.PermissionsHash
+		linked, file := linkedHash(&devlink.Build{Dir: build.Dir, Manifest: &build.Manifest})
+
+		require.NotNil(t, file)
+		require.NotEqual(t, installed, linked, "the dev policy makes the hashes differ")
+
+		err := r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_not_approved")
+		assert.Contains(t, err.Error(), "Approving a linked build replaces the approval of an installed copy of the same plugin on this tenant")
+
+		r.approveBuild(build)
+
+		approved, err := r.svc.approvals.Approved(pluginTestTenant, pluginTestID, installed)
+		require.NoError(t, err)
+		assert.False(t, approved, "the approval of the installed copy is gone")
+
+		approved, err = r.svc.approvals.Approved(pluginTestTenant, pluginTestID, linked)
+		require.NoError(t, err)
+		assert.True(t, approved)
+	})
+
+	t.Run("fails when the dev policy changed while the session was opened", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		login := r.svc.login
+		r.svc.login = func(ctx context.Context, c *cli) error {
+			if err := login(ctx, c); err != nil {
+				return err
+			}
+
+			build.writePolicy(t, fixturePolicy+" ")
+
+			return nil
+		}
+
+		err := r.exec("checkmate")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_changed", errorReason(err))
+		assert.Equal(t, 1, r.logins, "the build is read again after the session is open")
+		assert.False(t, r.started())
+		assert.Empty(t, r.tenant.seen())
+	})
+
+	t.Run("a failed second approval leaves the manifest alone approved, which does not run", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+		path := filepath.Join(r.Dir, "approvals.json")
+
+		// The approvals have no hook of their own, so the clock is used: on the second
+		// approval the file is replaced by a directory, which the rename of the write
+		// cannot replace. The file is put back after the command.
+		var saved []byte
+
+		calls := 0
+		now := r.svc.approvals.Now
+		r.svc.approvals.Now = func() time.Time {
+			calls++
+
+			if calls == 2 {
+				data, err := os.ReadFile(path)
+				require.NoError(t, err)
+
+				saved = data
+
+				require.NoError(t, os.Remove(path))
+				require.NoError(t, os.Mkdir(path, 0o700))
+			}
+
+			return now()
+		}
+
+		r.answer("y\n")
+
+		err := r.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant)
+
+		require.Error(t, err)
+		require.Equal(t, 2, calls, "both approvals were attempted")
+		require.NotEmpty(t, saved)
+
+		require.NoError(t, os.Remove(path))
+		require.NoError(t, os.WriteFile(path, saved, 0o600))
+
+		r.svc.approvals.Now = now
+		r.Terminal = false
+
+		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, r.approvedHashes(pluginTestID))
+
+		err = r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_not_approved")
+	})
+
+	t.Run("an approval of the manifest alone does not cover a dev policy", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		build := r.linkFixture("2.0.0", fixtureCommands())
+
+		require.NoError(t, r.svc.approvals.Approve(context.Background(), pluginTestTenant, pluginTestID, build.Manifest.PermissionsHash()))
+
+		err := r.exec("checkmate")
+
+		assertRefused(t, r, err, "plugin_not_approved")
+	})
+
+	t.Run("fails when the dev policy changed after the build was checked", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		r.cli.renderer = &display.Renderer{MessageWriter: r.stderr, ResultWriter: r.stdout}
+
+		link := devlink.Link{Path: build.Dir, Bin: build.Bin}
+		linked := &pluginCommand{cli: r.cli, id: pluginTestID, link: &link}
+
+		verified, err := linked.verify(r.svc)
+		require.NoError(t, err)
+
+		index, err := linked.devIndex(verified)
+		require.NoError(t, err)
+		assert.NotNil(t, index)
+
+		build.writePolicy(t, fixturePolicy+" ")
+
+		index, err = linked.devIndex(verified)
+
+		require.Error(t, err)
+		assert.Nil(t, index)
+		assert.Equal(t, "plugin_changed", errorReason(err))
+		assert.Contains(t, err.Error(), "dev-policy.json changed while the plugin was starting. Run it again")
+	})
+
+	t.Run("names the dev policy file that the link uses when it changed", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		r.cli.renderer = &display.Renderer{MessageWriter: r.stderr, ResultWriter: r.stdout}
+
+		other := filepath.Join(t.TempDir(), "other.json")
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy), 0o600))
+
+		link := devlink.Link{Path: build.Dir, Bin: build.Bin, Policy: other}
+		linked := &pluginCommand{cli: r.cli, id: pluginTestID, link: &link}
+
+		verified, err := linked.verify(r.svc)
+		require.NoError(t, err)
+
+		require.NoError(t, os.WriteFile(other, []byte(fixturePolicy+" "), 0o600))
+
+		index, err := linked.devIndex(verified)
+
+		require.Error(t, err)
+		assert.Nil(t, index)
+		assert.Equal(t, "plugin_changed", errorReason(err))
+		assert.Contains(t, err.Error(), "other.json changed while the plugin was starting. Run it again")
+		assert.NotContains(t, err.Error(), "dev-policy.json")
+	})
+
+	t.Run("says how to fix a missing dev policy file that the link names", func(t *testing.T) {
+		r, build := newLinked(t)
+
+		r.cli.renderer = &display.Renderer{MessageWriter: r.stderr, ResultWriter: r.stdout}
+
+		verified, err := (&pluginCommand{cli: r.cli, id: pluginTestID, link: &devlink.Link{Path: build.Dir, Bin: build.Bin}}).verify(r.svc)
+		require.NoError(t, err)
+
+		other := filepath.Join(t.TempDir(), "other.json")
+		link := devlink.Link{Path: build.Dir, Bin: build.Bin, Policy: other}
+		linked := &pluginCommand{cli: r.cli, id: pluginTestID, link: &link}
+
+		_, err = linked.devIndex(verified)
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_dev_policy_missing", errorReason(err))
+		assert.Contains(t, err.Error(), other)
+		assert.NotContains(t, err.Error(), "next to plugin.json")
+	})
+
+	t.Run("removes client_secret when the dev policy lists no secret fields", func(t *testing.T) {
+		r, build := newLinked(t)
+		build.writePolicy(t, `{"rules":[{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]}]}`)
+		r.approveBuild(build)
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/clients"))
+
+		assert.Contains(t, r.stdout.String(), "status=200")
+		assert.Contains(t, r.stdout.String(), `"app"`, "the rest of the response is there")
+		assert.NotContains(t, r.stdout.String(), "client_secret")
+		assert.NotContains(t, r.stdout.String(), "shh")
+	})
+
+	t.Run("an installed plugin keeps the approval hash of its manifest", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		verified, err := r.svc.store.Verify(pluginTestID)
+		require.NoError(t, err)
+
+		assert.Equal(t, verified.Manifest.PermissionsHash(), verified.PermissionsHash)
+		assert.Equal(t, r.record.PermissionsHash, verified.PermissionsHash)
+		assert.Equal(t, map[string]string{pluginTestTenant: verified.Manifest.PermissionsHash()}, r.approvedHashes(pluginTestID))
+
+		require.NoError(t, r.exec("checkmate"))
+		assert.True(t, r.started())
+	})
+
+	t.Run("an installed plugin gets no hint about a dev policy", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		require.NoError(t, r.exec("checkmate", "--mode=call", "--path=/api/v2/roles"))
+
+		assert.Contains(t, r.stderr.String(), "API call was denied")
+		assert.NotContains(t, r.stderr.String(), "Add to ")
+		assert.NotContains(t, r.stderr.String(), "Declare ")
 	})
 
 	t.Run("keeps the rules of the tenant", func(t *testing.T) {
@@ -3265,8 +3652,8 @@ func TestPluginRun_Linked(t *testing.T) {
 	t.Run("is not revoked by the registry", func(t *testing.T) {
 		r := newRunEnv(t, fixtureCommands())
 		build := r.linkFixture("1.0.0", fixtureCommands())
-		r.approveBuild(build)
 		r.approve()
+		r.approveBuild(build)
 
 		r.republish(r.fixtureIndex(r.record).Revoke(pluginTestID, "1.0.0", "it leaks tokens."))
 
@@ -3275,6 +3662,7 @@ func TestPluginRun_Linked(t *testing.T) {
 
 		// The installed copy of the same version is revoked, so the revocation is read.
 		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+		r.approve()
 
 		err := r.exec("checkmate")
 
@@ -3292,6 +3680,7 @@ func TestPluginRun_Linked(t *testing.T) {
 		assert.NoFileExists(t, hintPath(r))
 
 		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+		r.approve()
 		require.NoError(t, r.exec("checkmate"))
 
 		assert.Contains(t, r.stderr.String(), hintLine, "the installed copy still gets it")
@@ -3302,10 +3691,12 @@ func TestPluginRun_LinkedNeedsDevMode(t *testing.T) {
 	for _, value := range devModeValues {
 		t.Run("the links are ignored with dev mode "+value, func(t *testing.T) {
 			r := newRunEnv(t, fixtureCommands())
-			r.approve()
 
+			// There is one approval for each plugin and tenant, so the one of the
+			// installed copy comes last.
 			build := r.linkFixture("2.0.0", fixtureCommands())
 			r.approveBuild(build)
+			r.approve()
 
 			t.Setenv(pluginDevModeEnv, value)
 

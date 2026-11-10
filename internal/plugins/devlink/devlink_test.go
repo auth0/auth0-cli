@@ -106,6 +106,8 @@ func TestLinks_LoadIsRefusedWhenTheFileIsNotTrustworthy(t *testing.T) {
 		{"a link without bin", `{"formatVersion":1,"links":{"auth0/a":{"path":` + strconv.Quote(path) + `}}}`},
 		{"a path that is not absolute", `{"formatVersion":1,"links":{"auth0/a":{"path":"relative/dir","bin":` + strconv.Quote(path) + `}}}`},
 		{"a bin that is not absolute", `{"formatVersion":1,"links":{"auth0/a":{"path":` + strconv.Quote(path) + `,"bin":"checkmate"}}}`},
+		{"a policy that is not absolute", `{"formatVersion":1,"links":{"auth0/a":{"path":` + strconv.Quote(path) + `,"bin":` + strconv.Quote(path) + `,"policy":"dev-policy.json"}}}`},
+		{"a duplicate policy key", `{"formatVersion":1,"links":{"auth0/a":{"path":` + strconv.Quote(path) + `,"bin":` + strconv.Quote(path) + `,"policy":` + strconv.Quote(path) + `,"policy":` + strconv.Quote(path) + `}}}`},
 		{"an empty plugin ID", `{"formatVersion":1,"links":{"":` + link + `}}`},
 		{"a file larger than allowed", `{"formatVersion":1,"links":{},"pad":"` + strings.Repeat("x", maxFileBytes) + `"}`},
 	}
@@ -163,6 +165,36 @@ func TestLinks_LoadOfAValidFile(t *testing.T) {
 		assert.NotNil(t, got)
 		assert.Empty(t, got)
 	})
+}
+
+func TestLinks_PolicyOfALink(t *testing.T) {
+	tests := []struct {
+		name string
+		link Link
+		want string
+	}{
+		{"no policy is not written", Link{Path: abs(t, "dir"), Bin: abs(t, "bin")}, ""},
+		{"an absolute policy is kept", Link{Path: abs(t, "dir"), Bin: abs(t, "bin"), Policy: abs(t, "policy.json")}, "policy.json"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			links := newLinks(t)
+
+			require.NoError(t, links.Add(context.Background(), testID, test.link))
+
+			got, err := links.Load()
+			require.NoError(t, err)
+			assert.Equal(t, test.link, got[testID])
+
+			if test.want == "" {
+				assert.NotContains(t, links.read(t), `"policy"`)
+			} else {
+				assert.Contains(t, links.read(t), `"policy"`)
+				assert.True(t, strings.HasSuffix(got[testID].Policy, test.want))
+			}
+		})
+	}
 }
 
 func TestLinks_AddRemove(t *testing.T) {
@@ -279,6 +311,7 @@ func TestLinks_AddRefusesWhatIsNotAbsolute(t *testing.T) {
 	}{
 		{"a relative path", testID, Link{Path: "dir", Bin: abs(t, "bin")}},
 		{"a relative bin", testID, Link{Path: abs(t, "dir"), Bin: "bin"}},
+		{"a relative policy", testID, Link{Path: abs(t, "dir"), Bin: abs(t, "bin"), Policy: "dev-policy.json"}},
 		{"no ID", "", Link{Path: abs(t, "dir"), Bin: abs(t, "bin")}},
 	}
 
@@ -334,12 +367,22 @@ func TestLink_Open(t *testing.T) {
 		assert.Equal(t, link.Bin, opened.Bin)
 		assert.Equal(t, filepath.Join(link.Path, ManifestName), opened.ManifestPath)
 		assert.Equal(t, "1.0.0", opened.Manifest.Version)
+		assert.Empty(t, opened.Policy, "the build uses the dev policy in its directory")
 
 		writeManifest(t, link.Path, "1.1.0")
 
 		opened, err = link.Open(testID)
 		require.NoError(t, err)
 		assert.Equal(t, "1.1.0", opened.Manifest.Version, "an edit shows without linking again")
+	})
+
+	t.Run("carries the dev policy that the link names", func(t *testing.T) {
+		link := build(t, "1.0.0")
+		link.Policy = abs(t, "elsewhere.json")
+
+		opened, err := link.Open(testID)
+		require.NoError(t, err)
+		assert.Equal(t, link.Policy, opened.Policy)
 	})
 
 	tests := []struct {
