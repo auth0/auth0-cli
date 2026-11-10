@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/plugins"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 )
 
 // goodOptions returns options that create a plugin in dir.
@@ -402,7 +403,7 @@ func TestCreate_Tokens(t *testing.T) {
 		files, err := Create(opts, miniTree())
 		require.NoError(t, err)
 
-		assert.Equal(t, []string{".gitignore", "main.go", "plain.txt", "plugin.json", "sub/dir/file"}, files)
+		assert.Equal(t, []string{".gitignore", "dev-policy.json", "main.go", "plain.txt", "plugin.json", "sub/dir/file"}, files)
 
 		written := readProject(t, opts.Dir)
 		assert.Equal(t, "package main // demo lister Apache-2.0\n", written["main.go"])
@@ -418,7 +419,7 @@ func TestCreate_Tokens(t *testing.T) {
 		files, err := Create(opts, miniTree())
 		require.NoError(t, err)
 
-		assert.Equal(t, []string{"package.json", "plugin.json"}, files)
+		assert.Equal(t, []string{"dev-policy.json", "package.json", "plugin.json"}, files)
 		assert.JSONEq(t, `{"name": "demo"}`, readProject(t, opts.Dir)["package.json"])
 	})
 
@@ -730,7 +731,7 @@ func TestCreate_FromDirectory(t *testing.T) {
 		}))
 		require.NoError(t, err)
 
-		assert.Equal(t, []string{"main.go", "plain.go", "plugin.json"}, files)
+		assert.Equal(t, []string{"dev-policy.json", "main.go", "plain.go", "plugin.json"}, files)
 		assert.Equal(t, "// demo\n", readProject(t, opts.Dir)["main.go"])
 	})
 
@@ -780,6 +781,270 @@ func TestCreate_FromDirectory(t *testing.T) {
 			assert.Equal(t, []string{"probe"}, entries(t, parent))
 		})
 	}
+}
+
+func TestOptions_DevPolicy(t *testing.T) {
+	clientsPolicy := `{
+  "rules": [
+    {
+      "method": "GET",
+      "path": "/api/v2/clients",
+      "anyOf": [
+        "read:clients"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/clients/{id}",
+      "anyOf": [
+        "read:clients"
+      ]
+    }
+  ]
+}
+`
+
+	tests := []struct {
+		name   string
+		scopes []string
+		want   []string // The "METHOD path anyOf" of each rule, in order.
+		exact  string   // The exact content, when it is checked.
+	}{
+		{name: "read", scopes: []string{"read:clients"}, want: []string{"GET /api/v2/clients read:clients", "GET /api/v2/clients/{id} read:clients"}, exact: clientsPolicy},
+		{name: "create", scopes: []string{"create:actions"}, want: []string{"POST /api/v2/actions create:actions"}},
+		{name: "update", scopes: []string{"update:users"}, want: []string{"PATCH /api/v2/users/{id} update:users"}},
+		{name: "delete", scopes: []string{"delete:users"}, want: []string{"DELETE /api/v2/users/{id} delete:users"}},
+		{
+			name:   "an underscore becomes a hyphen",
+			scopes: []string{"read:client_grants"},
+			want:   []string{"GET /api/v2/client-grants read:client_grants", "GET /api/v2/client-grants/{id} read:client_grants"},
+		},
+		{
+			name:   "a mix is ordered by path and then by method",
+			scopes: []string{"read:clients", "delete:users", "create:actions", "read:client_grants"},
+			want: []string{
+				"POST /api/v2/actions create:actions",
+				"GET /api/v2/client-grants read:client_grants",
+				"GET /api/v2/client-grants/{id} read:client_grants",
+				"GET /api/v2/clients read:clients",
+				"GET /api/v2/clients/{id} read:clients",
+				"DELETE /api/v2/users/{id} delete:users",
+			},
+		},
+		{
+			name:   "the order of the scopes and a repeated scope change nothing",
+			scopes: []string{"read:clients", "delete:users", "read:clients", "create:actions"},
+			want: []string{
+				"POST /api/v2/actions create:actions",
+				"GET /api/v2/clients read:clients",
+				"GET /api/v2/clients/{id} read:clients",
+				"DELETE /api/v2/users/{id} delete:users",
+			},
+		},
+		{
+			name:   "a scope with no starter rules is skipped",
+			scopes: []string{"read:clients", "offline_access", "read:", "list:clients", "read:Clients", "read:a/b"},
+			want:   []string{"GET /api/v2/clients read:clients", "GET /api/v2/clients/{id} read:clients"},
+		},
+		{name: "no scope gives no rule"},
+		{name: "no scope that matches gives no rule", scopes: []string{"offline_access", "list:clients"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			opts := goodOptions("x")
+			opts.Scopes = test.scopes
+
+			data, ok, err := opts.devPolicy()
+			require.NoError(t, err)
+
+			if len(test.want) == 0 {
+				assert.False(t, ok)
+				assert.Nil(t, data)
+
+				return
+			}
+
+			require.True(t, ok)
+			assert.True(t, strings.HasSuffix(string(data), "}\n"), "the file ends with one newline")
+
+			if test.exact != "" {
+				assert.Equal(t, test.exact, string(data))
+			}
+
+			path := filepath.Join(t.TempDir(), devpolicy.FileName)
+			require.NoError(t, os.WriteFile(path, data, 0o600))
+
+			file, err := devpolicy.Load(path)
+			require.NoError(t, err)
+
+			_, err = file.Index()
+			require.NoError(t, err, "the file passes what a link checks")
+
+			var got []string
+
+			for _, rule := range file.Rules {
+				got = append(got, rule.Method+" "+rule.Path+" "+strings.Join(rule.AnyOf, ","))
+			}
+
+			assert.Equal(t, test.want, got)
+			assert.Empty(t, file.SecretFields)
+		})
+	}
+}
+
+func TestOptions_SkippedScopes(t *testing.T) {
+	tests := []struct {
+		name   string
+		scopes []string
+		want   []string
+	}{
+		{name: "no scope", scopes: nil, want: nil},
+		{name: "every scope has rules", scopes: []string{"read:clients", "delete:users", "read:client_grants"}, want: nil},
+		{name: "a scope that is not a verb and a resource", scopes: []string{"read:clients", "blacklist:tokens"}, want: []string{"blacklist:tokens"}},
+		{name: "an upper case scope", scopes: []string{"read:Clients", "READ:clients", "read:clients"}, want: []string{"READ:clients", "read:Clients"}},
+		{name: "not a pair", scopes: []string{"offline_access", "read:", "read:a/b", "list:clients"}, want: []string{"list:clients", "offline_access", "read:", "read:a/b"}},
+		{name: "sorted and without repeats", scopes: []string{"zeta:x", "alpha:y", "zeta:x"}, want: []string{"alpha:y", "zeta:x"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			opts := goodOptions("x")
+			opts.Scopes = test.scopes
+
+			assert.Equal(t, test.want, opts.SkippedScopes())
+		})
+	}
+}
+
+func TestCreate_DevPolicyReadme(t *testing.T) {
+	const heading = "## Local development policy"
+
+	tests := []struct {
+		name    string
+		scopes  []string
+		written bool
+	}{
+		{name: "scopes that are recognized", scopes: []string{"read:clients"}, written: true},
+		{name: "some scopes that are recognized", scopes: []string{"read:clients", "blacklist:tokens"}, written: true},
+		{name: "no scope", scopes: nil},
+		{name: "only scopes that are not recognized", scopes: []string{"blacklist:tokens", "list:clients"}},
+	}
+
+	for _, lang := range []Lang{LangGo, LangTypeScript} {
+		for _, test := range tests {
+			t.Run(string(lang)+" "+test.name, func(t *testing.T) {
+				opts := goodOptions(filepath.Join(t.TempDir(), "demo"))
+				opts.Lang = lang
+				opts.Scopes = test.scopes
+
+				files, err := Create(opts, Embedded())
+				require.NoError(t, err)
+
+				readme := readProject(t, opts.Dir)["README.md"]
+				assert.NotContains(t, readme, "__DEV_POLICY_SECTION__")
+				assert.NotContains(t, readme, "\n\n\n", "dropping the section leaves no extra blank line")
+				assert.NotContains(t, readme, "for every scope in `plugin.json`", "no claim that every scope has a rule")
+
+				if !test.written {
+					assert.NotContains(t, files, devpolicy.FileName)
+					assert.NotContains(t, readme, heading)
+					assert.NotContains(t, readme, "dev-policy.json")
+
+					return
+				}
+
+				assert.Contains(t, files, devpolicy.FileName)
+				assert.Contains(t, readme, heading)
+				assert.Contains(t, readme, "starter rules for the scopes the CLI recognizes, which are read, create, update and delete of a resource")
+				assert.Contains(t, readme, "A scope it does not recognize needs a rule that you add by hand")
+				assert.Contains(t, readme, "Run `auth0 plugin dev validate` to check that every scope in `plugin.json` has a rule")
+				assert.Contains(t, readme, "`auth0 plugin approve demo`")
+			})
+		}
+	}
+
+	t.Run("a dev-policy.json of the template tree gets the section", func(t *testing.T) {
+		opts := goodOptions(filepath.Join(t.TempDir(), "demo"))
+		opts.Scopes = nil
+
+		_, err := Create(opts, fstest.MapFS{
+			"go/README.md.tmpl":       {Data: []byte("a\n\n__DEV_POLICY_SECTION__\n\nb\n")},
+			"go/dev-policy.json.tmpl": {Data: []byte(`{"rules": []}` + "\n")},
+		})
+		require.NoError(t, err)
+
+		assert.Contains(t, readProject(t, opts.Dir)["README.md"], heading)
+	})
+}
+
+func TestCreate_DevPolicy(t *testing.T) {
+	t.Run("is in the list and is written with the other files", func(t *testing.T) {
+		opts := goodOptions(filepath.Join(t.TempDir(), "demo"))
+		opts.Scopes = []string{"read:clients", "delete:users"}
+
+		files, err := Create(opts, miniTree())
+		require.NoError(t, err)
+
+		assert.Contains(t, files, devpolicy.FileName)
+		assert.IsIncreasing(t, files)
+
+		file, err := devpolicy.Load(filepath.Join(opts.Dir, devpolicy.FileName))
+		require.NoError(t, err)
+
+		index, err := file.Index()
+		require.NoError(t, err)
+		assert.Len(t, index.ScopeTable.Rules, 3)
+	})
+
+	t.Run("is part of the embedded starter projects", func(t *testing.T) {
+		for _, lang := range []Lang{LangGo, LangTypeScript} {
+			opts := goodOptions(filepath.Join(t.TempDir(), "demo"))
+			opts.Lang = lang
+
+			files, err := Create(opts, Embedded())
+			require.NoError(t, err)
+			assert.Contains(t, files, devpolicy.FileName, lang)
+		}
+	})
+
+	t.Run("no scopes writes no file", func(t *testing.T) {
+		opts := goodOptions(filepath.Join(t.TempDir(), "demo"))
+		opts.Scopes = nil
+
+		files, err := Create(opts, miniTree())
+		require.NoError(t, err)
+
+		assert.NotContains(t, files, devpolicy.FileName)
+		assert.NoFileExists(t, filepath.Join(opts.Dir, devpolicy.FileName))
+	})
+
+	t.Run("a file of the template tree is kept and not overwritten", func(t *testing.T) {
+		for _, name := range []string{"go/dev-policy.json", "go/dev-policy.json.tmpl"} {
+			opts := goodOptions(filepath.Join(t.TempDir(), "demo"))
+
+			files, err := Create(opts, treeDir(t, map[string]string{
+				name:          `{"rules": [], "note": "__PLUGIN_NAME__"}` + "\n",
+				"go/main.go":  "package main\n",
+				"go/other.go": "package main\n",
+			}))
+			require.NoError(t, err, name)
+
+			assert.Equal(t, []string{"dev-policy.json", "main.go", "other.go", "plugin.json"}, files, name)
+			assert.Equal(t, `{"rules": [], "note": "demo"}`+"\n", readProject(t, opts.Dir)[devpolicy.FileName], "the tokens are replaced like in any file: "+name)
+		}
+	})
+
+	t.Run("goes through the checks of the target", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "demo")
+		require.NoError(t, os.Mkdir(dir, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "mine.txt"), []byte("mine"), 0o644))
+
+		_, err := Create(goodOptions(dir), miniTree())
+
+		requireInputError(t, err)
+		assert.Equal(t, []string{"mine.txt"}, entries(t, dir))
+	})
 }
 
 func TestCreate_Limits(t *testing.T) {

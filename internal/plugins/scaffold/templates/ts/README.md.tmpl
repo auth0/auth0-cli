@@ -35,6 +35,8 @@ auth0 __PLUGIN_NAME__ --json
 
 The CLI proxy refuses every call that needs a scope the command did not declare, and the plugin then says which scope is missing. Declare scopes under `permissions.scopes` of the command in `plugin.json`, then approve again. The sample command needs `read:clients`.
 
+__DEV_POLICY_SECTION__
+
 ## Add a command
 
 1. Copy `src/commands/clients.ts` to `src/commands/<name>.ts`. Change the name, the help text and the code in `run`.

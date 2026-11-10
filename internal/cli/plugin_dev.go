@@ -931,11 +931,43 @@ func sayCreated(cli *cli, opts scaffold.Options, files []string) error {
 		r.Detailf("%s", step)
 	}
 
+	written := slices.Contains(files, devpolicy.FileName)
+
+	if written {
+		r.Infof("%s holds the scope rules of the linked build. Edit it when the plugin calls routes the starter does not cover, and run auth0 plugin approve %s again after any change.", devpolicy.FileName, opts.Name)
+	}
+
+	if skipped := opts.SkippedScopes(); len(skipped) > 0 {
+		r.Warnf("%s", skippedScopesWarning(skipped, written))
+	}
+
 	r.Infof("To publish it, push the project to a new GitHub repository: the first push to main releases version %s. Release again with: %s", opts.Version, createReleaseCommand(opts.Lang))
 
 	r.PluginCreated(display.PluginCreateResult{Dir: dir, Files: files, ID: opts.ID, Lang: string(opts.Lang), Warnings: warnings})
 
 	return nil
+}
+
+// skippedScopesWarning says which scopes got no starter rule, and what that
+// means for dev validate and the linked build. Written tells whether the project
+// has a dev-policy.json.
+func skippedScopesWarning(skipped []string, written bool) string {
+	safe := make([]string, 0, len(skipped))
+	for _, scope := range skipped {
+		safe = append(safe, plugins.SafeText(scope))
+	}
+
+	pronoun := "them"
+	if len(safe) == 1 {
+		pronoun = "it"
+	}
+
+	remedy := "until a rule for " + pronoun + " is added to " + devpolicy.FileName
+	if !written {
+		remedy = "until " + devpolicy.FileName + " is created with a rule for " + pronoun
+	}
+
+	return fmt.Sprintf("%s got no starter rule, because the CLI writes rules only for the read, create, update and delete scopes of a resource. auth0 plugin dev validate fails %s.", strings.Join(safe, ", "), remedy)
 }
 
 // createNextSteps returns the commands to run after the project is created, in

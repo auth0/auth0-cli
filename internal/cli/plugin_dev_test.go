@@ -1516,11 +1516,115 @@ func TestCreatePluginCmd(t *testing.T) {
 
 		require.NoError(t, e.run(createArgs(dir, "--from", from, "--json-compact")...))
 
-		assert.Equal(t, []any{"main.go", "plain.txt", "plugin.json"}, e.jsonObject()["files"])
+		assert.Equal(t, []any{"dev-policy.json", "main.go", "plain.txt", "plugin.json"}, e.jsonObject()["files"])
 
 		main, err := os.ReadFile(filepath.Join(dir, "main.go"))
 		require.NoError(t, err)
 		assert.Equal(t, "// demo\n", string(main))
+	})
+
+	t.Run("writes a dev policy that links and validates with nothing to fix", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir, "--scopes", "read:clients,delete:users")...))
+
+		out := e.stderr.String()
+		assert.Contains(t, out, "dev-policy.json holds the scope rules of the linked build. Edit it when the plugin calls routes the starter does not cover, and run auth0 plugin approve demo again after any change.")
+
+		file, err := devpolicy.Load(filepath.Join(dir, devpolicy.FileName))
+		require.NoError(t, err)
+		require.Len(t, file.Rules, 3)
+
+		_, err = file.Index()
+		require.NoError(t, err)
+
+		// The project holds no executable until it is built.
+		bin := devlink.DefaultBin(dir, "demo")
+		require.NoError(t, os.WriteFile(bin, stubExecutable, 0o755))
+
+		e.stderr.Reset()
+
+		require.NoError(t, e.run("plugin", "dev", "link", dir, "--tenant", pluginTestTenant))
+
+		assert.Contains(t, e.stderr.String(), "Linked auth0/demo")
+		assert.NotContains(t, e.stderr.String(), "There is no dev-policy.json")
+		assert.Equal(t, map[string]devlink.Link{"auth0/demo": {Path: dir, Bin: bin}}, e.links())
+
+		e.stderr.Reset()
+
+		require.NoError(t, e.run("plugin", "dev", "validate", dir, "--json-compact"))
+
+		assert.JSONEq(t, `{"valid":true,"problems":[]}`, e.stdout.String())
+	})
+
+	t.Run("a scope with no starter rule is named in a warning, and validate reports it", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir, "--scopes", "read:clients,blacklist:tokens")...))
+
+		out := e.stderr.String()
+		assert.Contains(t, out, "blacklist:tokens got no starter rule")
+		assert.Contains(t, out, "auth0 plugin dev validate fails until a rule for it is added to dev-policy.json.")
+		assert.NotContains(t, out, "read:clients got no starter rule")
+		assert.Contains(t, out, "dev-policy.json holds the scope rules of the linked build")
+
+		e.stderr.Reset()
+
+		err := e.run("plugin", "dev", "validate", dir, "--json")
+		require.Error(t, err)
+
+		var got display.PluginValidation
+		require.NoError(t, json.Unmarshal(e.stdout.Bytes(), &got), e.stdout.String())
+
+		assert.False(t, got.Valid)
+		require.Len(t, got.Problems, 1)
+		assert.Equal(t, devpolicy.FileName, got.Problems[0].Path)
+		assert.Equal(t, "scope blacklist:tokens is declared in plugin.json but no rule allows it", got.Problems[0].Message)
+	})
+
+	t.Run("the warning names every scope with no rule, and the JSON result is unchanged", func(t *testing.T) {
+		e := newDevEnv(t)
+
+		require.NoError(t, e.run(createArgs(filepath.Join(t.TempDir(), "demo"), "--scopes", "read:clients,blacklist:tokens,list:clients", "--json-compact")...))
+
+		assert.Contains(t, e.stderr.String(), "blacklist:tokens, list:clients got no starter rule")
+		assert.Contains(t, e.stderr.String(), "for them is added to dev-policy.json")
+		assert.Len(t, e.jsonObject(), 4, "dir, files, id and lang")
+		assert.NotContains(t, e.jsonObject(), "warnings")
+	})
+
+	t.Run("scopes that all get rules give no warning", func(t *testing.T) {
+		e := newDevEnv(t)
+
+		require.NoError(t, e.run(createArgs(filepath.Join(t.TempDir(), "demo"), "--scopes", "read:clients,delete:users")...))
+
+		assert.NotContains(t, e.stderr.String(), "no starter rule")
+	})
+
+	t.Run("only scopes with no rule write no dev policy, and the warning says to create it", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir, "--scopes", "blacklist:tokens")...))
+
+		assert.NoFileExists(t, filepath.Join(dir, devpolicy.FileName))
+
+		out := e.stderr.String()
+		assert.Contains(t, out, "blacklist:tokens got no starter rule")
+		assert.Contains(t, out, "fails until dev-policy.json is created with a rule for it.")
+		assert.NotContains(t, out, "holds the scope rules")
+	})
+
+	t.Run("a project with no scopes has no dev policy and no word about it", func(t *testing.T) {
+		e := newDevEnv(t)
+		dir := filepath.Join(t.TempDir(), "demo")
+
+		require.NoError(t, e.run(createArgs(dir, "--scopes", "")...))
+
+		assert.NoFileExists(t, filepath.Join(dir, devpolicy.FileName))
+		assert.NotContains(t, e.stderr.String(), devpolicy.FileName)
 	})
 }
 
