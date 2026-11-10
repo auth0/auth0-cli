@@ -6,8 +6,12 @@ on:
     branches: [ "main", "beta" ]
 
 
+# Runs of different pull requests, and of pushes to the branches, do not wait for
+# each other. On one pull request a run that has started is never cancelled, because
+# it may be in the middle of the integration tests, which change a live tenant. A new
+# commit waits behind it and replaces the commit that was waiting.
 concurrency:
-  group: one-at-time
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -63,6 +67,12 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: unit-tests
+
+    # The tests change resources of a live tenant, so only one run at a time may use it.
+    # A run that has started is never cancelled, and the next one waits for its turn.
+    concurrency:
+      group: live-tenant
+      cancel-in-progress: false
 
     # Skip running if the PR is coming from a fork or is created by dependabot or snyk due to missing repo secrets.
     # Only run on pushes to main or PRs targeting main.

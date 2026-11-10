@@ -1,0 +1,68 @@
+{
+  "$schema": "https://raw.githubusercontent.com/auth0/auth0-cli-plugins/main/schema/plugin.v1.schema.json",
+  "id": "auth0/checkmate",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "description": "Run a tenant security audit",
+  "owner": {
+    "team": "CheckMate",
+    "bugs": "https://github.com/auth0/auth0-checkmate/issues"
+  },
+  "engines": {
+    "auth0-cli": ">=1.39.0"
+  },
+  "platforms": [
+    "darwin-arm64",
+    "darwin-x64",
+    "linux-x64",
+    "linux-arm64",
+    "linux-x64-musl",
+    "linux-arm64-musl",
+    "windows-x64"
+  ],
+  "commands": [
+    {
+      "name": "checkmate",
+      "description": "Run a tenant security audit",
+      "flags": [
+        {
+          "name": "validators",
+          "type": "string",
+          "description": "Validators to run"
+        }
+      ],
+      "interactive": false,
+      "timeout": "10m",
+      "output": {
+        "json": true,
+        "agentMode": true
+      },
+      "permissions": {
+        "scopes": [
+          "read:tenant_settings",
+          "read:clients",
+          "read:connections"
+        ],
+        "hosts": [
+          {
+            "host": "api.github.com",
+            "reason": "Check SDK versions against GitHub advisories"
+          }
+        ],
+        "files": [
+          {
+            "path": "$CWD",
+            "access": "write",
+            "reason": "Save the audit report"
+          }
+        ],
+        "env": [
+          {
+            "name": "AWS_PROFILE",
+            "reason": "Use the caller's AWS profile"
+          }
+        ]
+      }
+    }
+  ]
+}
