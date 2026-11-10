@@ -42,13 +42,14 @@ auth0 plugin dev create checkmate --lang go --author "Platform team" --bugs http
 ```
 
 ```text
- ▸    Created auth0/checkmate in /home/you/checkmate (27 files).
+ ▸    Created auth0/checkmate in /home/you/checkmate (28 files).
  ▸    Next:
   cd /home/you/checkmate
   go mod tidy && go build -o checkmate .
   AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link
   auth0 plugin approve checkmate
   auth0 checkmate
+ ▸    dev-policy.json holds the scope rules of the linked build. Edit it when the plugin calls routes the starter does not cover, and run auth0 plugin approve checkmate again after any change.
  ▸    To publish it, push the project to a new GitHub repository: the first push to main releases version 0.1.0. Release again with: make release BUMP=minor
 ```
 
@@ -86,7 +87,7 @@ The name is the short name of the plugin. It starts with a lowercase letter and 
 | `--command-description` | the plugin description | What the first command does. |
 | `--dir` | `./<name>` | Where to write the project. The directory must not exist or must be empty, and its parent must exist. |
 | `--license` | `UNLICENSED` | Written into the files of the project. No `LICENSE` file is created. |
-| `--scopes` | `read:clients` | Comma-separated Management API scopes for the first command. Pass `--scopes ""` for none. |
+| `--scopes` | `read:clients` | Comma-separated Management API scopes for the first command. Pass `--scopes ""` for none. The starter `dev-policy.json` is derived from them, see [The dev policy](#the-dev-policy). A scope that is not `read`, `create`, `update` or `delete` followed by a lowercase resource, such as `blacklist:tokens`, gets no starter rule. |
 | `--from` | the starter projects in the CLI | A directory of your own starter projects, laid out like the built-in ones. See below. |
 | `--json`, `--json-compact` | off | Print the directory, the files, the ID, the language and any warnings as JSON. |
 
@@ -104,7 +105,7 @@ When the CLI that runs `create` is a release build, the manifest also gets `engi
 
 ## The project layout
 
-The Go project has 27 files, and the TypeScript project has 31. These are the parts you will change.
+The Go project has 28 files, and the TypeScript project has 32. These are the parts you will change.
 
 Go:
 
@@ -122,6 +123,7 @@ checkmate/
     plugin.go              the name, the version and the exit codes
   scripts/release/         the program behind make release
   plugin.json              the manifest
+  dev-policy.json          the scope rules for the linked build
   Makefile                 build, test, lint, release
   .goreleaser.yaml         builds and packs the release archives
   .github/                 CI and release workflows
@@ -141,6 +143,7 @@ checkmate/
   scripts/release.ts       the program behind bun run release
   scripts/version.ts       the version rules of the release program
   plugin.json              the manifest
+  dev-policy.json          the scope rules for the linked build
   package.json             build, test, typecheck and release scripts
   .github/                 CI and release workflows
 ```
@@ -237,7 +240,7 @@ auth0 plugin dev link
 auth0 plugin dev link ./checkmate --bin ./checkmate/dist/checkmate
 ```
 
-`link` runs the same manifest checks as `plugin dev validate`, and it refuses a manifest with a problem with the reason `plugin_link_invalid`. It also refuses a missing executable.
+`link` runs the same manifest checks as `plugin dev validate`, and it refuses a manifest with a problem with the reason `plugin_link_invalid`. It also refuses a missing executable, and a dev policy that cannot be used, which includes a `--policy` file that exists but is not valid. The dev policy is explained [below](#the-dev-policy).
 
 The link is stored in `dev-links.json` in the plugins directory, which is listed in the [paths](reference.md#paths). The CLI reads `plugin.json` and the executable again on every run, so after a change you only rebuild. You link once. Linking the same plugin again replaces the link, and `auth0 plugin dev unlink checkmate` removes it. The build itself is never touched.
 
@@ -248,7 +251,55 @@ A linked plugin takes the place of an installed plugin with the same name. `auth
   auth0/checkmate  0.1.0    no                0 B   yes     
 ```
 
-A linked plugin is held to the same rules as an installed one: the same proxy, the same scope checks, and the same approval by a person. The checks that make no sense for an unpublished build are skipped. Those are the hashes of its files, the lockfile and the revocation list.
+A linked plugin is held to the same rules as an installed one: the same proxy, a scope check for every call, and the same approval by a person. The scope check reads the dev policy of the build instead of the registry index. The checks that make no sense for an unpublished build are skipped. Those are the hashes of its files, the lockfile, the registry index and the revocation list.
+
+### The dev policy
+
+An installed plugin is checked against the scope table in the signed registry index, which says which Management API calls each scope allows. A linked build is in no registry, so it has no such table. Instead, the CLI reads a file named `dev-policy.json` that sits next to `plugin.json`. The file is read only for a linked build in dev mode. Installed plugins never read it.
+
+`plugin dev create` writes a starter `dev-policy.json` from the `--scopes` you give. For each scope it adds rules like these:
+
+| Scope | Rules it adds |
+| --- | --- |
+| `read:X` | `GET /api/v2/X` and `GET /api/v2/X/{id}` |
+| `create:X` | `POST /api/v2/X` |
+| `update:X` | `PATCH /api/v2/X/{id}` |
+| `delete:X` | `DELETE /api/v2/X/{id}` |
+
+An underscore in `X` becomes a hyphen in the path. A scope that does not have the form of a verb and a lowercase resource, for example `blacklist:tokens`, gets no rule. `plugin dev create` warns about such scopes, and `plugin dev validate` fails until you add a rule for each of them by hand. When none of the scopes is recognized, no `dev-policy.json` is written. Edit the file for routes that the starter does not cover, such as Management API routes that are not in the scope table yet. This example adds a route that starts a bulk import and one that reads the job. The scope names in it are illustrative, so use the scopes that your tenant needs:
+
+```json
+{
+  "rules": [
+    { "method": "GET", "path": "/api/v2/clients", "anyOf": ["read:clients"] },
+    { "method": "GET", "path": "/api/v2/clients/{id}", "anyOf": ["read:clients"] },
+    { "method": "POST", "path": "/api/v2/jobs/users-imports", "anyOf": ["create:users"] },
+    { "method": "GET", "path": "/api/v2/jobs/{id}", "anyOf": ["read:users"] }
+  ],
+  "secretFields": ["connection_secret"]
+}
+```
+
+- `rules` uses the same `method`, `path` and `anyOf` as the registry scope table. A `{param}` segment in the path matches any one segment. A rule allows a call when the command declared at least one of the scopes in `anyOf` in `plugin.json`. A call that no rule matches is denied. The file needs at least one rule.
+- `secretFields` is optional. It adds field names that the proxy removes from every response, on top of the built-in list: `client_secret`, `signing_keys`, `encryption_key` and `private_key`. The built-in names cannot be removed.
+- The file is read strictly. Field names are case-sensitive, and an unknown key, a repeated key, an empty or `null` `secretFields`, more than one JSON document, a file that is not a regular file, or a file over 1 MiB is refused.
+- There is no default. A linked plugin with no dev policy does not run, and a file that cannot be used stops the run too. When the link was made with `--policy <file>`, that file is meant instead of `dev-policy.json`.
+
+To keep the file somewhere else, or to use one file for several builds, pass it when you link:
+
+```sh
+auth0 plugin dev link ./checkmate --policy ./checkmate/policy.json
+```
+
+The link stores the path as an absolute path. Without `--policy`, the CLI uses `dev-policy.json` in the plugin directory. If there is no such file when you link, `link` still succeeds, and it warns you that the plugin does not run without one:
+
+```text
+ ▸    There is no dev-policy.json in /home/you/checkmate, and a linked plugin does not run without one. Create it next to plugin.json with the calls the plugin makes, for example { "rules": [ { "method": "GET", "path": "/api/v2/clients", "anyOf": ["read:clients"] } ] }, or link again with --policy <file>.
+```
+
+A file given with `--policy` must exist.
+
+In dev mode the author of the plugin decides what each declared scope allows. The dev policy is not signed, and nothing else checks it. The person who approves the plugin sees the rules at approval time, as described below. Do not approve a linked build that you did not build or review yourself.
 
 ### Approve and run
 
@@ -283,29 +334,49 @@ Approve for example.us.auth0.com? [y/N/d]  (d shows the exact scopes)
 
 Approvals are kept per tenant, so the command also needs a tenant. Pass `--tenant`, or use the default tenant.
 
-Before the CLI starts any plugin, linked or installed, it needs a registry index that it can verify. The index carries the table that says which Management API calls each scope allows, and the list of secret fields that the proxy removes from responses. A linked build is not in the index, but it is checked against the same table. If the CLI cannot verify an index, the plugin does not start:
+For a linked plugin, `approve` also prints the rules of the dev policy before it asks, so you can see what each scope allows:
 
-The output below is from the current build, which does not embed a trusted registry key yet.
+```text
+ ▸    This plugin is linked in dev mode. The dev policy at /home/you/checkmate/dev-policy.json is not signed, and it decides which Management API calls each scope allows. Your approval covers its exact content, so any change to it needs a new approval.
+ ▸      GET /api/v2/clients  allows: read:clients
+ ▸      GET /api/v2/clients/{id}  allows: read:clients
+```
+
+`approve` warns about two kinds of rules. One is a rule whose path has only `{param}` segments after `/api/v2`, such as `/api/v2/{a}/{b}`, because it matches a call on any resource. The other is a `POST`, `PUT`, `PATCH` or `DELETE` rule that only `read:` scopes allow, because it lets a plugin change something while it holds read access. If the dev policy cannot be used, `approve` warns that the plugin will not run until the file is fixed, and it approves the permissions only.
+
+The approval of a linked build covers the exact bytes of `dev-policy.json` as well as the permissions in `plugin.json`. If an edit makes the file unusable, the next run fails with `plugin_dev_policy_invalid` first. After a valid edit, the next run fails with `plugin_not_approved` until you run `auth0 plugin approve` again. This also holds when the plugin itself edits the file. If the file changes while the plugin is starting, the run stops with `plugin_changed`, and you run it again.
+
+A tenant has one approval for each plugin. Approving the linked build replaces the approval of an installed copy of the same plugin on that tenant, so approve the installed copy again if you use it.
+
+A linked build does not need a registry index. The CLI reads the dev policy and does not use the registry index, so a linked plugin can run in a build of the CLI that has no trusted registry root. Installed plugins still need a registry index that the CLI can verify, and the current build does not embed the registry root yet. See [Status](index.md#status).
+
+After you approve the plugin, `auth0 checkmate` runs the sample command. It lists the clients of the tenant and needs the `read:clients` scope, which the manifest declares. Each run of a linked build prints a line about the dev policy on stderr, next to the line about the linked build:
 
 ```text
  ▸    Running the linked build of auth0/checkmate 0.1.0 from /home/you/checkmate. Its files are not checked against a release.
-
-===  example.us.auth0.com error
-
- ▸    Checkmate 0.1.0 was not run, because the registry index cannot be trusted: no trusted registry keys are embedded in this build. Reconnect and run: auth0 plugin search.
+ ▸    Using the dev policy at /home/you/checkmate/dev-policy.json. It is not signed and applies to this linked build only.
 ```
 
-With `--json`, the same failure has the reason `plugin_registry_unavailable`. The CLI needs a trusted registry key to check the registry, so builds without one stop here. Creating, building, validating, linking and approving a plugin do not need the index. See [Status](index.md#status).
+With no dev policy at the path the link uses (`dev-policy.json` next to `plugin.json`, or the `--policy` file), or with one that cannot be used, the plugin does not start. The reason is `plugin_dev_policy_missing` or `plugin_dev_policy_invalid`, and there is no fallback to a looser policy. See [Troubleshooting](troubleshooting.md#a-linked-plugin-and-its-dev-policy).
 
-Once a build can verify the index, `auth0 checkmate` runs the sample command. It lists the clients of the tenant and needs the `read:clients` scope, which the manifest declares.
+### When a call is denied
+
+If the plugin makes a call that the dev policy does not allow, the proxy denies it, and the summary at the end of the run says what to change. When no rule matches the call, the summary prints a rule that you can add:
+
+```text
+ ▸    Plugin auth0/checkmate: 1 API call was denied (GET /api/v2/stats/daily). Review permissions.scopes in plugin.json. Add to /home/you/checkmate/dev-policy.json: { "method": "GET", "path": "/api/v2/stats/daily", "anyOf": ["<scope>"] } (use {id} where the path has an id)
+```
+
+Replace `<scope>` with the scope that should allow the call, and declare that scope in `plugin.json`. When a rule matches but the command did not declare the scope, the summary names the scope, and says to declare it under `permissions.scopes` in `plugin.json`. If the path has characters that a rule cannot hold, the summary says to add a rule for the call without printing a ready-made one. A change to `dev-policy.json`, or to the permissions in `plugin.json`, needs a new `auth0 plugin approve`.
 
 ### The development loop
 
 1. Change the code and rebuild.
 2. Run `auth0 <name>` again. There is nothing to reinstall or relink.
 3. If you change `permissions`, whether a command is `interactive`, or the name of a command, the CLI asks for approval again. The approval is keyed on a hash of those fields only. Descriptions, flags, timeouts, output settings and the version do not change the hash.
+4. If you change `dev-policy.json`, the CLI asks for approval again, because the approval of a linked build also covers the exact bytes of that file. Any edit counts, including a change of spacing. An edit that makes the file unusable gives `plugin_dev_policy_invalid` first, and a valid edit gives `plugin_not_approved` until you approve again.
 
-You can see the hash that the CLI computes from your manifest with `auth0 plugin info checkmate`. This is the output after the approval above:
+You can see the hash that the CLI computes from your manifest with `auth0 plugin info checkmate`. This is the output after the approval above. For a linked build whose dev policy can be read, the hash also covers `dev-policy.json`, so the value in your output differs from one made from the manifest alone. CI pins of a linked build use the hash that `info` shows:
 
 ```text
   ID                auth0/checkmate
@@ -490,6 +561,8 @@ The CLI also refuses a plugin ID whose name is the name of a core command:
   PATH  PROBLEM
   id    auth0 already has a command named "apps". Plugin names cannot shadow core commands
 ```
+
+If a `dev-policy.json` sits next to `plugin.json`, the command checks it as well. The file must be valid, every scope that a command declares must have a rule, and every rule must allow at least one scope that the manifest declares. Problems in the file are listed with the path `dev-policy.json`. When all of the problems are in that file, the error says "the dev policy has N problems". A directory with no `dev-policy.json` is not a problem here. The command checks the `dev-policy.json` next to `plugin.json`, not a file that you gave to `dev link` with `--policy`.
 
 With `--bin <file>`, the command also checks that the executable exists and can run. With `--json`, the result is printed on stdout. A valid manifest and an invalid one have the same shape:
 

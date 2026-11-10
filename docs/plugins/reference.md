@@ -95,7 +95,8 @@ The CLI keeps its settings and plugins in the directory `~/.config/auth0` on mac
 | `plugins/` | The plugin store. The directory is created with owner-only permissions. |
 | `plugins/plugins.lock.json` | The installed plugins: the active version, the previous version, the pinned version and the hashes of the binary, the manifest and the archive. |
 | `plugins/approvals.json` | The approvals of each plugin, per tenant. The file is readable and writable by the owner only. |
-| `plugins/dev-links.json` | The local builds that `plugin dev link` linked. |
+| `plugins/dev-links.json` | The local builds that `plugin dev link` linked: the directory, the executable and, when `--policy` was given, the dev policy file. |
+| `dev-policy.json` | Not in this directory. It sits next to `plugin.json` in the directory of a linked build, and holds the scope rules of that build. Only a linked build in dev mode reads it. See [Building a plugin](building.md#the-dev-policy). |
 | `plugins/registries/auth0/` | The cache of the registry: `metadata/` with the latest `root.json`, `timestamp.json`, `snapshot.json` and `targets.json`, `roots/` with the roots after the first one (`<N>.root.json`, from 2 up), `index.json`, `state.json` with the newest index version accepted and the time of the last refresh, and the lock file `.lock` that guards them. The first root is built into the CLI and is not stored. |
 | `plugins/store/<registry>/<name>/<version>/` | The files of an installed version: the executable and `plugin.json`. For example, `plugins/store/auth0/checkmate/1.0.0/`. |
 | `plugins/tmp/` | The staging area for downloads and installs. |
@@ -146,11 +147,24 @@ When a name is set both by the CLI and by your environment, the CLI's value wins
 | `AUTH0_CLI_ANALYTICS` | `false` turns off usage tracking, including the events of the plugin commands. |
 | `AUTH0_CLI_AUTH_MODE`, `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`, `AUTH0_API_TOKEN` | Environment login. With `AUTH0_CLI_AUTH_MODE=env`, the plugin commands use `AUTH0_DOMAIN` as the tenant when you pass no `--tenant`. |
 
+## Author commands
+
+These commands need `AUTH0_CLI_PLUGIN_DEV_MODE=true`. [Building a plugin](building.md) walks through them.
+
+| Command | Flags | What it does |
+| --- | --- | --- |
+| `auth0 plugin dev create <name>` | `--lang`, `--author`, `--bugs`, `--id`, `--version`, `--description`, `--command`, `--command-description`, `--dir`, `--license`, `--scopes`, `--from`, `--json`, `--json-compact` | Writes a new project. It includes a starter `dev-policy.json` that is derived from `--scopes`: `read:X` adds `GET /api/v2/X` and `GET /api/v2/X/{id}`, `create:X` adds `POST /api/v2/X`, `update:X` adds `PATCH /api/v2/X/{id}`, and `delete:X` adds `DELETE /api/v2/X/{id}`. An underscore in `X` becomes a hyphen. |
+| `auth0 plugin dev validate [path]` | `--bin`, `--json`, `--json-compact` | Checks `plugin.json`. If a `dev-policy.json` sits next to it, the command also checks that the file is valid, that every scope a command declares has a rule, and that every rule allows at least one declared scope. A missing file is not a problem. |
+| `auth0 plugin dev link [path]` | `--bin`, `--policy`, `--json`, `--json-compact` | Links a local build. `--policy <file>` names the dev policy to use instead of `dev-policy.json` in the plugin directory. A relative path is made absolute, and the link stores it. The command checks the policy when it links. A directory with no `dev-policy.json` is linked with a warning, and the plugin does not run until the file exists. |
+| `auth0 plugin dev unlink <name>` | | Removes the link. |
+
+The format of `dev-policy.json` is a `rules` list of `method`, `path` and `anyOf`, and an optional `secretFields` list. [The dev policy](building.md#the-dev-policy) describes it.
+
 ## Exit codes and errors
 
 A failed plugin command exits with 1, including a run in which the plugin itself failed. An interrupt, such as Ctrl-C, exits with 130 instead. When the plugin exits with a non-zero code, the CLI does not pass that code on. It is in the error details as `exitCode`.
 
-With `--json`, a failure prints one object. The example below is from the current build, which does not embed a trusted registry root yet:
+With `--json`, a failure prints one object. The example below is the failure of an installed plugin in the current build, which does not embed a trusted registry root yet:
 
 ```json
 {"error":{"code":"validation","reason":"plugin_registry_unavailable","message":"checkmate 0.1.0 was not run, because the registry index cannot be trusted: no trusted registry keys are embedded in this build. Reconnect and run: auth0 plugin search"}}
@@ -164,8 +178,10 @@ The `code` is a class of failure: `usage`, `validation`, `auth`, `not_found`, `p
 | --- | --- | --- |
 | `plugin_dev_mode_required` | validation | A `plugin dev` command ran without `AUTH0_CLI_PLUGIN_DEV_MODE=true`. |
 | `plugin_create_invalid` | validation | `plugin dev create` refused the input: a missing value, a name or URL that is not valid, an ID that is not `auth0/<name>`, a directory that is not empty, a parent directory that does not exist, or a `--from` tree that is not allowed. |
-| `plugin_manifest_invalid` | validation | `plugin dev validate` found problems in the manifest, or the `--bin` file cannot run. |
-| `plugin_link_invalid` | validation | `plugin dev link` refused the directory: the manifest is not valid, the executable is missing, or the ID is not `auth0/<name>`. |
+| `plugin_manifest_invalid` | validation | `plugin dev validate` found problems in the manifest or in `dev-policy.json`, or the `--bin` file cannot run. |
+| `plugin_link_invalid` | validation | `plugin dev link` refused the directory: the manifest is not valid, the executable is missing, the ID is not `auth0/<name>`, or the dev policy cannot be used (a file given with `--policy` that is missing or exists but is not valid, or a `dev-policy.json` that is not valid). |
+| `plugin_dev_policy_missing` | validation | A linked plugin was run, and there is no dev policy at the path that the link uses. The plugin did not start. |
+| `plugin_dev_policy_invalid` | validation | A linked plugin was run, and its dev policy cannot be used: it cannot be read, is too large, is not the JSON the CLI reads, or has rules or secret field names that are not valid. The plugin did not start. |
 | `plugin_not_linked` | validation | `plugin dev unlink` was given a plugin that is not linked. |
 | `plugin_name_reserved` | validation | The name of the plugin is the name of a core command. |
 | `plugin_reference` | validation | The plugin reference is not valid, or it has a version where only a name is allowed. |
@@ -174,13 +190,13 @@ The `code` is a class of failure: `usage`, `validation`, `auth`, `not_found`, `p
 | `plugin_no_tenant` | validation | The command has no tenant. Pass `--tenant`, or log in. |
 | `plugin_tenant_mismatch` | validation | The session belongs to another tenant than the one the plugin is approved for. |
 | `plugin_command_missing` | validation | The command is not in the manifest of the installed or linked plugin. The manifest changed since the run started. |
-| `plugin_changed` | validation | The plugin changed while the session was being opened. Run it again. |
+| `plugin_changed` | validation | The plugin changed while the session was being opened. For a linked build this includes `dev-policy.json`, which must be the file that was approved. Run it again. |
 | `plugin_verification_failed` | validation | The installed files do not match what was installed. Reinstall the plugin. |
-| `plugin_registry_unavailable` | validation | The registry index cannot be verified or cannot be used, so the plugin did not start. |
+| `plugin_registry_unavailable` | validation | The registry index cannot be verified or cannot be used, so the installed plugin did not start. A linked build does not use the registry index. |
 | `plugin_revoked` | validation | The installed version was revoked in the registry. Update the plugin. |
 | `plugin_interactive` | validation | An interactive command ran with `--no-input`, in agent mode, or without a terminal. |
 | `plugin_output_unsupported` | validation | The command was asked for an output mode that its manifest does not declare. |
-| `plugin_not_approved` | validation | The plugin is not approved for the tenant, or its permissions changed since the last approval. |
+| `plugin_not_approved` | validation | The plugin is not approved for the tenant, or its permissions changed since the last approval. For a linked build, a change to `dev-policy.json` counts too. |
 | `plugin_approvals_damaged` | validation | The approvals file cannot be read. |
 | `plugin_approval_check` | validation | The approvals could not be checked. |
 | `plugin_timeout_invalid` | validation | The timeout of the command cannot be used. |
@@ -205,7 +221,7 @@ The proxy answers a call that it does not forward with the HTTP status below. Th
 | `method_not_allowed` | 405 | The HTTP method is not allowed for this path. |
 | `uri_too_long` | 414 | The request target is too long. |
 | `forbidden_path` | 403 | The path is not allowed through the proxy. |
-| `no_scope_rule` | 403 | The endpoint is not in the scope table of the registry index. |
+| `no_scope_rule` | 403 | The endpoint is not in the scope table of the registry index. For a linked build, no rule of its dev policy matches the call. |
 | `insufficient_scope` | 403 | The command did not declare a scope that allows the call. The message names the scope to add. |
 | `payload_too_large` | 413 | The request body is too large. |
 | `session_expired` | 401 | The session expired or was rejected, and the proxy cannot renew it. For a user login, run `auth0 login`. |

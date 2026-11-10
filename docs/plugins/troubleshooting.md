@@ -29,7 +29,9 @@ When you run `auth0 <plugin>`, the CLI checks things in a fixed order and stops 
 | --- | --- | --- |
 | No reason. The message names `AUTH0_CLI_PLUGINS_DISABLED`. | Plugins are turned off on this machine. | Unset the variable, or set it to `false`. Any value other than `true` or `false` also turns plugins off. |
 | `plugin_verification_failed` | A file of the installed plugin no longer matches what was checked at install time, so the plugin does not run. | Reinstall it with `auth0 plugin install <name>`. |
-| `plugin_registry_unavailable` | The registry index is missing, expired, or older than the 30 days a plugin may run on a saved copy. | Reconnect, then run `auth0 plugin search` to refresh the index. |
+| `plugin_registry_unavailable` | The registry index is missing, expired, or older than the 30 days an installed plugin may run on a saved copy. A build linked in dev mode does not use the registry index, so it does not give this error. | Reconnect, then run `auth0 plugin search` to refresh the index. |
+| `plugin_dev_policy_missing` | A linked plugin has no dev policy at the path its link uses. | See [A linked plugin and its dev policy](#a-linked-plugin-and-its-dev-policy). |
+| `plugin_dev_policy_invalid` | The dev policy of a linked plugin cannot be used. | See [A linked plugin and its dev policy](#a-linked-plugin-and-its-dev-policy). |
 | `plugin_revoked` | The registry revoked this version. | Run `auth0 plugin update <name>`. |
 | `plugin_interactive` | The command needs a terminal, and you used agent mode, `--no-input`, or no terminal. | Run it in a terminal. |
 | `plugin_output_unsupported` | You asked for `--json`, `--json-compact`, `--csv` or agent mode, and the command does not declare it. | Remove the flag. For agent mode, use `--agent-mode=false`. |
@@ -41,7 +43,7 @@ When you run `auth0 <plugin>`, the CLI checks things in a fixed order and stops 
 | `plugin_tenant_mismatch` | The session is for a different tenant than the one the plugin is approved for. | Pass `--tenant` for the approved tenant, or approve the plugin for the tenant you are logged in to. |
 | `plugin_timeout_invalid` | The timeout in the plugin's manifest is not a usable duration. | Tell the plugin's owner. `auth0 plugin info` shows who that is. |
 | `plugin_command_missing` | The plugin has no command with that name any more. | Run it again. If it persists, reinstall the plugin. |
-| `plugin_changed` | The plugin changed on disk while the CLI was opening the session. | Run the command again. |
+| `plugin_changed` | The plugin changed on disk while the CLI was opening the session. For a linked build this includes `dev-policy.json`. | Run the command again. |
 | `plugin_ambiguous_subcommand` | A call of the root command has a subcommand name among its arguments, before a bare `--`, so the CLI cannot tell which command you meant. | Type the subcommand first, write the flag as `--flag=value`, or put the argument after `--`. |
 
 ### Not approved
@@ -57,6 +59,8 @@ Approval belongs to a tenant and to a set of permissions. A new version that ask
 ```text
  ▸    checkmate changed what it asks for since you approved it for acme.us.auth0.com. Run: auth0 plugin approve auth0/checkmate --tenant acme.us.auth0.com
 ```
+
+For a linked build, the message also says that it needs a new approval when its permissions or its `dev-policy.json` change. See [A linked plugin and its dev policy](#a-linked-plugin-and-its-dev-policy).
 
 ### A plugin that does not verify
 
@@ -181,9 +185,47 @@ These reasons come from the commands under `auth0 plugin dev`. All of them need 
 | --- | --- |
 | `plugin_dev_mode_required` | The author commands are off. Set `AUTH0_CLI_PLUGIN_DEV_MODE=true`. |
 | `plugin_create_invalid` | `plugin dev create` was given a value it cannot use. The message names it. |
-| `plugin_link_invalid` | A link cannot be made, or the linked build cannot be used. The message says why, and names the `validate` and `unlink` commands. |
+| `plugin_link_invalid` | A link cannot be made, or the linked build cannot be used. The message says why, and names the `validate` and `unlink` commands. A dev policy that cannot be used, or a `--policy` file that is missing, gives this reason when you link. |
 | `plugin_not_linked` | `plugin dev unlink` named a plugin that is not linked. The message lists the linked plugins, or says that none are linked. |
-| `plugin_manifest_invalid` | `plugin dev validate` found problems in `plugin.json`. The `details` object has a `problems` list, and each entry has the `path` of the field and a `message`. With `--json`, the command also prints the same list on stdout, next to `valid`. |
+| `plugin_manifest_invalid` | `plugin dev validate` found problems in `plugin.json` or in `dev-policy.json`. The `details` object has a `problems` list, and each entry has the `path` of the field or file and a `message`. With `--json`, the command also prints the same list on stdout, next to `valid`. |
+
+### A linked plugin and its dev policy
+
+A linked build does not use the registry. It runs against the `dev-policy.json` next to its `plugin.json`, or against the file you gave with `auth0 plugin dev link --policy`. See [The dev policy](building.md#the-dev-policy).
+
+**`plugin_dev_policy_missing`.** The plugin did not start, because there is no dev policy at the path its link uses. A linked plugin has no default policy, so it does not run without one:
+
+```text
+===  example.us.auth0.com error
+
+ ▸    Checkmate 0.1.0 was not run, because its dev policy cannot be used: there is no dev policy at /home/you/checkmate/dev-policy.json. Create a dev-policy.json next to plugin.json, or give the file with: auth0 plugin dev link --policy <file>
+```
+
+Create the file, or link again with `--policy <file>`. `auth0 plugin dev create` writes a starter file for a new project.
+
+**`plugin_dev_policy_invalid`.** The file exists, but the CLI refuses it. The message names the file and the cause. The file is read strictly, so check for these:
+
+- An unknown key, a repeated key, or a field name with the wrong case. The names are `rules`, `method`, `path`, `anyOf` and `secretFields`.
+- An empty or `null` `secretFields`. Leave the key out instead.
+- More than one JSON document in the file, or a file over 1 MiB, or a file that is not a regular file.
+- No rule at all. The file needs at least one rule.
+- A rule or a secret field name that the registry would refuse.
+
+Run `auth0 plugin dev validate` in the plugin directory to see the problems, then fix the file. The command checks the `dev-policy.json` next to `plugin.json`, not a file that you gave with `--policy`. You do not need to link again, because the CLI reads the file on every run. If you changed it, approve the plugin again, see below.
+
+**Not approved after you edited the policy.** The approval of a linked build covers the exact bytes of `dev-policy.json`. After any edit, even a change of spacing, the next run stops. If the edit left the file unusable, the reason is `plugin_dev_policy_invalid`, see above. After a valid edit, the reason is `plugin_not_approved` and the message says that a linked plugin needs a new approval when its permissions or its `dev-policy.json` change. Run the `auth0 plugin approve` command from the message and check the rules it prints. If the plugin edits the file itself, it needs a new approval after every such edit, and you should look at why it does that. If the file changes while the plugin is starting, the run stops with `plugin_changed`. Run it again.
+
+**A denied call.** When a linked plugin makes a call that the dev policy does not allow, the summary after the run says what to change:
+
+```text
+ ▸    Plugin auth0/checkmate: 1 API call was denied (GET /api/v2/stats/daily). Review permissions.scopes in plugin.json. Add to /home/you/checkmate/dev-policy.json: { "method": "GET", "path": "/api/v2/stats/daily", "anyOf": ["<scope>"] } (use {id} where the path has an id)
+```
+
+- `Add to <file>: { ... }` means no rule matched the call. Add that rule to the file, with the scope that should allow it in place of `<scope>`, and use `{id}` for the parts of the path that change. The scope must also be declared in `plugin.json`. Then approve the plugin again.
+- `Declare "<scope>" under permissions.scopes in plugin.json.` means a rule matched, but the command did not declare the scope that allows the call. Add the scope to `permissions.scopes`, and approve again.
+- `Add a rule to <file> for <method> <path>. Use {id} for the parts that change.` means the path has characters that a rule cannot hold as they are, so the CLI does not print a ready-made rule. Write the rule by hand.
+
+The proxy answers the plugin with `no_scope_rule` for the first case and `insufficient_scope` for the second. See [Reference](reference.md#proxy-error-codes).
 
 ## Start over
 

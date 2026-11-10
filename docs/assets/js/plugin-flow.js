@@ -1133,7 +1133,7 @@
             {
               actors: ['cli', 'project'], from: 'cli', to: 'project', label: 'write plugin.json and the starter files',
               title: 'Write the project',
-              text: 'The CLI writes the manifest and a starter that calls the Management API through the proxy. The Go starter has 27 files and the TypeScript starter has 31. With `--from` the starters come from a folder of your own.',
+              text: 'The CLI writes the manifest and a starter that calls the Management API through the proxy. The Go starter has 28 files and the TypeScript starter has 32. With `--from` the starters come from a folder of your own.',
               data: [{
                 label: 'Go starter (top level)', lines: [
                   'plugin.json            the manifest: id, version 0.1.0, platforms, commands, permissions',
@@ -1149,13 +1149,14 @@
               text: 'The CLI prints what to do next. The starter asks for the scope `read:clients` only. You add scopes, hosts and files to `plugin.json` as the plugin needs them.',
               data: [{
                 label: 'Output', lines: [
-                  'Created auth0/checkmate in /path/to/checkmate (27 files).',
+                  'Created auth0/checkmate in /path/to/checkmate (28 files).',
                   'Next:',
                   '  cd checkmate',
                   '  go mod tidy && go build -o checkmate .',
                   '  AUTH0_CLI_PLUGIN_DEV_MODE=true auth0 plugin dev link',
                   '  auth0 plugin approve checkmate',
                   '  auth0 checkmate',
+                  'dev-policy.json holds the scope rules of the linked build. Edit it when the plugin calls routes the starter does not cover, and run auth0 plugin approve checkmate again after any change.',
                   'To publish it, push the project to a new GitHub repository: the first push to main releases version 0.1.0. Release again with: make release BUMP=minor']
               }]
             }
@@ -1226,6 +1227,8 @@
                 label: 'Checks', lines: [
                   ok('plugin.json is valid'),
                   ok('./checkmate/checkmate is a regular, executable file'),
+                  ok('dev-policy.json next to plugin.json, or the file given with --policy, can be used'),
+                  note('A directory with no dev-policy.json is linked with a warning, and the plugin does not run until the file exists. A --policy file must exist.'),
                   note('Without a build: "The executable of the plugin cannot be used: stat ...: no such file or directory. Build it there, or give another file with --bin."')]
               }]
             },
@@ -1249,7 +1252,7 @@
             {
               actors: ['c-consent', 'user'], from: 'user', to: 'cli', label: 'plugin approve checkmate --tenant ' + TENANT,
               title: 'The author approves the build on a tenant',
-              text: 'The consent screen shows the permissions of the manifest as it is on disk now. Approval is stored like any other, keyed to the permissions hash.',
+              text: 'The consent screen shows the permissions of the manifest as it is on disk now, and the rules of the dev policy. Approval is stored like any other, but the hash it is keyed to covers the permissions in plugin.json and the exact bytes of dev-policy.json.',
               data: [{ label: 'Command', lines: ['$ auth0 plugin approve checkmate --tenant ' + TENANT, 'Approved auth0/checkmate 0.1.0 for ' + TENANT + '.'] }]
             },
             {
@@ -1261,13 +1264,14 @@
                   no('hashes of the files'),
                   no('the lockfile'),
                   no('the revocation list, and usage events'),
-                  note('Everything else runs as for an installed plugin: the index check, the call check, the approval, the proxy and its scopes, secret stripping, the environment and the timeout.')]
+                  note('A linked build does not use the registry index. It reads its dev policy: dev-policy.json next to plugin.json, or the file given with dev link --policy. Without a usable dev policy the plugin does not start.'),
+                  note('Everything else runs as for an installed plugin: the call check, now against the rules of the dev policy, the approval, the proxy and its scopes, secret stripping, the environment and the timeout.')]
               }]
             },
             {
-              actors: ['c-approval', 'approvals'], from: 'cli', to: 'approvals', label: 'permissions hash of the manifest on disk', status: 'fail', dim: ['c-session', 'c-proxy', 'c-spawn', 'proxy', 'plugin', 'mgmt'],
-              title: 'Editing the permissions asks for a new approval',
-              text: 'If the author adds a scope to plugin.json, the permissions hash changes and the old approval no longer matches. The run stops until the author approves again. The manifest is read a second time after the login, so a build edited in between cannot run with more than was approved.',
+              actors: ['c-approval', 'approvals'], from: 'cli', to: 'approvals', label: 'hash of the permissions and of dev-policy.json', status: 'fail', dim: ['c-session', 'c-proxy', 'c-spawn', 'proxy', 'plugin', 'mgmt'],
+              title: 'Editing the permissions or the dev policy asks for a new approval',
+              text: 'If the author adds a scope to plugin.json, or changes dev-policy.json in any way, the hash changes and the old approval no longer matches. The run stops until the author approves again. The manifest is read a second time after the login, so a build edited in between cannot run with more than was approved.',
               data: [{ label: 'Message (stderr)', lines: ['Checkmate changed what it asks for since you approved it for ' + TENANT + '. Run: ' + APPROVE + TENANT + '.'] }]
             },
             {
