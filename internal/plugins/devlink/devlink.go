@@ -60,10 +60,19 @@ var (
 var renameFile = plugins.Rename
 
 // Link is one linked build: the directory that holds its plugin.json and the
-// executable to run. Both are absolute paths.
+// executable to run. Both are absolute paths. The policy is the file with the
+// scope rules of the build, also an absolute path, and is empty when the build
+// uses the dev-policy.json in its directory.
 type Link struct {
-	Path string `json:"path"`
-	Bin  string `json:"bin"`
+	Path   string `json:"path"`
+	Bin    string `json:"bin"`
+	Policy string `json:"policy,omitempty"`
+}
+
+// valid reports whether the link names absolute paths: the policy only when there
+// is one.
+func (l Link) valid() bool {
+	return filepath.IsAbs(l.Path) && filepath.IsAbs(l.Bin) && (l.Policy == "" || filepath.IsAbs(l.Policy))
 }
 
 // Build is a linked plugin as it is on disk now.
@@ -73,6 +82,10 @@ type Build struct {
 	Dir          string
 	ManifestPath string
 	Bin          string
+
+	// Policy is the dev policy that the link names, an absolute path, and is empty
+	// when the build uses the dev-policy.json in its directory.
+	Policy string
 
 	// Manifest is the plugin.json as it was read and validated just now.
 	Manifest *plugins.Manifest
@@ -122,8 +135,8 @@ func (l Links) Load() (map[string]Link, error) {
 
 // Add links the plugin, replacing the link it had.
 func (l Links) Add(ctx context.Context, id string, link Link) error {
-	if id == "" || !filepath.IsAbs(link.Path) || !filepath.IsAbs(link.Bin) {
-		return fmt.Errorf("a link needs a plugin ID and absolute paths, got %q, %q and %q", id, link.Path, link.Bin)
+	if id == "" || !link.valid() {
+		return fmt.Errorf("a link needs a plugin ID and absolute paths, got %q, %q, %q and %q", id, link.Path, link.Bin, link.Policy)
 	}
 
 	return l.change(ctx, func(links map[string]Link) error {
@@ -240,7 +253,7 @@ func decode(data []byte) (*document, error) {
 	}
 
 	for id, link := range doc.Links {
-		if id == "" || !filepath.IsAbs(link.Path) || !filepath.IsAbs(link.Bin) {
+		if id == "" || !link.valid() {
 			return nil, fmt.Errorf("links[%q]: the plugin ID is empty or a path is not absolute", id)
 		}
 	}
@@ -267,7 +280,7 @@ func (l Link) Open(id string) (*Build, error) {
 		return nil, err
 	}
 
-	return &Build{Dir: l.Path, ManifestPath: manifestPath, Bin: l.Bin, Manifest: manifest}, nil
+	return &Build{Dir: l.Path, ManifestPath: manifestPath, Bin: l.Bin, Policy: l.Policy, Manifest: manifest}, nil
 }
 
 // ReadManifest reads and validates the plugin.json at the path, as the manifest

@@ -899,6 +899,7 @@ func TestPluginRunTelemetry_LinkedRunsAreNotTracked(t *testing.T) {
 		require.Empty(t, events)
 
 		require.NoError(t, devlink.Links{Dir: r.Dir}.Remove(context.Background(), pluginTestID))
+		r.approve()
 
 		events, err = r.tracked(t, recorder, "checkmate")
 		require.NoError(t, err)

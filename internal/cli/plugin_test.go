@@ -28,6 +28,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/registry/registrytest"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
@@ -2323,6 +2324,7 @@ func TestApprovePluginCmd(t *testing.T) {
 
 		assert.True(t, 0 <= line && line < screen && screen < question && question < done, out)
 		assert.Equal(t, map[string]string{pluginTestTenant: record.PermissionsHash}, e.approvedHashes(pluginTestID))
+		assert.NotContains(t, out, "dev policy", "an installed plugin has none")
 		assert.Empty(t, e.stdout.String())
 	})
 
@@ -2984,6 +2986,30 @@ func TestInfoPluginCmd_Linked(t *testing.T) {
 		assert.Regexp(t, `VERSION\s+2\.0\.0`, e.stdout.String())
 	})
 
+	t.Run("shows the hash that covers the dev policy", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+		e.link(build)
+		e.approveBuild(build)
+
+		file, err := devpolicy.Load(filepath.Join(build.Dir, devpolicy.FileName))
+		require.NoError(t, err)
+
+		want := devpolicy.ConsentHash(build.Manifest.PermissionsHash(), file)
+		require.NotEqual(t, build.Manifest.PermissionsHash(), want)
+
+		require.NoError(t, e.run("plugin", "info", "checkmate", "--json-compact"))
+
+		object := e.jsonObject()
+		assert.Equal(t, want, object["permissionsHash"])
+
+		approved, ok := object["approvedTenants"].([]any)
+		require.True(t, ok)
+		require.Len(t, approved, 1)
+		assert.Equal(t, want, approved[0].(map[string]any)["permissionsHash"], "the approval is for the same hash")
+	})
+
 	t.Run("shows an installed copy next to the build", func(t *testing.T) {
 		e := newDevEnv(t)
 		e.publish(e.index(e.release("1.0.0")))
@@ -3079,6 +3105,98 @@ func TestApprovePluginCmd_Linked(t *testing.T) {
 		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
 
 		assert.Contains(t, e.stderr.String(), "delete")
+		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("shows the dev policy and approves it together with the permissions", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":[
+			{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]},
+			{"method":"DELETE","path":"/api/v2/{a}/{b}","anyOf":["delete:clients","delete:users"]}
+		]}`)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		out := e.stderr.String()
+		path := filepath.Join(build.Dir, devpolicy.FileName)
+
+		assert.Contains(t, out, "This plugin is linked in dev mode. The dev policy at "+path+" is not signed, and it decides which Management API calls each scope allows.")
+		assert.Contains(t, out, "GET /api/v2/clients  allows: read:clients")
+		assert.Contains(t, out, "DELETE /api/v2/{a}/{b}  allows: delete:clients, delete:users")
+		assert.Contains(t, out, "The rule DELETE /api/v2/{a}/{b} matches any resource, so it would let the plugin make any DELETE call with the scopes delete:clients, delete:users.")
+		assert.NotContains(t, out, "The rule GET /api/v2/clients matches any resource")
+		assert.Less(t, strings.Index(out, "allows: read:clients"), strings.Index(out, "Approve for "+pluginTestTenant+"?"), "the rules come before the question")
+
+		file, err := devpolicy.Load(path)
+		require.NoError(t, err)
+
+		want := devpolicy.ConsentHash(build.Manifest.PermissionsHash(), file)
+		assert.NotEqual(t, build.Manifest.PermissionsHash(), want)
+		assert.Equal(t, map[string]string{pluginTestTenant: want}, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("shows no warning when no rule is broad", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, fixturePolicy)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		assert.Contains(t, e.stderr.String(), "GET /api/v2/users  allows: read:users")
+		assert.NotContains(t, e.stderr.String(), "matches any resource")
+	})
+
+	t.Run("warns about a rule that makes a change with read scopes only", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":[
+			{"method":"GET","path":"/api/v2/clients","anyOf":["read:clients"]},
+			{"method":"DELETE","path":"/api/v2/users/{id}","anyOf":["read:users"]},
+			{"method":"POST","path":"/api/v2/clients","anyOf":["read:clients","create:clients"]}
+		]}`)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		out := e.stderr.String()
+
+		assert.Contains(t, out, "The rule DELETE /api/v2/users/{id} lets the plugin make a DELETE call with only read scopes (read:users). Check that this is what you expect.")
+		assert.NotContains(t, out, "The rule GET /api/v2/clients lets the plugin")
+		assert.NotContains(t, out, "The rule POST /api/v2/clients lets the plugin")
+	})
+
+	t.Run("a dev policy that the registry would refuse is said so, and the manifest is still approved", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":[{"method":"GET","path":"/clients","anyOf":["read:clients"]}]}`)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		assert.Contains(t, e.stderr.String(), "its dev policy at "+filepath.Join(build.Dir, devpolicy.FileName)+" cannot be used")
+		assert.Contains(t, e.stderr.String(), "It will not run until that is fixed.")
+		assert.NotContains(t, e.stderr.String(), "allows:")
+		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, e.approvedHashes(pluginTestID))
+	})
+
+	t.Run("a dev policy that cannot be used is said so, and the manifest is still approved", func(t *testing.T) {
+		e := newDevEnv(t)
+		build := writeDevBuild(t, "2.0.0", fixtureCommands(), stubExecutable)
+		build.writePolicy(t, `{"rules":`)
+		e.link(build)
+		e.answer("y\n")
+
+		require.NoError(t, e.run("plugin", "approve", "checkmate", "--tenant", pluginTestTenant))
+
+		assert.Contains(t, e.stderr.String(), "its dev policy at "+filepath.Join(build.Dir, devpolicy.FileName)+" cannot be used")
+		assert.Contains(t, e.stderr.String(), "It will not run until that is fixed.")
 		assert.Equal(t, map[string]string{pluginTestTenant: build.Manifest.PermissionsHash()}, e.approvedHashes(pluginTestID))
 	})
 

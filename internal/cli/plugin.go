@@ -25,6 +25,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/approvals"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -387,6 +388,10 @@ func buildPluginInfo(cmd *cobra.Command, cli *cli, svc *pluginService, index *re
 func linkedPluginInfo(cli *cli, svc *pluginService, build *devlink.Build) (*display.PluginDetails, error) {
 	manifest := build.Manifest
 
+	// The approval of a linked build covers its dev policy, so that is the hash to
+	// compare with the approvals.
+	hash, _ := linkedHash(build)
+
 	view := &display.PluginDetails{
 		ID:              manifest.ID,
 		Version:         manifest.Version,
@@ -395,7 +400,7 @@ func linkedPluginInfo(cli *cli, svc *pluginService, build *devlink.Build) (*disp
 		Homepage:        manifest.Homepage,
 		Platforms:       manifest.Platforms,
 		Permissions:     permissionCounts(manifest.Permissions()),
-		PermissionsHash: manifest.PermissionsHash(),
+		PermissionsHash: hash,
 		Versions:        []display.PluginVersion{},
 		ApprovedTenants: []display.PluginApproval{},
 		Linked:          true,
@@ -711,12 +716,16 @@ func approvePluginCmd(cli *cli) *cobra.Command {
 				return validationError{err: errPluginNoTenant, reason: "plugin_no_tenant"}
 			}
 
-			verified, err := approvalSubject(cli, svc, ref)
+			verified, policy, err := approvalSubject(cli, svc, ref)
 			if err != nil {
 				return err
 			}
 
 			cli.renderer.PluginSummary(verified.ID, verified.Version, verified.Manifest.Description)
+
+			if policy != nil {
+				sayDevPolicy(cli, policy)
+			}
 
 			op := newPluginOperation(cmd, cli, svc, nil)
 			request := approvals.Request{
@@ -738,6 +747,15 @@ func approvePluginCmd(cli *cli) *cobra.Command {
 				return err
 			}
 
+			// The consent screen records the hash of the permissions. The approval of a
+			// linked build covers its dev policy as well, so it replaces that one, and
+			// it is made from the same file that was shown above.
+			if policy != nil && policy.file != nil {
+				if err := svc.approvals.Approve(cmd.Context(), tenant, verified.ID, verified.PermissionsHash); err != nil {
+					return err
+				}
+			}
+
 			cli.renderer.Infof("Approved %s %s for %s.", verified.ID, verified.Version, tenant)
 
 			return nil
@@ -747,30 +765,93 @@ func approvePluginCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// linkedPolicy is the dev policy of the linked build that approve shows: the file
+// that was read once, which is also the one the approval is made from, or why it
+// could not be read.
+type linkedPolicy struct {
+	path string
+	file *devpolicy.File
+	err  error
+}
+
 // approvalSubject returns the plugin that approve shows and approves. It is the
 // linked build when the plugin is linked, because that is what runs, and
-// otherwise the installed copy, after it was verified.
-func approvalSubject(cli *cli, svc *pluginService, ref pluginRef) (store.Verified, error) {
+// otherwise the installed copy, after it was verified. For a linked build it also
+// returns its dev policy, and the permissions hash of the plugin covers that file.
+func approvalSubject(cli *cli, svc *pluginService, ref pluginRef) (store.Verified, *linkedPolicy, error) {
 	build, linked, err := linkedPlugin(cli, svc, ref.ID)
 	if err != nil {
-		return store.Verified{}, err
+		return store.Verified{}, nil, err
 	}
 
 	if linked {
-		return verifiedLinked(build), nil
+		path := devpolicy.PathFor(build.Dir, build.Policy)
+		policy := &linkedPolicy{path: path}
+		policy.file, policy.err = devpolicy.Load(path)
+
+		if policy.err == nil {
+			_, policy.err = policy.file.Index()
+		}
+
+		// A dev policy that the run would refuse is not approved: the hash is that of
+		// the manifest alone, and there is no file.
+		hash := build.Manifest.PermissionsHash()
+		if policy.err == nil {
+			hash = devpolicy.ConsentHash(hash, policy.file)
+		} else {
+			policy.file = nil
+		}
+
+		return verifiedLinkedWith(build, hash), policy, nil
 	}
 
 	if _, err := requireInstalled(svc.store, ref); err != nil {
-		return store.Verified{}, err
+		return store.Verified{}, nil, err
 	}
 
 	verified, err := svc.store.Verify(ref.ID)
 
 	if _, failed := errors.AsType[*store.VerificationError](err); failed {
-		return store.Verified{}, fmt.Errorf("the installed copy of %s failed verification, so it cannot be approved: %w. Reinstall it with: auth0 plugin install %s", ref.ID, err, ref.Name)
+		return store.Verified{}, nil, fmt.Errorf("the installed copy of %s failed verification, so it cannot be approved: %w. Reinstall it with: auth0 plugin install %s", ref.ID, err, ref.Name)
 	}
 
-	return verified, err
+	return verified, nil, err
+}
+
+// sayDevPolicy shows the person the dev policy that their approval of a linked
+// build covers: which Management API calls each scope allows, and a warning for a
+// rule that can match a call on any resource and for a rule that lets a call that
+// changes something through with read scopes only.
+func sayDevPolicy(cli *cli, policy *linkedPolicy) {
+	r := cli.renderer
+	path := plugins.SafeText(policy.path)
+
+	if policy.err != nil {
+		r.Warnf("This plugin is linked in dev mode, and its dev policy at %s cannot be used: %s. It will not run until that is fixed. Approving it now approves its permissions only.", path, plugins.SafeText(policy.err.Error()))
+
+		return
+	}
+
+	r.Infof("This plugin is linked in dev mode. The dev policy at %s is not signed, and it decides which Management API calls each scope allows. Your approval covers its exact content, so any change to it needs a new approval.", path)
+
+	for _, rule := range policy.file.CopyRules() {
+		scopes := make([]string, 0, len(rule.AnyOf))
+		for _, scope := range rule.AnyOf {
+			scopes = append(scopes, plugins.SafeText(scope))
+		}
+
+		r.Infof("  %s %s  allows: %s", plugins.SafeText(rule.Method), plugins.SafeText(rule.Path), strings.Join(scopes, ", "))
+	}
+
+	for _, rule := range policy.file.BroadRules() {
+		r.Warnf("The rule %s %s matches any resource, so it would let the plugin make any %s call with the scopes %s.",
+			plugins.SafeText(rule.Method), plugins.SafeText(rule.Path), plugins.SafeText(rule.Method), plugins.SafeText(strings.Join(rule.AnyOf, ", ")))
+	}
+
+	for _, rule := range policy.file.WriteWithReadScopes() {
+		r.Warnf("The rule %s %s lets the plugin make a %s call with only read scopes (%s). Check that this is what you expect.",
+			plugins.SafeText(rule.Method), plugins.SafeText(rule.Path), plugins.SafeText(rule.Method), plugins.SafeText(strings.Join(rule.AnyOf, ", ")))
+	}
 }
 
 // pluginsDisabledEnv turns off the plugin commands that bring plugins onto a

@@ -15,6 +15,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
+	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 )
@@ -29,6 +30,12 @@ var pluginDevBin = Flag{
 	Name:     "Bin",
 	LongForm: "bin",
 	Help:     "The executable of the plugin. By default it is the file named like the plugin in the directory of the plugin.",
+}
+
+var pluginDevPolicy = Flag{
+	Name:     "Policy",
+	LongForm: "policy",
+	Help:     "File with the scope rules that this linked build may use. Defaults to " + devpolicy.FileName + " in the plugin directory.",
 }
 
 // pluginDevMode reports whether dev mode is on. It reads one variable and
@@ -71,7 +78,7 @@ func pluginDevCmd(cli *cli) *cobra.Command {
 }
 
 func linkPluginCmd(cli *cli) *cobra.Command {
-	var bin string
+	var bin, policy string
 
 	cmd := &cobra.Command{
 		Use:   "link [path]",
@@ -80,10 +87,14 @@ func linkPluginCmd(cli *cli) *cobra.Command {
 		Long: "Link the plugin in a directory, so that `auth0 <name>` runs it. The directory must hold a valid plugin.json, and the executable is the file named like the plugin in it, " +
 			"with .exe added on Windows, unless you give another with `--bin`. The manifest and the executable are read again on every run, so a rebuild needs no new link.\n\n" +
 			"A linked plugin takes the place of an installed plugin with the same name. It is held to the same rules as an installed one, and a person must approve its permissions with `auth0 plugin approve`. " +
-			"Linking it again replaces the link.",
+			"Linking it again replaces the link.\n\n" +
+			"A linked plugin is in no registry, so the Management API calls it may make come from a dev policy: a " + devpolicy.FileName + " next to plugin.json, or the file you give with `--policy`. " +
+			"It lists rules in the form of the scope table of the registry, and it is checked when you link. It is not signed and applies to this build only. " +
+			"A linked plugin with no dev policy does not run.",
 		Example: `  auth0 plugin dev link
   auth0 plugin dev link ./checkmate
-  auth0 plugin dev link ./checkmate --bin ./checkmate/dist/checkmate`,
+  auth0 plugin dev link ./checkmate --bin ./checkmate/dist/checkmate
+  auth0 plugin dev link ./checkmate --policy ./checkmate/policy.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requirePluginDevMode(); err != nil {
 				return err
@@ -133,17 +144,31 @@ func linkPluginCmd(cli *cli) *cobra.Command {
 				return linkInvalid(fmt.Errorf("the executable of the plugin cannot be used: %w. Build it there, or give another file with --bin", err))
 			}
 
+			// The dev policy is the one that was given, or the file in the directory.
+			// Only a file that was given is recorded, so that the file in the
+			// directory is found wherever the directory is.
+			if policy != "" {
+				if policy, err = filepath.Abs(policy); err != nil {
+					return linkInvalid(err)
+				}
+			}
+
+			policyNote, err := checkDevPolicy(dir, policy)
+			if err != nil {
+				return err
+			}
+
 			svc, err := cli.getPlugins()
 			if err != nil {
 				return err
 			}
 
 			links := devlink.Links{Dir: svc.store.Dir}
-			if err := links.Add(cmd.Context(), manifest.ID, devlink.Link{Path: dir, Bin: bin}); err != nil {
+			if err := links.Add(cmd.Context(), manifest.ID, devlink.Link{Path: dir, Bin: bin, Policy: policy}); err != nil {
 				return linksError(err)
 			}
 
-			return sayLinked(cmd, cli, svc, manifest, display.PluginLinkResult{
+			return sayLinked(cmd, cli, svc, manifest, policy, policyNote, display.PluginLinkResult{
 				ID:      manifest.ID,
 				Version: manifest.Version,
 				Path:    dir,
@@ -154,6 +179,7 @@ func linkPluginCmd(cli *cli) *cobra.Command {
 	}
 
 	pluginDevBin.RegisterString(cmd, &bin, "")
+	pluginDevPolicy.RegisterString(cmd, &policy, "")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
@@ -161,16 +187,48 @@ func linkPluginCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// checkDevPolicy checks the dev policy of a build that is being linked, the way a
+// run reads it, so that a policy that would be refused is found now. The policy is
+// the file given with --policy, as an absolute path, or the one in the directory.
+// A file that was given must be there. A directory without one is no failure, and
+// the note says that a run needs one and how to make it; the note is empty when
+// the policy is fine.
+func checkDevPolicy(dir, given string) (string, error) {
+	path := devpolicy.PathFor(dir, given)
+
+	file, err := devpolicy.Load(path)
+	if errors.Is(err, devpolicy.ErrMissing) && given == "" {
+		return fmt.Sprintf("There is no %s in %s, and a linked plugin does not run without one. Create it next to %s with the calls the plugin makes, for example "+
+			`{ "rules": [ { "method": "GET", "path": "/api/v2/clients", "anyOf": ["read:clients"] } ] }`+
+			", or link again with --policy <file>.", devpolicy.FileName, plugins.SafeText(dir), devlink.ManifestName), nil
+	}
+
+	if err != nil {
+		return "", linkInvalid(err)
+	}
+
+	if _, err := file.Index(); err != nil {
+		return "", linkInvalid(err)
+	}
+
+	return "", nil
+}
+
 // sayLinked tells the person what was linked, what each run prints, and whether
-// the plugin still needs an approval, and prints the result for a machine.
-func sayLinked(cmd *cobra.Command, cli *cli, svc *pluginService, manifest *plugins.Manifest, result display.PluginLinkResult) error {
+// the plugin still needs an approval, and prints the result for a machine. A
+// policy note, when there is one, is a warning about the dev policy.
+func sayLinked(cmd *cobra.Command, cli *cli, svc *pluginService, manifest *plugins.Manifest, policy, policyNote string, result display.PluginLinkResult) error {
 	op := newPluginOperation(cmd, cli, svc, nil)
+
+	// The approval of a linked build covers its dev policy too, so a person who
+	// approved the manifest only is asked again.
+	hash, _ := linkedConsent(manifest, result.Path, policy)
 
 	// An approval that cannot be read counts as no approval: the person is asked to
 	// approve, and the approval itself reports a damaged file.
 	approved := false
 	if op.tenant != "" {
-		approved, _ = svc.approvals.Approved(op.tenant, manifest.ID, manifest.PermissionsHash())
+		approved, _ = svc.approvals.Approved(op.tenant, manifest.ID, hash)
 	}
 
 	result.ApprovalRequired = !approved
@@ -182,6 +240,10 @@ func sayLinked(cmd *cobra.Command, cli *cli, svc *pluginService, manifest *plugi
 	r := cli.renderer
 	r.Infof("Linked %s %s from %s. Run it with: auth0 %s", manifest.ID, plugins.SafeText(manifest.Version), plugins.SafeText(result.Path), manifest.Name())
 	r.Infof("Every run prints this line on stderr: %s", result.Banner)
+
+	if policyNote != "" {
+		r.Warnf("%s", policyNote)
+	}
 
 	op.sayApproval(&display.PluginChangeResult{ID: manifest.ID, ApprovalRequired: result.ApprovalRequired, ApproveCommand: result.ApproveCommand})
 	r.PluginLinked(result)
@@ -279,10 +341,12 @@ func validatePluginCmd(cli *cli) *cobra.Command {
 				path = args[0]
 			}
 
-			_, problems, err := checkPluginManifest(cmd.Root(), path)
+			manifest, problems, err := checkPluginManifest(cmd.Root(), path)
 			if err != nil {
 				return validationError{err: err, reason: "plugin_manifest_invalid"}
 			}
+
+			problems = append(problems, checkDevPolicyFile(manifestDir(path), manifest)...)
 
 			if bin != "" {
 				if err := devlink.CheckExecutable(bin); err != nil {
@@ -299,7 +363,7 @@ func validatePluginCmd(cli *cli) *cobra.Command {
 
 			if !result.Valid {
 				return validationError{
-					err:     fmt.Errorf("the plugin manifest has %s", pluralize(len(problems), "problem", "problems")),
+					err:     fmt.Errorf("%s has %s", problemSubject(problems), pluralize(len(problems), "problem", "problems")),
 					reason:  "plugin_manifest_invalid",
 					details: problemDetails(problems),
 				}
@@ -315,6 +379,87 @@ func validatePluginCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	return cmd
+}
+
+// problemSubject says what has the problems: the dev policy when all of them are
+// in dev-policy.json, the plugin when some are and some are not, and the plugin
+// manifest otherwise.
+func problemSubject(problems []display.PluginProblem) string {
+	inPolicy := 0
+
+	for _, problem := range problems {
+		if problem.Path == devpolicy.FileName {
+			inPolicy++
+		}
+	}
+
+	switch {
+	case inPolicy == 0:
+		return "the plugin manifest"
+	case inPolicy == len(problems):
+		return "the dev policy"
+	default:
+		return "the plugin"
+	}
+}
+
+// manifestDir returns the directory of the plugin.json at the path, which is a
+// directory that holds it or the file itself.
+func manifestDir(path string) string {
+	if info, err := os.Stat(path); err == nil && !info.IsDir() {
+		return filepath.Dir(path)
+	}
+
+	return path
+}
+
+// checkDevPolicyFile checks the dev-policy.json in the directory of a manifest, if
+// there is one: that it can be used, that it allows every scope the manifest
+// declares, and that each of its rules can be used by a scope the manifest declares.
+// A directory with no dev policy has no problem here, because a plugin that is not
+// meant to be linked needs none. The manifest is nil when it has problems, and then
+// only the file itself is checked.
+func checkDevPolicyFile(dir string, manifest *plugins.Manifest) []display.PluginProblem {
+	file, err := devpolicy.Load(devpolicy.PathFor(dir, ""))
+	if errors.Is(err, devpolicy.ErrMissing) {
+		return nil
+	}
+
+	problem := func(message string) display.PluginProblem {
+		return display.PluginProblem{Path: devpolicy.FileName, Message: message}
+	}
+
+	if err == nil {
+		_, err = file.Index()
+	}
+
+	if err != nil {
+		return []display.PluginProblem{problem(err.Error())}
+	}
+
+	if manifest == nil {
+		return nil
+	}
+
+	declared := manifest.Permissions().Scopes
+
+	var problems []display.PluginProblem
+
+	for _, scope := range declared {
+		allowed := slices.ContainsFunc(file.Rules, func(rule registry.ScopeRule) bool { return slices.Contains(rule.AnyOf, scope) })
+		if !allowed {
+			problems = append(problems, problem(fmt.Sprintf("scope %s is declared in plugin.json but no rule allows it", plugins.SafeText(scope))))
+		}
+	}
+
+	for _, rule := range file.Rules {
+		used := slices.ContainsFunc(rule.AnyOf, func(scope string) bool { return slices.Contains(declared, scope) })
+		if !used {
+			problems = append(problems, problem(fmt.Sprintf("rule %s %s allows only scopes that plugin.json does not declare", plugins.SafeText(rule.Method), plugins.SafeText(rule.Path))))
+		}
+	}
+
+	return problems
 }
 
 // checkPluginManifest reads the plugin.json at the path, which is a directory
@@ -468,8 +613,17 @@ func unusableLink(id string, link devlink.Link, err error) error {
 
 // verifiedLinked describes a linked build the way the checks of a run see an
 // installed plugin that was verified. Nothing was verified: the hashes and the
-// lockfile are skipped, and the permissions hash is that of the manifest just read.
+// lockfile are skipped, and the permissions hash is the one that the approval of a
+// linked build covers, see linkedHash.
 func verifiedLinked(build *devlink.Build) store.Verified {
+	hash, _ := linkedHash(build)
+
+	return verifiedLinkedWith(build, hash)
+}
+
+// verifiedLinkedWith is verifiedLinked for a hash that the caller made, so that a
+// caller that also shows the dev policy hashes the same file that it shows.
+func verifiedLinkedWith(build *devlink.Build, hash string) store.Verified {
 	return store.Verified{
 		ID:              build.Manifest.ID,
 		Version:         build.Manifest.Version,
@@ -477,6 +631,35 @@ func verifiedLinked(build *devlink.Build) store.Verified {
 		Bin:             build.Bin,
 		ManifestPath:    build.ManifestPath,
 		Manifest:        build.Manifest,
-		PermissionsHash: build.Manifest.PermissionsHash(),
+		PermissionsHash: hash,
 	}
+}
+
+// linkedHash returns the hash that the approval of a linked build covers, and the
+// dev policy it was made with. The dev policy decides which Management API calls
+// each scope of plugin.json allows, so the hash covers its exact bytes as well as
+// the permissions of the manifest. A dev policy that is missing or cannot be read
+// gives the hash of the manifest alone and no file: such a build does not run, and
+// the run says why.
+func linkedHash(build *devlink.Build) (string, *devpolicy.File) {
+	return linkedConsent(build.Manifest, build.Dir, build.Policy)
+}
+
+// linkedConsent is linkedHash for a manifest, the directory of the build and the
+// dev policy that was given for it, if any.
+func linkedConsent(manifest *plugins.Manifest, dir, policy string) (string, *devpolicy.File) {
+	hash := manifest.PermissionsHash()
+
+	file, err := devpolicy.Load(devpolicy.PathFor(dir, policy))
+	if err != nil {
+		return hash, nil
+	}
+
+	// A policy that the run would refuse is not part of the hash, as it is not when
+	// the person approves it.
+	if _, err := file.Index(); err != nil {
+		return hash, nil
+	}
+
+	return devpolicy.ConsentHash(hash, file), file
 }

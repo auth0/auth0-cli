@@ -98,6 +98,11 @@ type Config struct {
 	// forwarded when one of them allows it, so no scopes means no calls.
 	Scopes []string
 
+	// DevPolicyFile is the dev policy of a linked build, when it is the source of
+	// Policy. It only changes the summary of denied calls, which then says how to
+	// fix the file. It is empty for an installed plugin.
+	DevPolicyFile string
+
 	// Dir is the directory in which the proxy makes its own directory for the
 	// certificate. An empty Dir means the temporary directory of the system.
 	Dir string
@@ -212,6 +217,8 @@ func Start(ctx context.Context, cfg Config) (*Proxy, error) {
 		caPath:    caPath,
 	}
 
+	p.denials.devPolicyFile = cfg.DevPolicyFile
+
 	for _, scope := range cfg.Scopes {
 		p.scopes[scope] = struct{}{}
 	}
@@ -321,7 +328,13 @@ func (p *Proxy) serve(w http.ResponseWriter, r *http.Request) {
 
 	if rej != nil {
 		path, _, _ := strings.Cut(r.RequestURI, "?")
-		p.denials.deny(rej.scope, r.Method, path)
+
+		if rej.unmatched {
+			p.denials.denyUnmatched(r.Method, path)
+		} else {
+			p.denials.deny(rej.scope, r.Method, path)
+		}
+
 		rej.write(w)
 
 		return
@@ -381,9 +394,12 @@ func checkRequestLine(r *http.Request, addr string) *rejection {
 func checkScope(policy *Policy, declared map[string]struct{}, pluginID, method string, t target) *rejection {
 	matched, ok := policy.match(method, t.segments)
 	if !ok {
-		return reject(http.StatusForbidden, codeNoScopeRule, fmt.Sprintf(
+		rej := reject(http.StatusForbidden, codeNoScopeRule, fmt.Sprintf(
 			"Plugin %s cannot call %s %s because this call is not in the registry's scope table.",
 			safeText(pluginID), method, safeText(t.path)))
+		rej.unmatched = true
+
+		return rej
 	}
 
 	if policy.ambiguous(method, t.segments, matched) {

@@ -5,12 +5,17 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/auth0/auth0-cli/internal/plugins"
 )
 
 // The limits on what the proxy remembers and says about denied calls.
 const (
 	maxRememberedDenials = 20
 	maxListedDenials     = 3
+
+	// The longest path that a suggested rule names, in bytes.
+	maxRulePathBytes = 256
 )
 
 // denial is a call that the proxy denied, with how often.
@@ -20,6 +25,19 @@ type denial struct {
 
 	// The scope is the one that would have allowed the call, or empty.
 	scope string
+
+	// The method and the path of the call, as text that is safe to print.
+	method string
+	path   string
+
+	// The path as it is, set only when a rule of the dev policy can hold it: it is
+	// at most maxRulePathBytes long and made of the characters of a path that a
+	// rule may name.
+	rulePath string
+
+	// Unmatched is set when no rule of the scope table matched the call, as
+	// opposed to a rule that matched while the plugin lacked the scope.
+	unmatched bool
 
 	count int
 }
@@ -40,11 +58,25 @@ type denialLog struct {
 	// The refused calls are those that Auth0 refused with a 403, which means the
 	// session lacks a scope that the plugin declared.
 	refused int
+
+	// The dev policy file is set only for a linked build, and makes the summary
+	// say how to fix a denial in that file. It is read-only after Start.
+	devPolicyFile string
 }
 
 // deny records a call that the proxy denied. The scope is the one that would
 // have allowed it, or empty when the reason is not a missing scope.
 func (l *denialLog) deny(scope, method, path string) {
+	l.record(scope, method, path, false)
+}
+
+// denyUnmatched records a call that no rule of the scope table matched.
+func (l *denialLog) denyUnmatched(method, path string) {
+	l.record("", method, path, true)
+}
+
+// record records a denied call, see deny.
+func (l *denialLog) record(scope, method, path string, unmatched bool) {
 	what := safeText(method) + " " + safeText(path)
 	if scope != "" {
 		what = safeText(scope) + " for " + what
@@ -63,7 +95,10 @@ func (l *denialLog) deny(scope, method, path string) {
 		}
 	}
 
-	entry := denial{what: what, scope: scope, count: 1}
+	entry := denial{what: what, scope: scope, method: safeText(method), path: safeText(path), unmatched: unmatched, count: 1}
+	if unmatched && fitsRule(path) {
+		entry.rulePath = path
+	}
 
 	if len(l.kept) < maxRememberedDenials {
 		l.kept = append(l.kept, entry)
@@ -154,7 +189,69 @@ func (l *denialLog) summary(pluginID string) string {
 		return ""
 	}
 
-	return fmt.Sprintf("Plugin %s: %s. Review permissions.scopes in plugin.json.", safeText(pluginID), strings.Join(parts, " and "))
+	line := fmt.Sprintf("Plugin %s: %s. Review permissions.scopes in plugin.json.", safeText(pluginID), strings.Join(parts, " and "))
+
+	if hints := l.devHints(); hints != "" {
+		line += " " + hints
+	}
+
+	return line
+}
+
+// devHints says how to fix the denials that the summary lists, for a linked build:
+// a call that no rule matched needs a rule in the dev policy, and a call whose
+// rule matched needs the scope in plugin.json. It returns an empty string when
+// the build has no dev policy, so that the summary of an installed plugin is not
+// touched. The caller holds the lock.
+func (l *denialLog) devHints() string {
+	if l.devPolicyFile == "" {
+		return ""
+	}
+
+	var hints []string
+
+	for _, d := range l.listed() {
+		switch {
+		case d.unmatched:
+			hints = append(hints, ruleHint(plugins.SafeText(l.devPolicyFile), d))
+		case d.scope != "":
+			hints = append(hints, fmt.Sprintf("Declare %q under permissions.scopes in plugin.json.", d.scope))
+		}
+	}
+
+	return strings.Join(hints, " ")
+}
+
+// ruleHint says how to allow an unmatched call. It suggests a rule only for a path
+// that a rule can hold as it is, because a path that was cut or changed to be safe
+// to print would give a rule that does not match the call.
+func ruleHint(file string, d denial) string {
+	if d.rulePath == "" {
+		return fmt.Sprintf("Add a rule to %s for %s %s. Use {id} for the parts that change.", file, d.method, d.path)
+	}
+
+	return fmt.Sprintf(`Add to %s: { "method": %q, "path": %q, "anyOf": ["<scope>"] } (use {id} where the path has an id)`, file, d.method, d.rulePath)
+}
+
+// fitsRule reports whether the path is short enough for a rule and holds only
+// letters, digits and the characters . _ ~ / and -.
+func fitsRule(path string) bool {
+	if path == "" || len(path) > maxRulePathBytes {
+		return false
+	}
+
+	for i := range len(path) {
+		c := path[i]
+
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+		case c == '.', c == '_', c == '~', c == '/', c == '-':
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 // plural returns the count with the singular or the plural form of a noun.

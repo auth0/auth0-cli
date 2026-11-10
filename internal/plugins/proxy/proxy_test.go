@@ -443,6 +443,8 @@ func TestCheckScope(t *testing.T) {
 			if test.wantCode == codeInsufficientScope {
 				assert.NotEmpty(t, rej.scope, "the summary names the missing scope")
 			}
+
+			assert.Equal(t, test.wantCode == codeNoScopeRule, rej.unmatched, "only a call that no rule matched is unmatched")
 		})
 	}
 }
@@ -501,6 +503,63 @@ func TestCheckScope_RejectsACallThatCaseCouldRouteToAnotherRule(t *testing.T) {
 				assert.Equal(t, http.StatusBadRequest, rej.status)
 				assert.Contains(t, rej.message, "ambiguous")
 			}
+		})
+	}
+}
+
+func TestProxy_SummaryHintsAtTheDevPolicy(t *testing.T) {
+	const file = "/work/checkmate/dev-policy.json"
+
+	tests := []struct {
+		name   string
+		config func(c *Config)
+		scopes []string
+		method string
+		target string
+		want   string
+	}{
+		{
+			name:   "a call that no rule matches",
+			config: func(c *Config) { c.DevPolicyFile = file },
+			scopes: []string{"read:clients"},
+			method: http.MethodPost, target: "/api/v2/actions/abc123?x=1",
+			want: `Plugin auth0/checkmate: 1 API call was denied (POST /api/v2/actions/abc123). Review permissions.scopes in plugin.json. ` +
+				`Add to ` + file + `: { "method": "POST", "path": "/api/v2/actions/abc123", "anyOf": ["<scope>"] } (use {id} where the path has an id)`,
+		},
+		{
+			name:   "a call whose rule matched but whose scope is not declared",
+			config: func(c *Config) { c.DevPolicyFile = file },
+			scopes: []string{"read:clients"},
+			method: http.MethodGet, target: "/api/v2/users",
+			want: `Plugin auth0/checkmate: 1 API call was denied (read:users for GET /api/v2/users). Review permissions.scopes in plugin.json. ` +
+				`Declare "read:users" under permissions.scopes in plugin.json.`,
+		},
+		{
+			name:   "no dev policy, a call that no rule matches",
+			scopes: []string{"read:clients"},
+			method: http.MethodPost, target: "/api/v2/actions/abc123?x=1",
+			want: `Plugin auth0/checkmate: 1 API call was denied (POST /api/v2/actions/abc123). Review permissions.scopes in plugin.json.`,
+		},
+		{
+			name:   "no dev policy, a scope that is not declared",
+			scopes: []string{"read:clients"},
+			method: http.MethodGet, target: "/api/v2/users",
+			want: `Plugin auth0/checkmate: 1 API call was denied (read:users for GET /api/v2/users). Review permissions.scopes in plugin.json.`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			e := startProxy(t, test.scopes, okJSON, func(c *Config) {
+				if test.config != nil {
+					test.config(c)
+				}
+			})
+
+			resp, _ := e.do(test.method, test.target, nil)
+
+			assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+			assert.Equal(t, test.want, e.proxy.Summary())
 		})
 	}
 }
