@@ -484,6 +484,10 @@ func TestResolveAgentMode(t *testing.T) {
 		{name: "detected agent when no flag or env", detected: "claude-code", expected: true},
 		{name: "human is not agent mode", detected: "human", expected: false},
 		{name: "unknown is not agent mode", detected: "unknown", expected: false},
+		{name: "a flag after a double dash is not read", args: []string{"checkmate", "scan", "--", "--agent-mode"}, detected: "human", expected: false},
+		{name: "a flag with a value after a double dash is not read", args: []string{"checkmate", "--", "--agent-mode=true"}, detected: "human", expected: false},
+		{name: "a flag before a double dash is read", args: []string{"checkmate", "--agent-mode", "--", "scan"}, detected: "human", expected: true},
+		{name: "after a double dash the env still decides", args: []string{"checkmate", "--", "--agent-mode"}, env: "true", detected: "human", expected: true},
 	}
 
 	for _, test := range tests {

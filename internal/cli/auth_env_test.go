@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	gokeyring "github.com/zalando/go-keyring"
 
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
@@ -192,6 +195,38 @@ func TestSetupWithEnvAuthenticationNoSavedConfig(t *testing.T) {
 	err := c.setupWithEnvAuthentication(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, "tenant.us.auth0.com", c.tenant)
+	assert.NotNil(t, c.api)
+	assert.NotNil(t, c.apiv3)
+	assert.Equal(t, "direct-token", c.accessToken, "a plugin run hands this token to its proxy")
+	assert.Equal(t, "tenant.us.auth0.com", c.sessionDomain)
+}
+
+func TestSetupWithAuthenticationKeepsTheSession(t *testing.T) {
+	// A saved tenant with a token that has not expired is used as it is: nothing
+	// is refreshed and no login starts. The mock keyring and the temporary home
+	// keep the test away from the real keychain and config.
+	gokeyring.MockInit()
+	t.Setenv("HOME", t.TempDir())
+
+	for _, name := range []string{authModeEnvVar, envDomain, envAPIToken, envClientID, envClientSecret} {
+		t.Setenv(name, "")
+	}
+
+	const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2F1dGgwLmF1dGgwLmNvbS8iLCJpYXQiOjE2ODExNDcwNjAsImV4cCI6OTY4MTgzMzQ2MH0.DsEpQkL0MIWcGJOIfEY8vr3MVS_E0GYsachNLQwBu5Q"
+
+	saveTenant(t, config.Tenant{
+		Domain:      "saved.us.auth0.com",
+		AccessToken: token,
+		ExpiresAt:   time.Now().Add(time.Hour),
+		ClientID:    "client",
+	})
+
+	c := &cli{renderer: &display.Renderer{}}
+
+	require.NoError(t, c.setupWithAuthentication(context.Background()))
+
+	assert.Equal(t, token, c.accessToken, "a plugin run hands this token to its proxy")
+	assert.Equal(t, "saved.us.auth0.com", c.sessionDomain)
 	assert.NotNil(t, c.api)
 	assert.NotNil(t, c.apiv3)
 }
