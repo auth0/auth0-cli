@@ -119,7 +119,7 @@ func runUniversalPortalsAuditOn(
 	}
 
 	if err != nil {
-		return portalsCommandError(err, false)
+		return portalsCommandError(err, cli.tenant, false)
 	}
 
 	if cli.json {

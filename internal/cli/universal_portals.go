@@ -219,7 +219,7 @@ func runUniversalPortalsSetupOn(
 	}
 
 	if err != nil {
-		return portalsCommandError(err, target.hasWritten())
+		return portalsCommandError(err, cli.tenant, target.hasWritten())
 	}
 
 	// A dry run created nothing, so there is no portal to open.

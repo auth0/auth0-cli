@@ -36,10 +36,15 @@ func (e portalsFixError) ErrorDetails() json.RawMessage {
 
 // portalsCommandError gives an error of setup or audit the class and the reason the CLI reports, and
 // the steps that resolve it. When wrote is true, a request changed the tenant before the error, so a
-// rerun resumes.
-func portalsCommandError(err error, wrote bool) error {
+// rerun resumes. The tenant names the one a request was refused for when the feature is not enabled.
+func portalsCommandError(err error, tenant string, wrote bool) error {
 	if err == nil {
 		return nil
+	}
+
+	// Any request tells it, not only the checks of setup, so the audit reports it the same way.
+	if apiErr, ok := errors.AsType[*portals.APIError](err); ok && apiErr.Code == "feature_not_enabled" {
+		err = &portals.FeatureNotEnabledError{Tenant: tenant}
 	}
 
 	classified := classifyPortalsError(err)

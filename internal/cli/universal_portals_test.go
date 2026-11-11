@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -227,7 +228,7 @@ func TestSetupCommand_ErrorsAreClassified(t *testing.T) {
 	t.Run("a feature that is not enabled is reported as such", func(t *testing.T) {
 		t.Parallel()
 
-		err := portalsCommandError(&portals.FeatureNotEnabledError{Tenant: portalsTestTenant}, false)
+		err := portalsCommandError(&portals.FeatureNotEnabledError{Tenant: portalsTestTenant}, portalsTestTenant, false)
 
 		assert.Equal(t, "auth", errorClass(err))
 		assert.Equal(t, "feature_not_enabled", errorReason(err))
@@ -298,13 +299,19 @@ func TestPortalsCommandError_EachErrorHasItsOwnReason(t *testing.T) {
 			wantClass:  "auth",
 			wantReason: "feature_not_enabled",
 		},
+		{
+			name:       "a feature that is not enabled, told by any request and not by the checks",
+			err:        fmt.Errorf("read portal: %w", &portals.APIError{Status: 403, Code: "feature_not_enabled", Message: "Feature not enabled"}),
+			wantClass:  "auth",
+			wantReason: "feature_not_enabled",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := portalsCommandError(tt.err, false)
+			err := portalsCommandError(tt.err, portalsTestTenant, false)
 
 			assert.Equal(t, tt.wantClass, errorClass(err))
 			assert.Equal(t, tt.wantReason, errorReason(err))
