@@ -194,7 +194,7 @@ func readSnapshot(ctx context.Context, api API, portalID, tenantDomain, organiza
 			check string
 			rules []string
 			run   func() error
-		}{run: func() error { return result.readOrganization(ctx, api, organizationID) }})
+		}{check: "organization", rules: []string{"P022"}, run: func() error { return result.readOrganization(ctx, api, organizationID) }})
 	}
 
 	// Each read fills a part of the result of its own.
@@ -258,6 +258,13 @@ func (s *snapshot) readApplication(ctx context.Context, api API) error {
 		s.skip("client grants", []string{"P011", "P019"}, failures[0])
 
 		failures[0] = nil
+	}
+
+	// The same goes for the connections, which P021 and P022 compare.
+	if failures[1] != nil && refused(failures[1]) {
+		s.skip("application connections", []string{"P021", "P022"}, failures[1])
+
+		failures[1] = nil
 	}
 
 	if err := errors.Join(failures...); err != nil {

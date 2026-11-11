@@ -49,6 +49,16 @@ func (t *Tenant) EnableClientConnection(clientID, connectionID string) {
 	}
 }
 
+// DisableClientConnection turns a connection off for an application, without a request.
+func (t *Tenant) DisableClientConnection(clientID, connectionID string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if index := slices.IndexFunc(t.clients, func(record clientRecord) bool { return record.ID == clientID }); index >= 0 {
+		t.clients[index].enabledConnections = slices.DeleteFunc(t.clients[index].enabledConnections, func(id string) bool { return id == connectionID })
+	}
+}
+
 // AddRole adds a role with the given permissions.
 func (t *Tenant) AddRole(role portals.Role, permissions ...portals.Permission) {
 	t.mu.Lock()

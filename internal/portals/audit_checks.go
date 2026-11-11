@@ -763,7 +763,9 @@ func missingFrom(needed, have []string) []string {
 func (a *portalAudit) connectionsAndSessionTransfer() {
 	app := *a.current.Application
 
-	if len(a.current.ApplicationConnections) == 0 {
+	connectionsRead := a.current.wasChecked("application connections")
+
+	if connectionsRead && len(a.current.ApplicationConnections) == 0 {
 		a.add(Finding{
 			ID:       "P021",
 			Severity: SeverityError,
@@ -776,7 +778,7 @@ func (a *portalAudit) connectionsAndSessionTransfer() {
 		})
 	}
 
-	if organization := a.current.Organization; organization != nil {
+	if organization := a.current.Organization; organization != nil && connectionsRead {
 		shared := slices.ContainsFunc(organization.Connections, func(id string) bool {
 			return slices.ContainsFunc(a.current.ApplicationConnections, func(connection Connection) bool { return connection.ID == id })
 		})

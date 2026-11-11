@@ -291,6 +291,15 @@ func TestAudit_ThePortalIsNamedByItsIDOrItsSlug(t *testing.T) {
 	})
 }
 
+// auditFindings audits the portal for an organization and returns what it found.
+func auditFindings(t *testing.T, portal auditedPortal, organization string) []portals.Finding {
+	t.Helper()
+
+	outcome, _ := portal.audit(t, portals.AuditOptions{Organization: organization})
+
+	return outcome.Result.Findings
+}
+
 func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 	t.Parallel()
 
@@ -327,6 +336,14 @@ func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 				portal.tenant.AddGrant(portals.ClientGrant{ID: "cgr_mgmt", ClientID: portal.clientID, Audience: "https://acme.us.auth0.com/api/v2/"})
 
 				return []string{"GET client-grants"}
+			},
+		},
+		{
+			name: "the connections of the application", scope: "read:clients", check: "application connections", skipped: "P021",
+			breakIt: func(_ *testing.T, portal auditedPortal) []string {
+				portal.tenant.DisableClientConnection(portal.clientID, "con_db")
+
+				return []string{"GET clients/" + portal.clientID + "/connections"}
 			},
 		},
 		{
@@ -370,6 +387,38 @@ func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 			assert.True(t, reporter.Contains("warn", "Not checked"))
 		})
 	}
+
+	t.Run("the connections of the organization are not checked either, and P022 does not run", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		seedDatabase(tenant)
+		tenant.AddConnection(portals.Connection{ID: "con_other", Name: "Staff"}, "auth0")
+		seedUser(tenant, "auth0|jane", "jane@acme.com")
+		seedOrganization(tenant, "org_1", "acme", "auth0|jane")
+		seedAdminRole(tenant)
+		tenant.AssignRole("org_1", "auth0|jane", "rol_admin")
+
+		result := runSetup(t, tenant, businessOptions("auth0|jane"))
+		tenant.EnableClientConnection(result.Application.ClientID, "con_db")
+		portal := auditedPortal{tenant: tenant, portalID: result.Portal.ID, clientID: result.Application.ClientID}
+
+		// An organization that shares no connection with the application: P022 would be reported.
+		tenant.AddOrganization(portals.Organization{ID: "org_2", Name: "other"})
+		tenant.EnableOrganizationConnectionFor("org_2", "con_other")
+		assert.Contains(t, idsOf(auditFindings(t, portal, "org_2")), "P022", "the rule fires when the connections can be read")
+
+		tenant.Deny("GET organizations/org_2/enabled_connections", "Insufficient scope, expected any of: read:organization_connections")
+
+		outcome, _ := portal.audit(t, portals.AuditOptions{Organization: "org_2", Strict: true})
+
+		assert.NotContains(t, idsOf(outcome.Result.Findings), "P022")
+		require.Len(t, outcome.Result.Unchecked, 1)
+		assert.Equal(t, "organization", outcome.Result.Unchecked[0].Check)
+		assert.Equal(t, []string{"P022"}, outcome.Result.Unchecked[0].Rules)
+		assert.Contains(t, outcome.Result.Unchecked[0].Reason, "read:organization_connections")
+		assert.False(t, outcome.Failed())
+	})
 
 	t.Run("a read that is not refused for a scope still stops the audit", func(t *testing.T) {
 		t.Parallel()
