@@ -416,6 +416,14 @@ func TestPortalsDryRun_SetupOfABusinessPortalThatCreatesAnOrganization(t *testin
 		server.reply(http.MethodPost, path, 404, `{"statusCode":404,"message":"Not found"}`)
 	}
 
+	// The reads of the organization of a member and of its connections, which the checks send too.
+	for _, path := range []string{
+		"organizations/org_preflight0000000/enabled_connections",
+		"organizations/org_preflight0000000/members/auth0%7Cpreflight0000000000/roles",
+	} {
+		server.reply(http.MethodGet, path, 404, `{"statusCode":404,"message":"Not found"}`)
+	}
+
 	dry, plan, checker := newTenantsOver(t, tls, access)
 	deps, _ := dryRunDeps(dry, checker)
 	deps.Interactive = true

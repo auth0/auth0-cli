@@ -73,6 +73,20 @@ func SetupProbes(template Template) []Probe {
 			FakeTarget:   true,
 		},
 		{
+			Name:         "list the connections of an organization",
+			Method:       http.MethodGet,
+			Path:         "organizations/" + fakeOrganizationID + "/enabled_connections",
+			BusinessOnly: true,
+			FakeTarget:   true,
+		},
+		{
+			Name:         "list the roles of a member",
+			Method:       http.MethodGet,
+			Path:         "organizations/" + fakeOrganizationID + "/members/" + fakeUserID + "/roles",
+			BusinessOnly: true,
+			FakeTarget:   true,
+		},
+		{
 			Name:         "assign a role to a member",
 			Method:       http.MethodPost,
 			Path:         "organizations/" + fakeOrganizationID + "/members/" + fakeUserID + "/roles",

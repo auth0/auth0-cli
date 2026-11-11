@@ -15,7 +15,8 @@ import (
 )
 
 // scopeOf is the scope the Management API asks for a request: the verb comes from the HTTP method and
-// the resource is the first segment of the path.
+// the resource is the first segment of the path. The members, the roles of a member and the connections
+// of an organization have scopes of their own.
 func scopeOf(call string) string {
 	method, path, _ := strings.Cut(call, " ")
 
@@ -27,7 +28,19 @@ func scopeOf(call string) string {
 		http.MethodDelete: "delete",
 	}
 
-	resource, _, _ := strings.Cut(path, "/")
+	segments := strings.Split(path, "/")
+	resource := segments[0]
+
+	if resource == "organizations" && len(segments) >= 3 {
+		switch {
+		case segments[2] == "members" && len(segments) >= 5 && segments[4] == "roles":
+			resource = "organization_member_roles"
+		case segments[2] == "members":
+			resource = "organization_members"
+		case segments[2] == "enabled_connections":
+			resource = "organization_connections"
+		}
+	}
 
 	return verbs[method] + ":" + strings.ReplaceAll(resource, "-", "_")
 }
