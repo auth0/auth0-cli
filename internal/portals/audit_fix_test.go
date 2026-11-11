@@ -2,6 +2,7 @@ package portals_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -75,6 +76,77 @@ func TestFix_Remedies(t *testing.T) {
 			Type:   "sidebar:component:auth0:external_link:v2",
 			Config: map[string]any{"label": "Help", "href": "https://help.acme.com", "icon": "life-buoy"},
 		}, portal.portal(t).Navigation.Sidebar.Components[1])
+	})
+
+	t.Run("P003: a legacy link without an icon gets no icon, because the API rejects a null one", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.setSidebar(portals.SidebarComponent{
+			Type:   "sidebar:component:auth0:internal_link",
+			Config: map[string]any{"label": "Profile", "to": "profile"},
+		})
+
+		portal.fixOnly(t, "P003")
+
+		assert.Equal(t, map[string]any{"label": "Profile", "page_slug": "profile"}, portal.portal(t).Navigation.Sidebar.Components[0].Config)
+	})
+
+	t.Run("P003: a legacy link keeps the settings it has besides the ones it renames", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		legacy := legacyLink("profile")
+		legacy.Config["badge"] = "new"
+		portal.setSidebar(legacy)
+
+		portal.fixOnly(t, "P003")
+
+		assert.Equal(t, map[string]any{"label": "Profile", "page_slug": "profile", "icon": "user", "badge": "new"}, portal.portal(t).Navigation.Sidebar.Components[0].Config)
+	})
+
+	t.Run("P003: the address of a legacy link becomes the slug of the page", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.setSidebar(legacyLink("/profile"))
+
+		portal.fixOnly(t, "P003")
+
+		assert.Equal(t, "profile", portal.portal(t).Navigation.Sidebar.Components[0].Config["page_slug"])
+	})
+
+	t.Run("P003: a link of another type is not converted, and does not count as legacy", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		other := portals.SidebarComponent{Type: "sidebar:component:auth0:section_header", Config: map[string]any{"label": "Account"}}
+		portal.setSidebar(legacyLink("profile"), other)
+
+		finding := findingNamed(t, portal.findings(t), "P003")
+		assert.Contains(t, finding.Message, "1 sidebar link(s)")
+
+		portal.fixOnly(t, "P003")
+
+		assert.Equal(t, other, portal.portal(t).Navigation.Sidebar.Components[1])
+	})
+
+	t.Run("P003: the fields of the navigation the package does not know survive the conversion", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+
+		var navigation portals.Navigation
+		require.NoError(t, json.Unmarshal([]byte(`{"footer":{"text":"Acme"},"sidebar":{"collapsed":true,"components":[
+			{"type":"sidebar:component:auth0:internal_link","config":{"label":"Profile","to":"profile","icon":"user"},"visible":false}]}}`), &navigation))
+		portal.tenant.ModifyPortal(portal.portalID, func(p *portals.Portal) { p.Navigation = &navigation })
+
+		portal.fixOnly(t, "P003")
+
+		sent, err := json.Marshal(portal.portal(t).Navigation)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"footer":{"text":"Acme"},"sidebar":{"collapsed":true,"components":[
+			{"type":"sidebar:component:auth0:internal_link:v2","config":{"label":"Profile","page_slug":"profile","icon":"user"},"visible":false}]}}`, string(sent))
 	})
 
 	t.Run("P002: adding the home page to the sidebar makes it reachable", func(t *testing.T) {

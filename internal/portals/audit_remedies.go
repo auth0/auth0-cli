@@ -3,6 +3,7 @@ package portals
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 )
 
@@ -10,40 +11,69 @@ import (
 // The detection of what is wrong is in audit_checks.go.
 
 const (
-	internalLinkType = "sidebar:component:auth0:internal_link:v2"
-	externalLinkType = "sidebar:component:auth0:external_link:v2"
+	internalLinkBase = "sidebar:component:auth0:internal_link"
+	externalLinkBase = "sidebar:component:auth0:external_link"
+
+	internalLinkType = internalLinkBase + ":v2"
+	externalLinkType = externalLinkBase + ":v2"
 )
 
 // isLegacyLink reports whether a sidebar link has the legacy shape: it used "to" for pages and "url"
-// for external links, or it has no :v2 type.
+// for external links, or it has no :v2 type. Only the links to a page and the external links have one;
+// any other type is left as it is.
 func isLegacyLink(item SidebarComponent) bool {
+	base := strings.TrimSuffix(item.Type, ":v2")
+	if base != internalLinkBase && base != externalLinkBase {
+		return false
+	}
+
 	_, hasTo := item.Config["to"]
 	_, hasURL := item.Config["url"]
 
 	return !strings.HasSuffix(item.Type, ":v2") || hasTo || hasURL
 }
 
-// toV2Link converts a legacy sidebar link to the :v2 types.
+// toV2Link converts a legacy sidebar link to the :v2 types. The settings it does not rename are kept, and
+// a setting it does not have is not added, because the API rejects a null one.
 func toV2Link(item SidebarComponent) SidebarComponent {
 	if !isLegacyLink(item) {
 		return item
 	}
 
-	_, hasURL := item.Config["url"]
-	_, hasHref := item.Config["href"]
-	external := hasURL || hasHref || strings.Contains(item.Type, "external")
-
-	config := map[string]any{"label": item.Config["label"], "icon": item.Config["icon"]}
-
-	if external {
-		config["href"] = firstOf(item.Config["href"], item.Config["url"])
-
-		return SidebarComponent{Type: externalLinkType, Config: config}
+	config := maps.Clone(item.Config)
+	if config == nil {
+		config = map[string]any{}
 	}
 
-	config["page_slug"] = firstOf(item.Config["page_slug"], item.Config["to"])
+	delete(config, "to")
+	delete(config, "url")
 
-	return SidebarComponent{Type: internalLinkType, Config: config}
+	_, hasURL := item.Config["url"]
+	_, hasHref := item.Config["href"]
+
+	if hasURL || hasHref || strings.HasPrefix(item.Type, externalLinkBase) {
+		if href := firstOf(item.Config["href"], item.Config["url"]); href != nil {
+			config["href"] = href
+		}
+
+		return SidebarComponent{Type: externalLinkType, Config: config, extra: item.extra}
+	}
+
+	if page := firstOf(item.Config["page_slug"], item.Config["to"]); page != nil {
+		config["page_slug"] = pageSlugOf(page)
+	}
+
+	return SidebarComponent{Type: internalLinkType, Config: config, extra: item.extra}
+}
+
+// pageSlugOf turns the address a legacy link used for a page ("/profile") into the slug of the page.
+func pageSlugOf(page any) any {
+	address, isText := page.(string)
+	if !isText {
+		return page
+	}
+
+	return strings.Trim(address, "/")
 }
 
 // firstOf returns the first value that is set.
@@ -159,7 +189,7 @@ func addSidebarLink(ctx context.Context, api API, current snapshot, pageSlug, la
 		Config: map[string]any{"label": label, "page_slug": pageSlug, "icon": icon},
 	})
 
-	patch := PortalPatch{Navigation: &Navigation{Sidebar: &Sidebar{Components: components}}}
+	patch := PortalPatch{Navigation: current.Portal.withSidebar(components)}
 	if err := api.UpdatePortal(ctx, current.Portal.ID, patch); err != nil {
 		return fmt.Errorf("add %q to the sidebar of portal %q: %w", label, current.Portal.Slug, err)
 	}

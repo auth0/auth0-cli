@@ -225,7 +225,7 @@ func (a *portalAudit) convertSidebar(ctx context.Context, api API) error {
 		converted = append(converted, toV2Link(item))
 	}
 
-	patch := PortalPatch{Navigation: &Navigation{Sidebar: &Sidebar{Components: converted}}}
+	patch := PortalPatch{Navigation: a.current.Portal.withSidebar(converted)}
 	if err := api.UpdatePortal(ctx, a.portalID(), patch); err != nil {
 		return fmt.Errorf("convert the sidebar of portal %q: %w", a.current.Portal.Slug, err)
 	}

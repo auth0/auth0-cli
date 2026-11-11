@@ -54,6 +54,46 @@ func TestPortal_APageSentBackIsNotChanged(t *testing.T) {
 	}
 }
 
+func TestPortal_TheNavigationSentBackIsNotChanged(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		json string
+	}{
+		{
+			name: "a field of the navigation the package does not know is kept",
+			json: `{"sidebar":{"components":[]},"footer":{"text":"Acme"}}`,
+		},
+		{
+			name: "a field of the sidebar the package does not know is kept",
+			json: `{"sidebar":{"collapsed":true,"components":[{"type":"sidebar:component:auth0:internal_link:v2","config":{"label":"Profile","page_slug":"profile"}}]}}`,
+		},
+		{
+			name: "a field of a sidebar link the package does not know is kept",
+			json: `{"sidebar":{"components":[{"type":"sidebar:component:auth0:internal_link:v2","config":{"label":"Profile","page_slug":"profile"},"visible":false}]}}`,
+		},
+		{
+			name: "a navigation with no sidebar has none",
+			json: `{"footer":{"text":"Acme"}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var navigation portals.Navigation
+			require.NoError(t, json.Unmarshal([]byte(tt.json), &navigation))
+
+			sent, err := json.Marshal(navigation)
+
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.json, string(sent))
+		})
+	}
+}
+
 func TestPortal_APageIsReadForItsFields(t *testing.T) {
 	t.Parallel()
 

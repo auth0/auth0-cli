@@ -32,20 +32,109 @@ type PortalClient struct {
 	TokenEndpointAuthMethod string `json:"token_endpoint_auth_method,omitempty"`
 }
 
-// Navigation is the navigation of a portal.
+// Navigation is the navigation of a portal. A fix sends the sidebar back whole, so the fields the
+// package does not know are kept and sent as they were.
 type Navigation struct {
-	Sidebar *Sidebar `json:"sidebar,omitempty"`
+	Sidebar *Sidebar
+
+	extra map[string]json.RawMessage
 }
 
 // Sidebar is the sidebar of a portal.
 type Sidebar struct {
-	Components []SidebarComponent `json:"components,omitempty"`
+	Components []SidebarComponent
+
+	extra map[string]json.RawMessage
 }
 
 // SidebarComponent is a link in the sidebar. The config depends on the type.
 type SidebarComponent struct {
-	Type   string         `json:"type"`
-	Config map[string]any `json:"config,omitempty"`
+	Type   string
+	Config map[string]any
+
+	extra map[string]json.RawMessage
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (n *Navigation) UnmarshalJSON(data []byte) error {
+	known, extra, err := splitFields(data, "sidebar")
+	if err != nil {
+		return err
+	}
+
+	*n = Navigation{extra: extra}
+
+	return decodeFields(known, map[string]any{"sidebar": &n.Sidebar})
+}
+
+// MarshalJSON implements json.Marshaler.
+func (n Navigation) MarshalJSON() ([]byte, error) {
+	fields := map[string]any{}
+	if n.Sidebar != nil {
+		fields["sidebar"] = n.Sidebar
+	}
+
+	return joinFields(fields, n.extra)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *Sidebar) UnmarshalJSON(data []byte) error {
+	known, extra, err := splitFields(data, "components")
+	if err != nil {
+		return err
+	}
+
+	*s = Sidebar{extra: extra}
+
+	return decodeFields(known, map[string]any{"components": &s.Components})
+}
+
+// MarshalJSON implements json.Marshaler.
+func (s Sidebar) MarshalJSON() ([]byte, error) {
+	fields := map[string]any{}
+	if s.Components != nil {
+		fields["components"] = s.Components
+	}
+
+	return joinFields(fields, s.extra)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (c *SidebarComponent) UnmarshalJSON(data []byte) error {
+	known, extra, err := splitFields(data, "type", "config")
+	if err != nil {
+		return err
+	}
+
+	*c = SidebarComponent{extra: extra}
+
+	return decodeFields(known, map[string]any{"type": &c.Type, "config": &c.Config})
+}
+
+// MarshalJSON implements json.Marshaler.
+func (c SidebarComponent) MarshalJSON() ([]byte, error) {
+	fields := map[string]any{"type": c.Type}
+	if c.Config != nil {
+		fields["config"] = c.Config
+	}
+
+	return joinFields(fields, c.extra)
+}
+
+// withSidebar returns the navigation of the portal with its sidebar links replaced. The other fields of the
+// navigation and of the sidebar are kept, because the navigation is sent whole.
+func (p Portal) withSidebar(components []SidebarComponent) *Navigation {
+	navigation := &Navigation{Sidebar: &Sidebar{Components: components}}
+
+	if p.Navigation != nil {
+		navigation.extra = p.Navigation.extra
+
+		if p.Navigation.Sidebar != nil {
+			navigation.Sidebar.extra = p.Navigation.Sidebar.extra
+		}
+	}
+
+	return navigation
 }
 
 // Pages are the pages of a portal.
