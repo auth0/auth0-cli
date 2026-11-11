@@ -180,19 +180,3 @@ func patchPages(ctx context.Context, api API, current snapshot, home string) err
 
 	return nil
 }
-
-// addSidebarLink adds a link to a page at the end of the sidebar.
-func addSidebarLink(ctx context.Context, api API, current snapshot, pageSlug, label, icon string) error {
-	components := append([]SidebarComponent(nil), current.Portal.sidebar()...)
-	components = append(components, SidebarComponent{
-		Type:   internalLinkType,
-		Config: map[string]any{"label": label, "page_slug": pageSlug, "icon": icon},
-	})
-
-	patch := PortalPatch{Navigation: current.Portal.withSidebar(components)}
-	if err := api.UpdatePortal(ctx, current.Portal.ID, patch); err != nil {
-		return fmt.Errorf("add %q to the sidebar of portal %q: %w", label, current.Portal.Slug, err)
-	}
-
-	return nil
-}

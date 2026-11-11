@@ -149,22 +149,6 @@ func TestFix_Remedies(t *testing.T) {
 			{"type":"sidebar:component:auth0:internal_link:v2","config":{"label":"Profile","page_slug":"profile","icon":"user"},"visible":false}]}}`, string(sent))
 	})
 
-	t.Run("P002: adding the home page to the sidebar makes it reachable", func(t *testing.T) {
-		t.Parallel()
-
-		portal := newAuditedPortal(t)
-		portal.setSidebar()
-
-		portal.fixOnly(t, "P002")
-
-		var slugs []string
-		for _, item := range portal.portal(t).Navigation.Sidebar.Components {
-			slugs = append(slugs, item.Config["page_slug"].(string))
-		}
-
-		assert.Contains(t, slugs, "profile")
-	})
-
 	t.Run("P001: setting the first page as the home page keeps the pages as they were", func(t *testing.T) {
 		t.Parallel()
 

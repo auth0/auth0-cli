@@ -138,7 +138,7 @@ func TestAudit_Rules(t *testing.T) {
 		{
 			id: "P002", name: "the home page missing from the sidebar",
 			breakIt:      func(s *portals.AuditSnapshot) { s.Portal.Navigation.Sidebar.Components = nil },
-			wantSeverity: portals.SeverityWarning, wantFixable: true,
+			wantSeverity: portals.SeverityWarning,
 		},
 		{
 			id: "P003", name: "a sidebar link in the legacy shape",
@@ -161,7 +161,7 @@ func TestAudit_Rules(t *testing.T) {
 			breakIt: func(s *portals.AuditSnapshot) {
 				s.Portal.Pages.Standard = append(s.Portal.Pages.Standard, portals.Page{Title: "Billing", Slug: "billing", Components: []portals.Component{organizationSection}})
 			},
-			wantSeverity: portals.SeverityWarning, wantFixable: true,
+			wantSeverity: portals.SeverityWarning,
 		},
 		{
 			id: "P006", name: "a page with no components",

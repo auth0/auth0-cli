@@ -137,12 +137,8 @@ func (a *portalAudit) pagesAndNavigation() {
 			Severity: SeverityWarning,
 			Check:    "home page in navigation",
 			Message:  fmt.Sprintf("The home page %q is not in the sidebar, so users cannot get back to it.", home),
-			Remedy: &Remedy{
-				Summary: fmt.Sprintf("Add %q to the sidebar", title),
-				apply: func(ctx context.Context, api API) error {
-					return addSidebarLink(ctx, api, a.current, home, title, "house")
-				},
-			},
+			// A warning is never fixed by the CLI, so the remedy only says what to do.
+			Remedy: &Remedy{Summary: fmt.Sprintf("Add %q to the sidebar", title)},
 		})
 	}
 
@@ -241,12 +237,7 @@ func (a *portalAudit) pageFindings(page Page, sidebarPages []string) {
 			Severity: SeverityWarning,
 			Check:    "page in navigation",
 			Message:  fmt.Sprintf("The page %q is not in the sidebar, so users cannot reach it.", page.Title),
-			Remedy: &Remedy{
-				Summary: fmt.Sprintf("Add %q to the sidebar", page.Title),
-				apply: func(ctx context.Context, api API) error {
-					return addSidebarLink(ctx, api, a.current, page.Slug, page.Title, "file")
-				},
-			},
+			Remedy:   &Remedy{Summary: fmt.Sprintf("Add %q to the sidebar", page.Title)},
 		})
 	}
 
