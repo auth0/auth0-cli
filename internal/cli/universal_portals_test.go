@@ -457,7 +457,7 @@ func TestSetupCommand_DryRun(t *testing.T) {
 
 		require.NoError(t, runDry(run, consumerInputs))
 
-		assert.Contains(t, run.messages.String(), "●  Dry run: nothing is created or changed. Statuses show what a real run would do.")
+		assert.Contains(t, run.messages.String(), "●  Dry run: nothing is created or changed. Statuses show what a real run would do. The permission checks still send write requests with an empty body, which the API rejects.")
 		assert.Contains(t, run.messages.String(), "Dry run complete. 1 request(s) would change the tenant.")
 		assert.Contains(t, run.messages.String(), "Run the same command without --dry-run to set up the portal.")
 		assert.NotContains(t, run.messages.String(), "Open portal:")

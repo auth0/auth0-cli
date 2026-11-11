@@ -43,7 +43,7 @@ var (
 	upDryRun = Flag{
 		Name:     "Dry Run",
 		LongForm: "dry-run",
-		Help:     "Show what setup would create, without changing the tenant.",
+		Help:     "Show what setup would create, without changing the tenant. The permission checks still send write requests with an empty body, which the API rejects.",
 	}
 	upOrganization = Flag{
 		Name:      "Organization",
@@ -273,7 +273,7 @@ func executeUniversalPortalsSetup(ctx context.Context, run universalPortalsSetup
 	run.deps.Reporter.Banner("Universal Portals setup", run.deps.TenantDomain)
 
 	if run.dryRun {
-		run.deps.Reporter.Info("Dry run: nothing is created or changed. Statuses show what a real run would do.")
+		run.deps.Reporter.Info("Dry run: nothing is created or changed. Statuses show what a real run would do. The permission checks still send write requests with an empty body, which the API rejects.")
 	}
 
 	options := run.options
