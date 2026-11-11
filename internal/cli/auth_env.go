@@ -172,6 +172,7 @@ func (c *cli) setupWithEnvAuthentication(ctx context.Context) error {
 
 	c.api = auth0.NewAPI(api)
 	c.apiv3 = auth0.NewAPIV3(apiv3)
+	c.apiAccess = apiAccess{domain: domain, accessToken: accessToken, invokerMetadata: invokerMetadata}
 
 	return nil
 }

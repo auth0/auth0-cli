@@ -1,0 +1,149 @@
+{
+  "default_page": "organization",
+  "sidebar": [
+    {
+      "type": "sidebar:component:auth0:internal_link:v2",
+      "config": {
+        "label": "Organization",
+        "page_slug": "organization",
+        "icon": "building-2"
+      }
+    },
+    {
+      "type": "sidebar:component:auth0:internal_link:v2",
+      "config": {
+        "label": "Domains",
+        "page_slug": "domains",
+        "icon": "globe"
+      }
+    },
+    {
+      "type": "sidebar:component:auth0:internal_link:v2",
+      "config": {
+        "label": "Security",
+        "page_slug": "security",
+        "icon": "shield-check"
+      }
+    },
+    {
+      "type": "sidebar:component:auth0:internal_link:v2",
+      "config": {
+        "label": "Preferences",
+        "page_slug": "preferences",
+        "icon": "sliders-horizontal"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "title": "Organization",
+      "slug": "organization",
+      "components": [
+        {
+          "type": "page:component:auth0:structure:section",
+          "config": {
+            "title": "Organization details",
+            "description": "Update your organization's name and other details visible to its members.",
+            "variant": "card",
+            "children": [
+              {
+                "type": "page:component:auth0:my_organization:details_edit"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Domains",
+      "slug": "domains",
+      "components": [
+        {
+          "type": "page:component:auth0:structure:section",
+          "config": {
+            "title": "Verified domains",
+            "description": "Add and verify the domains that your organization members sign in with.",
+            "variant": "card",
+            "children": [
+              {
+                "type": "page:component:auth0:my_organization:domain_table"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Security",
+      "slug": "security",
+      "components": [
+        {
+          "type": "page:component:auth0:structure:section",
+          "config": {
+            "title": "Multi-factor authentication",
+            "description": "Add an extra layer of protection to your account by requiring a second verification step each time you sign in.",
+            "variant": "card",
+            "children": [
+              {
+                "type": "page:component:auth0:my_account:mfa_management"
+              }
+            ]
+          }
+        },
+        {
+          "type": "page:component:auth0:structure:section",
+          "config": {
+            "title": "Passkeys",
+            "description": "Use your fingerprint, face, or screen lock instead of a password to sign in quickly and more securely.",
+            "variant": "card",
+            "children": [
+              {
+                "type": "page:component:auth0:my_account:passkey_management"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "title": "Preferences",
+      "slug": "preferences",
+      "components": [
+        {
+          "type": "page:component:auth0:structure:section",
+          "config": {
+            "title": "Personal information",
+            "description": "Basic info about you, like your name and contact details, that you use across services.",
+            "variant": "card",
+            "children": [
+              {
+                "type": "page:component:auth0:form",
+                "config": {
+                  "form_id": "$FORM_PERSONAL_INFO",
+                  "completion_message": "Your personal information has been updated."
+                }
+              }
+            ]
+          }
+        },
+        {
+          "type": "page:component:auth0:structure:section",
+          "config": {
+            "title": "Communication preferences",
+            "description": "Choose which emails and notifications you'd like to receive from us.",
+            "variant": "card",
+            "children": [
+              {
+                "type": "page:component:auth0:form",
+                "config": {
+                  "form_id": "$FORM_COMMUNICATION_PREFERENCES",
+                  "completion_message": "Your communication preferences have been updated."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

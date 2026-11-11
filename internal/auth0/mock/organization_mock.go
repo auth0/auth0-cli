@@ -41,6 +41,63 @@ func (m *MockOrganizationAPI) EXPECT() *MockOrganizationAPIMockRecorder {
 	return m.recorder
 }
 
+// AddConnection mocks base method.
+func (m *MockOrganizationAPI) AddConnection(ctx context.Context, id string, c *management.OrganizationConnection, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id, c}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddConnection", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddConnection indicates an expected call of AddConnection.
+func (mr *MockOrganizationAPIMockRecorder) AddConnection(ctx, id, c any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id, c}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddConnection", reflect.TypeOf((*MockOrganizationAPI)(nil).AddConnection), varargs...)
+}
+
+// AddMembers mocks base method.
+func (m *MockOrganizationAPI) AddMembers(ctx context.Context, id string, memberIDs []string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id, memberIDs}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddMembers", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddMembers indicates an expected call of AddMembers.
+func (mr *MockOrganizationAPIMockRecorder) AddMembers(ctx, id, memberIDs any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id, memberIDs}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddMembers", reflect.TypeOf((*MockOrganizationAPI)(nil).AddMembers), varargs...)
+}
+
+// AssignMemberRoles mocks base method.
+func (m *MockOrganizationAPI) AssignMemberRoles(ctx context.Context, id, memberID string, roles []string, opts ...management.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id, memberID, roles}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AssignMemberRoles", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AssignMemberRoles indicates an expected call of AssignMemberRoles.
+func (mr *MockOrganizationAPIMockRecorder) AssignMemberRoles(ctx, id, memberID, roles any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id, memberID, roles}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssignMemberRoles", reflect.TypeOf((*MockOrganizationAPI)(nil).AssignMemberRoles), varargs...)
+}
+
 // Connections mocks base method.
 func (m *MockOrganizationAPI) Connections(ctx context.Context, id string, opts ...management.RequestOption) (*management.OrganizationConnectionList, error) {
 	m.ctrl.T.Helper()

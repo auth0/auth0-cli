@@ -1,0 +1,115 @@
+{
+  "version": "4.0.0",
+  "form": {
+    "name": "Marketing communication preferences (Universal Portals)",
+    "languages": {
+      "primary": "en"
+    },
+    "nodes": [
+      {
+        "id": "step_4Td2",
+        "type": "STEP",
+        "coordinates": {
+          "x": 217,
+          "y": -218
+        },
+        "config": {
+          "components": [
+            {
+              "id": "communication_preferences",
+              "category": "FIELD",
+              "type": "CHOICE",
+              "label": "Communication preferences",
+              "required": false,
+              "sensitive": false,
+              "config": {
+                "multiple": true,
+                "options": [
+                  {
+                    "label": "Product Announcements",
+                    "value": "Product Announcements"
+                  },
+                  {
+                    "label": "Featured Content",
+                    "value": "Featured Content"
+                  },
+                  {
+                    "label": "Digest News",
+                    "value": "Digest News"
+                  },
+                  {
+                    "label": "Events",
+                    "value": "Events"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "next_button_US5N",
+              "category": "BLOCK",
+              "type": "NEXT_BUTTON",
+              "config": {
+                "text": "Update"
+              }
+            }
+          ],
+          "next_node": "flow_etvH"
+        }
+      },
+      {
+        "id": "flow_etvH",
+        "type": "FLOW",
+        "coordinates": {
+          "x": 988,
+          "y": 9
+        },
+        "config": {
+          "flow_id": "#FLOW-1#",
+          "next_node": "$ending"
+        }
+      }
+    ],
+    "start": {
+      "next_node": "step_4Td2",
+      "coordinates": {
+        "x": -25,
+        "y": -98
+      }
+    },
+    "ending": {
+      "resume_flow": true,
+      "coordinates": {
+        "x": 1194,
+        "y": -59
+      }
+    }
+  },
+  "flows": {
+    "#FLOW-1#": {
+      "name": "Update preferences",
+      "actions": [
+        {
+          "id": "update_user_HitP",
+          "type": "AUTH0",
+          "action": "UPDATE_USER",
+          "allow_failure": false,
+          "mask_output": false,
+          "params": {
+            "connection_id": "#CONN-1#",
+            "user_id": "{{context.user.user_id}}",
+            "changes": {
+              "app_metadata": {
+                "communication_preferences": "{{fields.communication_preferences}}"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "connections": {
+    "#CONN-1#": {
+      "id": "$VAULT_CONNECTION_ID"
+    }
+  }
+}
