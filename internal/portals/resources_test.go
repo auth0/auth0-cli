@@ -176,6 +176,13 @@ func TestEnsurePortalClient(t *testing.T) {
 
 		var inUse *portals.NameInUseError
 		require.ErrorAs(t, err, &inUse)
+		assert.Equal(t, "another-slug", inUse.OwnerSlug)
+		assert.Contains(t, err.Error(), `belongs to the portal "another-slug"`)
+		assert.NotContains(t, err.Error(), "not created by this setup", "setup did create it, for another portal")
+		assert.Equal(t, []string{
+			`Rerun with --slug another-slug to resume that portal`,
+			"Or rerun with a different --name to make a new application",
+		}, portals.FixesOf(err))
 	})
 
 	t.Run("an application whose secret the session cannot read asks for read:client_keys", func(t *testing.T) {

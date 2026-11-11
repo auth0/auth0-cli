@@ -136,8 +136,8 @@ func ensurePortalClient(ctx context.Context, store ClientStore, app portalApplic
 		}, nil
 	}
 
-	if existing.Metadata[portalSlugMetadata] != app.slug {
-		return ensured[credentials]{}, &NameInUseError{Name: app.name}
+	if owner := existing.Metadata[portalSlugMetadata]; owner != app.slug {
+		return ensured[credentials]{}, &NameInUseError{Name: app.name, OwnerSlug: owner}
 	}
 
 	update := ClientSettings{

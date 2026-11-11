@@ -202,17 +202,36 @@ func (e *UsageError) Error() string { return e.Message }
 // Fixes returns the steps that resolve the error.
 func (e *UsageError) Fixes() []string { return e.Hints }
 
-// NameInUseError means an application with the name exists and was not created by this setup, so it
-// is never reused.
+// NameInUseError means an application with the name exists and is not the one of this portal, so it is
+// never reused.
 type NameInUseError struct {
 	Name string
+	// OwnerSlug is the slug of the portal setup made the application for, empty when setup did not make it.
+	OwnerSlug string
 }
 
 func (e *NameInUseError) Error() string {
+	if e.OwnerSlug != "" {
+		return fmt.Sprintf("The application %q belongs to the portal %q, so it is not reused for another slug", e.Name, e.OwnerSlug)
+	}
+
 	return fmt.Sprintf(
 		"An application named %q already exists and was not created by this setup. Rename or delete it, then rerun",
 		e.Name,
 	)
+}
+
+// Fixes returns how to resolve the error. An application of another portal is resumed with its slug,
+// or left alone with a new name.
+func (e *NameInUseError) Fixes() []string {
+	if e.OwnerSlug == "" {
+		return nil
+	}
+
+	return []string{
+		"Rerun with --slug " + e.OwnerSlug + " to resume that portal",
+		"Or rerun with a different --name to make a new application",
+	}
 }
 
 // SlugTakenError means another portal uses the slug.
