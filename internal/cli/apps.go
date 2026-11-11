@@ -1153,19 +1153,27 @@ func updateAppCmd(cli *cli) *cobra.Command {
 				a.AgentID = &inputs.AgentID
 			}
 
-			// The v1 SDK omits a nil agent_id, so unlinking needs an explicit null PATCH.
-			if inputs.UnlinkAgent {
-				if err := ansi.Waiting(func() error {
-					return cli.api.HTTPClient.Request(cmd.Context(), http.MethodPatch, cli.api.HTTPClient.URI("clients", inputs.ID), map[string]interface{}{"agent_id": nil})
-				}); err != nil {
-					return fmt.Errorf("failed to unlink agent from application with ID %q: %w", inputs.ID, err)
-				}
-			}
-
 			if err := ansi.Waiting(func() error {
-				return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
+				if !inputs.UnlinkAgent {
+					return cli.api.Client.Update(cmd.Context(), inputs.ID, a)
+				}
+
+				// The v1 SDK omits a nil agent_id, so send the update with an explicit null in one PATCH.
+				// The client must be nil when overriding the body, and the response is read back for display.
+				body, err := unlinkAgentPatchBody(a)
+				if err != nil {
+					return err
+				}
+				return cli.api.Client.Update(cmd.Context(), inputs.ID, nil, management.Body(body))
 			}); err != nil {
 				return fmt.Errorf("failed to update application with ID %q: %w", inputs.ID, err)
+			}
+
+			if inputs.UnlinkAgent {
+				var err error
+				if a, err = cli.api.Client.Read(cmd.Context(), inputs.ID); err != nil {
+					return fmt.Errorf("application with ID %q was updated, but reading it back failed: %w", inputs.ID, err)
+				}
 			}
 
 			cli.renderer.ApplicationUpdate(a, inputs.RevealSecrets)
@@ -1424,6 +1432,21 @@ func excludeEmptyEntries(s []string) []string {
 	}
 
 	return result
+}
+
+// unlinkAgentPatchBody encodes the client update with an explicit "agent_id": null.
+func unlinkAgentPatchBody(a *management.Client) ([]byte, error) {
+	a.CleanForPatch()
+	raw, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+	body := map[string]interface{}{}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return nil, err
+	}
+	body["agent_id"] = nil
+	return json.Marshal(body)
 }
 
 func (c *cli) appPickerOptions(requestOpts ...management.RequestOption) pickerOptionsFunc {

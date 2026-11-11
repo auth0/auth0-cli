@@ -69,8 +69,8 @@ func agentsCmd(cli *cli) *cobra.Command {
 		Long: "Manage agents (Early Access): first-class agent principals in your tenant. " +
 			"Machine to machine applications can be linked to an agent with `auth0 apps update <app-id> --agent-id <agent-id>`.\n\n" +
 			"These commands need the read:agents, create:agents, update:agents and delete:agents scopes, " +
-			"which are not requested by default. To grant them, run: " +
-			"`auth0 login --scopes read:agents,create:agents,update:agents,delete:agents`.\n\n" +
+			"which are available through a machine to machine (M2M) login only. " +
+			"Authorize an M2M application for the Auth0 Management API with these scopes, then log in with it.\n\n" +
 			"To manage skills for your AI coding assistants, use `auth0 agent` instead.",
 	}
 
