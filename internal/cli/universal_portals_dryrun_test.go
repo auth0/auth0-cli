@@ -164,6 +164,45 @@ func TestPortalsDryRun(t *testing.T) {
 		assert.Equal(t, "cli_1", body["client"].(map[string]any)["client_id"], "the rest is kept")
 	})
 
+	t.Run("the answer to a create never repeats a secret that was sent", func(t *testing.T) {
+		t.Parallel()
+
+		plan := newPortalsDryRun(&stubTransport{})
+
+		answer := send(t, plan, http.MethodPost, "portals", `{"slug":"acme","client":{"client_id":"cli_1","client_secret":"real-secret"}}`)
+
+		encoded, err := json.Marshal(answer)
+		require.NoError(t, err)
+		assert.NotContains(t, string(encoded), "real-secret")
+	})
+
+	t.Run("the other credentials a request can carry are left out of the plan too", func(t *testing.T) {
+		t.Parallel()
+
+		plan := newPortalsDryRun(&stubTransport{})
+
+		send(t, plan, http.MethodPost, "flows/vault/connections", `{"name":"v","setup":{"client_id":"cli_2","secret":"s-1","private_key":"k-1","password":"p-1","token":"t-1","access_token":"a-1","refresh_token":"r-1"}}`)
+
+		encoded, err := json.Marshal(plan.planned())
+		require.NoError(t, err)
+
+		for _, secret := range []string{"s-1", "k-1", "p-1", "t-1", "a-1", "r-1"} {
+			assert.NotContains(t, string(encoded), secret)
+		}
+
+		assert.Contains(t, string(encoded), "cli_2", "the rest is kept")
+	})
+
+	t.Run("the refresh token settings of an application are not a credential", func(t *testing.T) {
+		t.Parallel()
+
+		plan := newPortalsDryRun(&stubTransport{})
+
+		answer := send(t, plan, http.MethodPost, "clients", `{"name":"Acme","refresh_token":{"rotation_type":"non-rotating"}}`)
+
+		assert.Equal(t, map[string]any{"rotation_type": "non-rotating"}, answer["refresh_token"])
+	})
+
 	t.Run("the connections enabled in the plan are the ones the organization has", func(t *testing.T) {
 		t.Parallel()
 

@@ -18,6 +18,12 @@ import (
 // dryRunClientSecret stands in for every client secret in the plan.
 const dryRunClientSecret = "<client secret>"
 
+// dryRunRedacted stands in for any other credential in the plan.
+const dryRunRedacted = "<redacted>"
+
+// credentialKeys are the fields of a request that hold a credential, apart from client_secret.
+var credentialKeys = []string{"secret", "private_key", "password", "token", "access_token", "refresh_token"}
+
 // plannedRequest is a request a real run would send.
 type plannedRequest struct {
 	Method string `json:"method"`
@@ -174,7 +180,8 @@ func (d *portalsDryRun) keep(request *http.Request, body []byte) *http.Response 
 		}
 	}
 
-	response, _ := jsonResponse(request, createdResponse(path, decoded, id))
+	// The answer is built from the redacted body, so a secret that was sent is never in what comes back.
+	response, _ := jsonResponse(request, createdResponse(path, redactSecrets(decoded), id))
 
 	return response
 }
@@ -202,8 +209,8 @@ func createdResponse(path string, body any, id string) map[string]any {
 	return created
 }
 
-// redactSecrets copies the value and replaces every client secret, so a secret read from the tenant
-// for a reused application can never reach the plan.
+// redactSecrets copies the value and replaces every client secret and credential, so a secret read from
+// the tenant for a reused application can never reach the plan.
 func redactSecrets(value any) any {
 	switch typed := value.(type) {
 	case []any:
@@ -219,6 +226,12 @@ func redactSecrets(value any) any {
 		for key, item := range typed {
 			if key == "client_secret" {
 				redacted[key] = dryRunClientSecret
+				continue
+			}
+
+			// refresh_token is also the settings object of an application, which holds no secret.
+			if _, isText := item.(string); isText && slices.Contains(credentialKeys, key) {
+				redacted[key] = dryRunRedacted
 				continue
 			}
 
