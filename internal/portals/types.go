@@ -83,7 +83,13 @@ type ClientGrant struct {
 	ClientID string
 	Audience string
 	Scope    []string
+	// SubjectType is "user" or "client", and empty when the API did not tell.
+	SubjectType string
 }
+
+// forUsers reports whether the grant lets the users of the application call the API. A grant that does
+// not tell its subject is given the benefit of the doubt.
+func (g ClientGrant) forUsers() bool { return g.SubjectType == "" || g.SubjectType == "user" }
 
 // ClientGrantSpec describes a client grant to create.
 type ClientGrantSpec struct {

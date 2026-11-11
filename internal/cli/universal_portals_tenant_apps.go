@@ -299,6 +299,8 @@ func (t *portalsTenant) ListClientGrants(ctx context.Context, clientID string) (
 			ClientID: grant.GetClientID(),
 			Audience: grant.GetAudience(),
 			Scope:    grant.GetScope(),
+
+			SubjectType: string(grant.GetSubjectType()),
 		})
 	}
 
@@ -335,6 +337,8 @@ func (t *portalsTenant) CreateClientGrant(ctx context.Context, spec portals.Clie
 		ClientID: created.GetClientID(),
 		Audience: created.GetAudience(),
 		Scope:    created.GetScope(),
+
+		SubjectType: string(created.GetSubjectType()),
 	}, nil
 }
 

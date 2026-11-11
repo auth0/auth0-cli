@@ -197,18 +197,18 @@ func TestPortalsTenant_ClientGrants(t *testing.T) {
 		server, tenant := newPortalsServer(t)
 		server.handle(http.MethodGet, "client-grants", func(r receivedRequest) (int, string) {
 			if r.Query["from"] == nil {
-				return 200, `{"client_grants":[{"id":"cgr_1","client_id":"cli_1","audience":"https://acme/me/","scope":["a"]}],"next":"cursor"}`
+				return 200, `{"client_grants":[{"id":"cgr_1","client_id":"cli_1","audience":"https://acme/me/","scope":["a"],"subject_type":"user"}],"next":"cursor"}`
 			}
 
-			return 200, `{"client_grants":[{"id":"cgr_2","client_id":"cli_1","audience":"https://acme/my-org/","scope":["b","c"]}]}`
+			return 200, `{"client_grants":[{"id":"cgr_2","client_id":"cli_1","audience":"https://acme/my-org/","scope":["b","c"],"subject_type":"client"}]}`
 		})
 
 		grants, err := tenant.ListClientGrants(context.Background(), "cli_1")
 
 		require.NoError(t, err)
 		assert.Equal(t, []portals.ClientGrant{
-			{ID: "cgr_1", ClientID: "cli_1", Audience: "https://acme/me/", Scope: []string{"a"}},
-			{ID: "cgr_2", ClientID: "cli_1", Audience: "https://acme/my-org/", Scope: []string{"b", "c"}},
+			{ID: "cgr_1", ClientID: "cli_1", Audience: "https://acme/me/", Scope: []string{"a"}, SubjectType: "user"},
+			{ID: "cgr_2", ClientID: "cli_1", Audience: "https://acme/my-org/", Scope: []string{"b", "c"}, SubjectType: "client"},
 		}, grants)
 
 		requests := server.received(http.MethodGet, "client-grants")

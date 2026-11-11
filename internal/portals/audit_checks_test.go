@@ -266,6 +266,13 @@ func TestAudit_Rules(t *testing.T) {
 			wantSeverity: portals.SeverityError, wantFixable: true,
 		},
 		{
+			id: "P019", name: "a used API whose grant is not for users",
+			breakIt: func(s *portals.AuditSnapshot) {
+				s.Grants = []portals.ClientGrant{{ID: "cgr_1", Audience: me, Scope: []string{"read:me:factors"}, SubjectType: "client"}}
+			},
+			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
 			id: "P020", name: "a used API with no refresh token policy",
 			breakIt:      func(s *portals.AuditSnapshot) { s.Application.RefreshToken.Policies = nil },
 			wantSeverity: portals.SeverityError, wantFixable: true,

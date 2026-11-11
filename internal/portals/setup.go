@@ -474,8 +474,8 @@ func (r *setupRun) setUpForms(ctx context.Context) (ensured[string], map[FormKey
 }
 
 // setUpFormsVault prepares the vault shared by the forms: one machine-to-machine application and
-// one vault connection for the tenant. A change of its scopes needs a refresh, which sends the setup
-// again so the vault signs in with the new grants.
+// one vault connection for the tenant. A change of its application or its scopes needs a refresh, which
+// sends the setup again so the vault signs in with the new credentials and grants.
 func (r *setupRun) setUpFormsVault(ctx context.Context) (ensured[string], error) {
 	app, err := task(r.report(), "Preparing the forms vault", func() (ensured[credentials], error) {
 		return ensureFormsVaultClient(ctx, r.deps.API, formsVaultName)
@@ -501,12 +501,18 @@ func (r *setupRun) setUpFormsVault(ctx context.Context) (ensured[string], error)
 		return ensured[string]{}, err
 	}
 
-	if grant.status == StatusUpdated && vault.status == StatusReused {
+	// The vault keeps the credentials and the token it was given. A new application has other
+	// credentials, and a changed grant changes what the token can do, so either one needs a refresh.
+	if vault.status == StatusReused && (app.status != StatusReused || grant.status != StatusReused) {
 		if err := refreshVaultConnection(ctx, r.deps.API, vault.value, setup); err != nil {
 			return ensured[string]{}, err
 		}
 
-		r.report().Item("Forms vault refreshed with the updated permissions", "")
+		if app.status != StatusReused {
+			r.report().Item("Forms vault refreshed with the new application", "")
+		} else {
+			r.report().Item("Forms vault refreshed with the updated permissions", "")
+		}
 	}
 
 	r.record("forms_vault_client", app.value.clientID, app.status)

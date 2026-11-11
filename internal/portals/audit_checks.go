@@ -623,7 +623,7 @@ func (a *portalAudit) apisTheComponentsCall() {
 			})
 		}
 
-		if !slices.ContainsFunc(a.current.Grants, func(grant ClientGrant) bool { return grant.Audience == api.audience }) {
+		if !slices.ContainsFunc(a.current.Grants, func(grant ClientGrant) bool { return grant.Audience == api.audience && grant.forUsers() }) {
 			a.add(Finding{
 				ID:       "P019",
 				Subject:  api.audience,

@@ -6,6 +6,7 @@
 package portalstest
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -465,6 +466,8 @@ func (t *Tenant) CreateClientGrant(_ context.Context, spec portals.ClientGrantSp
 		ClientID: spec.ClientID,
 		Audience: spec.Audience,
 		Scope:    slices.Clone(spec.Scope),
+		// The API makes a grant for the application itself when the subject type is left out.
+		SubjectType: cmp.Or(spec.SubjectType, "client"),
 	}
 	t.grants = append(t.grants, grant)
 
@@ -507,6 +510,29 @@ func (t *Tenant) DeleteClientGrant(_ context.Context, id string) error {
 	t.grants = slices.Delete(t.grants, index, index+1)
 
 	return nil
+}
+
+// RemoveClient deletes an application and its grants, like the API does.
+func (t *Tenant) RemoveClient(id string) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.clients = slices.DeleteFunc(t.clients, func(record clientRecord) bool { return record.ID == id })
+	t.grants = slices.DeleteFunc(t.grants, func(grant portals.ClientGrant) bool { return grant.ClientID == id })
+}
+
+// VaultClientID returns the application a vault connection signs in with.
+func (t *Tenant) VaultClientID(id string) string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	for _, vault := range t.vaults {
+		if vault.ID == id {
+			return vault.setup.ClientID
+		}
+	}
+
+	return ""
 }
 
 // ListVaultConnections implements portals.VaultStore.

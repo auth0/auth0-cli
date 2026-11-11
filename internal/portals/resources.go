@@ -204,7 +204,10 @@ func ensureClientGrant(ctx context.Context, store ClientGrantStore, spec ClientG
 		return ensured[string]{}, fmt.Errorf("list the grants of application %q: %w", spec.ClientID, err)
 	}
 
-	index := slices.IndexFunc(grants, func(grant ClientGrant) bool { return grant.Audience == spec.Audience })
+	// An application can have one grant for its users and one for itself on the same API.
+	index := slices.IndexFunc(grants, func(grant ClientGrant) bool {
+		return grant.Audience == spec.Audience && (spec.SubjectType == "" || grant.SubjectType == "" || grant.SubjectType == spec.SubjectType)
+	})
 	if index < 0 {
 		created, createErr := store.CreateClientGrant(ctx, spec)
 		if createErr != nil {

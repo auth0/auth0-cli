@@ -544,6 +544,30 @@ func TestSetup_TheFormsVaultIsRefreshedWhenItsGrantGainsAScope(t *testing.T) {
 	assert.True(t, reporter.Contains("item", "Forms vault refreshed with the updated permissions"))
 }
 
+func TestSetup_TheFormsVaultIsRefreshedWhenItsApplicationIsRecreated(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	tenant := portalstest.New()
+	runSetup(t, tenant, consumerOptions())
+
+	oldApp := clientNamed(t, tenant, portals.FormsVaultName())
+	tenant.RemoveClient(oldApp.ID)
+
+	deps, reporter, _ := newSetupDeps(tenant)
+
+	rerun, err := portals.Setup(ctx, consumerOptions(), deps)
+
+	require.NoError(t, err)
+
+	newApp := clientNamed(t, tenant, portals.FormsVaultName())
+	require.NotEqual(t, oldApp.ID, newApp.ID, "the application was created again")
+	assert.Equal(t, portals.StatusReused, rerun.Vault.Status)
+	assert.Equal(t, newApp.ID, tenant.VaultClientID(rerun.Vault.ID), "the vault signs in with the new application")
+	assert.Equal(t, portals.FormsVaultScopes(), tenant.VaultMintedScopes(rerun.Vault.ID))
+	assert.True(t, reporter.Contains("item", "Forms vault refreshed with the new application"))
+}
+
 // What a person can get wrong in the options is told before anything is sent, even before the check
 // of the permissions: a session that lacks a scope should not have to fix it only to be told about a
 // typo in the slug.

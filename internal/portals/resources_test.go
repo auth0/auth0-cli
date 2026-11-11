@@ -265,6 +265,28 @@ func TestEnsureClientGrant(t *testing.T) {
 	assert.ElementsMatch(t, []string{"read:me:factors", "read:me:authentication_methods"}, tenant.Grants()[0].Scope)
 }
 
+func TestEnsureClientGrant_ASubjectTypeIsAGrantOfItsOwn(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	tenant := portalstest.New()
+	audience := "https://acme.us.auth0.com/me/"
+	scope := []string{"read:me:factors"}
+
+	forUsers, err := portals.EnsureClientGrant(ctx, tenant, portals.ClientGrantSpec{ClientID: "cli_1", Audience: audience, Scope: scope, SubjectType: "user"})
+	require.NoError(t, err)
+	forClient, err := portals.EnsureClientGrant(ctx, tenant, portals.ClientGrantSpec{ClientID: "cli_1", Audience: audience, Scope: scope, SubjectType: "client"})
+	require.NoError(t, err)
+	again, err := portals.EnsureClientGrant(ctx, tenant, portals.ClientGrantSpec{ClientID: "cli_1", Audience: audience, Scope: scope, SubjectType: "client"})
+	require.NoError(t, err)
+
+	assert.Equal(t, portals.StatusCreated, forClient.Status, "a grant for users does not give the application access for itself")
+	assert.NotEqual(t, forUsers.ID, forClient.ID)
+	assert.Equal(t, portals.StatusReused, again.Status)
+	assert.Equal(t, forClient.ID, again.ID)
+	assert.Len(t, tenant.Grants(), 2)
+}
+
 func TestVaultConnection(t *testing.T) {
 	t.Parallel()
 
