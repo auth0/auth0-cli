@@ -234,6 +234,63 @@ func TestAudit_WhatItReports(t *testing.T) {
 	})
 }
 
+func TestAudit_ThePortalIsNamedByItsIDOrItsSlug(t *testing.T) {
+	t.Parallel()
+
+	audit := func(portal auditedPortal, name string) (portals.AuditOutcome, error) {
+		return portals.Audit(context.Background(), portals.AuditOptions{PortalID: name}, portals.AuditDeps{
+			API: portal.tenant, Reporter: &portalstest.Reporter{}, Prompter: &portalstest.Prompter{}, TenantDomain: tenantDomain,
+		})
+	}
+
+	t.Run("a slug finds the portal, and the result has its ID", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+
+		outcome, err := audit(portal, "acme-account")
+
+		require.NoError(t, err)
+		assert.Equal(t, portal.portalID, outcome.Result.PortalID)
+	})
+
+	t.Run("a slug that no portal has says so", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := audit(newAuditedPortal(t), "no-such-portal")
+
+		var usage *portals.UsageError
+		require.ErrorAs(t, err, &usage)
+		assert.Contains(t, err.Error(), `No portal has the slug "no-such-portal"`)
+	})
+
+	t.Run("something that is neither an ID nor a slug is told before any request", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		before := len(portal.tenant.Calls())
+
+		_, err := audit(portal, "Not A Portal!")
+
+		var usage *portals.UsageError
+		require.ErrorAs(t, err, &usage)
+		assert.Contains(t, err.Error(), `"Not A Portal!" is neither a portal ID`)
+		assert.Len(t, portal.tenant.Calls(), before, "the API would answer a malformed ID with a 400")
+	})
+
+	t.Run("an ID is read as it is", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		before := len(portal.tenant.Calls())
+
+		_, err := audit(portal, "up_missing")
+
+		assert.True(t, portals.IsStatus(err, http.StatusNotFound), "got %v", err)
+		assert.NotContains(t, portal.tenant.Calls()[before:], "GET portals", "the list of portals is not needed for an ID")
+	})
+}
+
 func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 	t.Parallel()
 

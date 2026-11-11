@@ -13,13 +13,14 @@ With a terminal it offers to fix the errors the CLI can fix, and with --fix it f
 
 ## Usage
 ```
-auth0 universal-portals audit <portal-id> [flags]
+auth0 universal-portals audit <portal-id or slug> [flags]
 ```
 
 ## Examples
 
 ```
   auth0 universal-portals audit up_123
+  auth0 universal-portals audit acme-account
   auth0 universal-portals audit up_123 --fix
   auth0 up audit up_123 --organization org_123 --strict --json
 ```

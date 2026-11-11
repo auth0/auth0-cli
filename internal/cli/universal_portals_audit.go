@@ -41,7 +41,7 @@ func universalPortalsAuditCmd(cli *cli) *cobra.Command {
 	var inputs universalPortalsAuditInputs
 
 	cmd := &cobra.Command{
-		Use:   "audit <portal-id>",
+		Use:   "audit <portal-id or slug>",
 		Short: "Check a Universal Portal",
 		Long: `Checks a Universal Portal and its application against what setup makes, and tells what is wrong and how to fix it.
 
@@ -49,12 +49,13 @@ An error breaks the portal or one of its components, and a warning is something 
 
 With a terminal it offers to fix the errors the CLI can fix, and with --fix it fixes them without asking. Warnings are never changed, because they may be intentional.`,
 		Example: `  auth0 universal-portals audit up_123
+  auth0 universal-portals audit acme-account
   auth0 universal-portals audit up_123 --fix
   auth0 up audit up_123 --organization org_123 --strict --json`,
 		Args: func(_ *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				return usageError{
-					err:    errors.New("audit needs the ID of one portal: auth0 universal-portals audit <portal-id> [--organization <id>] [--strict]"),
+					err:    errors.New("audit needs the ID or the slug of one portal: auth0 universal-portals audit <portal-id or slug> [--organization <id>] [--strict]"),
 					reason: "missing_required_args",
 				}
 			}

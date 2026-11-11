@@ -3,6 +3,7 @@ package portals
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -77,9 +78,46 @@ func (o AuditOutcome) Failed() bool {
 	return o.Result.Failed || o.FixesFailed > 0
 }
 
+// portalIDPattern is the shape of the ID of a portal.
+var portalIDPattern = regexp.MustCompile(`^up_[A-Za-z0-9]+$`)
+
+// resolvePortalID returns the ID of the portal a person named by its ID or by its slug. Anything else is
+// told before a request, because the API answers a malformed ID with a 400 that does not say what is wrong.
+func resolvePortalID(ctx context.Context, store PortalStore, name string) (string, error) {
+	switch {
+	case portalIDPattern.MatchString(name):
+		return name, nil
+	case IsValidSlug(name):
+		portal, err := findPortalBySlug(ctx, store, name)
+		if err != nil {
+			return "", err
+		}
+
+		if portal == nil {
+			return "", &UsageError{
+				Message: fmt.Sprintf("No portal has the slug %q", name),
+				Hints:   []string{"Use the ID of the portal (up_...) or the slug of a portal of this tenant."},
+			}
+		}
+
+		return portal.ID, nil
+	default:
+		return "", &UsageError{
+			Message: fmt.Sprintf("%q is neither a portal ID (up_...) nor a portal slug", name),
+			Hints:   []string{"Use the ID of the portal (up_...) or the slug of a portal of this tenant."},
+		}
+	}
+}
+
 // Audit checks a portal and its application against what setup makes. It can fix the errors the CLI knows
 // how to fix: all of them without asking, or the ones a person chooses.
 func Audit(ctx context.Context, options AuditOptions, deps AuditDeps) (AuditOutcome, error) {
+	portalID, err := resolvePortalID(ctx, deps.API, options.PortalID)
+	if err != nil {
+		return AuditOutcome{}, err
+	}
+
+	options.PortalID = portalID
 	run := &auditRun{options: options, deps: deps}
 
 	run.deps.Reporter.Banner("Universal Portals audit", deps.TenantDomain)

@@ -231,7 +231,7 @@ func TestAuditCommand_Errors(t *testing.T) {
 			require.Error(t, err)
 			assert.Equal(t, "usage", errorClass(err))
 			assert.Equal(t, "missing_required_args", errorReason(err))
-			assert.Contains(t, err.Error(), "auth0 universal-portals audit <portal-id>")
+			assert.Contains(t, err.Error(), "auth0 universal-portals audit <portal-id or slug>")
 		}
 
 		assert.NoError(t, cmd.Args(cmd, []string{"up_1"}))
