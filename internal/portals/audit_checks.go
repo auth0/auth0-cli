@@ -623,7 +623,9 @@ func (a *portalAudit) apisTheComponentsCall() {
 			})
 		}
 
-		if !slices.ContainsFunc(a.current.Grants, func(grant ClientGrant) bool { return grant.Audience == api.audience && grant.forUsers() }) {
+		grantIndex := slices.IndexFunc(a.current.Grants, func(grant ClientGrant) bool { return grant.Audience == api.audience && grant.forUsers() })
+
+		if grantIndex < 0 {
 			a.add(Finding{
 				ID:       "P019",
 				Subject:  api.audience,
@@ -650,9 +652,39 @@ func (a *portalAudit) apisTheComponentsCall() {
 					},
 				},
 			})
+		} else if grant, missing := a.current.Grants[grantIndex], missingScopes(api.scope, a.current.Grants[grantIndex].Scope); len(missing) > 0 {
+			remedy := &Remedy{Summary: "Add the missing scopes to the grant of the " + api.name}
+
+			// A grant without an ID cannot be updated, so the person has to do it.
+			if grant.ID != "" {
+				remedy.apply = func(ctx context.Context, client API) error {
+					if err := client.UpdateClientGrantScope(ctx, grant.ID, append(slices.Clone(grant.Scope), missing...)); err != nil {
+						return fmt.Errorf("add the missing scopes to the grant for the %s: %w", api.name, err)
+					}
+
+					return nil
+				}
+			}
+
+			a.add(Finding{
+				ID:       "P019",
+				Subject:  api.audience,
+				Severity: SeverityError,
+				Check:    "client grant scopes",
+				Message: fmt.Sprintf(
+					"The components (%s) need the %s, but the client grant of the application lacks these scopes: %s.",
+					components, api.name, strings.Join(missing, ", "),
+				),
+				Remedy: remedy,
+			})
 		}
 
-		if app.RefreshToken == nil || !slices.ContainsFunc(app.RefreshToken.Policies, func(policy RefreshTokenPolicy) bool { return policy.Audience == api.audience }) {
+		policyIndex := -1
+		if app.RefreshToken != nil {
+			policyIndex = slices.IndexFunc(app.RefreshToken.Policies, func(policy RefreshTokenPolicy) bool { return policy.Audience == api.audience })
+		}
+
+		if policyIndex < 0 {
 			a.add(Finding{
 				ID:       "P020",
 				Subject:  api.audience,
@@ -671,8 +703,36 @@ func (a *portalAudit) apisTheComponentsCall() {
 					},
 				},
 			})
+		} else if missing := missingScopes(api.scope, app.RefreshToken.Policies[policyIndex].Scope); len(missing) > 0 {
+			a.add(Finding{
+				ID:       "P020",
+				Subject:  api.audience,
+				Severity: SeverityError,
+				Check:    "refresh token policy scopes",
+				Message: fmt.Sprintf(
+					"The components (%s) need the %s, but the refresh token policy for it lacks these scopes: %s.",
+					components, api.name, strings.Join(missing, ", "),
+				),
+				Remedy: &Remedy{
+					Summary: fmt.Sprintf("Add the missing scopes to the %s policy of the refresh token", api.name),
+					apply: func(ctx context.Context, client API) error {
+						return patchRefresh(ctx, client, app, func(token *RefreshToken) {
+							for index := range token.Policies {
+								if token.Policies[index].Audience == api.audience {
+									token.Policies[index].Scope = append(slices.Clone(token.Policies[index].Scope), missing...)
+								}
+							}
+						})
+					},
+				},
+			})
 		}
 	}
+}
+
+// missingScopes returns the needed scopes that are not among the ones there are.
+func missingScopes(needed, have []string) []string {
+	return slices.DeleteFunc(slices.Clone(needed), func(scope string) bool { return slices.Contains(have, scope) })
 }
 
 func (a *portalAudit) connectionsAndSessionTransfer() {

@@ -78,10 +78,10 @@ func healthySnapshot() portals.AuditSnapshot {
 				IdleTokenLifetime:         intPointer(3600),
 				TokenLifetime:             intPointer(86400),
 				InfiniteIdleTokenLifetime: boolPointer(false),
-				Policies:                  []portals.RefreshTokenPolicy{{Audience: me, Scope: []string{"read:me:factors"}}},
+				Policies:                  []portals.RefreshTokenPolicy{{Audience: me, Scope: portals.MyAccountScopes()}},
 			},
 		}},
-		Grants:                 []portals.ClientGrant{{Audience: me, Scope: []string{"read:me:factors"}}},
+		Grants:                 []portals.ClientGrant{{Audience: me, Scope: portals.MyAccountScopes()}},
 		ResourceServers:        []string{me},
 		Forms:                  []portals.FormStatus{{ID: "ap_1", Exists: true}},
 		ApplicationConnections: []portals.Connection{{ID: "con_db", Name: "Username-Password-Authentication"}},
@@ -245,8 +245,8 @@ func TestAudit_Rules(t *testing.T) {
 				s.Portal.Pages.Standard[0].Components = append(s.Portal.Pages.Standard[0].Components, organizationSection)
 				s.Application.OrganizationUsage = "deny"
 				s.ResourceServers = append(s.ResourceServers, myOrg)
-				s.Grants = append(s.Grants, portals.ClientGrant{Audience: myOrg})
-				s.Application.RefreshToken.Policies = append(s.Application.RefreshToken.Policies, portals.RefreshTokenPolicy{Audience: myOrg})
+				s.Grants = append(s.Grants, portals.ClientGrant{Audience: myOrg, Scope: portals.MyOrganizationScopes()})
+				s.Application.RefreshToken.Policies = append(s.Application.RefreshToken.Policies, portals.RefreshTokenPolicy{Audience: myOrg, Scope: portals.MyOrganizationScopes()})
 			},
 			wantSeverity: portals.SeverityError, wantFixable: true,
 		},
@@ -269,6 +269,20 @@ func TestAudit_Rules(t *testing.T) {
 			id: "P019", name: "a used API whose grant is not for users",
 			breakIt: func(s *portals.AuditSnapshot) {
 				s.Grants = []portals.ClientGrant{{ID: "cgr_1", Audience: me, Scope: []string{"read:me:factors"}, SubjectType: "client"}}
+			},
+			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
+			id: "P019", name: "a grant that lacks scopes the components need, such as the ones of the passkeys",
+			breakIt: func(s *portals.AuditSnapshot) {
+				s.Grants = []portals.ClientGrant{{ID: "cgr_1", Audience: me, Scope: []string{"read:me:factors"}, SubjectType: "user"}}
+			},
+			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
+			id: "P020", name: "a refresh token policy that lacks scopes the components need",
+			breakIt: func(s *portals.AuditSnapshot) {
+				s.Application.RefreshToken.Policies = []portals.RefreshTokenPolicy{{Audience: me, Scope: []string{"read:me:factors"}}}
 			},
 			wantSeverity: portals.SeverityError, wantFixable: true,
 		},
@@ -320,6 +334,16 @@ func TestAudit_Rules(t *testing.T) {
 			assert.NotEmpty(t, finding.Remedy.Summary)
 		})
 	}
+}
+
+func TestAudit_AGrantWithMoreScopesThanTheComponentsNeedIsFine(t *testing.T) {
+	t.Parallel()
+
+	current := healthySnapshot()
+	current.Grants[0].Scope = append(current.Grants[0].Scope, "read:me:something_new")
+	current.Application.RefreshToken.Policies[0].Scope = append(current.Application.RefreshToken.Policies[0].Scope, "read:me:something_new")
+
+	assert.Empty(t, portals.AuditFindings(current))
 }
 
 func TestAudit_TheRulesThatAreNotBrokenStayQuiet(t *testing.T) {

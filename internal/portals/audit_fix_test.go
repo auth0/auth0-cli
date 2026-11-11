@@ -322,6 +322,40 @@ func TestFix_Remedies(t *testing.T) {
 		assert.True(t, found)
 	})
 
+	t.Run("P019: a grant cut to fewer scopes gets the missing ones back and keeps the others", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		for _, grant := range portal.tenant.Grants() {
+			if grant.ClientID == portal.clientID && grant.Audience == me {
+				require.NoError(t, portal.tenant.UpdateClientGrantScope(context.Background(), grant.ID, []string{"read:me:factors", "read:me:something_new"}))
+			}
+		}
+
+		portal.fixOnly(t, "P019")
+
+		for _, grant := range portal.tenant.Grants() {
+			if grant.ClientID == portal.clientID && grant.Audience == me {
+				assert.ElementsMatch(t, append(portals.MyAccountScopes(), "read:me:something_new"), grant.Scope)
+			}
+		}
+	})
+
+	t.Run("P020: a policy cut to fewer scopes gets the missing ones back", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) {
+			client.RefreshToken.Policies[0].Scope = []string{"read:me:factors"}
+		})
+
+		portal.fixOnly(t, "P020")
+
+		policies := portal.client(t, portal.clientID).RefreshToken.Policies
+		require.Len(t, policies, 1)
+		assert.ElementsMatch(t, portals.MyAccountScopes(), policies[0].Scope)
+	})
+
 	t.Run("P018: creating the resource server of an API a component calls", func(t *testing.T) {
 		t.Parallel()
 
