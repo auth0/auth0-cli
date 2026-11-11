@@ -336,6 +336,26 @@ func TestAudit_Rules(t *testing.T) {
 	}
 }
 
+func TestAudit_OrganizationUsageThatAllowsOrganizationsIsNotReported(t *testing.T) {
+	t.Parallel()
+
+	for _, usage := range []string{"allow", "require"} {
+		t.Run(usage, func(t *testing.T) {
+			t.Parallel()
+
+			current := healthySnapshot()
+			current.Portal.Pages.Standard[0].Components = append(current.Portal.Pages.Standard[0].Components,
+				section(leaf("page:component:auth0:my_organization:details_edit", map[string]any{})))
+			current.ResourceServers = append(current.ResourceServers, myOrg)
+			current.Grants = append(current.Grants, portals.ClientGrant{Audience: myOrg, Scope: portals.MyOrganizationScopes()})
+			current.Application.RefreshToken.Policies = append(current.Application.RefreshToken.Policies, portals.RefreshTokenPolicy{Audience: myOrg, Scope: portals.MyOrganizationScopes()})
+			current.Application.OrganizationUsage = usage
+
+			assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P016", "require is a choice, not a mistake")
+		})
+	}
+}
+
 func TestAudit_AGrantWithMoreScopesThanTheComponentsNeedIsFine(t *testing.T) {
 	t.Parallel()
 

@@ -536,7 +536,8 @@ func (a *portalAudit) organizationAndHeader() {
 	app := *a.current.Application
 	clientID := app.ID
 
-	if app.OrganizationUsage != "allow" && a.uses("my_organization") {
+	// "require" is a choice that organization components work with, so only an application that denies or does not say is a mistake.
+	if app.OrganizationUsage != "allow" && app.OrganizationUsage != "require" && a.uses("my_organization") {
 		a.add(Finding{
 			ID:       "P016",
 			Severity: SeverityError,
