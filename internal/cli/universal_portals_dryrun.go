@@ -229,7 +229,7 @@ func redactSecrets(value any) any {
 				continue
 			}
 
-			// refresh_token is also the settings object of an application, which holds no secret.
+			// The refresh_token of an application is a settings object, which holds no secret.
 			if _, isText := item.(string); isText && slices.Contains(credentialKeys, key) {
 				redacted[key] = dryRunRedacted
 				continue

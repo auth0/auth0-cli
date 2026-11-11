@@ -30,7 +30,7 @@ type fixResult struct {
 	alreadyFixed int
 	// The scopes the failed fixes needed, so the fix for them is shown once at the end.
 	missingScopes []string
-	// records say what each fix did, in the order they ran.
+	// Records say what each fix did, in the order they ran.
 	records []FixRecord
 }
 

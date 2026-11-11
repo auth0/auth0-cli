@@ -572,7 +572,7 @@ func (r *setupRun) setUpPortal(
 type portalHost struct {
 	domain   string
 	isCustom bool
-	// reason says why the portal is not served from a custom domain, empty when it is.
+	// Why the portal is not served from a custom domain, empty when it is.
 	reason string
 }
 

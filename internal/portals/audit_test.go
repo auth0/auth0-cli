@@ -298,8 +298,8 @@ func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 		name  string
 		scope string
 		check string
-		// breakIt makes the portal wrong in the way the skipped rule would report, and returns the
-		// requests the session is refused.
+		// What breakIt does is make the portal wrong in the way the skipped rule would report, and return
+		// the requests the session is refused.
 		breakIt func(t *testing.T, portal auditedPortal) []string
 		skipped string
 	}{

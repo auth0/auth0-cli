@@ -655,9 +655,15 @@ func (a *portalAudit) apisTheComponentsCall() {
 
 		grantIndex := slices.IndexFunc(a.current.Grants, func(grant ClientGrant) bool { return grant.Audience == api.audience && grant.forUsers() })
 
-		if !a.current.wasChecked("client grants") {
+		var grantMissing []string
+		if grantIndex >= 0 {
+			grantMissing = missingFrom(api.scope, a.current.Grants[grantIndex].Scope)
+		}
+
+		switch {
+		case !a.current.wasChecked("client grants"):
 			// The grant was not read, so there is nothing to say about it.
-		} else if grantIndex < 0 {
+		case grantIndex < 0:
 			a.add(Finding{
 				ID:       "P019",
 				Subject:  api.audience,
@@ -684,7 +690,8 @@ func (a *portalAudit) apisTheComponentsCall() {
 					},
 				},
 			})
-		} else if grant, missing := a.current.Grants[grantIndex], missingFrom(api.scope, a.current.Grants[grantIndex].Scope); len(missing) > 0 {
+		case len(grantMissing) > 0:
+			grant, missing := a.current.Grants[grantIndex], grantMissing
 			remedy := &Remedy{Summary: "Add the missing scopes to the grant of the " + api.name}
 
 			// A grant without an ID cannot be updated, so the person has to do it.

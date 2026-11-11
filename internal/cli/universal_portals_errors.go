@@ -17,7 +17,7 @@ const portalsResumeHint = "Run the same command again to resume. Existing resour
 type portalsFixError struct {
 	err   error
 	fixes []string
-	// resources are what a setup made before it failed.
+	// What a setup made before it failed.
 	resources []portals.Resource
 }
 

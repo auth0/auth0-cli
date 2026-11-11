@@ -8,10 +8,10 @@ import (
 
 // domainChoice is where a portal is served from.
 type domainChoice struct {
-	// custom is the custom domain the portal is served from. It is nil when the portal is served from
-	// the domain of the tenant.
+	// The custom domain the portal is served from. It is nil when the portal is served from the domain
+	// of the tenant.
 	custom *CustomDomain
-	// reason says why no custom domain is used, and what that costs. It is empty when one is used.
+	// Why no custom domain is used, and what that costs. It is empty when one is used.
 	reason string
 }
 
