@@ -68,30 +68,6 @@ func (t *portalsTenant) rawJSONAt(ctx context.Context, method string, segments [
 	return data, nil
 }
 
-// listItems reads a listing that is an array, or an object that holds the array under key.
-func listItems[T any](data []byte, key string) ([]T, error) {
-	var items []T
-	if err := json.Unmarshal(data, &items); err == nil {
-		return items, nil
-	}
-
-	var wrapped map[string]json.RawMessage
-	if err := json.Unmarshal(data, &wrapped); err != nil {
-		return nil, err
-	}
-
-	raw, found := wrapped[key]
-	if !found {
-		return nil, nil
-	}
-
-	if err := json.Unmarshal(raw, &items); err != nil {
-		return nil, err
-	}
-
-	return items, nil
-}
-
 // ListForms implements portals.FormStore.
 func (t *portalsTenant) ListForms(ctx context.Context) ([]portals.Form, error) {
 	summaries, err := pageAll(ctx, func(ctx context.Context) (*auth0.FormSummaryPage, error) {
@@ -207,68 +183,6 @@ func firstFlowID(flows json.RawMessage) string {
 	}
 
 	return keyed[first].ID
-}
-
-// ListPortals implements portals.PortalStore. The endpoint does not page, so it is one request and the
-// answer is every portal.
-func (t *portalsTenant) ListPortals(ctx context.Context) ([]portals.PortalSummary, error) {
-	data, err := t.rawJSON(ctx, http.MethodGet, "portals", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	items, err := listItems[struct {
-		ID   string `json:"id"`
-		Slug string `json:"slug"`
-		Name string `json:"name"`
-	}](data, "portals")
-	if err != nil {
-		return nil, fmt.Errorf("read the listing of portals: %w", err)
-	}
-
-	listed := make([]portals.PortalSummary, 0, len(items))
-	for _, item := range items {
-		listed = append(listed, portals.PortalSummary{ID: item.ID, Slug: item.Slug, Name: item.Name})
-	}
-
-	return listed, nil
-}
-
-// ReadPortal implements portals.PortalStore.
-func (t *portalsTenant) ReadPortal(ctx context.Context, id string) (portals.Portal, error) {
-	data, err := t.rawJSONAt(ctx, http.MethodGet, []string{"portals", id}, "", nil)
-	if err != nil {
-		return portals.Portal{}, err
-	}
-
-	var portal portals.Portal
-	if err := json.Unmarshal(data, &portal); err != nil {
-		return portals.Portal{}, fmt.Errorf("read portal %q: %w", id, err)
-	}
-
-	return portal, nil
-}
-
-// CreatePortal implements portals.PortalStore.
-func (t *portalsTenant) CreatePortal(ctx context.Context, request portals.CreatePortalRequest) (portals.Portal, error) {
-	data, err := t.rawJSON(ctx, http.MethodPost, "portals", request)
-	if err := t.written(err); err != nil {
-		return portals.Portal{}, err
-	}
-
-	var portal portals.Portal
-	if err := json.Unmarshal(data, &portal); err != nil {
-		return portals.Portal{}, fmt.Errorf("read the created portal: %w", err)
-	}
-
-	return portal, nil
-}
-
-// UpdatePortal implements portals.PortalStore.
-func (t *portalsTenant) UpdatePortal(ctx context.Context, id string, patch portals.PortalPatch) error {
-	_, err := t.rawJSONAt(ctx, http.MethodPatch, []string{"portals", id}, "", patch)
-
-	return t.written(err)
 }
 
 // Probe implements portals.Prober.
