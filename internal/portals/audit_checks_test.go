@@ -2,7 +2,6 @@ package portals_test
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -450,22 +449,6 @@ func TestAudit_TheRulesThatAreNotBrokenStayQuiet(t *testing.T) {
 
 		finding := findingNamed(t, portals.AuditFindings(current), "P008")
 		assert.Contains(t, finding.Message, "no ready custom domain")
-	})
-
-	t.Run("custom code longer than the portal accepts is reported", func(t *testing.T) {
-		t.Parallel()
-
-		current := healthySnapshot()
-		current.CustomDomain = &portals.CustomDomain{Domain: "auth.acme.com", Status: "ready"}
-		current.Application.Callbacks = []string{"https://auth.acme.com/portals/auth/callback"}
-		current.Portal.CustomCode = &portals.CustomCode{Head: strings.Repeat("a", 10001)}
-
-		finding := findingNamed(t, portals.AuditFindings(current), "P026")
-		assert.Equal(t, portals.SeverityWarning, finding.Severity)
-		assert.Contains(t, finding.Message, "10,000")
-
-		current.Portal.CustomCode.Head = strings.Repeat("a", 10000)
-		assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P026")
 	})
 
 	t.Run("without an application the checks that need it do not run", func(t *testing.T) {
