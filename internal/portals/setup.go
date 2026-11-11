@@ -348,7 +348,7 @@ func (r *setupRun) askValidSlug(suggestion string) (string, error) {
 			return answer, nil
 		}
 
-		r.report().Error("The slug must start with a lowercase letter and use only lowercase letters, digits and hyphens.")
+		r.report().Error(invalidSlugMessage)
 	}
 }
 
@@ -610,9 +610,11 @@ func portalURL(host, slug, organizationID string) string {
 	return address + "?organization=" + value
 }
 
+const invalidSlugMessage = "The slug must start with a lowercase letter and use only lowercase letters, digits and hyphens."
+
 // AskForMissing asks for the choices that were not given, before anything is checked or created:
 // the kind of portal, its name, and its slug. The slug defaults to the one made from the name.
-func AskForMissing(options SetupOptions, prompter Prompter) (SetupOptions, error) {
+func AskForMissing(options SetupOptions, prompter Prompter, reporter Reporter) (SetupOptions, error) {
 	if options.Template == "" {
 		choices := []Choice{
 			{Label: "Consumer portal", Hint: "for end-users to manage their account in a self-service way"},
@@ -637,12 +639,20 @@ func AskForMissing(options SetupOptions, prompter Prompter) (SetupOptions, error
 	}
 
 	if options.Slug == "" {
-		slug, err := prompter.Ask("URL slug", SlugFromName(options.Name), "")
-		if err != nil {
-			return SetupOptions{}, err
-		}
+		for {
+			slug, err := prompter.Ask("URL slug", SlugFromName(options.Name), "")
+			if err != nil {
+				return SetupOptions{}, err
+			}
 
-		options.Slug = slug
+			if IsValidSlug(slug) {
+				options.Slug = slug
+
+				break
+			}
+
+			reporter.Error(invalidSlugMessage)
+		}
 	}
 
 	return options, nil

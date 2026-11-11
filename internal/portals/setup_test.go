@@ -706,7 +706,7 @@ func TestAskForMissing(t *testing.T) {
 		prompter := &portalstest.Prompter{}
 		answerWithDefaults(prompter)
 
-		options, err := portals.AskForMissing(portals.SetupOptions{}, prompter)
+		options, err := portals.AskForMissing(portals.SetupOptions{}, prompter, &portalstest.Reporter{})
 
 		require.NoError(t, err)
 		assert.Equal(t, portals.SetupOptions{Template: portals.TemplateBusiness, Name: "My Portal", Slug: "my-portal"}, options)
@@ -719,11 +719,37 @@ func TestAskForMissing(t *testing.T) {
 		prompter := &portalstest.Prompter{}
 		answerWithDefaults(prompter)
 
-		options, err := portals.AskForMissing(portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme Admin"}, prompter)
+		options, err := portals.AskForMissing(portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme Admin"}, prompter, &portalstest.Reporter{})
 
 		require.NoError(t, err)
 		assert.Equal(t, "acme-admin", options.Slug)
 		assert.Equal(t, []string{"URL slug"}, prompter.Questions())
+	})
+
+	t.Run("a slug the API would refuse is asked again, with the reason", func(t *testing.T) {
+		t.Parallel()
+
+		answers := []string{"Not A Slug!", "9lives", "acme-admin"}
+		var suggestions []string
+
+		prompter := &portalstest.Prompter{}
+		prompter.AskFunc = func(_, defaultValue, _ string) (string, error) {
+			suggestions = append(suggestions, defaultValue)
+
+			answer := answers[0]
+			answers = answers[1:]
+
+			return answer, nil
+		}
+
+		reporter := &portalstest.Reporter{}
+
+		options, err := portals.AskForMissing(portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme Admin"}, prompter, reporter)
+
+		require.NoError(t, err)
+		assert.Equal(t, "acme-admin", options.Slug)
+		assert.Equal(t, []string{"acme-admin", "acme-admin", "acme-admin"}, suggestions, "the slug made from the name is offered each time")
+		assert.True(t, reporter.Contains("error", "The slug must start with a lowercase letter"))
 	})
 
 	t.Run("it asks for nothing that was given", func(t *testing.T) {
@@ -731,7 +757,7 @@ func TestAskForMissing(t *testing.T) {
 
 		given := portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme", Slug: "acme-portal", UserQuery: "jane@acme.com"}
 
-		options, err := portals.AskForMissing(given, &portalstest.Prompter{})
+		options, err := portals.AskForMissing(given, &portalstest.Prompter{}, &portalstest.Reporter{})
 
 		require.NoError(t, err)
 		assert.Equal(t, given, options)
@@ -742,7 +768,7 @@ func TestAskForMissing(t *testing.T) {
 
 		prompter := &portalstest.Prompter{AskFunc: func(string, string, string) (string, error) { return "", portals.ErrCancelled }}
 
-		_, err := portals.AskForMissing(portals.SetupOptions{Template: portals.TemplateConsumer}, prompter)
+		_, err := portals.AskForMissing(portals.SetupOptions{Template: portals.TemplateConsumer}, prompter, &portalstest.Reporter{})
 
 		assert.ErrorIs(t, err, portals.ErrCancelled)
 	})

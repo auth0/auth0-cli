@@ -281,7 +281,7 @@ func executeUniversalPortalsSetup(ctx context.Context, run universalPortalsSetup
 	if run.deps.Interactive {
 		var err error
 
-		if options, err = portals.AskForMissing(options, run.deps.Prompter); err != nil {
+		if options, err = portals.AskForMissing(options, run.deps.Prompter, run.deps.Reporter); err != nil {
 			return portals.SetupResult{}, err
 		}
 	}
