@@ -26,6 +26,23 @@ func TestPortalsTenant_CustomDomain(t *testing.T) {
 		assert.Equal(t, portals.CustomDomain{Domain: "login.acme.com", Status: "ready"}, domain)
 	})
 
+	t.Run("it lists the domains with their status and whether they are primary", func(t *testing.T) {
+		t.Parallel()
+
+		server, tenant := newPortalsServer(t)
+		server.reply(http.MethodGet, "custom-domains", 200, `[
+			{"custom_domain_id":"cd_1","domain":"login.acme.com","status":"ready","primary":true},
+			{"custom_domain_id":"cd_2","domain":"old.acme.com","status":"failed","primary":false}]`)
+
+		domains, err := tenant.ListCustomDomains(context.Background())
+
+		require.NoError(t, err)
+		assert.Equal(t, []portals.CustomDomain{
+			{Domain: "login.acme.com", Status: "ready", Primary: true},
+			{Domain: "old.acme.com", Status: "failed"},
+		}, domains)
+	})
+
 	t.Run("a tenant without one is a 404", func(t *testing.T) {
 		t.Parallel()
 

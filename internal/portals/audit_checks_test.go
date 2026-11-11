@@ -2,6 +2,7 @@ package portals_test
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -346,25 +347,52 @@ func TestAudit_TheRulesThatAreNotBrokenStayQuiet(t *testing.T) {
 		assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P012")
 	})
 
-	t.Run("custom code without a custom domain says the tenant has none", func(t *testing.T) {
+	t.Run("custom code without a custom domain says the tenant has no ready one", func(t *testing.T) {
 		t.Parallel()
 
 		current := healthySnapshot()
 		current.Portal.CustomCode = &portals.CustomCode{Head: "<script></script>"}
 
 		finding := findingNamed(t, portals.AuditFindings(current), "P008")
-		assert.Contains(t, finding.Message, "the tenant has no custom domain")
+		assert.Contains(t, finding.Message, "no ready custom domain")
 	})
 
-	t.Run("custom code is fine once the tenant has a custom domain", func(t *testing.T) {
+	t.Run("custom code is fine once the tenant has a ready custom domain", func(t *testing.T) {
+		t.Parallel()
+
+		current := healthySnapshot()
+		current.Portal.CustomCode = &portals.CustomCode{Head: "<script></script>"}
+		current.CustomDomain = &portals.CustomDomain{Domain: "auth.acme.com", Status: "ready"}
+		current.Application.Callbacks = []string{"https://auth.acme.com/portals/auth/callback"}
+
+		assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P008")
+	})
+
+	t.Run("custom code on a custom domain that is not ready is never injected", func(t *testing.T) {
 		t.Parallel()
 
 		current := healthySnapshot()
 		current.Portal.CustomCode = &portals.CustomCode{Head: "<script></script>"}
 		current.CustomDomain = &portals.CustomDomain{Domain: "auth.acme.com", Status: "pending_verification"}
-		current.Application.Callbacks = []string{"https://acme.us.auth0.com/portals/auth/callback"}
 
-		assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P008")
+		finding := findingNamed(t, portals.AuditFindings(current), "P008")
+		assert.Contains(t, finding.Message, "no ready custom domain")
+	})
+
+	t.Run("custom code longer than the portal accepts is reported", func(t *testing.T) {
+		t.Parallel()
+
+		current := healthySnapshot()
+		current.CustomDomain = &portals.CustomDomain{Domain: "auth.acme.com", Status: "ready"}
+		current.Application.Callbacks = []string{"https://auth.acme.com/portals/auth/callback"}
+		current.Portal.CustomCode = &portals.CustomCode{Head: strings.Repeat("a", 10001)}
+
+		finding := findingNamed(t, portals.AuditFindings(current), "P026")
+		assert.Equal(t, portals.SeverityWarning, finding.Severity)
+		assert.Contains(t, finding.Message, "10,000")
+
+		current.Portal.CustomCode.Head = strings.Repeat("a", 10000)
+		assert.NotContains(t, idsOf(portals.AuditFindings(current)), "P026")
 	})
 
 	t.Run("without an application the checks that need it do not run", func(t *testing.T) {

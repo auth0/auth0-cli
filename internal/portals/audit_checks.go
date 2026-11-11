@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode/utf8"
 )
+
+// customCodeHeadLimit is the number of characters the custom code of a portal can have in head.
+const customCodeHeadLimit = 10000
 
 // Severity tells how bad a finding is.
 type Severity string
@@ -272,13 +276,24 @@ func (a *portalAudit) formsAndCustomCode() {
 		}
 	}
 
-	if customCode := a.current.Portal.CustomCode; customCode != nil && customCode.Head != "" && a.current.CustomDomain == nil {
+	customCode := a.current.Portal.CustomCode
+	if customCode != nil && customCode.Head != "" && (a.current.CustomDomain == nil || !a.current.CustomDomain.IsReady()) {
 		a.add(Finding{
 			ID:       "P008",
 			Severity: SeverityWarning,
 			Check:    "custom code",
-			Message:  "Custom code is set, but the tenant has no custom domain, so it is never injected.",
+			Message:  "Custom code is set, but the tenant has no ready custom domain, so it is never injected.",
 			Remedy:   &Remedy{Summary: "Set up a custom domain, or remove the custom code"},
+		})
+	}
+
+	if customCode != nil && utf8.RuneCountInString(customCode.Head) > customCodeHeadLimit {
+		a.add(Finding{
+			ID:       "P026",
+			Severity: SeverityWarning,
+			Check:    "custom code size",
+			Message:  fmt.Sprintf("The custom code in head is longer than the 10,000 characters a portal accepts (%d).", utf8.RuneCountInString(customCode.Head)),
+			Remedy:   &Remedy{Summary: "Shorten the custom code"},
 		})
 	}
 }

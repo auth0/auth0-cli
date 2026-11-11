@@ -68,6 +68,7 @@ type Tenant struct {
 	roles           []roleRecord
 	connections     []connectionRecord
 	customDomain    *portals.CustomDomain
+	customDomains   []portals.CustomDomain
 }
 
 type clientRecord struct {
@@ -765,6 +766,31 @@ func (t *Tenant) SetCustomDomain(domain *portals.CustomDomain) {
 	defer t.mu.Unlock()
 
 	t.customDomain = clone(domain)
+}
+
+// AddCustomDomain adds a custom domain to the list of the tenant. It is not the default one.
+func (t *Tenant) AddCustomDomain(domain portals.CustomDomain) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.customDomains = append(t.customDomains, domain)
+}
+
+// ListCustomDomains implements portals.CustomDomainStore. The default domain is in the list too.
+func (t *Tenant) ListCustomDomains(_ context.Context) ([]portals.CustomDomain, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if err := t.begin("GET custom-domains"); err != nil {
+		return nil, err
+	}
+
+	domains := slices.Clone(t.customDomains)
+	if t.customDomain != nil {
+		domains = append(domains, *t.customDomain)
+	}
+
+	return domains, nil
 }
 
 // ReadDefaultCustomDomain implements portals.CustomDomainStore.

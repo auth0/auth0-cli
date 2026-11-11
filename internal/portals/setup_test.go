@@ -97,6 +97,9 @@ func TestSetup_TheResultIsTheJSONTheToolPrinted(t *testing.T) {
 	assert.Equal(t, string(want), string(got))
 }
 
+const customCodeAndPasskeysCost = "Custom code does not run on the domain of the tenant, " +
+	"and passkeys enrolled there have to be enrolled again if the portal moves to a custom domain later."
+
 func TestSetup_ShowsTheStepsInOrder(t *testing.T) {
 	t.Parallel()
 
@@ -110,6 +113,7 @@ func TestSetup_ShowsTheStepsInOrder(t *testing.T) {
 		"section: Permissions",
 		"task: Checking permissions",
 		"result: The CLI session has every permission setup needs",
+		"warn: The tenant has no custom domain, so the portal is served from acme.us.auth0.com. " + customCodeAndPasskeysCost,
 		"section: Resource servers",
 		"task: Checking Auth0 My Account API",
 		`item: "Auth0 My Account API" | created`,
@@ -438,6 +442,81 @@ func TestSetup_ACustomDomainThatIsNotReadyIsNotUsed(t *testing.T) {
 
 	assert.Equal(t, "https://acme.us.auth0.com/portals/acme-account", result.Portal.URL)
 	assert.Nil(t, clientNamed(t, tenant, "Acme Account").OIDCLogout)
+}
+
+func TestSetup_TheCustomDomainThePortalIsServedFrom(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		domains     []portals.CustomDomain
+		wantHost    string
+		wantWarning string
+	}{
+		{
+			name:     "a ready primary domain is used when none is the default",
+			domains:  []portals.CustomDomain{{Domain: "bad.acme.com", Status: "failed"}, {Domain: "auth.acme.com", Status: "ready", Primary: true}},
+			wantHost: "auth.acme.com",
+		},
+		{
+			name:     "the only ready domain is used when none is the default or the primary",
+			domains:  []portals.CustomDomain{{Domain: "bad.acme.com", Status: "failed"}, {Domain: "auth.acme.com", Status: "ready"}},
+			wantHost: "auth.acme.com",
+		},
+		{
+			name:        "several ready domains with no default or primary are not guessed",
+			domains:     []portals.CustomDomain{{Domain: "a.acme.com", Status: "ready"}, {Domain: "b.acme.com", Status: "ready"}},
+			wantHost:    tenantDomain,
+			wantWarning: "Several custom domains are ready",
+		},
+		{
+			name:        "a domain that is not ready is not used, and the tenant is told what that costs",
+			domains:     []portals.CustomDomain{{Domain: "bad.acme.com", Status: "pending_verification"}},
+			wantHost:    tenantDomain,
+			wantWarning: "No custom domain is ready",
+		},
+		{
+			name:        "a tenant with no custom domain is told what that costs",
+			wantHost:    tenantDomain,
+			wantWarning: "passkeys",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			tenant := portalstest.New()
+			for _, domain := range test.domains {
+				tenant.AddCustomDomain(domain)
+			}
+
+			deps, reporter, _ := newSetupDeps(tenant)
+			result, err := portals.Setup(context.Background(), consumerOptions(), deps)
+			require.NoError(t, err)
+
+			assert.Equal(t, "https://"+test.wantHost+"/portals/acme-account", result.Portal.URL)
+			assert.Equal(t, []string{"https://" + test.wantHost + "/portals/auth/callback"}, clientNamed(t, tenant, "Acme Account").Callbacks)
+
+			if test.wantWarning == "" {
+				assert.False(t, reporter.Contains("warn", "custom domain"), "nothing to warn about")
+			} else {
+				assert.True(t, reporter.Contains("warn", test.wantWarning), "the warning should say: %s", test.wantWarning)
+			}
+		})
+	}
+}
+
+func TestSetup_TheDefaultCustomDomainWinsOverThePrimary(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	tenant.AddCustomDomain(portals.CustomDomain{Domain: "primary.acme.com", Status: "ready", Primary: true})
+	tenant.SetCustomDomain(&portals.CustomDomain{Domain: "default.acme.com", Status: "ready"})
+
+	result := runSetup(t, tenant, consumerOptions())
+
+	assert.Equal(t, "https://default.acme.com/portals/acme-account", result.Portal.URL)
 }
 
 func TestSetup_TheFormsVaultIsRefreshedWhenItsGrantGainsAScope(t *testing.T) {

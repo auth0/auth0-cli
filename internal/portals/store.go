@@ -60,10 +60,11 @@ type PortalStore interface {
 	UpdatePortal(ctx context.Context, id string, patch PortalPatch) error
 }
 
-// CustomDomainStore reads the custom domain of the tenant.
+// CustomDomainStore reads the custom domains of the tenant.
 type CustomDomainStore interface {
 	// ReadDefaultCustomDomain fails with a 404 when the tenant has none.
 	ReadDefaultCustomDomain(ctx context.Context) (CustomDomain, error)
+	ListCustomDomains(ctx context.Context) ([]CustomDomain, error)
 }
 
 // UserStore reads users.

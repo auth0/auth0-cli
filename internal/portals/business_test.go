@@ -664,6 +664,40 @@ func (conflictingConnectionTenant) EnableOrganizationConnection(context.Context,
 	return &portals.APIError{Status: http.StatusConflict, Message: "The connection is already enabled."}
 }
 
+func TestSetup_ABusinessSetupReadsTheDomainBeforeItCreatesAnything(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	seedDatabase(tenant)
+	seedUser(tenant, "auth0|a", "jane@acme.com")
+	tenant.FailNext("GET custom-domains/default", http.StatusForbidden)
+
+	deps, _, _ := interactiveDeps(tenant, answers{
+		asks:     []string{"Acme Admins", "acme-admins"},
+		chooses:  []string{"None of these"},
+		confirms: []bool{true, true},
+	})
+
+	_, err := portals.Setup(context.Background(), businessOptions("jane@acme.com"), deps)
+
+	require.Error(t, err)
+	assert.True(t, portals.IsStatus(err, http.StatusForbidden), "got %v", err)
+
+	ctx := context.Background()
+
+	organizations, err := tenant.ListOrganizations(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, organizations, "no organization is left behind")
+
+	roles, err := tenant.ListRoles(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, roles, "no role is left behind")
+
+	servers, err := tenant.ListResourceServers(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, servers, "nothing was created")
+}
+
 func TestSetup_TheRoleOfTheTestUser(t *testing.T) {
 	t.Parallel()
 

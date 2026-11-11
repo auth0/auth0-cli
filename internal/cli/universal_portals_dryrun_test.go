@@ -201,6 +201,7 @@ func newDryRunServer(t *testing.T) (*portalsServer, *httptest.Server, apiAccess)
 	}
 
 	server.reply(http.MethodGet, "custom-domains/default", 404, `{"statusCode":404,"message":"Not Found"}`)
+	server.reply(http.MethodGet, "custom-domains", 200, `[]`)
 
 	// The checks of the permissions send writes with an empty body, which the API rejects.
 	for _, path := range []string{"resource-servers", "clients", "client-grants", "flows/vault/connections", "forms/import", "portals"} {

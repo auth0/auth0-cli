@@ -248,17 +248,14 @@ func (s *snapshot) readForms(ctx context.Context, api API) error {
 	return nil
 }
 
+// readCustomDomain reads the custom domain the portal is served from, the same one setup picks.
 func (s *snapshot) readCustomDomain(ctx context.Context, api API) error {
-	domain, err := api.ReadDefaultCustomDomain(ctx)
-	if IsStatus(err, http.StatusNotFound) {
-		return nil
-	}
-
+	choice, err := chooseCustomDomain(ctx, api, s.TenantDomain)
 	if err != nil {
-		return fmt.Errorf("read the custom domain: %w", err)
+		return err
 	}
 
-	s.CustomDomain = &domain
+	s.CustomDomain = choice.custom
 
 	return nil
 }

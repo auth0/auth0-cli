@@ -17,7 +17,22 @@ func (t *portalsTenant) ReadDefaultCustomDomain(ctx context.Context) (portals.Cu
 		return portals.CustomDomain{}, asPortalsError(err)
 	}
 
-	return portals.CustomDomain{Domain: domain.GetDomain(), Status: domain.GetStatus()}, nil
+	return portals.CustomDomain{Domain: domain.GetDomain(), Status: domain.GetStatus(), Primary: domain.GetPrimary()}, nil
+}
+
+// ListCustomDomains implements portals.CustomDomainStore.
+func (t *portalsTenant) ListCustomDomains(ctx context.Context) ([]portals.CustomDomain, error) {
+	list, err := t.api.CustomDomain.List(ctx)
+	if err != nil {
+		return nil, asPortalsError(err)
+	}
+
+	domains := make([]portals.CustomDomain, 0, len(list))
+	for _, domain := range list {
+		domains = append(domains, portals.CustomDomain{Domain: domain.GetDomain(), Status: domain.GetStatus(), Primary: domain.GetPrimary()})
+	}
+
+	return domains, nil
 }
 
 // SearchUsersByEmail implements portals.UserStore.

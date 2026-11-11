@@ -127,10 +127,11 @@ type ImportedForm struct {
 	FlowID string
 }
 
-// CustomDomain is the default custom domain of the tenant.
+// CustomDomain is a custom domain of the tenant.
 type CustomDomain struct {
-	Domain string
-	Status string
+	Domain  string
+	Status  string
+	Primary bool
 }
 
 // IsReady reports whether the portal is served from the domain: it is verified, and it has a name.

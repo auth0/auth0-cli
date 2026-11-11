@@ -3,7 +3,6 @@ package portals
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -194,6 +193,16 @@ func (r *setupRun) execute(ctx context.Context) (SetupResult, error) {
 		return SetupResult{}, err
 	}
 
+	// Everything that can fail on a read comes before the first write, so a refused read leaves nothing behind.
+	host, err := resolvePortalHost(ctx, r.deps.API, r.tenant)
+	if err != nil {
+		return SetupResult{}, err
+	}
+
+	if host.reason != "" {
+		r.report().Warn(host.reason)
+	}
+
 	// The test user, or the organization of the link, is settled before anything is created.
 	var link testLink
 
@@ -201,11 +210,6 @@ func (r *setupRun) execute(ctx context.Context) (SetupResult, error) {
 		if link, err = r.chooseTestLink(ctx); err != nil {
 			return SetupResult{}, err
 		}
-	}
-
-	host, err := resolvePortalHost(ctx, r.deps.API, r.tenant)
-	if err != nil {
-		return SetupResult{}, err
 	}
 
 	if err := r.setUpResourceServers(ctx); err != nil {
@@ -557,25 +561,22 @@ func (r *setupRun) setUpPortal(
 type portalHost struct {
 	domain   string
 	isCustom bool
+	// reason says why the portal is not served from a custom domain, empty when it is.
+	reason string
 }
 
-// resolvePortalHost returns the custom domain of the tenant when it is ready, and the tenant domain
-// otherwise.
+// resolvePortalHost returns the best ready custom domain of the tenant, and the tenant domain otherwise.
 func resolvePortalHost(ctx context.Context, store CustomDomainStore, tenantDomain string) (portalHost, error) {
-	custom, err := store.ReadDefaultCustomDomain(ctx)
-	if IsStatus(err, http.StatusNotFound) {
-		return portalHost{domain: tenantDomain}, nil
-	}
-
+	choice, err := chooseCustomDomain(ctx, store, tenantDomain)
 	if err != nil {
-		return portalHost{}, fmt.Errorf("read the custom domain: %w", err)
+		return portalHost{}, err
 	}
 
-	if custom.IsReady() {
-		return portalHost{domain: custom.Domain, isCustom: true}, nil
+	if choice.custom == nil {
+		return portalHost{domain: tenantDomain, reason: choice.reason}, nil
 	}
 
-	return portalHost{domain: tenantDomain}, nil
+	return portalHost{domain: choice.custom.Domain, isCustom: true}, nil
 }
 
 // organizationPlaceholder stays in the link of a business portal until the person replaces it with
