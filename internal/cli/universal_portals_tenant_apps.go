@@ -356,13 +356,20 @@ func (t *portalsTenant) DeleteClientGrant(ctx context.Context, id string) error 
 
 // ListVaultConnections implements portals.VaultStore.
 func (t *portalsTenant) ListVaultConnections(ctx context.Context) ([]portals.VaultConnection, error) {
-	list, err := t.api.FlowVaultConnection.GetConnectionList(ctx, management.Page(0), management.PerPage(portalsPageSize))
+	connections, err := listPages(ctx, func(opts ...management.RequestOption) ([]*management.FlowVaultConnection, bool, error) {
+		list, err := t.api.FlowVaultConnection.GetConnectionList(ctx, opts...)
+		if err != nil {
+			return nil, false, err
+		}
+
+		return list.Connections, list.HasNext(), nil
+	})
 	if err != nil {
-		return nil, asPortalsError(err)
+		return nil, err
 	}
 
-	listed := make([]portals.VaultConnection, 0, len(list.Connections))
-	for _, connection := range list.Connections {
+	listed := make([]portals.VaultConnection, 0, len(connections))
+	for _, connection := range connections {
 		listed = append(listed, portals.VaultConnection{ID: connection.GetID(), Name: connection.GetName()})
 	}
 

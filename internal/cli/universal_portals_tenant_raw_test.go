@@ -123,24 +123,21 @@ func TestPortalsTenant_Portals(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("a list reads an object and follows the pages", func(t *testing.T) {
+	t.Run("a list is one request without paging, because the endpoint has none", func(t *testing.T) {
 		t.Parallel()
 
 		server, tenant := newPortalsServer(t)
-		server.handle(http.MethodGet, "portals", func(r receivedRequest) (int, string) {
-			if r.Query["page"][0] == "0" {
-				return 200, `{"portals":` + portalsJSON(0, portalsPageSize) + `}`
-			}
-
-			return 200, `{"portals":` + portalsJSON(portalsPageSize, portalsPageSize+1) + `}`
-		})
+		server.reply(http.MethodGet, "portals", 200, `{"portals":`+portalsJSON(0, portalsPageSize+1)+`}`)
 
 		listed, err := tenant.ListPortals(ctx)
 
 		require.NoError(t, err)
-		assert.Len(t, listed, portalsPageSize+1)
+		assert.Len(t, listed, portalsPageSize+1, "more than a page of portals in one answer is all of them")
 		assert.Equal(t, portals.PortalSummary{ID: "up_0", Slug: "portal-0", Name: "Portal 0"}, listed[0])
-		assert.Equal(t, []string{"100"}, server.received(http.MethodGet, "portals")[0].Query["per_page"])
+
+		requests := server.received(http.MethodGet, "portals")
+		require.Len(t, requests, 1)
+		assert.Empty(t, requests[0].Query)
 	})
 
 	t.Run("a list reads an array", func(t *testing.T) {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -67,37 +66,6 @@ func (t *portalsTenant) rawJSONAt(ctx context.Context, method string, segments [
 	}
 
 	return data, nil
-}
-
-// rawList reads every page of a listing that pages with page and per_page. The listing is an array,
-// or an object that holds the array under key.
-func rawList[T any](ctx context.Context, t *portalsTenant, route, key string) ([]T, error) {
-	var all []T
-
-	for page := range portalsMaxPages {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		path := route + "?page=" + strconv.Itoa(page) + "&per_page=" + strconv.Itoa(portalsPageSize)
-
-		data, err := t.rawJSON(ctx, http.MethodGet, path, nil)
-		if err != nil {
-			return nil, err
-		}
-
-		items, err := listItems[T](data, key)
-		if err != nil {
-			return nil, fmt.Errorf("read the listing of %s: %w", route, err)
-		}
-
-		all = append(all, items...)
-		if len(items) < portalsPageSize {
-			return all, nil
-		}
-	}
-
-	return nil, fmt.Errorf("%s returned more than %d items and did not stop paging", route, portalsMaxPages*portalsPageSize)
 }
 
 // listItems reads a listing that is an array, or an object that holds the array under key.
@@ -241,15 +209,21 @@ func firstFlowID(flows json.RawMessage) string {
 	return keyed[first].ID
 }
 
-// ListPortals implements portals.PortalStore.
+// ListPortals implements portals.PortalStore. The endpoint does not page, so it is one request and the
+// answer is every portal.
 func (t *portalsTenant) ListPortals(ctx context.Context) ([]portals.PortalSummary, error) {
-	items, err := rawList[struct {
+	data, err := t.rawJSON(ctx, http.MethodGet, "portals", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := listItems[struct {
 		ID   string `json:"id"`
 		Slug string `json:"slug"`
 		Name string `json:"name"`
-	}](ctx, t, "portals", "portals")
+	}](data, "portals")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read the listing of portals: %w", err)
 	}
 
 	listed := make([]portals.PortalSummary, 0, len(items))

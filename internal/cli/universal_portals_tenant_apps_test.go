@@ -316,6 +316,24 @@ func TestPortalsTenant_Vault(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []portals.VaultConnection{{ID: "ac_1", Name: "Vault"}}, listed)
 	})
+
+	t.Run("a list follows the pages, so a vault past the first one is found", func(t *testing.T) {
+		t.Parallel()
+
+		server, tenant := newPortalsServer(t)
+		server.handle(http.MethodGet, "flows/vault/connections", func(r receivedRequest) (int, string) {
+			if r.Query["page"] != nil && r.Query["page"][0] == "1" {
+				return 200, `{"start":1,"limit":1,"total":2,"connections":[{"id":"ac_2","name":"Universal Portals forms vault"}]}`
+			}
+
+			return 200, `{"start":0,"limit":1,"total":2,"connections":[{"id":"ac_1","name":"Other"}]}`
+		})
+
+		listed, err := tenant.ListVaultConnections(context.Background())
+
+		require.NoError(t, err)
+		assert.Equal(t, []portals.VaultConnection{{ID: "ac_1", Name: "Other"}, {ID: "ac_2", Name: "Universal Portals forms vault"}}, listed)
+	})
 }
 
 func TestPortalsTenant_Connections(t *testing.T) {
