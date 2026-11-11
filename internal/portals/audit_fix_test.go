@@ -193,6 +193,24 @@ func TestFix_Remedies(t *testing.T) {
 		assert.Equal(t, 3600, *token.IdleTokenLifetime)
 	})
 
+	t.Run("P025: giving the refresh token a total lifetime keeps the idle one", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) {
+			client.RefreshToken.InfiniteTokenLifetime = boolPointer(true)
+			client.RefreshToken.TokenLifetime = nil
+		})
+
+		portal.fixOnly(t, "P025")
+
+		token := portal.client(t, portal.clientID).RefreshToken
+		assert.False(t, *token.InfiniteTokenLifetime)
+		assert.Equal(t, 86400, *token.TokenLifetime)
+		assert.Equal(t, 3600, *token.IdleTokenLifetime)
+		assert.False(t, *token.InfiniteIdleTokenLifetime)
+	})
+
 	t.Run("P020: adding the policy of an API keeps the one it has", func(t *testing.T) {
 		t.Parallel()
 

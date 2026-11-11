@@ -51,6 +51,7 @@ type RefreshToken struct {
 	RotationType              string
 	ExpirationType            string
 	TokenLifetime             *int
+	InfiniteTokenLifetime     *bool
 	IdleTokenLifetime         *int
 	InfiniteIdleTokenLifetime *bool
 	Policies                  []RefreshTokenPolicy

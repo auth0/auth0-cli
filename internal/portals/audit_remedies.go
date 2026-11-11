@@ -98,7 +98,8 @@ func createPortalApplication(ctx context.Context, api API, current snapshot, use
 }
 
 // patchRefresh changes the refresh token of the application. The refresh token has to be sent whole,
-// with its rotation type, so the current settings are merged with the change.
+// with its rotation type, so the current settings are merged with the change. A flag that keeps a
+// lifetime infinite is copied as it is, because the finding that owns it changes it.
 func patchRefresh(ctx context.Context, api API, app Client, change func(token *RefreshToken)) error {
 	token := RefreshToken{
 		RotationType:      "non-rotating",
@@ -111,6 +112,13 @@ func patchRefresh(ctx context.Context, api API, app Client, change func(token *R
 		if current.RotationType != "" {
 			token.RotationType = current.RotationType
 		}
+
+		if current.ExpirationType != "" {
+			token.ExpirationType = current.ExpirationType
+		}
+
+		token.InfiniteTokenLifetime = current.InfiniteTokenLifetime
+		token.InfiniteIdleTokenLifetime = current.InfiniteIdleTokenLifetime
 
 		if current.TokenLifetime != nil {
 			token.TokenLifetime = current.TokenLifetime

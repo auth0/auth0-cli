@@ -446,8 +446,10 @@ func (a *portalAudit) refreshToken() {
 		})
 	}
 
-	switch {
-	case refresh != nil && refresh.InfiniteIdleTokenLifetime != nil && *refresh.InfiniteIdleTokenLifetime:
+	infiniteIdle := refresh != nil && refresh.InfiniteIdleTokenLifetime != nil && *refresh.InfiniteIdleTokenLifetime
+	infiniteTotal := refresh != nil && refresh.InfiniteTokenLifetime != nil && *refresh.InfiniteTokenLifetime
+
+	if infiniteIdle {
 		a.add(Finding{
 			ID:       "P014",
 			Severity: SeverityError,
@@ -463,7 +465,29 @@ func (a *portalAudit) refreshToken() {
 				},
 			},
 		})
-	case refresh != nil && (!sameInt(refresh.IdleTokenLifetime, refreshTokenIdleSeconds) || !sameInt(refresh.TokenLifetime, refreshTokenAbsoluteSeconds)):
+	}
+
+	if infiniteTotal {
+		a.add(Finding{
+			ID:       "P025",
+			Severity: SeverityError,
+			Check:    "refresh token lifetime",
+			Message:  "The refresh token never reaches its maximum lifetime, so the portal session can last forever.",
+			Remedy: &Remedy{
+				Summary: fmt.Sprintf("Set the lifetime to %d seconds", refreshTokenAbsoluteSeconds),
+				apply: func(ctx context.Context, api API) error {
+					return patchRefresh(ctx, api, app, func(token *RefreshToken) {
+						token.InfiniteTokenLifetime = boolPointer(false)
+						token.TokenLifetime = intPointer(refreshTokenAbsoluteSeconds)
+					})
+				},
+			},
+		})
+	}
+
+	// A lifetime that never ends has its own finding, and its seconds are ignored.
+	if refresh != nil && !infiniteIdle && !infiniteTotal &&
+		(!sameInt(refresh.IdleTokenLifetime, refreshTokenIdleSeconds) || !sameInt(refresh.TokenLifetime, refreshTokenAbsoluteSeconds)) {
 		a.add(Finding{
 			ID:       "P015",
 			Severity: SeverityWarning,

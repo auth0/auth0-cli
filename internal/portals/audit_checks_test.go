@@ -227,6 +227,13 @@ func TestAudit_Rules(t *testing.T) {
 			wantSeverity: portals.SeverityError, wantFixable: true,
 		},
 		{
+			id: "P025", name: "a refresh token that never expires",
+			breakIt: func(s *portals.AuditSnapshot) {
+				s.Application.RefreshToken.InfiniteTokenLifetime = boolPointer(true)
+			},
+			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
 			id: "P015", name: "refresh token lifetimes that differ from the guide",
 			breakIt:      func(s *portals.AuditSnapshot) { s.Application.RefreshToken.IdleTokenLifetime = intPointer(7200) },
 			wantSeverity: portals.SeverityWarning, wantFixable: true,
@@ -389,6 +396,26 @@ func TestAudit_TheRulesThatAreNotBrokenStayQuiet(t *testing.T) {
 		current.Application.RefreshToken.IdleTokenLifetime = nil
 
 		assert.Equal(t, []string{"P014"}, idsOf(portals.AuditFindings(current)))
+	})
+
+	t.Run("a total lifetime that never ends is P025 and not also P015", func(t *testing.T) {
+		t.Parallel()
+
+		current := healthySnapshot()
+		current.Application.RefreshToken.InfiniteTokenLifetime = boolPointer(true)
+		current.Application.RefreshToken.TokenLifetime = nil
+
+		assert.Equal(t, []string{"P025"}, idsOf(portals.AuditFindings(current)))
+	})
+
+	t.Run("both lifetimes never ending are two findings", func(t *testing.T) {
+		t.Parallel()
+
+		current := healthySnapshot()
+		current.Application.RefreshToken.InfiniteTokenLifetime = boolPointer(true)
+		current.Application.RefreshToken.InfiniteIdleTokenLifetime = boolPointer(true)
+
+		assert.ElementsMatch(t, []string{"P014", "P025"}, idsOf(portals.AuditFindings(current)))
 	})
 
 	t.Run("the home page missing from the sidebar is not reported when the home page does not exist", func(t *testing.T) {

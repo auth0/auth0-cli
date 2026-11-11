@@ -156,6 +156,11 @@ func TestSetup_TheApplicationOfAConsumerPortal(t *testing.T) {
 	assert.Equal(t, "non-rotating", client.RefreshToken.RotationType)
 	assert.Equal(t, 3600, *client.RefreshToken.IdleTokenLifetime)
 	assert.Equal(t, 86400, *client.RefreshToken.TokenLifetime)
+	// The API keeps a lifetime infinite unless it is told otherwise, and then ignores the seconds.
+	require.NotNil(t, client.RefreshToken.InfiniteTokenLifetime)
+	assert.False(t, *client.RefreshToken.InfiniteTokenLifetime)
+	require.NotNil(t, client.RefreshToken.InfiniteIdleTokenLifetime)
+	assert.False(t, *client.RefreshToken.InfiniteIdleTokenLifetime)
 
 	audiences := make([]string, 0)
 	for _, policy := range client.RefreshToken.Policies {

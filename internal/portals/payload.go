@@ -160,6 +160,9 @@ func refreshTokenSettings(template Template, tenantDomain string) *RefreshToken 
 		ExpirationType:    "expiring",
 		TokenLifetime:     intPointer(refreshTokenAbsoluteSeconds),
 		IdleTokenLifetime: intPointer(refreshTokenIdleSeconds),
+		// The API keeps a lifetime infinite and ignores its seconds unless the flag is sent as false.
+		InfiniteTokenLifetime:     boolPointer(false),
+		InfiniteIdleTokenLifetime: boolPointer(false),
 	}
 
 	for _, access := range audiencesFor(template, tenantDomain) {
