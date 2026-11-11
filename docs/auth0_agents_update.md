@@ -25,6 +25,7 @@ auth0 agents update [flags]
   auth0 agents update
   auth0 agents update <agent-id> --name "New Name"
   auth0 agents update <agent-id> --metadata '{"team":"platform"}' --json
+  auth0 agents update <agent-id> --metadata @metadata.json
   auth0 agents update <agent-id> --metadata null
 
   # Discover the payload schema
@@ -41,7 +42,7 @@ auth0 agents update [flags]
       --data string       JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json              Output in json format.
       --json-compact      Output in compact json format.
-  -m, --metadata string   Metadata for the agent as a JSON object (max 10KB), e.g. '{"team":"ai"}'.
+  -m, --metadata string   Metadata for the agent as a JSON object (max 10KB), e.g. '{"team":"ai"}', or a file (@metadata.json). On update, null or {} clears it.
   -n, --name string       Name of the agent (1-255 characters).
       --schema            Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```

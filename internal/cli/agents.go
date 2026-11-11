@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	management1 "github.com/auth0/go-auth0/management"
 	"github.com/auth0/go-auth0/v3/management"
@@ -47,11 +48,10 @@ var (
 	}
 
 	agentMetadata = Flag{
-		Name:         "Metadata",
-		LongForm:     "metadata",
-		ShortForm:    "m",
-		Help:         "Metadata for the agent as a JSON object (max 10KB), e.g. '{\"team\":\"ai\"}'.",
-		AlwaysPrompt: true,
+		Name:      "Metadata",
+		LongForm:  "metadata",
+		ShortForm: "m",
+		Help:      "Metadata for the agent as a JSON object (max 10KB), e.g. '{\"team\":\"ai\"}', or a file (@metadata.json). On update, null or {} clears it.",
 	}
 
 	agentNumber = Flag{
@@ -208,6 +208,7 @@ func createAgentCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 agents create
   auth0 agents create --name "Support Bot"
   auth0 agents create -n "Support Bot" --client-id <client-id> --external-id bot-42 --metadata '{"team":"support"}' --json
+  auth0 agents create -n "Support Bot" --metadata @metadata.json
 
   # Discover the payload schema
   auth0 agents create --schema
@@ -241,8 +242,10 @@ func createAgentCmd(cli *cli) *cobra.Command {
 			if err := agentExternalID.Ask(cmd, &inputs.ExternalID, nil); err != nil {
 				return err
 			}
-			if err := agentMetadata.Ask(cmd, &inputs.Metadata, nil); err != nil {
-				return err
+			if !agentMetadata.IsSet(cmd) && canPrompt(cmd) && prompt.Confirm("Add metadata?") {
+				if err := agentMetadata.OpenEditor(cmd, &inputs.Metadata, "{}", inputs.Name+".*.json", cli.agentMetadataEditorHint); err != nil {
+					return fmt.Errorf("failed to capture input from the editor: %w", err)
+				}
 			}
 
 			var metadata map[string]any
@@ -308,6 +311,7 @@ func updateAgentCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 agents update
   auth0 agents update <agent-id> --name "New Name"
   auth0 agents update <agent-id> --metadata '{"team":"platform"}' --json
+  auth0 agents update <agent-id> --metadata @metadata.json
   auth0 agents update <agent-id> --metadata null
 
   # Discover the payload schema
@@ -354,17 +358,24 @@ func updateAgentCmd(cli *cli) *cobra.Command {
 
 			currentMetadata := ""
 			if len(existing.GetMetadata()) > 0 {
-				b, err := json.Marshal(existing.GetMetadata())
+				b, err := json.MarshalIndent(existing.GetMetadata(), "", "  ")
 				if err != nil {
 					return fmt.Errorf("failed to encode metadata of agent %q: %w", inputs.ID, err)
 				}
 				currentMetadata = string(b)
 			}
+			interactive := canPrompt(cmd) && noLocalFlagSet(cmd)
 			if !agentMetadata.IsSet(cmd) {
 				inputs.Metadata = currentMetadata
-			}
-			if err := agentMetadata.AskU(cmd, &inputs.Metadata, &currentMetadata); err != nil {
-				return err
+				if interactive && prompt.Confirm("Change metadata?") {
+					if err := agentMetadata.OpenEditor(cmd, &inputs.Metadata, currentMetadata, inputs.Name+".*.json", cli.agentMetadataUpdateEditorHint); err != nil {
+						return fmt.Errorf("failed to capture input from the editor: %w", err)
+					}
+					// An empty file keeps the current metadata; null or {} clears it.
+					if strings.TrimSpace(inputs.Metadata) == "" {
+						inputs.Metadata = currentMetadata
+					}
+				}
 			}
 
 			req := &management.PatchAgentRequestParameters{}
@@ -374,7 +385,7 @@ func updateAgentCmd(cli *cli) *cobra.Command {
 				req.Name = &inputs.Name
 				updated = true
 			}
-			if agentMetadata.IsSet(cmd) || inputs.Metadata != currentMetadata {
+			if agentMetadata.IsSet(cmd) || strings.TrimSpace(inputs.Metadata) != strings.TrimSpace(currentMetadata) {
 				metadata, err := parseAgentMetadata(inputs.Metadata)
 				if err != nil {
 					return err
@@ -385,6 +396,10 @@ func updateAgentCmd(cli *cli) *cobra.Command {
 			}
 
 			if !updated {
+				if interactive {
+					cli.renderer.Infof("No changes to apply.")
+					return nil
+				}
 				return usageError{err: errors.New("nothing to update: provide at least one flag or --data"), reason: "missing_required_flags"}
 			}
 
@@ -531,10 +546,22 @@ func (c *cli) agentClientPickerOptions(ctx context.Context) (pickerOptions, erro
 	return append(opts, apps...), nil
 }
 
-// parseAgentMetadata decodes --metadata into a JSON object; the literal null yields a nil map.
+func (c *cli) agentMetadataEditorHint() {
+	c.renderer.Infof("%s Enter the metadata as a JSON object, e.g. {\"team\":\"ai\"}. Once you close the editor, it will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
+}
+
+func (c *cli) agentMetadataUpdateEditorHint() {
+	c.renderer.Infof("%s Edit the metadata as a JSON object. Use null or {} to clear it; an empty file keeps the current value. Once you close the editor, it will be saved. To cancel, press CTRL+C.", ansi.Faint("Hint:"))
+}
+
+// parseAgentMetadata decodes --metadata (inline JSON or @file) into a JSON object; null yields a nil map.
 func parseAgentMetadata(raw string) (map[string]any, error) {
+	data, err := readJSONInput(raw)
+	if err != nil {
+		return nil, validationError{err: fmt.Errorf("failed to read --metadata: %w", err)}
+	}
 	var m map[string]any
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, validationError{err: fmt.Errorf("invalid JSON for --metadata (must be a JSON object, e.g. '{\"team\":\"ai\"}'): %w", err), reason: "malformed_json"}
 	}
 	return m, nil

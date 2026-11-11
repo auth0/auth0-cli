@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"testing"
 
 	management1 "github.com/auth0/go-auth0/management"
@@ -70,7 +72,7 @@ func TestParseAgentMetadata(t *testing.T) {
 			got, err := parseAgentMetadata(tt.raw)
 
 			if tt.wantErr {
-				assert.ErrorContains(t, err, "invalid JSON for --metadata")
+				assert.ErrorContains(t, err, "--metadata")
 				var vErr validationError
 				assert.True(t, errors.As(err, &vErr))
 				return
@@ -576,4 +578,16 @@ func TestAgentClientPickerOptions(t *testing.T) {
 			assert.Equal(t, "None (don't link an application)", opts[0].label)
 		})
 	}
+}
+
+func TestParseAgentMetadataFromFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "metadata.json")
+	assert.NoError(t, os.WriteFile(path, []byte(`{"team":"ai"}`), 0600))
+
+	got, err := parseAgentMetadata("@" + path)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]any{"team": "ai"}, got)
+
+	_, err = parseAgentMetadata("@" + filepath.Join(t.TempDir(), "missing.json"))
+	assert.ErrorContains(t, err, "failed to read --metadata")
 }
