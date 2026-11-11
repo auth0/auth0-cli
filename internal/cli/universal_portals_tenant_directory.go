@@ -81,7 +81,17 @@ func usersFromSDK(users []*management.User) []portals.User {
 }
 
 func userFromSDK(user *management.User) portals.User {
-	return portals.User{ID: user.GetID(), Email: user.GetEmail(), Name: user.GetName()}
+	mapped := portals.User{ID: user.GetID(), Email: user.GetEmail(), Name: user.GetName()}
+
+	// The identities of a database user have the provider auth0. A social identity is not a connection
+	// an organization could enable for them with a password.
+	for _, identity := range user.Identities {
+		if identity.GetProvider() == "auth0" && identity.GetConnection() != "" {
+			mapped.Connections = append(mapped.Connections, identity.GetConnection())
+		}
+	}
+
+	return mapped
 }
 
 // ListUserOrganizations implements portals.UserStore.

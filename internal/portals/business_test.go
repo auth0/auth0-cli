@@ -538,6 +538,54 @@ func TestSetup_CreatingAnOrganization(t *testing.T) {
 		assert.Equal(t, []string{"con_db"}, connections)
 	})
 
+	t.Run("the organization gets the database connection the user signs in with, without asking", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		seedDatabase(tenant)
+		tenant.AddConnection(portals.Connection{ID: "con_other", Name: "Staff"}, "auth0")
+		tenant.AddUser(portals.User{ID: "auth0|a", Email: "jane@acme.com", Name: "jane", Connections: []string{"Staff"}})
+		// The script has no answer for a choice of connection, so asking for one fails the test.
+		deps, _, _ := interactiveDeps(tenant, answers{
+			asks:     []string{"Acme Admins", "acme-admins"},
+			chooses:  []string{"None of these"},
+			confirms: []bool{true, false},
+		})
+
+		_, err := setupBusiness(tenant, businessOptions("jane@acme.com"), deps)
+
+		require.NoError(t, err)
+
+		organizations := tenant.Organizations()
+		require.Len(t, organizations, 1)
+
+		connections, err := tenant.ListOrganizationConnections(context.Background(), organizations[0].ID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"con_other"}, connections)
+	})
+
+	t.Run("a user whose connection is not a database one still gets a choice of database connections", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		seedDatabase(tenant)
+		tenant.AddConnection(portals.Connection{ID: "con_other", Name: "Staff"}, "auth0")
+		tenant.AddUser(portals.User{ID: "auth0|a", Email: "jane@acme.com", Name: "jane", Connections: []string{"google-oauth2"}})
+		deps, _, _ := interactiveDeps(tenant, answers{
+			asks:     []string{"Acme Admins", "acme-admins"},
+			chooses:  []string{"None of these", "Staff"},
+			confirms: []bool{true, false},
+		})
+
+		_, err := setupBusiness(tenant, businessOptions("jane@acme.com"), deps)
+
+		require.NoError(t, err)
+
+		connections, err := tenant.ListOrganizationConnections(context.Background(), tenant.Organizations()[0].ID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"con_other"}, connections)
+	})
+
 	t.Run("declining the confirmation creates nothing", func(t *testing.T) {
 		t.Parallel()
 

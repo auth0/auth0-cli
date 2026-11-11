@@ -87,6 +87,20 @@ func TestPortalsTenant_Users(t *testing.T) {
 		assert.Equal(t, "auth0|abc", user.ID)
 	})
 
+	t.Run("a user comes with the database connections it signs in with", func(t *testing.T) {
+		t.Parallel()
+
+		server, tenant := newPortalsServer(t)
+		server.reply(http.MethodGet, "users/auth0%7Cabc", 200, `{"user_id":"auth0|abc","email":"jane@acme.com","identities":[
+			{"connection":"Staff","provider":"auth0","user_id":"abc","isSocial":false},
+			{"connection":"google-oauth2","provider":"google-oauth2","user_id":"1","isSocial":true}]}`)
+
+		user, err := tenant.ReadUser(context.Background(), "auth0|abc")
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Staff"}, user.Connections, "a social identity is not a database connection")
+	})
+
 	t.Run("a user that does not exist is a 404", func(t *testing.T) {
 		t.Parallel()
 

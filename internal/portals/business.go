@@ -462,7 +462,7 @@ func (r *setupRun) createOrganization(ctx context.Context, user User) (Organizat
 
 // connectOrganization enables a database connection on a new organization and adds the user to it.
 func (r *setupRun) connectOrganization(ctx context.Context, organization Organization, user User, displayName string) error {
-	connectionID, err := r.chooseDatabaseConnection(ctx)
+	connectionID, err := r.chooseDatabaseConnection(ctx, user)
 	if err != nil {
 		return err
 	}
@@ -495,10 +495,20 @@ func (r *setupRun) askOrganizationName(suggestion string) (string, error) {
 	}
 }
 
-func (r *setupRun) chooseDatabaseConnection(ctx context.Context) (string, error) {
+// chooseDatabaseConnection picks the connection to enable on a new organization. It is the one the user
+// signs in with, because a connection they are not in would leave them unable to sign in to the
+// organization. When that is not one connection, the person is asked.
+func (r *setupRun) chooseDatabaseConnection(ctx context.Context, user User) (string, error) {
 	connections, err := r.deps.API.ListDatabaseConnections(ctx)
 	if err != nil {
 		return "", fmt.Errorf("list the database connections: %w", err)
+	}
+
+	own := slices.DeleteFunc(slices.Clone(connections), func(connection Connection) bool {
+		return !slices.Contains(user.Connections, connection.Name)
+	})
+	if len(own) == 1 {
+		return own[0].ID, nil
 	}
 
 	switch len(connections) {

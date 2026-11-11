@@ -148,6 +148,8 @@ type User struct {
 	ID    string
 	Email string
 	Name  string
+	// Connections are the names of the database connections the user signs in with.
+	Connections []string
 }
 
 // Organization is an organization of the tenant.
