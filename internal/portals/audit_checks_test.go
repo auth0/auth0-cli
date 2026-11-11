@@ -68,11 +68,13 @@ func healthySnapshot() portals.AuditSnapshot {
 			},
 		},
 		Application: &portals.Client{ID: "cli_1", ClientSettings: portals.ClientSettings{
-			GrantTypes:        []string{"authorization_code", "refresh_token"},
-			Callbacks:         []string{"https://acme.us.auth0.com/portals/auth/callback"},
-			OrganizationUsage: "allow",
-			IPHeaderTrusted:   boolPointer(true),
-			SessionTransfer:   &portals.SessionTransfer{AllowedAuthenticationMethods: []string{"query"}},
+			AppType:                 "regular_web",
+			TokenEndpointAuthMethod: "client_secret_post",
+			GrantTypes:              []string{"authorization_code", "refresh_token"},
+			Callbacks:               []string{"https://acme.us.auth0.com/portals/auth/callback"},
+			OrganizationUsage:       "allow",
+			IPHeaderTrusted:         boolPointer(true),
+			SessionTransfer:         &portals.SessionTransfer{AllowedAuthenticationMethods: []string{"query"}},
 			RefreshToken: &portals.RefreshToken{
 				RotationType:              "non-rotating",
 				IdleTokenLifetime:         intPointer(3600),
@@ -226,6 +228,26 @@ func TestAudit_Rules(t *testing.T) {
 				s.Application.RefreshToken.InfiniteIdleTokenLifetime = boolPointer(true)
 			},
 			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
+			id: "P027", name: "an application without the refresh_token grant",
+			breakIt:      func(s *portals.AuditSnapshot) { s.Application.GrantTypes = []string{"authorization_code"} },
+			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
+			id: "P027", name: "an application without the authorization_code grant",
+			breakIt:      func(s *portals.AuditSnapshot) { s.Application.GrantTypes = []string{"refresh_token"} },
+			wantSeverity: portals.SeverityError, wantFixable: true,
+		},
+		{
+			id: "P028", name: "an application that is not a regular web application",
+			breakIt:      func(s *portals.AuditSnapshot) { s.Application.AppType = "spa" },
+			wantSeverity: portals.SeverityError,
+		},
+		{
+			id: "P028", name: "an application that does not send its secret in the body",
+			breakIt:      func(s *portals.AuditSnapshot) { s.Application.TokenEndpointAuthMethod = "client_secret_basic" },
+			wantSeverity: portals.SeverityError,
 		},
 		{
 			id: "P025", name: "a refresh token that never expires",

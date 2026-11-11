@@ -339,6 +339,40 @@ func (a *portalAudit) application() bool {
 		})
 	}
 
+	// The portal signs users in with the authorization code flow and keeps them signed in with refresh tokens.
+	if missing := missingFrom([]string{"authorization_code", "refresh_token"}, app.GrantTypes); len(missing) > 0 {
+		grantTypes := append(slices.Clone(app.GrantTypes), missing...)
+
+		a.add(Finding{
+			ID:       "P027",
+			Severity: SeverityError,
+			Check:    "grant types",
+			Message:  fmt.Sprintf("The portal application lacks the grant types %s, so users cannot sign in or stay signed in.", strings.Join(missing, ", ")),
+			Remedy: &Remedy{
+				Summary: "Turn on " + strings.Join(missing, ", "),
+				apply: func(ctx context.Context, api API) error {
+					return updateApplication(ctx, api, clientID, ClientSettings{GrantTypes: grantTypes})
+				},
+			},
+		})
+	}
+
+	if (app.AppType != "" && app.AppType != portalAppType) || (app.TokenEndpointAuthMethod != "" && app.TokenEndpointAuthMethod != portalTokenAuthMethod) {
+		a.add(Finding{
+			ID:       "P028",
+			Severity: SeverityError,
+			Check:    "application type",
+			Message: fmt.Sprintf(
+				"The portal is a confidential client that sends its secret in the body: the application should be %s with %s, and it is %q with %q.",
+				portalAppType, portalTokenAuthMethod, app.AppType, app.TokenEndpointAuthMethod,
+			),
+			Remedy: &Remedy{
+				Summary: "Change the type of the application",
+				Command: fmt.Sprintf(`auth0 api patch "clients/%s" --data '{"app_type":"%s","token_endpoint_auth_method":"%s"}'`, clientID, portalAppType, portalTokenAuthMethod),
+			},
+		})
+	}
+
 	if app.RequireProofOfPossession != nil && *app.RequireProofOfPossession {
 		a.add(Finding{
 			ID:       "P023",
@@ -650,7 +684,7 @@ func (a *portalAudit) apisTheComponentsCall() {
 					},
 				},
 			})
-		} else if grant, missing := a.current.Grants[grantIndex], missingScopes(api.scope, a.current.Grants[grantIndex].Scope); len(missing) > 0 {
+		} else if grant, missing := a.current.Grants[grantIndex], missingFrom(api.scope, a.current.Grants[grantIndex].Scope); len(missing) > 0 {
 			remedy := &Remedy{Summary: "Add the missing scopes to the grant of the " + api.name}
 
 			// A grant without an ID cannot be updated, so the person has to do it.
@@ -701,7 +735,7 @@ func (a *portalAudit) apisTheComponentsCall() {
 					},
 				},
 			})
-		} else if missing := missingScopes(api.scope, app.RefreshToken.Policies[policyIndex].Scope); len(missing) > 0 {
+		} else if missing := missingFrom(api.scope, app.RefreshToken.Policies[policyIndex].Scope); len(missing) > 0 {
 			a.add(Finding{
 				ID:       "P020",
 				Subject:  api.audience,
@@ -728,9 +762,9 @@ func (a *portalAudit) apisTheComponentsCall() {
 	}
 }
 
-// missingScopes returns the needed scopes that are not among the ones there are.
-func missingScopes(needed, have []string) []string {
-	return slices.DeleteFunc(slices.Clone(needed), func(scope string) bool { return slices.Contains(have, scope) })
+// missingFrom returns the needed items, such as scopes or grant types, that are not among the ones there are.
+func missingFrom(needed, have []string) []string {
+	return slices.DeleteFunc(slices.Clone(needed), func(item string) bool { return slices.Contains(have, item) })
 }
 
 func (a *portalAudit) connectionsAndSessionTransfer() {

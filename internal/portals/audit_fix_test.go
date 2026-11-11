@@ -192,6 +192,17 @@ func TestFix_Remedies(t *testing.T) {
 		assert.Contains(t, grants, "refresh_token")
 	})
 
+	t.Run("P027: the missing grant is added and the others are kept", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) { client.GrantTypes = []string{"refresh_token", "implicit"} })
+
+		portal.fixOnly(t, "P027")
+
+		assert.ElementsMatch(t, []string{"refresh_token", "implicit", "authorization_code"}, portal.client(t, portal.clientID).GrantTypes)
+	})
+
 	t.Run("P023: turning DPoP off on the application", func(t *testing.T) {
 		t.Parallel()
 

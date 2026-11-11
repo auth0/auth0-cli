@@ -118,6 +118,12 @@ type portalApplication struct {
 	isCustomDomain bool
 }
 
+// The type of the application of a portal, and how it proves who it is at the token endpoint.
+const (
+	portalAppType         = "regular_web"
+	portalTokenAuthMethod = "client_secret_post"
+)
+
 func boolPointer(value bool) *bool { return &value }
 
 func intPointer(value int) *int { return &value }
@@ -126,10 +132,10 @@ func intPointer(value int) *int { return &value }
 func portalClientSettings(app portalApplication) ClientSettings {
 	settings := ClientSettings{
 		Name:                    app.name,
-		AppType:                 "regular_web",
+		AppType:                 portalAppType,
 		IsFirstParty:            boolPointer(true),
 		OIDCConformant:          boolPointer(true),
-		TokenEndpointAuthMethod: "client_secret_post",
+		TokenEndpointAuthMethod: portalTokenAuthMethod,
 		IPHeaderTrusted:         boolPointer(true),
 		Callbacks:               []string{"https://" + app.host + "/portals/auth/callback"},
 		// Users land on the host of the portal after they log out.
