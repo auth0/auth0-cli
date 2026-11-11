@@ -307,6 +307,44 @@ func TestSetup_ATakenSlug(t *testing.T) {
 	})
 }
 
+func TestSetup_AFailureSaysWhatWasCreatedBeforeIt(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	tenant.FailNext("POST portals", http.StatusInternalServerError)
+	deps, _, _ := newSetupDeps(tenant)
+
+	_, err := portals.Setup(context.Background(), consumerOptions(), deps)
+
+	require.Error(t, err)
+	assert.True(t, portals.IsStatus(err, http.StatusInternalServerError), "the cause is still there: %v", err)
+
+	var kinds []string
+	for _, resource := range portals.ResourcesOf(err) {
+		kinds = append(kinds, resource.Type)
+		assert.NotEmpty(t, resource.ID)
+		assert.Equal(t, portals.StatusCreated, resource.Status)
+	}
+
+	assert.Equal(t, []string{
+		"resource_server", "application", "client_grant",
+		"forms_vault_client", "forms_vault_grant", "forms_vault", "form", "form", "form",
+	}, kinds, "everything but the portal was made")
+}
+
+func TestSetup_AFailureBeforeAnyWriteHasNoResources(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	tenant.Deny("POST portals", "Insufficient scope, expected any of: create:portals")
+	deps, _, _ := newSetupDeps(tenant)
+
+	_, err := portals.Setup(context.Background(), consumerOptions(), deps)
+
+	require.Error(t, err)
+	assert.Empty(t, portals.ResourcesOf(err))
+}
+
 func TestSetup_ARefusedPermissionStopsBeforeAnythingIsCreated(t *testing.T) {
 	t.Parallel()
 

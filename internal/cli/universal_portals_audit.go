@@ -147,7 +147,20 @@ func auditFailure(outcome portals.AuditOutcome, strict bool) error {
 	}
 
 	if outcome.FixesFailed > 0 {
-		reasons = append(reasons, fmt.Sprintf("%d fix(es) failed", outcome.FixesFailed))
+		var failed []string
+
+		for _, fix := range outcome.Result.Fixes {
+			if fix.Status == "failed" {
+				failed = append(failed, fix.ID)
+			}
+		}
+
+		reason := fmt.Sprintf("%d fix(es) failed", outcome.FixesFailed)
+		if len(failed) > 0 {
+			reason += " (" + strings.Join(failed, ", ") + ")"
+		}
+
+		reasons = append(reasons, reason)
 	}
 
 	return fmt.Errorf("the audit failed: %s", strings.Join(reasons, ", "))

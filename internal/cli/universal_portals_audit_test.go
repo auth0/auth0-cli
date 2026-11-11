@@ -114,6 +114,8 @@ func TestAuditCommand_APortalThatFails(t *testing.T) {
 		var printed portals.AuditResult
 		require.NoError(t, json.Unmarshal(run.results.Bytes(), &printed))
 		assert.Empty(t, printed.Findings)
+		require.Len(t, printed.Fixes, 1)
+		assert.Equal(t, portals.FixRecord{ID: "P013", Check: "refresh token rotation", Status: "applied"}, printed.Fixes[0])
 
 		client, err := run.tenant.ReadClient(context.Background(), run.clientID)
 		require.NoError(t, err)
@@ -130,7 +132,13 @@ func TestAuditCommand_APortalThatFails(t *testing.T) {
 		err := run.audit(universalPortalsAuditInputs{Fix: true})
 
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "1 error(s), 1 fix(es) failed")
+		assert.Contains(t, err.Error(), "1 error(s), 1 fix(es) failed (P013)")
+
+		var printed portals.AuditResult
+		require.NoError(t, json.Unmarshal(run.results.Bytes(), &printed))
+		require.Len(t, printed.Fixes, 1)
+		assert.Equal(t, "failed", printed.Fixes[0].Status)
+		assert.Equal(t, "P013", printed.Fixes[0].ID)
 	})
 }
 
@@ -245,7 +253,15 @@ func TestAuditFailure(t *testing.T) {
 			want:    "the audit failed: 2 error(s)",
 		},
 		{
-			name:    "errors and a fix that failed",
+			name: "errors and a fix that failed, named by its rule",
+			outcome: portals.AuditOutcome{
+				Result:      portals.AuditResult{Errors: 1, Fixes: []portals.FixRecord{{ID: "P003", Status: "applied"}, {ID: "P013", Status: "failed"}}},
+				FixesFailed: 1,
+			},
+			want: "the audit failed: 1 error(s), 1 fix(es) failed (P013)",
+		},
+		{
+			name:    "a fix that failed with no record of it",
 			outcome: portals.AuditOutcome{Result: portals.AuditResult{Errors: 1}, FixesFailed: 1},
 			want:    "the audit failed: 1 error(s), 1 fix(es) failed",
 		},

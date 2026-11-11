@@ -109,7 +109,12 @@ func Setup(ctx context.Context, options SetupOptions, deps SetupDeps) (SetupResu
 
 	run := &setupRun{options: options, deps: deps, tenant: deps.TenantDomain}
 
-	return run.execute(ctx)
+	result, err := run.execute(ctx)
+	if err != nil && len(run.resources) > 0 {
+		err = &IncompleteSetupError{Err: err, Resources: run.resources}
+	}
+
+	return result, err
 }
 
 // checkOptions tells what is wrong in the options before anything is sent, even the check of the

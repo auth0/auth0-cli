@@ -17,6 +17,8 @@ const portalsResumeHint = "Run the same command again to resume. Existing resour
 type portalsFixError struct {
 	err   error
 	fixes []string
+	// resources are what a setup made before it failed.
+	resources []portals.Resource
 }
 
 func (e portalsFixError) Error() string { return e.err.Error() }
@@ -25,8 +27,9 @@ func (e portalsFixError) Unwrap() error { return e.err }
 
 func (e portalsFixError) ErrorDetails() json.RawMessage {
 	raw, err := json.Marshal(struct {
-		Fixes []string `json:"fixes"`
-	}{Fixes: e.fixes})
+		Fixes     []string           `json:"fixes,omitempty"`
+		Resources []portals.Resource `json:"resources,omitempty"`
+	}{Fixes: e.fixes, Resources: e.resources})
 	if err != nil {
 		return nil
 	}
@@ -55,13 +58,20 @@ func portalsCommandError(err error, tenant string, wrote bool) error {
 		fixes = append(fixes, portalsResumeHint)
 	}
 
-	if len(fixes) == 0 {
+	// A dry run records what it would make, and made nothing, so only a real write has resources to show.
+	var resources []portals.Resource
+	if wrote {
+		resources = portals.ResourcesOf(err)
+	}
+
+	if len(fixes) == 0 && len(resources) == 0 {
 		return classified
 	}
 
 	return portalsFixError{
-		err:   apiResponseHintError{err: classified, hint: strings.Join(fixes, "\n")},
-		fixes: fixes,
+		err:       apiResponseHintError{err: classified, hint: strings.Join(fixes, "\n")},
+		fixes:     fixes,
+		resources: resources,
 	}
 }
 

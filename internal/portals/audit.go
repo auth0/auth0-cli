@@ -35,6 +35,25 @@ type AuditResult struct {
 	Failed   bool      `json:"failed"`
 	// Unchecked is what the session was not allowed to read. It does not fail the audit.
 	Unchecked []UncheckedCheck `json:"unchecked,omitempty"`
+	// Fixes is what each fix did, when the audit fixed anything.
+	Fixes []FixRecord `json:"fixes,omitempty"`
+}
+
+// Fix statuses.
+const (
+	fixApplied      = "applied"
+	fixFailed       = "failed"
+	fixAlreadyFixed = "already_fixed"
+)
+
+// FixRecord is what the audit did about a finding.
+type FixRecord struct {
+	ID      string `json:"id"`
+	Subject string `json:"subject,omitempty"`
+	Check   string `json:"check"`
+	// Status is applied, failed or already_fixed, when the finding was gone by the time its fix ran.
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
 }
 
 // UncheckedCheck is something the audit could not read, so the rules that need it did not run.
@@ -133,6 +152,8 @@ func (r *auditRun) fix(
 	if err != nil {
 		return AuditOutcome{}, err
 	}
+
+	report.Fixes = applied.records
 
 	return AuditOutcome{Result: report, FixesFailed: outcome.FixesFailed + applied.failed}, nil
 }

@@ -170,6 +170,26 @@ func FixesOf(err error) []string {
 	return nil
 }
 
+// IncompleteSetupError is a setup that stopped after it made some resources. The resources stay in the
+// tenant, and a rerun reuses them.
+type IncompleteSetupError struct {
+	Err       error
+	Resources []Resource
+}
+
+func (e *IncompleteSetupError) Error() string { return e.Err.Error() }
+
+func (e *IncompleteSetupError) Unwrap() error { return e.Err }
+
+// ResourcesOf returns the resources a setup that failed had made by then.
+func ResourcesOf(err error) []Resource {
+	if incomplete, ok := errors.AsType[*IncompleteSetupError](err); ok {
+		return incomplete.Resources
+	}
+
+	return nil
+}
+
 // UsageError is a command that cannot run as asked, for example a slug the API would refuse.
 type UsageError struct {
 	Message string

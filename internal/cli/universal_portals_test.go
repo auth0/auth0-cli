@@ -349,6 +349,25 @@ func TestSetupCommand_AFailureAfterAWriteSaysHowToResume(t *testing.T) {
 		assert.Equal(t, []string{"Run the same command again to resume. Existing resources are reused."}, details.Fixes)
 	})
 
+	t.Run("the error lists what was created before it", func(t *testing.T) {
+		t.Parallel()
+
+		run := newSetupRun(true)
+		run.tenant.FailNext("POST forms/import", http.StatusInternalServerError)
+
+		err := run.run(consumerInputs)
+
+		require.Error(t, err)
+
+		var details struct {
+			Resources []portals.Resource `json:"resources"`
+		}
+		require.NoError(t, json.Unmarshal(buildErrorEnvelope(err).Error.Details, &details))
+		require.NotEmpty(t, details.Resources)
+		assert.Equal(t, "resource_server", details.Resources[0].Type)
+		assert.Equal(t, portals.StatusCreated, details.Resources[0].Status)
+	})
+
 	t.Run("a failure before any write has nothing to resume", func(t *testing.T) {
 		t.Parallel()
 
@@ -371,7 +390,14 @@ func TestSetupCommand_AFailureAfterAWriteSaysHowToResume(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Equal(t, "slug_race", errorReason(err))
-		assert.Nil(t, buildErrorEnvelope(err).Error.Details)
+
+		var details struct {
+			Fixes     []string           `json:"fixes"`
+			Resources []portals.Resource `json:"resources"`
+		}
+		require.NoError(t, json.Unmarshal(buildErrorEnvelope(err).Error.Details, &details))
+		assert.Empty(t, details.Fixes, "a rerun with the same name would fail the same way")
+		assert.NotEmpty(t, details.Resources, "what was made before the slug was taken")
 	})
 }
 

@@ -698,6 +698,30 @@ func TestAudit_Fixing(t *testing.T) {
 		assert.Equal(t, 1, outcome.FixesFailed)
 		assert.True(t, outcome.Failed())
 	})
+
+	t.Run("the result says which fix was applied and which failed", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.withLegacyProfileLink()
+		portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) { client.RequireProofOfPossession = boolPointer(true) })
+		portal.tenant.FailNext("PATCH portals/"+portal.portalID, http.StatusInternalServerError)
+
+		outcome, _ := portal.audit(t, portals.AuditOptions{Fix: true})
+
+		require.Len(t, outcome.Result.Fixes, 2)
+		assert.Equal(t, portals.FixRecord{ID: "P003", Check: "navigation shape", Status: "failed", Error: outcome.Result.Fixes[0].Error}, outcome.Result.Fixes[0])
+		assert.Contains(t, outcome.Result.Fixes[0].Error, "convert the sidebar of portal")
+		assert.Equal(t, portals.FixRecord{ID: "P023", Check: "DPoP", Status: "applied"}, outcome.Result.Fixes[1])
+	})
+
+	t.Run("a result without fixes has no fixes field in its JSON", func(t *testing.T) {
+		t.Parallel()
+
+		outcome, _ := newAuditedPortal(t).audit(t, portals.AuditOptions{Fix: true})
+
+		assert.NotContains(t, mustJSON(t, outcome.Result), "fixes")
+	})
 }
 
 // fixMenu answers the fix menu by position (0 fix all, 1 choose, 2 skip), and keeps the checked

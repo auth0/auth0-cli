@@ -30,6 +30,8 @@ type fixResult struct {
 	alreadyFixed int
 	// The scopes the failed fixes needed, so the fix for them is shown once at the end.
 	missingScopes []string
+	// records say what each fix did, in the order they ran.
+	records []FixRecord
 }
 
 // fixableFindings returns the findings the CLI fixes. Only errors are fixed: warnings may be
@@ -53,6 +55,7 @@ func applyFixes(ctx context.Context, selected []Finding, deps fixDeps) (fixResul
 		fresh, found := findFinding(auditPortal(current), finding)
 		if !found || !fresh.canFix() {
 			result.alreadyFixed++
+			result.records = append(result.records, FixRecord{ID: finding.ID, Subject: finding.Subject, Check: finding.Check, Status: fixAlreadyFixed})
 
 			deps.reporter.Item(fmt.Sprintf("%s %s", finding.ID, finding.Check), "already fixed")
 
@@ -70,6 +73,7 @@ func applyFixes(ctx context.Context, selected []Finding, deps fixDeps) (fixResul
 			}
 
 			result.failed++
+			result.records = append(result.records, FixRecord{ID: fresh.ID, Subject: fresh.Subject, Check: fresh.Check, Status: fixFailed, Error: err.Error()})
 
 			deps.reporter.Error(fmt.Sprintf("%s: %s", label, err))
 
@@ -81,6 +85,7 @@ func applyFixes(ctx context.Context, selected []Finding, deps fixDeps) (fixResul
 		}
 
 		result.applied++
+		result.records = append(result.records, FixRecord{ID: fresh.ID, Subject: fresh.Subject, Check: fresh.Check, Status: fixApplied})
 
 		deps.reporter.Fixed(label, fresh.Remedy.Summary)
 	}
@@ -119,6 +124,7 @@ func applyFixRounds(
 		total.applied += result.applied
 		total.failed += result.failed
 		total.alreadyFixed += result.alreadyFixed
+		total.records = append(total.records, result.records...)
 		total.missingScopes = append(total.missingScopes, result.missingScopes...)
 
 		if err != nil {
