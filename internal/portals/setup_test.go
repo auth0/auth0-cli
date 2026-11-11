@@ -552,7 +552,7 @@ func TestSetup_TheFormsVaultIsRefreshedWhenItsApplicationIsRecreated(t *testing.
 	runSetup(t, tenant, consumerOptions())
 
 	oldApp := clientNamed(t, tenant, portals.FormsVaultName())
-	tenant.RemoveClient(oldApp.ID)
+	tenant.DeleteClient(oldApp.ID)
 
 	deps, reporter, _ := newSetupDeps(tenant)
 

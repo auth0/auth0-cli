@@ -234,6 +234,120 @@ func TestAudit_WhatItReports(t *testing.T) {
 	})
 }
 
+func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		scope string
+		check string
+		// breakIt makes the portal wrong in the way the skipped rule would report, and returns the
+		// requests the session is refused.
+		breakIt func(t *testing.T, portal auditedPortal) []string
+		skipped string
+	}{
+		{
+			name: "the custom domain", scope: "read:custom_domains", check: "custom domain", skipped: "P012",
+			breakIt: func(_ *testing.T, portal auditedPortal) []string {
+				portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) { client.Callbacks = nil })
+
+				return []string{"GET custom-domains/default"}
+			},
+		},
+		{
+			name: "the resource servers", scope: "read:resource_servers", check: "resource servers", skipped: "P018",
+			breakIt: func(_ *testing.T, portal auditedPortal) []string {
+				for _, server := range portal.tenant.ResourceServers() {
+					portal.tenant.DeleteResourceServer(server.ID)
+				}
+
+				return []string{"GET resource-servers"}
+			},
+		},
+		{
+			name: "the grants of the application", scope: "read:client_grants", check: "client grants", skipped: "P011",
+			breakIt: func(_ *testing.T, portal auditedPortal) []string {
+				portal.tenant.AddGrant(portals.ClientGrant{ID: "cgr_mgmt", ClientID: portal.clientID, Audience: "https://acme.us.auth0.com/api/v2/"})
+
+				return []string{"GET client-grants"}
+			},
+		},
+		{
+			name: "the forms", scope: "read:forms", check: "forms", skipped: "P007",
+			breakIt: func(_ *testing.T, portal auditedPortal) []string {
+				var refused []string
+
+				for _, form := range portal.tenant.Forms() {
+					portal.tenant.DeleteForm(form.ID)
+
+					refused = append(refused, "GET forms/"+form.ID)
+				}
+
+				return refused
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name+" is reported as not checked, and the rest of the audit runs", func(t *testing.T) {
+			t.Parallel()
+
+			portal := newAuditedPortal(t)
+			for _, request := range test.breakIt(t, portal) {
+				portal.tenant.Deny(request, "Insufficient scope, expected any of: "+test.scope)
+			}
+
+			// A finding the rules that were skipped would have made, and one they do not touch.
+			portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) { client.RequireProofOfPossession = boolPointer(true) })
+
+			outcome, reporter := portal.audit(t, portals.AuditOptions{Strict: true})
+
+			ids := idsOf(outcome.Result.Findings)
+			assert.NotContains(t, ids, test.skipped, "a rule that needs what it could not read does not run")
+			assert.Contains(t, ids, "P023", "the rules that do not need it still run")
+
+			require.Len(t, outcome.Result.Unchecked, 1)
+			assert.Equal(t, test.check, outcome.Result.Unchecked[0].Check)
+			assert.Contains(t, outcome.Result.Unchecked[0].Rules, test.skipped)
+			assert.Contains(t, outcome.Result.Unchecked[0].Reason, test.scope)
+			assert.True(t, reporter.Contains("warn", "Not checked"))
+		})
+	}
+
+	t.Run("a read that is not refused for a scope still stops the audit", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.FailNext("GET custom-domains/default", http.StatusInternalServerError)
+
+		_, err := portals.Audit(context.Background(), portals.AuditOptions{PortalID: portal.portalID}, portals.AuditDeps{
+			API: portal.tenant, Reporter: &portalstest.Reporter{}, Prompter: &portalstest.Prompter{}, TenantDomain: tenantDomain,
+		})
+
+		require.Error(t, err)
+	})
+
+	t.Run("what could not be read does not fail the audit, even a strict one", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.Deny("GET custom-domains/default", "Insufficient scope, expected any of: read:custom_domains")
+
+		outcome, _ := portal.audit(t, portals.AuditOptions{Strict: true})
+
+		assert.False(t, outcome.Failed())
+		assert.Len(t, outcome.Result.Unchecked, 1)
+	})
+
+	t.Run("a portal with nothing unread has no unchecked field in its JSON", func(t *testing.T) {
+		t.Parallel()
+
+		outcome, _ := newAuditedPortal(t).audit(t, portals.AuditOptions{})
+
+		assert.NotContains(t, mustJSON(t, outcome.Result), "unchecked")
+	})
+}
+
 func TestAudit_WhatItShows(t *testing.T) {
 	t.Parallel()
 

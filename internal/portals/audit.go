@@ -3,6 +3,7 @@ package portals
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 // AuditOptions are the choices that shape an audit.
@@ -32,6 +33,15 @@ type AuditResult struct {
 	Errors   int       `json:"errors"`
 	Warnings int       `json:"warnings"`
 	Failed   bool      `json:"failed"`
+	// Unchecked is what the session was not allowed to read. It does not fail the audit.
+	Unchecked []UncheckedCheck `json:"unchecked,omitempty"`
+}
+
+// UncheckedCheck is something the audit could not read, so the rules that need it did not run.
+type UncheckedCheck struct {
+	Check  string   `json:"check"`
+	Rules  []string `json:"rules"`
+	Reason string   `json:"reason"`
 }
 
 // AuditOutcome is an audit and the fixes made after it.
@@ -159,6 +169,10 @@ func (r *auditRun) audit(ctx context.Context) (AuditResult, error) {
 		r.showFindings(findings)
 	}
 
+	for _, unchecked := range current.Unchecked {
+		reporter.Warn(fmt.Sprintf("Not checked: %s (%s). Skipped %s.", unchecked.Check, unchecked.Reason, strings.Join(unchecked.Rules, ", ")))
+	}
+
 	reporter.Newline()
 
 	summary := fmt.Sprintf("%d error%s, %d warning%s", errors, plural(errors), warnings, plural(warnings))
@@ -178,6 +192,8 @@ func (r *auditRun) audit(ctx context.Context) (AuditResult, error) {
 		Errors:   errors,
 		Warnings: warnings,
 		Failed:   errors > 0 || (r.options.Strict && warnings > 0),
+
+		Unchecked: current.Unchecked,
 	}, nil
 }
 

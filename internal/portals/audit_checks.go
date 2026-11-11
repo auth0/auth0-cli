@@ -277,7 +277,7 @@ func (a *portalAudit) formsAndCustomCode() {
 	}
 
 	customCode := a.current.Portal.CustomCode
-	if customCode != nil && customCode.Head != "" && (a.current.CustomDomain == nil || !a.current.CustomDomain.IsReady()) {
+	if customCode != nil && customCode.Head != "" && a.current.wasChecked("custom domain") && (a.current.CustomDomain == nil || !a.current.CustomDomain.IsReady()) {
 		a.add(Finding{
 			ID:       "P008",
 			Severity: SeverityWarning,
@@ -366,7 +366,7 @@ func (a *portalAudit) application() bool {
 	a.managementGrants(clientID)
 
 	callback := fmt.Sprintf("https://%s/portals/auth/callback", a.current.host())
-	if !slices.Contains(app.Callbacks, callback) {
+	if a.current.wasChecked("custom domain") && !slices.Contains(app.Callbacks, callback) {
 		callbacks := append(slices.Clone(app.Callbacks), callback)
 
 		a.add(Finding{
@@ -397,6 +397,10 @@ func updateApplication(ctx context.Context, api API, clientID string, settings C
 // managementGrants reports the Management API grants of the application in one finding, since one fix
 // removes them all.
 func (a *portalAudit) managementGrants(clientID string) {
+	if !a.current.wasChecked("client grants") {
+		return
+	}
+
 	var ids []string
 
 	count := 0
@@ -594,7 +598,7 @@ func (a *portalAudit) apisTheComponentsCall() {
 
 		components := strings.Join(usedBy, ", ")
 
-		if !slices.Contains(a.current.ResourceServers, api.audience) {
+		if a.current.wasChecked("resource servers") && !slices.Contains(a.current.ResourceServers, api.audience) {
 			a.add(Finding{
 				ID:       "P018",
 				Subject:  api.audience,
@@ -625,7 +629,9 @@ func (a *portalAudit) apisTheComponentsCall() {
 
 		grantIndex := slices.IndexFunc(a.current.Grants, func(grant ClientGrant) bool { return grant.Audience == api.audience && grant.forUsers() })
 
-		if grantIndex < 0 {
+		if !a.current.wasChecked("client grants") {
+			// The grant was not read, so there is nothing to say about it.
+		} else if grantIndex < 0 {
 			a.add(Finding{
 				ID:       "P019",
 				Subject:  api.audience,

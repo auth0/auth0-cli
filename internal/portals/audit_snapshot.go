@@ -25,6 +25,39 @@ type snapshot struct {
 	ApplicationConnections []Connection
 	CustomDomain           *CustomDomain
 	Organization           *snapshotOrganization
+	// Unchecked are the reads the session was not allowed to make. The rules that need them do not run.
+	Unchecked []UncheckedCheck
+}
+
+// skip records a read the session was refused for a scope, so the audit goes on without it.
+func (s *snapshot) skip(check string, rules []string, err error) {
+	reason := "the session may not read it"
+	if gap, isGap := ParseScopeGap("", err); isGap {
+		reason = "needs " + strings.Join(gap.Required(), ", ")
+	}
+
+	s.Unchecked = append(s.Unchecked, UncheckedCheck{Check: check, Rules: rules, Reason: reason})
+}
+
+// wasChecked reports whether a read was made, so the rules that need it can run.
+func (s snapshot) wasChecked(check string) bool {
+	return !slices.ContainsFunc(s.Unchecked, func(unchecked UncheckedCheck) bool { return unchecked.Check == check })
+}
+
+// refused reports whether every failure in the error is a refusal for a missing scope. One that is
+// not, such as a server error, still stops the audit.
+func refused(err error) bool {
+	if joined, isJoined := err.(interface{ Unwrap() []error }); isJoined {
+		for _, inner := range joined.Unwrap() {
+			if !refused(inner) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	return IsStatus(err, http.StatusForbidden)
 }
 
 // formStatus is a form a portal uses.
@@ -143,22 +176,44 @@ func readSnapshot(ctx context.Context, api API, portalID, tenantDomain, organiza
 
 	result := snapshot{TenantDomain: tenantDomain, Portal: portal}
 
-	reads := []func() error{
-		func() error { return result.readApplication(ctx, api) },
-		func() error { return result.readResourceServers(ctx, api) },
-		func() error { return result.readForms(ctx, api) },
-		func() error { return result.readCustomDomain(ctx, api) },
+	// A read of something the audit only compares the portal with is skipped when the session may not make
+	// it. The portal and its application are what the audit is about, so those stop it.
+	reads := []struct {
+		check string
+		rules []string
+		run   func() error
+	}{
+		{run: func() error { return result.readApplication(ctx, api) }},
+		{check: "resource servers", rules: []string{"P018"}, run: func() error { return result.readResourceServers(ctx, api) }},
+		{check: "forms", rules: []string{"P007"}, run: func() error { return result.readForms(ctx, api) }},
+		{check: "custom domain", rules: []string{"P008", "P012"}, run: func() error { return result.readCustomDomain(ctx, api) }},
 	}
 
 	if organizationID != "" {
-		reads = append(reads, func() error { return result.readOrganization(ctx, api, organizationID) })
+		reads = append(reads, struct {
+			check string
+			rules []string
+			run   func() error
+		}{run: func() error { return result.readOrganization(ctx, api, organizationID) }})
 	}
 
 	// Each read fills a part of the result of its own.
 	failures := make([]error, len(reads))
-	forEachParallel(len(reads), func(index int) { failures[index] = reads[index]() })
+	forEachParallel(len(reads), func(index int) { failures[index] = reads[index].run() })
 
-	if err := errors.Join(failures...); err != nil {
+	var stopping []error
+
+	for index, failure := range failures {
+		switch {
+		case failure == nil:
+		case reads[index].check != "" && refused(failure):
+			result.skip(reads[index].check, reads[index].rules, failure)
+		default:
+			stopping = append(stopping, failure)
+		}
+	}
+
+	if err := errors.Join(stopping...); err != nil {
 		return snapshot{}, err
 	}
 
@@ -197,6 +252,13 @@ func (s *snapshot) readApplication(ctx context.Context, api API) error {
 			connections, failures[1] = api.ListClientConnections(ctx, clientID)
 		}
 	})
+
+	// The grants are only compared with what the portal needs, so a refusal skips the rules that use them.
+	if failures[0] != nil && refused(failures[0]) {
+		s.skip("client grants", []string{"P011", "P019"}, failures[0])
+
+		failures[0] = nil
+	}
 
 	if err := errors.Join(failures...); err != nil {
 		return fmt.Errorf("read the grants and connections of application %q: %w", clientID, err)

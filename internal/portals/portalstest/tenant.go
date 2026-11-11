@@ -512,15 +512,6 @@ func (t *Tenant) DeleteClientGrant(_ context.Context, id string) error {
 	return nil
 }
 
-// RemoveClient deletes an application and its grants, like the API does.
-func (t *Tenant) RemoveClient(id string) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	t.clients = slices.DeleteFunc(t.clients, func(record clientRecord) bool { return record.ID == id })
-	t.grants = slices.DeleteFunc(t.grants, func(grant portals.ClientGrant) bool { return grant.ClientID == id })
-}
-
 // VaultClientID returns the application a vault connection signs in with.
 func (t *Tenant) VaultClientID(id string) string {
 	t.mu.Lock()
