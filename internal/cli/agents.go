@@ -243,7 +243,7 @@ func createAgentCmd(cli *cli) *cobra.Command {
 				return err
 			}
 			if !agentMetadata.IsSet(cmd) && canPrompt(cmd) && prompt.Confirm("Add metadata?") {
-				if err := agentMetadata.OpenEditor(cmd, &inputs.Metadata, "{}", inputs.Name+".*.json", cli.agentMetadataEditorHint); err != nil {
+				if err := agentMetadata.OpenEditor(cmd, &inputs.Metadata, "{}", "agent-metadata.*.json", cli.agentMetadataEditorHint); err != nil {
 					return fmt.Errorf("failed to capture input from the editor: %w", err)
 				}
 			}
@@ -368,7 +368,7 @@ func updateAgentCmd(cli *cli) *cobra.Command {
 			if !agentMetadata.IsSet(cmd) {
 				inputs.Metadata = currentMetadata
 				if interactive && prompt.Confirm("Change metadata?") {
-					if err := agentMetadata.OpenEditor(cmd, &inputs.Metadata, currentMetadata, inputs.Name+".*.json", cli.agentMetadataUpdateEditorHint); err != nil {
+					if err := agentMetadata.OpenEditor(cmd, &inputs.Metadata, currentMetadata, "agent-metadata.*.json", cli.agentMetadataUpdateEditorHint); err != nil {
 						return fmt.Errorf("failed to capture input from the editor: %w", err)
 					}
 					// An empty file keeps the current metadata; null or {} clears it.
