@@ -183,6 +183,11 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				inputs.id = args[0]
 			}
 
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+
 			var oldLogStream *management.LogStream
 			if err := ansi.Waiting(func() (err error) {
 				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.id)
@@ -195,10 +200,6 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeAmazonEventBridge))
 			}
 
-			payload, provided, err := ResolveData(cmd)
-			if err != nil {
-				return err
-			}
 			if provided {
 				return updateLogStreamFromJSON(cli, cmd, logStreamTypeAmazonEventBridge, inputs.id, payload)
 			}

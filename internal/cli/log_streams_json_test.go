@@ -115,3 +115,22 @@ func TestLogStreamsUpdateCmdData(t *testing.T) {
 		})
 	}
 }
+
+func TestLogStreamsUpdateCmdResolvesPayloadBeforeReading(t *testing.T) {
+	for _, tc := range logStreamTypeCases {
+		t.Run(string(tc.streamType), func(t *testing.T) {
+			// The mock has no Read expectation, so reading the stream fails the test.
+			stub := &jsonWriteStub{}
+			c := newJSONWriteCLI(stub)
+			c.api.LogStream = mock.NewMockLogStreamAPI(gomock.NewController(t))
+			cmd := tc.update(c)
+			prepareInteractivity(cmd)
+			cmd.SetArgs([]string{"lst_123"})
+
+			withPipedStdin(t, "@payload.json", func() {
+				assert.ErrorContains(t, cmd.Execute(), "not a file reference")
+			})
+			assert.Empty(t, stub.gotMethod)
+		})
+	}
+}

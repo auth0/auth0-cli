@@ -187,6 +187,11 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				inputs.id = args[0]
 			}
 
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+
 			var oldLogStream *management.LogStream
 			if err := ansi.Waiting(func() (err error) {
 				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.id)
@@ -199,10 +204,6 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeDatadog))
 			}
 
-			payload, provided, err := ResolveData(cmd)
-			if err != nil {
-				return err
-			}
 			if provided {
 				return updateLogStreamFromJSON(cli, cmd, logStreamTypeDatadog, inputs.id, payload)
 			}

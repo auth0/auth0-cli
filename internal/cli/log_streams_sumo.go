@@ -168,6 +168,11 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 				inputs.id = args[0]
 			}
 
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+
 			var oldLogStream *management.LogStream
 			if err := ansi.Waiting(func() (err error) {
 				oldLogStream, err = cli.api.LogStream.Read(cmd.Context(), inputs.id)
@@ -180,10 +185,6 @@ func updateLogStreamsSumoLogicCmd(cli *cli) *cobra.Command {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeSumo))
 			}
 
-			payload, provided, err := ResolveData(cmd)
-			if err != nil {
-				return err
-			}
 			if provided {
 				return updateLogStreamFromJSON(cli, cmd, logStreamTypeSumo, inputs.id, payload)
 			}
