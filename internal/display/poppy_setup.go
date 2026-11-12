@@ -654,6 +654,10 @@ func poppySetupNext(l Layout, domain, out string, unhinted int) string {
 		})
 	}
 
+	steps = append(steps,
+		[2]string{"auth0 agents register <agent-url>", "to allow an agent."},
+	)
+
 	var b strings.Builder
 
 	b.WriteString(ansi.Bold("Next"))
