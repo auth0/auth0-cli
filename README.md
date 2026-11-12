@@ -265,6 +265,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 ## Available Commands
 
 - [auth0 actions](https://auth0.github.io/auth0-cli/auth0_actions.html) - Manage resources for actions
+- [auth0 agents](https://auth0.github.io/auth0-cli/auth0_agents.html) - Manage agents (Early Access)
 - [auth0 api](https://auth0.github.io/auth0-cli/auth0_api.html) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](https://auth0.github.io/auth0-cli/auth0_apis.html) - Manage resources for APIs
 - [auth0 apps](https://auth0.github.io/auth0-cli/auth0_apps.html) - Manage resources for applications
