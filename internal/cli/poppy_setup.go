@@ -16,14 +16,15 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
+	"github.com/auth0/auth0-cli/internal/poppy/doctor"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 	"github.com/auth0/auth0-cli/internal/text"
 )
 
 // poppySetupCommandOptions are the options that rebuild the setup command being
 // run, for the example in an error and for the line that applies a plan.
-func (c *cli) poppySetupCommandOptions() setup.CommandOptions {
-	return setup.CommandOptions{Tenant: c.tenant, Yes: c.force}
+func (c *cli) poppySetupCommandOptions(skipDoctor bool) setup.CommandOptions {
+	return setup.CommandOptions{Tenant: c.tenant, Yes: c.force, SkipDoctor: skipDoctor}
 }
 
 // poppyWriteScopes are the Management API scopes that setup may need to change the
@@ -31,7 +32,8 @@ func (c *cli) poppySetupCommandOptions() setup.CommandOptions {
 var poppyWriteScopes = []string{"update:tenant_settings", "update:resource_servers", "update:clients"}
 
 type poppySetupOptions struct {
-	DryRun bool
+	DryRun     bool
+	SkipDoctor bool
 }
 
 func poppySetupCmd(cli *cli) *cobra.Command {
@@ -49,7 +51,7 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 			"The API and the web app must already exist. Their scopes, MFA policy and Actions are left alone, except that setup adds the scope `poppy:browser-sign-in` to each API that lacks it.\n\n" +
 			"The command shows a plan first and marks the tenant-wide changes, then applies it once you confirm. Use `--dry-run` to see the plan only, and `--force` to skip the question, which is required without a terminal.\n\n" +
 			"In a terminal, it lets you pick the API and the web app, and asks for the values that cannot be listed, such as the OpenAPI URL of an API, the Application Login URI of the web app, and the description of each scope that has none. Without a terminal, it names every missing flag at once.\n\n" +
-			"Running it again changes nothing when the tenant already matches, or continues where a failed run stopped."),
+			"Running it again changes nothing when the tenant already matches, or continues where a failed run stopped. It finishes by running `auth0 poppy doctor`, unless `--skip-doctor` is set. A failed check does not fail setup, because your website may not serve the config file until you deploy it."),
 		Example: `  auth0 poppy setup
   auth0 poppy setup --company-domain shop.example --api https://api.shop.example --app "Shop Web" --scope orders:read="See your orders and their status. Read only."
   auth0 poppy setup --company-domain shop.example --api https://api.shop.example --app "Shop Web" --dry-run
@@ -77,6 +79,7 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 	poppyOut.RegisterString(cmd, &flags.Out, config.DefaultFileName)
 	poppyDryRun.RegisterBool(cmd, &opts.DryRun, false)
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
+	poppySkipDoctor.RegisterBool(cmd, &opts.SkipDoctor, false)
 	poppyWebUnscoped.RegisterBool(cmd, &webUnscoped, false)
 	poppyOverwriteConfig.RegisterBool(cmd, &flags.ForceConfig, false)
 	registerPoppyOutputFlags(cmd, cli)
@@ -113,7 +116,7 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 		return err
 	}
 
-	commandOpts := cli.poppySetupCommandOptions()
+	commandOpts := cli.poppySetupCommandOptions(opts.SkipDoctor)
 
 	var (
 		state    *setup.State
@@ -204,11 +207,27 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 
 	result := poppySetupResult{Plan: newPoppyPlanOutput(plan), Applied: appliedPoppyChanges(plan, applied)}
 
+	if !opts.SkipDoctor {
+		// Setup has a login, so the doctor checks can read the tenant too.
+		doctorOpts := poppyDoctorTestOptions
+		doctorOpts.Tenant, doctorOpts.ConfigFile = cli.poppyDoctorTenant(), in.Out
+		// The website is usually not deployed yet, so only the tenant is checked.
+		doctorOpts.TenantOnly = true
+
+		var report doctor.Report
+		_ = ansi.Waiting(func() error {
+			report = doctor.Run(cmd.Context(), in.CompanyDomain, doctorOpts)
+
+			return nil
+		})
+		result.Doctor = &report
+	}
+
 	if cli.renderer.PoppyJSON(result) {
 		return nil
 	}
 
-	cli.renderer.PoppySetupResult(plan, textOpts)
+	cli.renderer.PoppySetupResult(plan, result.Doctor, textOpts)
 
 	return nil
 }
@@ -230,6 +249,7 @@ type poppySetupResult struct {
 	Plan poppyPlanOutput `json:"plan"`
 	// Applied are the changes that were made, in the form they have in the plan.
 	Applied []setup.Change `json:"applied"`
+	Doctor  *doctor.Report `json:"doctor,omitempty"`
 }
 
 // appliedPoppyChanges returns the changes of the plan that applied describes. The
@@ -324,6 +344,7 @@ func (c *cli) poppyReader() *setup.Reader {
 		Domains:      c.api.CustomDomain,
 		Servers:      c.apiv3.ResourceServerV3,
 		Clients:      c.apiv3.ClientV3,
+		Grants:       c.apiv3.ClientGrant,
 	}
 }
 

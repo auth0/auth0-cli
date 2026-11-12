@@ -8,6 +8,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
+	"github.com/auth0/auth0-cli/internal/poppy/doctor"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 )
 
@@ -64,15 +65,21 @@ func (r *Renderer) PoppySetupFailure(plan setup.Plan, outcome setup.Outcome, opt
 	r.poppyWrite(func(l Layout) string { return "\n" + poppyApplyText(l, plan, outcome, opts) })
 }
 
-// PoppySetupResult writes a setup that went through: the changes made, and what
-// to do next.
-func (r *Renderer) PoppySetupResult(plan setup.Plan, opts PoppySetupOptions) {
+// PoppySetupResult writes a setup that went through: the changes made, what the
+// doctor found, and what to do next. The report is nil when the doctor did not
+// run.
+func (r *Renderer) PoppySetupResult(plan setup.Plan, report *doctor.Report, opts PoppySetupOptions) {
 	r.poppyWrite(func(l Layout) string {
 		var b strings.Builder
 
 		if !plan.Empty() {
 			b.WriteString("\n")
 			b.WriteString(poppyApplyText(l, plan, setup.Outcome{Done: len(plan.Changes)}, opts))
+		}
+
+		if report != nil {
+			b.WriteString("\n")
+			b.WriteString(poppyDoctorAfterSetup(l, *report))
 		}
 
 		b.WriteString("\n")
@@ -655,6 +662,7 @@ func poppySetupNext(l Layout, domain, out string, unhinted int) string {
 	}
 
 	steps = append(steps,
+		[2]string{"auth0 poppy doctor " + poppyClean(domain), "to check the live site."},
 		[2]string{"auth0 agents register <agent-url>", "to allow an agent."},
 	)
 

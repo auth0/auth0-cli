@@ -28,8 +28,8 @@ func TestCommand(t *testing.T) {
 		{
 			name: "dry run is never in it, force only when given",
 			in:   Inputs{CompanyDomain: "shop.example", APIs: []string{shopAPI}, App: "app1"},
-			opts: CommandOptions{Yes: true},
-			want: `auth0 poppy setup --company-domain shop.example --api https://api.shop.example --app app1 --force`,
+			opts: CommandOptions{Yes: true, SkipDoctor: true},
+			want: `auth0 poppy setup --company-domain shop.example --api https://api.shop.example --app app1 --skip-doctor --force`,
 		},
 		{
 			name: "repeated flags, in a fixed order",
@@ -68,9 +68,9 @@ func TestCommand(t *testing.T) {
 		{
 			name: "the tenant is the first flag",
 			in:   Inputs{CompanyDomain: "shop.example", APIs: []string{shopAPI}, App: "a", ForceConfig: true},
-			opts: CommandOptions{Tenant: "staging.us.auth0.com", Yes: true},
+			opts: CommandOptions{Tenant: "staging.us.auth0.com", Yes: true, SkipDoctor: true},
 			want: `auth0 poppy setup --tenant staging.us.auth0.com --company-domain shop.example --api https://api.shop.example --app a` +
-				` --overwrite-config --force`,
+				` --overwrite-config --skip-doctor --force`,
 		},
 		{
 			name: "the tenant is first even when it is the only flag",

@@ -399,8 +399,8 @@ func TestCommandOfTheConfigCommand(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{"auth0 poppy config", "--tenant t.auth0.com", "--company-domain shop.example", "--api " + shopAPI, "--app app1", `--company-name "Shop Inc"`, "--out x.json"},
-		Command(in, CommandOptions{Tenant: "t.auth0.com", Config: true, Yes: true}),
-		"the config command has no --scope, --login-uri or --force")
+		Command(in, CommandOptions{Tenant: "t.auth0.com", Config: true, SkipDoctor: true, Yes: true}),
+		"the config command has no --scope, --login-uri, --skip-doctor or --force")
 }
 
 func TestQuestionsForMissing(t *testing.T) {

@@ -25,6 +25,7 @@ func TestPoppyConfig(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Contains(t, h.out.String(), out+"  written")
+		assert.Contains(t, h.out.String(), "Next\n  auth0 poppy doctor shop.example   to check the live site.")
 		assert.Empty(t, h.messages.String(), "the result is on stdout")
 
 		cfg, err := config.Read(out)
@@ -49,6 +50,7 @@ func TestPoppyConfig(t *testing.T) {
 		require.NoError(t, second.run(args...))
 		assert.Contains(t, second.out.String(), out+"  unchanged")
 		assert.NotContains(t, second.out.String(), "written")
+		assert.Contains(t, second.out.String(), "Next\n")
 	})
 
 	t.Run("the API is told by the file and the web app by the tenant", func(t *testing.T) {

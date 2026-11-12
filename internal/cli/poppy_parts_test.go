@@ -29,7 +29,7 @@ func TestPoppyPartFlagsAreOnSetupAndConfigOnly(t *testing.T) {
 		}
 	}
 
-	for _, path := range [][]string{{"agents", "register"}} {
+	for _, path := range [][]string{{"poppy", "doctor"}, {"agents", "register"}} {
 		cmd, _, err := root.Find(path)
 		require.NoError(t, err)
 

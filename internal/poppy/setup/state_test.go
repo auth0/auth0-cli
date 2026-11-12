@@ -48,6 +48,10 @@ func clientPages(pages ...[]*managementv3.Client) *auth0.ClientListPage {
 	return chain[*int, *managementv3.Client, *managementv3.ListClientsOffsetPaginatedResponseContent](pages...)
 }
 
+func grantPages(pages ...[]*managementv3.ClientGrantResponseContent) *auth0.ClientGrantPage {
+	return chain[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent](pages...)
+}
+
 func notFound() error {
 	return core.NewAPIError(http.StatusNotFound, nil, errors.New("not found"))
 }
@@ -86,6 +90,7 @@ type readerFixture struct {
 	domains *mock.MockCustomDomainAPI
 	servers *mock.MockResourceServerAPIV3
 	clients *mock.MockClientAPIV3
+	grants  *mock.MockClientGrantAPIV3
 	reader  *Reader
 }
 
@@ -98,6 +103,7 @@ func newReaderFixture(t *testing.T) *readerFixture {
 		domains: mock.NewMockCustomDomainAPI(ctrl),
 		servers: mock.NewMockResourceServerAPIV3(ctrl),
 		clients: mock.NewMockClientAPIV3(ctrl),
+		grants:  mock.NewMockClientGrantAPIV3(ctrl),
 	}
 	f.reader = &Reader{
 		TenantDomain: tenantURL,
@@ -105,6 +111,7 @@ func newReaderFixture(t *testing.T) *readerFixture {
 		Domains:      f.domains,
 		Servers:      f.servers,
 		Clients:      f.clients,
+		Grants:       f.grants,
 	}
 
 	return f
@@ -688,4 +695,33 @@ func TestListAPIsFailure(t *testing.T) {
 	_, err := f.reader.ListAPIs(t.Context())
 
 	assert.ErrorContains(t, err, "failed to list the APIs")
+}
+
+func TestGrantedScopes(t *testing.T) {
+	f := newReaderFixture(t)
+	f.grants.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *managementv3.ListClientGrantsRequestParameters, _ ...any) (*auth0.ClientGrantPage, error) {
+			assert.Equal(t, shopApp, *request.ClientID)
+			assert.Equal(t, shopAPI, *request.Audience)
+
+			return grantPages([]*managementv3.ClientGrantResponseContent{
+				{SubjectType: ptr(managementv3.ClientGrantSubjectTypeEnumUser), Scope: []string{"orders:read", "checkout"}},
+				{SubjectType: ptr(managementv3.ClientGrantSubjectTypeEnumAnonymousUser), Scope: []string{"orders:read", "poppy:browser-sign-in"}},
+				{SubjectType: ptr(managementv3.ClientGrantSubjectTypeEnumClient), Scope: []string{"machine"}},
+			}), nil
+		})
+
+	got, err := f.reader.GrantedScopes(t.Context(), shopApp, shopAPI)
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"orders:read", "checkout", "poppy:browser-sign-in"}, got, "user and guest scopes without duplicates, and no client scopes")
+}
+
+func TestGrantedScopesFailure(t *testing.T) {
+	f := newReaderFixture(t)
+	f.grants.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, errors.New("boom"))
+
+	_, err := f.reader.GrantedScopes(t.Context(), shopApp, shopAPI)
+
+	assert.ErrorContains(t, err, "failed to read the grants of "+shopApp)
 }

@@ -78,6 +78,13 @@ func NormalizeCompanyDomain(entry string) string {
 	return strings.ToLower(entry)
 }
 
+// IsBareCompanyDomain reports whether an entry of the tenant setting is a bare
+// lower-case host: no scheme, port, path, query or trailing slash. It is the
+// form the Management API accepts.
+func IsBareCompanyDomain(entry string) bool {
+	return entry != "" && entry == strings.ToLower(entry) && !strings.ContainsAny(entry, "/:@?#\\ \t")
+}
+
 // HasCompanyDomain tells whether the entries list the host. Entries are compared
 // as hosts, so an https://shop.example origin matches shop.example.
 func HasCompanyDomain(entries []string, host string) bool {

@@ -58,6 +58,11 @@ type ClientAPI interface {
 	List(ctx context.Context, request *managementv3.ListClientsRequestParameters, opts ...option.RequestOption) (*auth0.ClientListPage, error)
 }
 
+// GrantAPI is the part of the client grants API the reader uses.
+type GrantAPI interface {
+	List(ctx context.Context, request *managementv3.ListClientGrantsRequestParameters, opts ...option.RequestOption) (*auth0.ClientGrantPage, error)
+}
+
 // Reader reads the tenant through the Management API.
 type Reader struct {
 	// TenantDomain is the canonical domain of the tenant.
@@ -66,6 +71,7 @@ type Reader struct {
 	Domains      CustomDomainAPI
 	Servers      ResourceServerAPI
 	Clients      ClientAPI
+	Grants       GrantAPI
 
 	// Domains holds the custom domains once they are read, so that a run lists
 	// them once whichever of TenantHosts and Read asks first.
@@ -298,6 +304,29 @@ func (r *Reader) ListAPIs(ctx context.Context) ([]API, error) {
 	return apis, nil
 }
 
+// GrantedScopes returns the scopes the app holds on an API for signed-in users
+// and for guests, without duplicates.
+func (r *Reader) GrantedScopes(ctx context.Context, clientID, audience string) ([]string, error) {
+	grants, err := r.grants(ctx, &managementv3.ListClientGrantsRequestParameters{ClientID: &clientID, Audience: &audience})
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the grants of %s: %w", clientID, err)
+	}
+
+	scopes := []string{}
+	for _, grant := range grants {
+		switch grant.GetSubjectType() {
+		case managementv3.ClientGrantSubjectTypeEnumUser, managementv3.ClientGrantSubjectTypeEnumAnonymousUser:
+			for _, scope := range grant.GetScope() {
+				if !slices.Contains(scopes, scope) {
+					scopes = append(scopes, scope)
+				}
+			}
+		}
+	}
+
+	return scopes, nil
+}
+
 func (r *Reader) servers(ctx context.Context, request *managementv3.ListResourceServerRequestParameters) ([]*managementv3.ResourceServer, error) {
 	page, err := r.Servers.List(ctx, request)
 	if err != nil {
@@ -381,6 +410,15 @@ func (r *Reader) clientIDByName(ctx context.Context, name string) (string, error
 		Fix:        "Pass the client ID with --app.",
 		Candidates: ids,
 	}
+}
+
+func (r *Reader) grants(ctx context.Context, request *managementv3.ListClientGrantsRequestParameters) ([]*managementv3.ClientGrantResponseContent, error) {
+	page, err := r.Grants.List(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return collect(ctx, page)
 }
 
 // collect reads every page of a list response.

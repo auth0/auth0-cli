@@ -19,8 +19,10 @@ type CommandOptions struct {
 	Tenant string
 	// Yes adds --force, which skips the confirmation.
 	Yes bool
+	// SkipDoctor adds --skip-doctor.
+	SkipDoctor bool
 	// Config builds the auth0 poppy config command, which has no --scope,
-	// --login-uri or --force.
+	// --login-uri, --skip-doctor or --force.
 	Config bool
 }
 
@@ -94,6 +96,10 @@ func Command(in Inputs, opts CommandOptions) []string {
 
 	if in.ForceConfig {
 		parts = append(parts, "--overwrite-config")
+	}
+
+	if opts.SkipDoctor && !opts.Config {
+		parts = append(parts, "--skip-doctor")
 	}
 
 	if opts.Yes && !opts.Config {
