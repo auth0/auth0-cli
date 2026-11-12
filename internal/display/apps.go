@@ -48,6 +48,8 @@ type applicationView struct {
 	OrganizationRequireBehavior  string
 	OrganizationDiscoveryMethods []string
 
+	AgentID string
+
 	revealSecret bool
 
 	raw interface{}
@@ -160,6 +162,10 @@ func (v *applicationView) KeyValues() [][]string {
 		keyValues = append(keyValues, []string{"ORGANIZATION DISCOVERY METHODS", strings.Join(v.OrganizationDiscoveryMethods, ", ")})
 	}
 
+	if v.AgentID != "" {
+		keyValues = append(keyValues, []string{"AGENT ID", v.AgentID})
+	}
+
 	return keyValues
 }
 
@@ -252,6 +258,8 @@ func makeApplicationView(client *management.Client, revealSecrets bool) *applica
 		OrganizationUsage:            client.GetOrganizationUsage(),
 		OrganizationRequireBehavior:  client.GetOrganizationRequireBehavior(),
 		OrganizationDiscoveryMethods: client.GetOrganizationDiscoveryMethods(),
+
+		AgentID: client.GetAgentID(),
 
 		raw:          client,
 		RefreshToken: string(jsonRefreshToken),
