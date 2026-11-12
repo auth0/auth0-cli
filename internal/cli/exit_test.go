@@ -247,3 +247,46 @@ func TestBuildErrorEnvelope(t *testing.T) {
 		assert.Equal(t, float64(429), decoded["error"]["status"])
 	})
 }
+
+func TestUsageErrorDetails(t *testing.T) {
+	inner := validationError{err: errors.New("inner"), details: json.RawMessage(`{"inner":true}`)}
+
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{name: "no details", err: usageError{err: errors.New("bad flag")}},
+		{name: "details", err: usageError{err: errors.New("bad flag"), details: json.RawMessage(`{"flags":["--api"]}`)}, want: `{"flags":["--api"]}`},
+		{name: "own details win over the wrapped ones", err: usageError{err: inner, details: json.RawMessage(`{"own":true}`)}, want: `{"own":true}`},
+		{name: "wrapped details are kept", err: usageError{err: inner}, want: `{"inner":true}`},
+		{name: "wrapped without details", err: usageError{err: validationError{err: errors.New("inner")}}},
+		{name: "wrapped by fmt.Errorf", err: fmt.Errorf("outer: %w", usageError{err: errors.New("bad flag"), details: json.RawMessage(`{"a":1}`)}), want: `{"a":1}`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			details := errorDetails(test.err)
+
+			if test.want == "" {
+				assert.Nil(t, details)
+
+				return
+			}
+
+			assert.JSONEq(t, test.want, string(details))
+		})
+	}
+
+	t.Run("the envelope carries the details and the reason", func(t *testing.T) {
+		envelope := buildErrorEnvelope(usageError{
+			err:     errors.New("missing required flags: --api"),
+			details: json.RawMessage(`{"flags":[{"flag":"--api"}]}`),
+			reason:  "missing_required_flags",
+		})
+
+		assert.Equal(t, "usage", envelope.Error.Code)
+		assert.Equal(t, "missing_required_flags", envelope.Error.Reason)
+		assert.JSONEq(t, `{"flags":[{"flag":"--api"}]}`, string(envelope.Error.Details))
+	})
+}

@@ -1,0 +1,8 @@
+Poppy setup for shop.example                          tenant tenant.us.auth0.com
+
+Checked
+  ✓ API       https://api.shop.example
+  ✓ Web app   Shop Web (first party)
+  ✓ Scopes    all described
+
+Nothing to change. Everything already matches.

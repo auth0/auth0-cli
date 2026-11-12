@@ -1,0 +1,52 @@
+Poppy setup for shop.example                          tenant tenant.us.auth0.com
+Dry run: nothing will be changed.
+
+Checked
+  ✓ API       https://api.shop.example
+  ✓ API       https://pay.shop.example
+  ✓ Web app   Shop Web (first party)
+  ✓ Scopes    all described
+  ! Issuer    https://tenant.us.auth0.com/
+              The tenant has no verified custom domain, so agents will see the
+              Auth0 domain tenant.us.auth0.com as the issuer. Changing the
+              issuer later signs every user out.
+
+Your answers
+  OpenAPI URL   https://api.shop.example/openapi.json (https://api.shop.example)
+                https://pay.shop.example/openapi.json (https://pay.shop.example)
+
+Plan: 16 changes, 4 of them affect every app on the tenant
+
+Tenant settings                                               ⚠ affects all apps
+  ~ CIMD support                off → on
+  ~ iss in sign-in redirects    off → on                  every app's redirects
+  ~ resource parameter profile  audience → compatibility
+  + company domain              shop.example
+
+API https://api.shop.example
+  + scope poppy:browser-sign-in  "Use the website signed in, with the other
+                                 access you approve"
+  ~ offline access               off → on
+  ~ agent subject claims         off → auth0-v1
+  ~ Poppy API                    off → on
+  ~ guest policy                 none → require_client_grant
+
+API https://pay.shop.example
+  + scope poppy:browser-sign-in  "Use the website signed in, with the other
+                                 access you approve"
+  ~ offline access               off → on
+  ~ agent subject claims         off → auth0-v1
+  ~ Poppy API                    off → on
+  ~ guest policy                 none → require_client_grant
+
+App Shop Web
+  ~ browser join  off → on
+
+File
+  + poppy.json  new
+
+To apply:  auth0 poppy setup --company-domain shop.example \
+             --api https://api.shop.example --api https://pay.shop.example \
+             --api-url https://api.shop.example=https://api.shop.example/openapi.json \
+             --api-url https://pay.shop.example=https://pay.shop.example/openapi.json \
+             --app "Shop Web"

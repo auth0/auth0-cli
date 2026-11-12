@@ -1,0 +1,5 @@
+Applying 15 changes
+  ok Tenant settings   5 changes
+  ok API               7 changes
+  ok App Shop Web      2 changes
+  ok poppy.json        written
