@@ -29,14 +29,27 @@ const (
 // via cobra's FlagErrorFunc; see buildRootCmd. The optional reason carries a
 // finer sub-classification (see errorReason) that is surfaced in analytics and
 // the envelope's "reason" field; an empty reason falls back to a class default.
+// When details is set it carries structured context, such as the flags that are
+// missing, into the envelope's "details" field via the errorDetailer interface.
 type usageError struct {
-	err    error
-	reason string
+	err     error
+	details json.RawMessage
+	reason  string
 }
 
 func (e usageError) Error() string { return e.err.Error() }
 
 func (e usageError) Unwrap() error { return e.err }
+
+// ErrorDetails returns the details of the error. Without any, it falls back to the
+// ones of the error it wraps, so an error that wraps a detailer keeps its details.
+func (e usageError) ErrorDetails() json.RawMessage {
+	if e.details != nil {
+		return e.details
+	}
+
+	return errorDetails(e.err)
+}
 
 // unknownCommandError is the usage failure for a mistyped command or subcommand
 // (for example `auth0 appps` or `auth0 apps shoe`). Its Error() stays a single

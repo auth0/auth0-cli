@@ -1,0 +1,4 @@
+Your answers
+  Hints         orders:read: none
+                cart: reversible
+                checkout: irreversible, personal data

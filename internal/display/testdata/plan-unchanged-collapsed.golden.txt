@@ -1,0 +1,22 @@
+Poppy setup for shop.example                          tenant tenant.us.auth0.com
+Dry run: nothing will be changed.
+
+Checked
+  ✓ API       https://api.shop.example
+  ✓ Web app   Shop Web (first party)
+  ✓ Scopes    all described
+
+Plan: 2 changes, 1 of them affects every app on the tenant
+
+Tenant settings                                               ⚠ affects all apps
+  ~ CIMD support  off → on
+
+App Shop Web
+  ~ browser join  off → on
+
+Already correct: 8 settings (iss in sign-in redirects, resource parameter
+  profile, default audience, company domain, offline access, agent subject
+  claims, Poppy API, guest policy)
+
+To apply:  auth0 poppy setup --company-domain shop.example \
+             --api https://api.shop.example --app "Shop Web"
