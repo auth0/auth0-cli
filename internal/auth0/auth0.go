@@ -74,6 +74,8 @@ func NewAPI(m *management.Management) *API {
 }
 
 type APIV3 struct {
+	ClientV3                     ClientAPIV3
+	TenantSettings               TenantSettingsAPIV3
 	AttackProtectionBotDetection AttackProtectionBotDetectionAPIV3
 	ClientGrant                  ClientGrantAPIV3
 	ClientGrantOrganization      ClientGrantOrganizationAPIV3
@@ -109,6 +111,8 @@ type APIV3 struct {
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
 	return &APIV3{
+		ClientV3:                     m.Clients,
+		TenantSettings:               m.Tenants.Settings,
 		AttackProtectionBotDetection: m.AttackProtection.BotDetection,
 		ClientGrant:                  m.ClientGrants,
 		ClientGrantOrganization:      m.ClientGrants.Organizations,
