@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing event streams. To create one, run: `auth0 event-streams create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 event-streams list [flags]
@@ -20,6 +23,8 @@ auth0 event-streams list [flags]
   auth0 event-streams ls --json
   auth0 event-streams ls --json-compact
   auth0 event-streams ls --csv
+  auth0 event-streams list --schema
+  auth0 event-streams list --query '{"take":10}'
 ```
 
 
@@ -29,6 +34,8 @@ auth0 event-streams list [flags]
       --csv            Output in csv format.
       --json           Output in json format.
       --json-compact   Output in compact json format.
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

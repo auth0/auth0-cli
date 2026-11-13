@@ -9,6 +9,9 @@ Update a vault connection.
 
 Passing `--setup-file` replaces the connection's setup credentials; the file must contain only the setup body, not a name. Passing `--name` renames the connection; omit it to keep the current name. Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 flows vault connections update [flags]
@@ -19,15 +22,20 @@ auth0 flows vault connections update [flags]
 ```
   auth0 flows vault connections update <connection-id> --name "New Name"
   auth0 flows vault connections update <connection-id> --setup-file ./setup.json
+  auth0 flows vault connections update --schema
+  auth0 flows vault connections update <connection-id> --data '{"name":"New Name"}'
+  auth0 flows vault connections update <connection-id> --data @connection.json
 ```
 
 
 ## Flags
 
 ```
+      --data string         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                Output in json format.
       --json-compact        Output in compact json format.
       --name string         Name of the Vault connection.
+      --schema              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -f, --setup-file string   Path to a JSON file containing the vault connection setup credentials. Run with --setup-template --app-id <APP_ID> to see the expected setup schema for a given app.
 ```
 

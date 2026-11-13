@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -43,6 +44,8 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 		azureResourceGroup  string
 		piiConfig           string
 		filters             string
+		data                string
+		schema              bool
 	}
 
 	cmd := &cobra.Command{
@@ -61,8 +64,22 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventgrid --name <name> --azure-id <azure-id> --azure-region <azure-region> --azure-group <azure-group> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "hash", "algorithm": "xxhash"}'
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
-  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact`,
+  auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact
+  auth0 logs streams create eventgrid --schema
+  auth0 logs streams create eventgrid --data '{"name":"my-stream","sink":{"azureSubscriptionId":"00000000-0000-0000-0000-000000000000","azureRegion":"eastus","azureResourceGroup":"<resource-group>"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPost, "/log-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createLogStreamFromJSON(cli, cmd, logStreamTypeAzureEventGrid, payload)
+			}
+
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
@@ -132,6 +149,10 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	azureRegion.RegisterString(cmd, &inputs.azureRegion, "")
 	azureResourceGroup.RegisterString(cmd, &inputs.azureResourceGroup, "")
 
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
 }
 
@@ -141,6 +162,8 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 		name      string
 		piiConfig string
 		filters   string
+		data      string
+		schema    bool
 	}
 
 	cmd := &cobra.Command{
@@ -156,8 +179,14 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --filters '[{"type":"category","name":"user.fail"},{"type":"category","name":"scim.event"}]'
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
-  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact`,
+  auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact
+  auth0 logs streams update eventgrid --schema
+  auth0 logs streams update eventgrid <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPatch, "/log-streams/{id}")
+			}
+
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeAzureEventGrid))
 				if err != nil {
@@ -165,6 +194,11 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.id = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
 			}
 
 			var oldLogStream *management.LogStream
@@ -177,6 +211,10 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 
 			if oldLogStream.GetType() != string(logStreamTypeAzureEventGrid) {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeAzureEventGrid))
+			}
+
+			if provided {
+				return updateLogStreamFromJSON(cli, cmd, logStreamTypeAzureEventGrid, inputs.id, payload)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
@@ -234,6 +272,10 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
+
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }

@@ -9,6 +9,9 @@ Update a flow.
 
 Passing `--actions-file` replaces the flow's actions graph; the file must contain only the actions body, not a name. Passing `--name` renames the flow; omit it to keep the current name.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 flows update [flags]
@@ -18,7 +21,10 @@ auth0 flows update [flags]
 
 ```
   auth0 flows update <flow-id> --name "New Name"
-  auth0 flows update <flow-id> --actions-file ./flow.json
+  auth0 flows update <flow-id> --actions-file ./action.json
+  auth0 flows update --schema
+  auth0 flows update <flow-id> --data '{"name":"New Name"}'
+  auth0 flows update <flow-id> --data @flow.json
 ```
 
 
@@ -26,9 +32,11 @@ auth0 flows update [flags]
 
 ```
   -f, --actions-file string   Path to a JSON file containing the flow actions body. Run with --actions-template to see the expected format.
+      --data string           JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                  Output in json format.
       --json-compact          Output in compact json format.
       --name string           Name of the Flow.
+      --schema                Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

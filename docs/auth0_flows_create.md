@@ -9,6 +9,9 @@ Create a new flow.
 
 A name is required, supplied with `--name` or the interactive prompt. The actions graph is authored interactively or supplied with `--actions-file`; the file must contain only the actions body, not a name. Run `auth0 flows create --actions-template > flow.json` to generate an actions template.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload, including the name (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 flows create [flags]
@@ -20,7 +23,10 @@ auth0 flows create [flags]
   auth0 flows create
   auth0 flows create --name "My Flow"
   auth0 flows create --actions-template > flow.json
-  auth0 flows create --name "My Flow" --actions-file ./flow.json
+  auth0 flows create --name "My Flow" --actions-file ./action.json
+  auth0 flows create --schema
+  auth0 flows create --data '{"name":"My Flow","actions":[]}'
+  auth0 flows create --data @flow.json
 ```
 
 
@@ -29,9 +35,11 @@ auth0 flows create [flags]
 ```
   -f, --actions-file string   Path to a JSON file containing the flow actions body. Run with --actions-template to see the expected format.
       --actions-template      Print the actions template for --actions-file and exit.
+      --data string           JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                  Output in json format.
       --json-compact          Output in compact json format.
       --name string           Name of the Flow.
+      --schema                Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

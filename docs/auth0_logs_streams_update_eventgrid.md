@@ -26,12 +26,15 @@ auth0 logs streams update eventgrid [flags]
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact
+  auth0 logs streams update eventgrid --schema
+  auth0 logs streams update eventgrid <log-stream-id> --data '{"status":"paused"}'
 ```
 
 
 ## Flags
 
 ```
+      --data string         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
                             Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
@@ -41,6 +44,7 @@ auth0 logs streams update eventgrid [flags]
                             including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
                              Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
                              (default "{}")
+      --schema              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

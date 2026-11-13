@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -55,6 +56,8 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 		httpAuthorization string
 		piiConfig         string
 		filters           string
+		data              string
+		schema            bool
 	}
 
 	cmd := &cobra.Command{
@@ -74,8 +77,22 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams create http --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
-  auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact`,
+  auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
+  auth0 logs streams create http --schema
+  auth0 logs streams create http --data '{"name":"my-stream","sink":{"httpEndpoint":"https://example.com/logs","httpContentType":"application/json","httpContentFormat":"JSONLINES"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPost, "/log-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createLogStreamFromJSON(cli, cmd, logStreamTypeHTTP, payload)
+			}
+
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
@@ -158,6 +175,10 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	httpContentFormat.RegisterString(cmd, &inputs.httpContentFormat, "")
 	httpAuthorization.RegisterString(cmd, &inputs.httpAuthorization, "")
 
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
 }
 
@@ -171,6 +192,8 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 		httpAuthorization string
 		piiConfig         string
 		filters           string
+		data              string
+		schema            bool
 	}
 
 	cmd := &cobra.Command{
@@ -190,8 +213,14 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams update http <log-stream-id> --name <name> --endpoint <endpoint> --type <type> --format <format> --authorization <authorization>
   auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization> -c null
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
-  auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact`,
+  auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
+  auth0 logs streams update http --schema
+  auth0 logs streams update http <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPatch, "/log-streams/{id}")
+			}
+
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeHTTP))
 				if err != nil {
@@ -199,6 +228,11 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.id = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
 			}
 
 			var oldLogStream *management.LogStream
@@ -211,6 +245,10 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 
 			if oldLogStream.GetType() != string(logStreamTypeHTTP) {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeHTTP))
+			}
+
+			if provided {
+				return updateLogStreamFromJSON(cli, cmd, logStreamTypeHTTP, inputs.id, payload)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
@@ -297,6 +335,10 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
 	httpContentType.RegisterStringU(cmd, &inputs.httpContentType, "")
 	httpContentFormat.RegisterStringU(cmd, &inputs.httpContentFormat, "")
 	httpAuthorization.RegisterStringU(cmd, &inputs.httpAuthorization, "")
+
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
