@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,14 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 )
+
+// ActionReadScopes are the Management API scopes that reading the post-login
+// Action and its flow needs. They are only needed when the Action is wanted.
+var ActionReadScopes = []string{"read:actions"}
+
+// ActionWriteScopes are the Management API scopes that creating, updating and
+// deploying the Action, and binding it, need.
+var ActionWriteScopes = []string{"create:actions", "update:actions"}
 
 // ReadScopes are the Management API scopes the reads of this package need. They
 // are also the scopes of the config command.
@@ -32,6 +41,11 @@ const (
 	// InvalidQueryString is the error code of a request with a query the tenant
 	// does not accept, such as a field that does not exist yet.
 	invalidQueryString = "invalid_query_string"
+
+	// ActionPageSize is the page size of the Actions API lists, and maxActionPages
+	// the most pages read from one.
+	actionPageSize = 50
+	maxActionPages = 20
 
 	// AppFields limits the clients listed to find web apps to what is used.
 	appFields = "client_id,name,is_first_party,initiate_login_uri,allow_personal_agent_browser_join"
@@ -63,6 +77,12 @@ type GrantAPI interface {
 	List(ctx context.Context, request *managementv3.ListClientGrantsRequestParameters, opts ...option.RequestOption) (*auth0.ClientGrantPage, error)
 }
 
+// ActionAPI is the part of the Actions API the reader uses.
+type ActionAPI interface {
+	List(ctx context.Context, opts ...management.RequestOption) (*management.ActionList, error)
+	Bindings(ctx context.Context, triggerID string, opts ...management.RequestOption) (*management.ActionBindingList, error)
+}
+
 // Reader reads the tenant through the Management API.
 type Reader struct {
 	// TenantDomain is the canonical domain of the tenant.
@@ -72,6 +92,8 @@ type Reader struct {
 	Servers      ResourceServerAPI
 	Clients      ClientAPI
 	Grants       GrantAPI
+	// Actions is only used by ReadAction.
+	Actions ActionAPI
 
 	// Domains holds the custom domains once they are read, so that a run lists
 	// them once whichever of TenantHosts and Read asks first.
@@ -147,6 +169,132 @@ func (r *Reader) Read(ctx context.Context, apis []string, app string) (*State, e
 	}
 
 	return state, nil
+}
+
+// ReadAction reads the Action of setup that always issues refresh tokens, if the
+// tenant has it, and the post-login flow it runs in. The Action is found by its
+// exact name. It stops with an *InputError when the flow has a binding that
+// setup could not write back as it is.
+func (r *Reader) ReadAction(ctx context.Context) (*ActionState, error) {
+	actions, err := pages(func(page int) ([]*management.Action, int, error) {
+		list, err := r.Actions.List(ctx, management.Parameter("actionName", OfflineAccessActionName), management.Page(page), management.PerPage(actionPageSize))
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to list the Actions: %w", err)
+		}
+
+		return list.Actions, list.Total, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	bindings, err := readBindings(ctx, r.Actions)
+	if err != nil {
+		return nil, err
+	}
+
+	state := &ActionState{}
+	if state.Flow, err = flowOf(bindings); err != nil {
+		return nil, err
+	}
+
+	// The server-side filter is not trusted: only an Action with exactly this name is used.
+	if i := slices.IndexFunc(actions, func(a *management.Action) bool { return a.GetName() == OfflineAccessActionName }); i >= 0 {
+		action := actions[i]
+
+		state.ID = action.GetID()
+		state.CodeCurrent = action.GetCode() == OfflineAccessActionSource
+		state.Deployed = state.CodeCurrent && action.DeployedVersion != nil && action.AllChangesDeployed
+	}
+
+	return state, nil
+}
+
+// bindingsAPI is what reading the bindings of the post-login trigger needs.
+type bindingsAPI interface {
+	Bindings(ctx context.Context, triggerID string, opts ...management.RequestOption) (*management.ActionBindingList, error)
+}
+
+// readBindings reads every binding of the post-login trigger, in order.
+func readBindings(ctx context.Context, api bindingsAPI) ([]*management.ActionBinding, error) {
+	return pages(func(page int) ([]*management.ActionBinding, int, error) {
+		list, err := api.Bindings(ctx, postLoginTrigger, management.Page(page), management.PerPage(actionPageSize))
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to read the post-login bindings: %w", err)
+		}
+
+		return list.Bindings, list.Total, nil
+	})
+}
+
+// pages reads every page of a list of the Actions API. The server may cap the page
+// size below the one asked for, so a short page does not end the list: the
+// total the API reports does. When the API reports no total, an empty page ends
+// the list. It fails instead of returning part of the list, because a post-login
+// flow that is written back with entries missing loses them.
+func pages[T any](fetch func(page int) ([]T, int, error)) ([]T, error) {
+	var all []T
+
+	for page := range maxActionPages {
+		items, total, err := fetch(page)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, items...)
+
+		switch {
+		case total > 0 && len(all) == total:
+			return all, nil
+		case total > 0 && (len(items) == 0 || len(all) > total):
+			return nil, fmt.Errorf("the Actions API listed %d items but says the list has %d", len(all), total)
+		case total == 0 && len(items) == 0:
+			return all, nil
+		}
+	}
+
+	return nil, fmt.Errorf("the Actions API list did not end after %d pages", maxActionPages)
+}
+
+// flowOf turns the bindings of the post-login trigger into the entries the update
+// writes back. The API lists each binding with its Action, and an update refers
+// to an Action by ID. The secrets of an Action belong to the Action, not to the
+// binding, so they are not sent. A binding that lists secrets, or that names no
+// Action, is refused, because the update replaces the whole list and could not
+// repeat it faithfully.
+func flowOf(bindings []*management.ActionBinding) ([]FlowAction, error) {
+	flow := make([]FlowAction, 0, len(bindings))
+
+	for _, binding := range bindings {
+		entry := FlowAction{BindingID: binding.GetID(), DisplayName: binding.GetDisplayName()}
+
+		switch {
+		case binding.Action.GetID() != "":
+			entry.RefType, entry.RefValue = management.ActionBindingReferenceByID, binding.Action.GetID()
+		case binding.Ref.GetType() != "" && binding.Ref.GetValue() != "":
+			entry.RefType, entry.RefValue = binding.Ref.GetType(), binding.Ref.GetValue()
+		default:
+			return nil, unsupportedFlow(fmt.Sprintf("A binding of the post-login trigger (%s) does not say which Action it is.", clean(binding.GetID())))
+		}
+
+		entry.Name = clean(cmp.Or(entry.DisplayName, binding.Action.GetName(), entry.RefValue))
+
+		if len(binding.Secrets) > 0 {
+			return nil, unsupportedFlow(fmt.Sprintf("The binding %s of the post-login trigger has secrets, which setup cannot read back to keep them.", entry.Name))
+		}
+
+		flow = append(flow, entry)
+	}
+
+	return flow, nil
+}
+
+func unsupportedFlow(message string) *InputError {
+	return &InputError{
+		Reason:  ReasonActionFlowUnsupported,
+		Message: message + " Setup writes back the whole list of bindings, and could not repeat this one.",
+		Fix:     "Pass --always-issue-refresh-tokens=false, or add the Action to the post-login flow in the Dashboard.",
+	}
 }
 
 // BrowserJoinApps returns the apps that have the browser join on.

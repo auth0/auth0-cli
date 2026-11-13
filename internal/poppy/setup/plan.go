@@ -2,6 +2,7 @@ package setup
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -18,6 +19,8 @@ const (
 	KindAPI    Kind = "api"
 	KindApp    Kind = "app"
 	KindFile   Kind = "file"
+	// KindAction is the post-login Action that always issues refresh tokens.
+	KindAction Kind = "action"
 )
 
 // Impact says how far a change reaches.
@@ -48,6 +51,9 @@ const (
 	fieldGuestPolicy    = "subject_type_authorization.anonymous_user.policy"
 	fieldLoginURI       = "initiate_login_uri"
 	fieldBrowserJoin    = "allow_personal_agent_browser_join"
+	// The post-login Action: its code and deployment, and its place in the flow.
+	fieldAction      = "post_login_action"
+	fieldActionOrder = "post_login_order"
 )
 
 // ValueNone is the Before value of a setting that does not exist.
@@ -204,6 +210,9 @@ func (p Plan) Scopes() []string {
 			scopes = append(scopes, "update:resource_servers")
 		case KindApp:
 			scopes = append(scopes, "update:clients")
+		case KindAction:
+			scopes = append(scopes, ActionReadScopes...)
+			scopes = append(scopes, ActionWriteScopes...)
 		}
 	}
 
@@ -226,6 +235,8 @@ var settingLabels = map[string]string{
 	fieldGuestPolicy:     "guest policy",
 	fieldLoginURI:        "Application Login URI",
 	fieldBrowserJoin:     "browser join",
+	fieldAction:          "refresh token Action",
+	fieldActionOrder:     "Action position",
 }
 
 // settings collects the fields a change sets, and the names of the settings that
@@ -307,6 +318,18 @@ func Build(state *State, in Inputs) (Plan, error) {
 		}
 	}
 
+	if in.WantsRefreshTokenAction() {
+		if state.Action == nil {
+			return Plan{}, errors.New("the post-login Action was not read")
+		}
+
+		change, unchanged, ok := actionChange(state.Action)
+		plan.Unchanged = append(plan.Unchanged, unchanged...)
+		if ok {
+			plan.Changes = append(plan.Changes, change)
+		}
+	}
+
 	if len(config.Diff(state.File, cfg)) > 0 {
 		plan.Changes = append(plan.Changes, Change{
 			Kind:        KindFile,
@@ -336,6 +359,14 @@ func warnings(state *State, in Inputs) (texts, kinds []string) {
 			))
 			kinds = append(kinds, WarningAPI)
 		}
+	}
+
+	if in.WantsRefreshTokenAction() {
+		texts = append(texts, fmt.Sprintf(
+			"The Action %q runs on every sign-in of every app, and setup never removes it. To undo it, delete the Action: auth0 actions delete",
+			OfflineAccessActionName,
+		))
+		kinds = append(kinds, "")
 	}
 
 	if state.usesCanonicalDomain() {
@@ -431,6 +462,42 @@ func appChange(app App, in Inputs) (Change, []string, bool) {
 		Kind:        KindApp,
 		Description: describe(app.Name, s.fields),
 		Impact:      ImpactApp,
+		Fields:      emptyIfNil(s.fields),
+	}, s.unchanged, len(s.fields) > 0
+}
+
+// actionChange works out what the post-login Action needs: to exist with the code
+// setup ships, to be deployed, and to run last in the post-login flow, after every
+// Action that is bound already.
+func actionChange(action *ActionState) (Change, []string, bool) {
+	var s settings
+
+	before := ValueNone
+	if action.ID != "" {
+		before = "old code"
+		if action.CodeCurrent {
+			before = "not deployed"
+		}
+	}
+
+	s.check(action.ID != "" && action.CodeCurrent && action.Deployed, Field{Name: fieldAction, Value: "deployed", Before: before})
+
+	names := make([]string, 0, len(action.Flow))
+	for _, other := range action.others() {
+		names = append(names, other.Name)
+	}
+
+	effect := "no other Action runs"
+	if len(names) > 0 {
+		effect = "runs after: " + strings.Join(names, ", ")
+	}
+
+	s.check(action.last(), Field{Name: fieldActionOrder, Value: "last", Before: action.position(), Effect: effect})
+
+	return Change{
+		Kind:        KindAction,
+		Description: "post-login Action " + OfflineAccessActionName,
+		Impact:      ImpactTenantWide,
 		Fields:      emptyIfNil(s.fields),
 	}, s.unchanged, len(s.fields) > 0
 }

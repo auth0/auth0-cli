@@ -80,6 +80,11 @@ var (
 		LongForm: "web-unscoped",
 		Help:     "Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. auth0 poppy doctor then reminds you to check the description of poppy:browser-sign-in. Asked in a terminal when the config file has no value.",
 	}
+	poppyAlwaysIssueRefreshTokens = Flag{
+		Name:     "Always Issue Refresh Tokens",
+		LongForm: "always-issue-refresh-tokens",
+		Help:     "Create a post-login Action that always issues refresh tokens to Poppy agents, deploy it, and bind it as the last Action of the post-login flow. Existing bindings keep their order. Setup never removes the Action. Needs the read:actions, create:actions and update:actions scopes. Asked in a terminal when the flag is not given. Without it, or with =false, the post-login flow is left alone.",
+	}
 	poppySetupNoAPI = Flag{
 		Name:     "No API",
 		LongForm: "no-api",

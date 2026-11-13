@@ -71,6 +71,9 @@ type State struct {
 	// APIs are the requested APIs, in the order they were requested.
 	APIs []API
 	App  App
+	// Action is the post-login Action of the option to always issue refresh tokens,
+	// nil unless the inputs ask for it. The caller fills it.
+	Action *ActionState
 	// File is the existing config file, nil when there is none. The caller
 	// fills it.
 	File *config.Config

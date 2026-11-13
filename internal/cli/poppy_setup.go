@@ -38,9 +38,10 @@ type poppySetupOptions struct {
 
 func poppySetupCmd(cli *cli) *cobra.Command {
 	var (
-		flags       setup.Flags
-		opts        poppySetupOptions
-		webUnscoped bool
+		flags                    setup.Flags
+		opts                     poppySetupOptions
+		webUnscoped              bool
+		alwaysIssueRefreshTokens bool
 	)
 
 	cmd := &cobra.Command{
@@ -48,7 +49,7 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Turn on Poppy for the tenant, an API and a web app",
 		Long: poppyLong("Turns on the Poppy settings for the tenant, an existing API and an existing web app, and writes the config file.\n\n" +
-			"The API and the web app must already exist. Their scopes, MFA policy and Actions are left alone, except that setup adds the scope `poppy:browser-sign-in` to each API that lacks it.\n\n" +
+			"The API and the web app must already exist. Their scopes, MFA policy and Actions are left alone, except that setup adds the scope `poppy:browser-sign-in` to each API that lacks it. Only with `--always-issue-refresh-tokens`, or a yes to its question in a terminal, does setup also create a post-login Action and bind it as the last Action of the post-login flow.\n\n" +
 			"The command shows a plan first and marks the tenant-wide changes, then applies it once you confirm. Use `--dry-run` to see the plan only, and `--force` to skip the question, which is required without a terminal.\n\n" +
 			"In a terminal, it lets you pick the API and the web app, and asks for the values that cannot be listed, such as the OpenAPI URL of an API, the Application Login URI of the web app, and the description of each scope that has none. Without a terminal, it names every missing flag at once.\n\n" +
 			"Running it again changes nothing when the tenant already matches, or continues where a failed run stopped. It finishes by running `auth0 poppy doctor`, unless `--skip-doctor` is set. A failed check does not fail setup, because your website may not serve the config file until you deploy it."),
@@ -60,6 +61,10 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if poppyWebUnscoped.IsSet(cmd) {
 				flags.WebUnscoped = &webUnscoped
+			}
+
+			if poppyAlwaysIssueRefreshTokens.IsSet(cmd) {
+				flags.AlwaysIssueRefreshTokens = &alwaysIssueRefreshTokens
 			}
 
 			return runPoppySetup(cmd, cli, flags, opts)
@@ -81,6 +86,7 @@ func poppySetupCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 	poppySkipDoctor.RegisterBool(cmd, &opts.SkipDoctor, false)
 	poppyWebUnscoped.RegisterBool(cmd, &webUnscoped, false)
+	poppyAlwaysIssueRefreshTokens.RegisterBool(cmd, &alwaysIssueRefreshTokens, false)
 	poppyOverwriteConfig.RegisterBool(cmd, &flags.ForceConfig, false)
 	registerPoppyOutputFlags(cmd, cli)
 
@@ -112,6 +118,10 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 		scopes = append(slices.Clone(scopes), poppyWriteScopes...)
 	}
 
+	if in.WantsRefreshTokenAction() {
+		scopes = append(slices.Clone(scopes), poppyActionScopes(opts.DryRun)...)
+	}
+
 	if err := cli.checkPoppyScopes(scopes); err != nil {
 		return err
 	}
@@ -135,6 +145,24 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 
 	if err := askPoppyWebUnscoped(screen, promptAsk.canPrompt(cmd), state, &in); err != nil {
 		return err
+	}
+
+	asked, err := askPoppyRefreshTokens(screen, promptAsk.canPrompt(cmd), &in)
+	if err != nil {
+		return err
+	}
+
+	if in.WantsRefreshTokenAction() {
+		// A flag was checked with the other scopes, before the first question.
+		if asked {
+			if err := cli.checkPoppyScopes(poppyActionScopes(opts.DryRun)); err != nil {
+				return err
+			}
+		}
+
+		if state.Action, err = cli.readPoppyAction(cmd.Context()); err != nil {
+			return err
+		}
 	}
 
 	plan, err := setup.Build(state, in)
@@ -268,10 +296,26 @@ func appliedPoppyChanges(plan setup.Plan, applied []string) []setup.Change {
 func confirmPoppyReason(plan setup.Plan, in setup.Inputs) string {
 	reason := "This changes your Auth0 tenant and writes " + in.Out + "."
 
+	var settings, action bool
+
 	for _, change := range plan.Changes {
-		if change.Impact == setup.ImpactTenantWide {
-			return reason + " The tenant settings affect every app."
+		if change.Impact != setup.ImpactTenantWide {
+			continue
 		}
+
+		if change.Kind == setup.KindAction {
+			action = true
+		} else {
+			settings = true
+		}
+	}
+
+	if settings {
+		reason += " The tenant settings affect every app."
+	}
+
+	if action {
+		reason += " The post-login Action runs on every sign-in."
 	}
 
 	return reason
@@ -324,6 +368,7 @@ func (c *cli) applyPoppyPlan(ctx context.Context, state *setup.State, in setup.I
 		Tenant:  c.apiv3.TenantSettings,
 		Servers: c.apiv3.ResourceServerV3,
 		Clients: c.apiv3.ClientV3,
+		Actions: c.api.Action,
 	}
 
 	var applied []string
@@ -345,6 +390,7 @@ func (c *cli) poppyReader() *setup.Reader {
 		Servers:      c.apiv3.ResourceServerV3,
 		Clients:      c.apiv3.ClientV3,
 		Grants:       c.apiv3.ClientGrant,
+		Actions:      c.api.Action,
 	}
 }
 
@@ -368,6 +414,23 @@ func (c *cli) readPoppyState(ctx context.Context, apis []string, app string, fil
 	}
 
 	return state, nil
+}
+
+// readPoppyAction reads the post-login Action of setup and the flow it runs in.
+func (c *cli) readPoppyAction(ctx context.Context) (*setup.ActionState, error) {
+	reader := c.poppyReader()
+
+	var action *setup.ActionState
+	err := ansi.Waiting(func() (err error) {
+		action, err = reader.ReadAction(ctx)
+
+		return err
+	})
+	if err != nil {
+		return nil, c.poppyError(poppySetupError(err))
+	}
+
+	return action, nil
 }
 
 // readPoppyConfigLenient reads the config file without validating it, so a
@@ -676,6 +739,49 @@ func askPoppyWebUnscoped(screen *questionScreen, interactive bool, state *setup.
 	}
 
 	return nil
+}
+
+// The wording of the question about always issuing refresh tokens. The text is the
+// question itself; the reason sits under the title.
+const (
+	poppyRefreshTokensTitle  = "Refresh tokens"
+	poppyRefreshTokensReason = "A post-login Action can add offline access when a Poppy agent signs in, so that the agent gets a refresh token. It is added as the last Action of your post-login flow. Saying no does not remove an Action that is already there."
+	poppyRefreshTokensText   = "Always issue refresh tokens to Poppy agents?"
+)
+
+// poppyActionScopes are the Management API scopes that installing the post-login
+// Action needs: a dry run only reads.
+func poppyActionScopes(dryRun bool) []string {
+	scopes := slices.Clone(setup.ActionReadScopes)
+	if !dryRun {
+		scopes = append(scopes, setup.ActionWriteScopes...)
+	}
+
+	return scopes
+}
+
+// askPoppyRefreshTokens asks, in a terminal, whether to install the post-login
+// Action that always issues refresh tokens. A yes goes into the inputs as if
+// --always-issue-refresh-tokens had given it, and the question starts on no.
+// Nothing is asked when the flag was passed, and without a terminal the
+// post-login flow is left alone. It tells whether it asked.
+func askPoppyRefreshTokens(screen *questionScreen, interactive bool, in *setup.Inputs) (asked bool, err error) {
+	if !interactive || !in.AsksAlwaysIssueRefreshTokens() {
+		return false, nil
+	}
+
+	always, err := screen.confirmAsk(poppyRefreshTokensTitle, poppyRefreshTokensReason, poppyRefreshTokensText)
+	if err != nil {
+		return false, err
+	}
+
+	// An answer of no leaves the inputs as they were: the post-login flow is left
+	// alone, as without a terminal.
+	if always {
+		in.AlwaysIssueRefreshTokens = &always
+	}
+
+	return true, nil
 }
 
 // The wording of the questions about the two parts of Poppy. The text is the

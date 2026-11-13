@@ -437,3 +437,52 @@ func TestPoppyPartAnswers(t *testing.T) {
 		assert.Contains(t, out, "--no-api", "the command to apply repeats the choice")
 	})
 }
+
+func TestPoppyPlanTextWithTheAction(t *testing.T) {
+	yes, no := true, false
+
+	state, in := poppyRichTenant(t)
+	in.AlwaysIssueRefreshTokens = &yes
+	state.Action = &setup.ActionState{Flow: []setup.FlowAction{
+		{RefType: "action_id", RefValue: "act_a", Name: "Enrich"},
+		{RefType: "action_id", RefValue: "act_b", Name: "Audit"},
+	}}
+
+	plan := poppyBuildPlan(t, state, in)
+	out := poppyPlanText(unicode80, plan, PoppySetupOptions{Inputs: in, DryRun: true})
+
+	for _, want := range []string{
+		"\nPost-login flow",
+		"⚠ affects all apps",
+		"  ~ refresh token Action  none → deployed\n",
+		"  ~ Action position       not bound → last  runs after: Enrich, Audit\n",
+		"  Refresh token always issued, by a post-login Action\n",
+		"auth0 actions delete",
+		"--always-issue-refresh-tokens=true",
+	} {
+		assert.Contains(t, out, want)
+	}
+
+	order := []string{"App Shop Web", "Post-login flow", "File\n"}
+	last := -1
+	for _, heading := range order {
+		at := strings.Index(out, "\n"+heading)
+		require.Greater(t, at, last, "%q comes after the one before it", heading)
+		last = at
+	}
+
+	t.Run("the apply text names the step", func(t *testing.T) {
+		applied := poppyApplyText(unicode80, plan, setup.Outcome{Done: len(plan.Changes)}, PoppySetupOptions{Inputs: in})
+
+		assert.Contains(t, applied, "Post-login Action")
+	})
+
+	t.Run("a no leaves the plan as it was", func(t *testing.T) {
+		in.AlwaysIssueRefreshTokens = &no
+
+		out := poppyPlanText(unicode80, poppyBuildPlan(t, state, in), PoppySetupOptions{Inputs: in, DryRun: true})
+
+		assert.NotContains(t, out, "Post-login")
+		assert.NotContains(t, out, "Refresh token")
+	})
+}

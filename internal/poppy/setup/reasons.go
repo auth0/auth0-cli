@@ -29,6 +29,12 @@ const (
 	ReasonScopeDescriptionRequired = "scope_description_required"
 	// ReasonScopeNotFound is a --scope description for a scope that no API has.
 	ReasonScopeNotFound = "scope_not_found"
+	// ReasonActionFlowUnsupported is a post-login flow that setup cannot rewrite
+	// without losing something.
+	ReasonActionFlowUnsupported = "action_flow_unsupported"
+	// ReasonActionFlowChanged is a post-login flow that changed between the read
+	// and the update of its bindings, which setup did not overwrite.
+	ReasonActionFlowChanged = "action_flow_changed"
 	// ReasonPoppyUnavailable is a tenant that does not have the Poppy beta.
 	ReasonPoppyUnavailable = "poppy_unavailable"
 )

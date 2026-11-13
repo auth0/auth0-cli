@@ -23,6 +23,9 @@ type Flags struct {
 	ForceConfig   bool
 	// WebUnscoped is the web.unscoped flag. Nil means it was not passed.
 	WebUnscoped *bool
+	// AlwaysIssueRefreshTokens is the --always-issue-refresh-tokens flag. Nil
+	// means it was not passed.
+	AlwaysIssueRefreshTokens *bool
 	// NoAPI and NoWeb are the --no-api and --no-web flags.
 	NoAPI bool
 	NoWeb bool
@@ -50,6 +53,10 @@ type Inputs struct {
 	// the question. Nil means it was not given, and the config file's value is
 	// kept.
 	WebUnscoped *bool
+	// AlwaysIssueRefreshTokens is the owner's answer to installing the post-login
+	// Action that always issues refresh tokens, from the flag or from the question.
+	// Nil means it was not given, and the post-login flow is left alone.
+	AlwaysIssueRefreshTokens *bool
 	// NoAPI turns the API part off: no API is read, planned or changed, and the
 	// config file gets auth.disabled. It comes from --no-api, from the question, or
 	// from a config file that has auth.disabled.
@@ -89,6 +96,11 @@ func (f Flags) Parse() (Inputs, error) {
 	if f.WebUnscoped != nil {
 		unscoped := *f.WebUnscoped
 		in.WebUnscoped = &unscoped
+	}
+
+	if f.AlwaysIssueRefreshTokens != nil {
+		always := *f.AlwaysIssueRefreshTokens
+		in.AlwaysIssueRefreshTokens = &always
 	}
 
 	var err error
@@ -215,6 +227,18 @@ func (in *Inputs) UseConfigFile(file *config.Config) error {
 	}
 
 	return nil
+}
+
+// AsksAlwaysIssueRefreshTokens tells whether installing the Action that always
+// issues refresh tokens is still a question for the owner: the flag was not given.
+func (in Inputs) AsksAlwaysIssueRefreshTokens() bool {
+	return in.AlwaysIssueRefreshTokens == nil
+}
+
+// WantsRefreshTokenAction tells whether the Action that always issues refresh
+// tokens is to be installed.
+func (in Inputs) WantsRefreshTokenAction() bool {
+	return in.AlwaysIssueRefreshTokens != nil && *in.AlwaysIssueRefreshTokens
 }
 
 // AsksAPI tells whether the question whether agents use an API is still open: the
