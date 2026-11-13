@@ -1,0 +1,16 @@
+Doctor for shop.example                                             protocol 0.3
+Issuer https://shop.example/
+
+Auth0 issuer
+  ✓ issuer matches https://shop.example/
+  FAIL D3 (spec 3.2) protected_resources does not list https://shop.example
+       FIX  auth0 poppy setup --company-domain shop.example --force
+  FAIL D4 (spec 4.1) client assertions: PS384 not accepted by the issuer
+       FIX  PS384 needs the HRI SKU. Ask support if you need it (Auth0 must fix
+            this)
+
+Tenant
+  - skipped: you are logged in to a different tenant than the one that serves
+    shop.example. Log in to that tenant to run these checks.
+
+2 failed, 1 passed, 1 skipped.

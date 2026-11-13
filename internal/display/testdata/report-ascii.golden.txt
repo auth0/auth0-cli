@@ -1,0 +1,13 @@
+Doctor for shop.example                                             protocol 0.3
+Issuer https://shop.example/
+
+Auth0 issuer
+  ok issuer matches https://shop.example/
+  FAIL D3 (spec 3.2) protected_resources does not list https://shop.example
+       FIX  auth0 poppy setup --company-domain shop.example --force
+
+Tenant
+  - skipped: you are logged in to a different tenant than the one that serves
+    shop.example. Log in to that tenant to run these checks.
+
+1 failed, 1 passed, 1 skipped.

@@ -44,7 +44,7 @@ auth0 poppy config [flags]
       --no-web                  Leave the browser sign-in out: agents use APIs only. Sets web.disabled in the config file. Cannot be used with --app, --web-unscoped or --no-api. In a terminal, the command asks when neither --app nor this flag is given, the config file does not have web.disabled, and an app has the browser join on.
       --out string              Path of the config file. (default "poppy.json")
       --overwrite-config        Overwrite a config file that belongs to a different issuer.
-      --web-unscoped            Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. Asked in a terminal when the config file has no value.
+      --web-unscoped            Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. auth0 poppy doctor then reminds you to check the description of poppy:browser-sign-in. Asked in a terminal when the config file has no value.
 ```
 
 
@@ -62,6 +62,7 @@ auth0 poppy config [flags]
 ## Related Commands
 
 - [auth0 poppy config](auth0_poppy_config.md) - Rebuild the Poppy config file from the tenant
+- [auth0 poppy doctor](auth0_poppy_doctor.md) - Check the Poppy discovery chain end to end
 - [auth0 poppy setup](auth0_poppy_setup.md) - Turn on Poppy for the tenant, an API and a web app
 
 

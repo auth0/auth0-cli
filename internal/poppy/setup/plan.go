@@ -327,11 +327,11 @@ func warnings(state *State, in Inputs) (texts, kinds []string) {
 			kinds = append(kinds, WarningAPI)
 		}
 
-		// The config file has no identifier per entry: config finds the entry
-		// of an API by the host of its URL.
+		// The config file has no identifier per entry: config and doctor find
+		// the entry of an API by the host of its URL.
 		if origin, url := config.Origin(api.Identifier), in.APIURLs[api.Identifier]; origin != "" && url != "" && config.Origin(url) != origin {
 			texts = append(texts, fmt.Sprintf(
-				"The OpenAPI URL %s is not on the host of %s. auth0 poppy config finds the entry of an API in poppy.json by that host, so it will not find this one. Serve the document on the host of the API.",
+				"The OpenAPI URL %s is not on the host of %s. auth0 poppy config and auth0 poppy doctor find the entry of an API in poppy.json by that host, so they will not find this one. Serve the document on the host of the API.",
 				url, api.Identifier,
 			))
 			kinds = append(kinds, WarningAPI)

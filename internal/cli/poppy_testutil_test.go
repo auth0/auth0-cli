@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
@@ -13,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/poppy/doctor"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 )
 
@@ -110,4 +113,29 @@ func TestPoppyError(t *testing.T) {
 		notFound := core.NewAPIError(http.StatusNotFound, nil, errors.New("missing"))
 		assert.Same(t, notFound, c.poppyError(notFound))
 	})
+}
+
+// newDoctorTestOptions points every host name at a TLS server that answers 404.
+func newDoctorTestOptions(t *testing.T) doctor.Options {
+	t.Helper()
+
+	srv := httptest.NewTLSServer(http.NotFoundHandler())
+	t.Cleanup(srv.Close)
+
+	transport := srv.Client().Transport.(*http.Transport).Clone()
+	transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, network, srv.Listener.Addr().String())
+	}
+
+	return doctor.Options{HTTPClient: &http.Client{Transport: transport}}
+}
+
+// useDoctorTestOptions makes the doctor commands use newDoctorTestOptions for the
+// rest of the test.
+func useDoctorTestOptions(t *testing.T) {
+	t.Helper()
+
+	previous := poppyDoctorTestOptions
+	poppyDoctorTestOptions = newDoctorTestOptions(t)
+	t.Cleanup(func() { poppyDoctorTestOptions = previous })
 }

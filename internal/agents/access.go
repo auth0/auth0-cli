@@ -53,6 +53,12 @@ type GrantedAgent struct {
 	APIs Maybe[[]Grant] `json:"apis"`
 }
 
+// MayHaveGrants reports whether the agent has a grant. An agent whose grants
+// could not be read counts, because it may have one.
+func (a GrantedAgent) MayHaveGrants() bool {
+	return !a.APIs.Known || len(a.APIs.Value) > 0
+}
+
 // describeGranted reads the grants of an entry's agent app. A value it cannot
 // read stays unknown, and the error says why. When clientsKnown is true, an
 // entry without an agent app is known to have no grants. Grants on APIs the
@@ -94,6 +100,78 @@ func attachGrants(agent GrantedAgent, e Entry, clientsKnown bool, a audiences, g
 	agent.APIs = Known(apis)
 
 	return agent
+}
+
+// ListGranted returns every agent, with the grants of its app on the APIs the
+// filter covers (every API when it is nil). A value that cannot be read, such as
+// the grants of one agent, is reported as unknown; the filter failing is an error.
+func (s *Service) ListGranted(ctx context.Context, only AudienceFilter) ([]GrantedAgent, error) {
+	records, err := s.Records(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	a := resolve(ctx, only)
+	if a.err != nil {
+		return nil, a.err
+	}
+
+	entries, appsKnown := s.Link(ctx, records)
+
+	agents := make([]GrantedAgent, len(entries))
+	for i, e := range entries {
+		agents[i], _ = s.describeGranted(ctx, e, appsKnown, a)
+	}
+
+	return agents, nil
+}
+
+// FindGranted returns the agent app and agent record for an agent URL or agent
+// ID, with the grants of the app on the APIs the filter covers. It fails when no
+// agent is found.
+func (s *Service) FindGranted(ctx context.Context, ref string, only AudienceFilter) (*Entry, GrantedAgent, error) {
+	e, err := s.Find(ctx, ref)
+	if err != nil {
+		return nil, GrantedAgent{}, err
+	}
+
+	if e == nil {
+		return nil, GrantedAgent{}, fmt.Errorf("no agent found for %s", ref)
+	}
+
+	a := resolve(ctx, only)
+	if a.err != nil {
+		return nil, GrantedAgent{}, a.err
+	}
+
+	agent, _ := s.describeGranted(ctx, *e, true, a)
+
+	return e, agent, nil
+}
+
+// GrantedDetail is an agent with its grants and a live check of its metadata
+// document.
+type GrantedDetail struct {
+	GrantedAgent
+	MetadataCheck MetadataCheck `json:"metadata_check"`
+	// KeysCurrent tells whether the keys Auth0 stored match the document's keys.
+	KeysCurrent Maybe[bool] `json:"keys_current"`
+	// Notes explain a check that could not be made.
+	Notes []string `json:"notes"`
+}
+
+// CheckGranted checks the metadata document of an agent and whether its stored
+// keys are current. A check that fails is reported in Notes, not as an error.
+func (s *Service) CheckGranted(ctx context.Context, agent GrantedAgent) *GrantedDetail {
+	checked := NewDetail(agent.Agent)
+	s.CheckMetadata(ctx, checked)
+
+	return &GrantedDetail{
+		GrantedAgent:  agent,
+		MetadataCheck: checked.MetadataCheck,
+		KeysCurrent:   checked.KeysCurrent,
+		Notes:         checked.Notes,
+	}
 }
 
 // Extras is what `agents list` and `agents show` add to an agent record of the

@@ -131,7 +131,7 @@ func TestPoppySetupAsksInTheOrderOfTheParts(t *testing.T) {
 			h := newPoppySetupHarness(t, bare())
 			installPoppyOrderAsker(t)
 
-			args := append([]string{"setup", "--out", filepath.Join(t.TempDir(), "poppy.json"), "--dry-run"}, test.extra...)
+			args := append([]string{"setup", "--out", filepath.Join(t.TempDir(), "poppy.json"), "--dry-run", "--skip-doctor"}, test.extra...)
 
 			require.NoError(t, h.run(args...))
 			assert.Equal(t, test.want, poppyQuestionTitles(h.out.String()+h.messages.String(), known))

@@ -536,3 +536,215 @@ func jsonOf(value any) (string, error) {
 
 	return string(b), err
 }
+
+func TestListGranted(t *testing.T) {
+	boom := errors.New("boom")
+
+	muse := agentApp(museApp, museURL, museAgent)
+	atlas := agentApp("client_atlas", atlasURL, "agt_atlas")
+
+	museRecord := agentRecord(museAgent, "Meta Muse", museURL)
+	atlasRecord := agentRecord("agt_atlas", "Atlas", atlasURL)
+
+	shopGrant := grantOf("cgr_shop", shopAPI, "orders:read")
+	otherGrant := grantOf("cgr_other", otherAPI, "refund")
+
+	view := func(agentID, name, url, clientID string, apis Maybe[[]Grant]) GrantedAgent {
+		return GrantedAgent{
+			Agent: Agent{
+				AgentID: agentID, Name: name, URL: url, RecordURL: url, ClientID: clientID,
+				MetadataStatus: "available", DPoPRequired: known(false),
+			},
+			APIs: apis,
+		}
+	}
+
+	shop := Grant{ID: "cgr_shop", Audience: shopAPI, Scopes: []string{"orders:read"}}
+	other := Grant{ID: "cgr_other", Audience: otherAPI, Scopes: []string{"refund"}}
+
+	tests := []struct {
+		name      string
+		narrowed  bool
+		filterErr error
+		records   []*managementv3.AgentResponseContent
+		recordErr error
+		apps      []*managementv3.Client
+		appsErr   error
+		grants    map[string][]*managementv3.ClientGrantResponseContent
+		grantErr  map[string]error
+		want      []GrantedAgent
+		wantError string
+	}{
+		{
+			name:    "every grant of every agent",
+			records: []*managementv3.AgentResponseContent{museRecord, atlasRecord},
+			apps:    []*managementv3.Client{muse, atlas},
+			grants: map[string][]*managementv3.ClientGrantResponseContent{
+				museApp:        {shopGrant, otherGrant},
+				"client_atlas": nil,
+			},
+			want: []GrantedAgent{
+				view(museAgent, "Meta Muse", museURL, museApp, known([]Grant{shop, other})),
+				view("agt_atlas", "Atlas", atlasURL, "client_atlas", known([]Grant{})),
+			},
+		},
+		{
+			name:     "narrowed, only the grants on the APIs the filter covers",
+			narrowed: true,
+			records:  []*managementv3.AgentResponseContent{museRecord, atlasRecord},
+			apps:     []*managementv3.Client{muse, atlas},
+			grants: map[string][]*managementv3.ClientGrantResponseContent{
+				museApp:        {shopGrant, otherGrant},
+				"client_atlas": {otherGrant},
+			},
+			want: []GrantedAgent{
+				view(museAgent, "Meta Muse", museURL, museApp, known([]Grant{shop})),
+				view("agt_atlas", "Atlas", atlasURL, "client_atlas", known([]Grant{})),
+			},
+		},
+		{
+			name:    "a record without an app has no grants",
+			records: []*managementv3.AgentResponseContent{museRecord},
+			want: []GrantedAgent{{
+				Agent: Agent{AgentID: museAgent, Name: "Meta Muse", URL: museURL, RecordURL: museURL, MetadataStatus: "unknown"},
+				APIs:  known([]Grant{}),
+			}},
+		},
+		{
+			name:    "the apps cannot be listed",
+			records: []*managementv3.AgentResponseContent{museRecord},
+			appsErr: boom,
+			want: []GrantedAgent{{
+				Agent: Agent{AgentID: museAgent, Name: "Meta Muse", URL: museURL, RecordURL: museURL, MetadataStatus: "unknown"},
+			}},
+		},
+		{
+			name:     "the grants of one app cannot be read",
+			records:  []*managementv3.AgentResponseContent{museRecord, atlasRecord},
+			apps:     []*managementv3.Client{muse, atlas},
+			grants:   map[string][]*managementv3.ClientGrantResponseContent{museApp: {shopGrant}},
+			grantErr: map[string]error{"client_atlas": boom},
+			want: []GrantedAgent{
+				view(museAgent, "Meta Muse", museURL, museApp, known([]Grant{shop})),
+				view("agt_atlas", "Atlas", atlasURL, "client_atlas", Maybe[[]Grant]{}),
+			},
+		},
+		{
+			name:      "the records cannot be listed",
+			recordErr: boom,
+			wantError: "failed to list agents: boom",
+		},
+		{
+			name:      "the audiences to narrow to cannot be read",
+			narrowed:  true,
+			filterErr: boom,
+			records:   []*managementv3.AgentResponseContent{museRecord},
+			wantError: "boom",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.agents.EXPECT().List(gomock.Any(), gomock.Any()).Return(agentPage(test.records...), test.recordErr)
+
+			// The resource servers are never read here: the filter is the caller's.
+			var only AudienceFilter
+			filterCalls := 0
+			if test.narrowed {
+				only = func(context.Context) (map[string]bool, error) {
+					filterCalls++
+
+					return map[string]bool{shopAPI: true}, test.filterErr
+				}
+			}
+
+			if test.recordErr == nil && test.filterErr == nil {
+				if test.appsErr != nil {
+					f.clients.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, test.appsErr)
+				} else {
+					f.clients.EXPECT().List(gomock.Any(), gomock.Any()).Return(clientPage(test.apps...), nil)
+				}
+
+				for clientID, err := range test.grantErr {
+					f.grants.EXPECT().List(gomock.Any(), &managementv3.ListClientGrantsRequestParameters{ClientID: ptr(clientID)}).Return(nil, err)
+				}
+				for clientID, grants := range test.grants {
+					f.grants.EXPECT().List(gomock.Any(), &managementv3.ListClientGrantsRequestParameters{ClientID: ptr(clientID)}).Return(grantPage(grants...), nil)
+				}
+			}
+
+			got, err := f.svc.ListGranted(t.Context(), only)
+
+			if test.wantError != "" {
+				assert.EqualError(t, err, test.wantError)
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, test.want, got)
+			assert.Equal(t, map[bool]int{true: 1, false: 0}[test.narrowed], filterCalls, "the filter is called once")
+		})
+	}
+}
+
+func TestFindGranted(t *testing.T) {
+	boom := errors.New("boom")
+	record := agentRecord(museAgent, "Meta Muse", museURL)
+
+	grants := func(f *fixture) {
+		f.grants.EXPECT().
+			List(gomock.Any(), &managementv3.ListClientGrantsRequestParameters{ClientID: ptr(museApp)}).
+			Return(grantPage(grantOf("cgr_shop", shopAPI, "orders:read"), grantOf("cgr_other", otherAPI, "refund")), nil)
+	}
+
+	t.Run("the grants on every API", func(t *testing.T) {
+		f := newFixture(t)
+		expectFind(t, f, museURL, agentApp(museApp, museURL, museAgent))
+		f.agents.EXPECT().Read(gomock.Any(), museAgent).Return(record, nil)
+		grants(f)
+
+		e, agent, err := f.svc.FindGranted(t.Context(), museURL, nil)
+
+		require.NoError(t, err)
+		assert.True(t, e.IsAgentApp())
+		assert.Equal(t, museApp, agent.ClientID)
+		assert.Len(t, agent.APIs.Value, 2)
+		assert.True(t, agent.MayHaveGrants())
+	})
+
+	t.Run("narrowed", func(t *testing.T) {
+		f := newFixture(t)
+		expectFind(t, f, museURL, agentApp(museApp, museURL, museAgent))
+		f.agents.EXPECT().Read(gomock.Any(), museAgent).Return(record, nil)
+		grants(f)
+
+		_, agent, err := f.svc.FindGranted(t.Context(), museURL, func(context.Context) (map[string]bool, error) {
+			return map[string]bool{otherAPI: true}, nil
+		})
+
+		require.NoError(t, err)
+		assert.Equal(t, []Grant{{ID: "cgr_other", Audience: otherAPI, Scopes: []string{"refund"}}}, agent.APIs.Value)
+	})
+
+	t.Run("no agent found", func(t *testing.T) {
+		f := newFixture(t)
+		expectFind(t, f, museURL)
+
+		e, _, err := f.svc.FindGranted(t.Context(), museURL, nil)
+
+		assert.EqualError(t, err, "no agent found for "+museURL)
+		assert.Nil(t, e)
+	})
+
+	t.Run("the audiences to narrow to cannot be read", func(t *testing.T) {
+		f := newFixture(t)
+		expectFind(t, f, museURL, agentApp(museApp, museURL, museAgent))
+		f.agents.EXPECT().Read(gomock.Any(), museAgent).Return(record, nil)
+
+		_, _, err := f.svc.FindGranted(t.Context(), museURL, func(context.Context) (map[string]bool, error) { return nil, boom })
+
+		assert.ErrorIs(t, err, boom)
+	})
+}

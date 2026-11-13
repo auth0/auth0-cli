@@ -32,6 +32,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
+	"github.com/auth0/auth0-cli/internal/poppy/doctor"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 )
 
@@ -64,7 +65,7 @@ func TestPoppyCommands(t *testing.T) {
 			path: []string{"poppy", "setup"},
 			flags: []string{
 				"company-domain", "api", "api-url", "app", "no-api", "no-web", "scope", "hint", "company-name", "login-uri", "out",
-				"dry-run", "force", "web-unscoped", "overwrite-config", "json", "json-compact",
+				"dry-run", "force", "skip-doctor", "web-unscoped", "overwrite-config", "json", "json-compact",
 			},
 		},
 		{
@@ -74,6 +75,11 @@ func TestPoppyCommands(t *testing.T) {
 				"company-domain", "api", "api-url", "app", "no-api", "no-web", "hint", "company-name", "out",
 				"web-unscoped", "overwrite-config", "json", "json-compact",
 			},
+		},
+		{
+			name:  "poppy doctor",
+			path:  []string{"poppy", "doctor"},
+			flags: []string{"config", "strict", "json", "json-compact"},
 		},
 		{
 			name: "agents register",
@@ -351,6 +357,9 @@ type poppySetupHarness struct {
 	domains  *mock.MockCustomDomainAPI
 	servers  *mock.MockResourceServerAPIV3
 	clients  *mock.MockClientAPIV3
+	grants   *mock.MockClientGrantAPIV3
+	agents   *mock.MockAgentsAPI
+	policies *mock.MockGuardianPolicyAPIV3
 	run      func(args ...string) error
 
 	// Runs the command in agent mode when set.
@@ -387,7 +396,8 @@ func (h *poppySetupHarness) allowWrites() {
 
 // newPoppySetupHarness serves the tenant to the commands. The mocks have no
 // write calls until allowWrites is called, so any attempt to change the tenant
-// fails the test.
+// fails the test. The doctor checks that run at the end of setup see a website
+// that answers 404.
 func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarness {
 	t.Helper()
 
@@ -399,8 +409,15 @@ func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarn
 		domains:  mock.NewMockCustomDomainAPI(ctrl),
 		servers:  mock.NewMockResourceServerAPIV3(ctrl),
 		clients:  mock.NewMockClientAPIV3(ctrl),
+		grants:   mock.NewMockClientGrantAPIV3(ctrl),
+		agents:   mock.NewMockAgentsAPI(ctrl),
+		policies: mock.NewMockGuardianPolicyAPIV3(ctrl),
 		fail:     map[string]error{},
 	}
+
+	// The doctor checks that run at the end of setup read the agents and the MFA policies too.
+	h.agents.EXPECT().List(gomock.Any(), gomock.Any()).Return(testAgentPage(), nil).AnyTimes()
+	h.policies.EXPECT().List(gomock.Any()).Return(managementv3.ListGuardianPoliciesResponseContent{}, nil).AnyTimes()
 
 	h.tenant.EXPECT().Get(gomock.Any(), gomock.Any()).Return(tenant.settings, nil).AnyTimes()
 	h.domains.EXPECT().List(gomock.Any()).Return(tenant.domains, nil).AnyTimes()
@@ -455,10 +472,24 @@ func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarn
 
 			return testClientPage(clients...), nil
 		}).AnyTimes()
+	h.grants.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(_ context.Context, request *managementv3.ListClientGrantsRequestParameters, _ ...any) (*auth0.ClientGrantPage, error) {
+			if request.ClientID == nil {
+				return testGrantPage(&managementv3.ClientGrantResponseContent{ClientID: testPtr("client_muse")}), nil
+			}
+
+			if !tenant.guest {
+				return testGrantPage(), nil
+			}
+
+			return testGrantPage(&managementv3.ClientGrantResponseContent{SubjectType: testPtr(managementv3.ClientGrantSubjectTypeEnumAnonymousUser)}), nil
+		}).AnyTimes()
 
 	renderer := display.NewRenderer()
 	renderer.ResultWriter = h.out
 	renderer.MessageWriter = h.messages
+
+	useDoctorTestOptions(t)
 
 	testCLI := &cli{
 		renderer: renderer,
@@ -468,6 +499,9 @@ func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarn
 			TenantSettings:   h.tenant,
 			ResourceServerV3: h.servers,
 			ClientV3:         h.clients,
+			ClientGrant:      h.grants,
+			Agents:           h.agents,
+			GuardianPolicy:   h.policies,
 		},
 	}
 
@@ -662,7 +696,7 @@ func TestPoppyIssuerMismatchAsksNothing(t *testing.T) {
 	fresh := func() poppyTenantState { state := freshPoppyTenant(); state.domains = nil; return state }
 
 	setupArgs := func(t *testing.T, extra ...string) []string {
-		return freshSetupArgs(t, append([]string{"--out", goldenPoppyConfig(t)}, extra...)...)
+		return freshSetupArgs(t, append([]string{"--out", goldenPoppyConfig(t), "--skip-doctor"}, extra...)...)
 	}
 	// Hints that the file lacks are what config would ask about.
 	configArgs := func(t *testing.T, extra ...string) []string {
@@ -964,14 +998,14 @@ func outOf(args []string) string {
 }
 
 func TestPoppySetupApply(t *testing.T) {
-	t.Run("applies the plan and writes the file last", func(t *testing.T) {
+	t.Run("applies the plan, writes the file last and runs doctor", func(t *testing.T) {
 		h := newPoppySetupHarness(t, freshPoppyTenant())
 		h.allowWrites()
 		args := freshSetupArgs(t, "--force")
 
 		err := h.run(args...)
 
-		require.NoError(t, err)
+		require.NoError(t, err, "a doctor failure does not fail setup")
 		assert.Equal(t, []string{"tenant", "api", "app"}, h.calls)
 
 		cfg, err := config.Read(outOf(args))
@@ -981,7 +1015,21 @@ func TestPoppySetupApply(t *testing.T) {
 		text := h.out.String()
 		assert.Contains(t, text, "Poppy setup for shop.example")
 		assert.Contains(t, text, "Applying 12 changes\n")
+		// Setup has a login, so doctor reads the tenant. The website is usually not
+		// deployed yet, so only the checks of the tenant run (D8 to D14). The mocks
+		// serve the tenant as it was before the plan, without the company domain, and
+		// the site cannot be reached to tell which tenant serves it. So the doctor
+		// takes the tenant for another one and skips its checks.
+		assert.NotContains(t, text, "FAIL D")
+		assert.NotContains(t, text, ".well-known")
+		assert.NotContains(t, text, "- skipped", "the checks that did not run are not listed after setup")
+		assert.NotContains(t, text, "skipped (")
+		assert.Contains(t, text, "0 passed, 7 skipped.")
+		assert.Contains(t, text, "Checking your setup (auth0 poppy doctor)")
 		assert.Contains(t, text, "written\n")
+		assert.Contains(t, text, "Only the checks of your tenant ran, because your website is usually not deployed yet. Once it is, run `auth0 poppy doctor shop.example` to check everything.")
+		assert.NotContains(t, text, "Deploy the config file with your app")
+		assert.NotContains(t, text, "to see every check")
 		assert.Contains(t, text, "Next\n  1. Deploy ")
 		assert.Empty(t, h.messages.String(), "the result is on stdout")
 	})
@@ -990,12 +1038,23 @@ func TestPoppySetupApply(t *testing.T) {
 		h := newPoppySetupHarness(t, freshPoppyTenant())
 		h.allowWrites()
 
-		require.NoError(t, h.run(freshSetupArgs(t, "--force")...))
+		require.NoError(t, h.run(freshSetupArgs(t, "--force", "--skip-doctor")...))
 
 		assert.Equal(t, []string{"tenant", "api", "app"}, h.calls)
 	})
 
-	t.Run("a tenant that is set up has nothing to change", func(t *testing.T) {
+	t.Run("skip doctor", func(t *testing.T) {
+		h := newPoppySetupHarness(t, freshPoppyTenant())
+		h.allowWrites()
+
+		require.NoError(t, h.run(freshSetupArgs(t, "--force", "--skip-doctor")...))
+
+		assert.NotContains(t, h.out.String(), "Checking your setup")
+		assert.NotContains(t, h.out.String(), ".well-known")
+		assert.NotContains(t, h.out.String(), "Deploy the config file")
+	})
+
+	t.Run("a tenant that is set up has nothing to change and still runs doctor", func(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
 		h.allowWrites()
 		args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", goldenPoppyConfig(t)}
@@ -1005,11 +1064,18 @@ func TestPoppySetupApply(t *testing.T) {
 		assert.Empty(t, h.calls)
 		assert.Contains(t, h.out.String(), "Nothing to change")
 		assert.NotContains(t, h.out.String(), "Applying", "nothing is applied")
+		assert.Contains(t, h.out.String(), "Checking your setup")
+		assert.Contains(t, h.out.String(), "Only the checks of your tenant ran")
+		assert.NotContains(t, h.out.String(), ".well-known/poppy.json", "the website checks do not run after setup")
+
+		h = newPoppySetupHarness(t, configuredPoppyTenant())
+		require.NoError(t, h.run(append(args, "--skip-doctor")...))
+		assert.NotContains(t, h.out.String(), "Checking your setup")
 	})
 
 	t.Run("an empty plan asks for nothing", func(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
-		args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", goldenPoppyConfig(t)}
+		args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", goldenPoppyConfig(t), "--skip-doctor"}
 
 		require.NoError(t, h.run(args...), "no terminal and no --force")
 	})
@@ -1049,11 +1115,12 @@ func TestPoppySetupConfirmation(t *testing.T) {
 		require.NoError(t, h.run(args...), "the mocks have no write calls")
 
 		assert.NoFileExists(t, outOf(args))
+		assert.NotContains(t, h.messages.String(), "Doctor")
 	})
 }
 
 func TestPoppySetupJSON(t *testing.T) {
-	t.Run("plan and applied", func(t *testing.T) {
+	t.Run("plan, applied and doctor", func(t *testing.T) {
 		h := newPoppySetupHarness(t, freshPoppyTenant())
 		h.allowWrites()
 
@@ -1062,17 +1129,41 @@ func TestPoppySetupJSON(t *testing.T) {
 		var result struct {
 			Plan    setup.Plan     `json:"plan"`
 			Applied []setup.Change `json:"applied"`
+			Doctor  *doctor.Report `json:"doctor"`
 		}
 		require.NoError(t, json.Unmarshal(h.out.Bytes(), &result), "one object")
 		require.Len(t, result.Plan.Changes, 4)
 		assert.Equal(t, result.Plan.Changes, result.Applied, "applied has the same change objects as the plan")
+		require.NotNil(t, result.Doctor)
+		assert.Equal(t, "shop.example", result.Doctor.Domain)
+		assert.True(t, result.Doctor.TenantOnly, "the website is usually not deployed yet, so only the tenant is checked")
+		assert.Zero(t, result.Doctor.ExitCode())
+		assert.Equal(t, 7, result.Doctor.Totals.Skipped, "the mocks serve a tenant the doctor takes for another one")
+		assert.Zero(t, result.Doctor.Totals.Fail)
+
+		for _, res := range result.Doctor.Results {
+			assert.Contains(t, []string{"D8", "D9", "D10", "D11", "D12", "D13", "D14"}, res.ID, "no website check is in the report")
+		}
+	})
+
+	t.Run("skip doctor leaves the doctor out", func(t *testing.T) {
+		h := newPoppySetupHarness(t, freshPoppyTenant())
+		h.allowWrites()
+
+		require.NoError(t, h.run(freshSetupArgs(t, "--force", "--json-compact", "--skip-doctor")...))
+
+		var result map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(h.out.Bytes(), &result))
+		assert.Contains(t, result, "plan")
+		assert.Contains(t, result, "applied")
+		assert.NotContains(t, result, "doctor")
 	})
 
 	t.Run("an empty plan applies nothing", func(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
 
 		require.NoError(t, h.run("setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID,
-			"--out", goldenPoppyConfig(t), "--json"))
+			"--out", goldenPoppyConfig(t), "--skip-doctor", "--json"))
 
 		assert.JSONEq(t, `[]`, string(jsonField(t, h.out.Bytes(), "applied")))
 	})
@@ -1081,7 +1172,7 @@ func TestPoppySetupJSON(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
 
 		require.NoError(t, h.run("setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID,
-			"--out", goldenPoppyConfig(t), "--json"))
+			"--out", goldenPoppyConfig(t), "--skip-doctor", "--json"))
 
 		plan := jsonField(t, h.out.Bytes(), "plan")
 		assert.JSONEq(t, `[]`, string(jsonField(t, plan, "warnings")), "a plan without warnings has a list, not null")
@@ -1157,6 +1248,7 @@ func TestPoppySetupFailures(t *testing.T) {
 				assert.Equal(t, test.wantCalls, h.calls, "stops at the first failure")
 				assert.Contains(t, err.Error(), test.wantMessage)
 				assert.NoFileExists(t, outOf(args), "the file is written last")
+				assert.NotContains(t, h.out.String(), "Checking your setup", "doctor runs only after a full apply")
 
 				var partial *setup.PartialError
 				isPartial := errors.As(err, &partial)
@@ -1202,7 +1294,7 @@ func TestPoppyJSONLeavesNoText(t *testing.T) {
 			tenant func() poppyTenantState
 			args   func(t *testing.T) []string
 		}{
-			"setup":         {freshPoppyTenant, func(t *testing.T) []string { return freshSetupArgs(t, flag, "--force") }},
+			"setup":         {freshPoppyTenant, func(t *testing.T) []string { return freshSetupArgs(t, flag, "--force", "--skip-doctor") }},
 			"setup dry run": {freshPoppyTenant, func(t *testing.T) []string { return freshSetupArgs(t, flag, "--dry-run") }},
 			"setup refused": {freshPoppyTenant, func(t *testing.T) []string { return freshSetupArgs(t, flag) }},
 			"config": {configuredPoppyTenant, func(t *testing.T) []string {
@@ -1532,7 +1624,7 @@ func TestPoppySetupPromptRule(t *testing.T) {
 
 	asks := []string{"hints", "web access", "confirm"}
 
-	checkPoppySetupPromptRows(t, freshPoppyTenant(), nil, []poppyPromptRow{
+	checkPoppySetupPromptRows(t, freshPoppyTenant(), []string{"--skip-doctor"}, []poppyPromptRow{
 		{name: "terminal", mode: modeTerminal, asked: asks, text: "Applying"},
 		{name: "terminal with --json", mode: modeTerminalJSON, asked: asks, message: plan, json: true},
 		{name: "terminal with --no-input", mode: modeTerminalNoInput, text: plan, reason: "confirmation_required", errText: "--force"},
@@ -1554,7 +1646,7 @@ func TestPoppySetupPromptRuleScopeDescription(t *testing.T) {
 	tenant := freshPoppyTenant()
 	tenant.server.Scopes[1].Description = nil
 
-	checkPoppySetupPromptRows(t, tenant, nil, []poppyPromptRow{
+	checkPoppySetupPromptRows(t, tenant, []string{"--skip-doctor"}, []poppyPromptRow{
 		{name: "terminal", mode: modeTerminal, asked: asks, text: "Applying"},
 		{name: "terminal with --json", mode: modeTerminalJSON, asked: asks, message: plan, json: true},
 		{name: "terminal with --no-input", mode: modeTerminalNoInput, reason: "missing_required_flags", errText: missing},
@@ -1575,7 +1667,7 @@ func TestPoppySetupCompanyName(t *testing.T) {
 	missing := "missing required flags: --company-name"
 
 	t.Run("asked in a terminal, listed without one", func(t *testing.T) {
-		checkPoppySetupPromptRows(t, unnamed, nil, []poppyPromptRow{
+		checkPoppySetupPromptRows(t, unnamed, []string{"--skip-doctor"}, []poppyPromptRow{
 			{name: "terminal", mode: modeTerminal, asked: asks, text: "Applying"},
 			{name: "terminal with --json", mode: modeTerminalJSON, asked: asks, message: plan, json: true},
 			{name: "terminal with --no-input", mode: modeTerminalNoInput, reason: "missing_required_flags", errText: missing},
@@ -1585,7 +1677,7 @@ func TestPoppySetupCompanyName(t *testing.T) {
 	})
 
 	t.Run("--company-name answers it", func(t *testing.T) {
-		checkPoppySetupPromptRows(t, unnamed, []string{"--company-name", "Shop Inc"}, []poppyPromptRow{
+		checkPoppySetupPromptRows(t, unnamed, []string{"--skip-doctor", "--company-name", "Shop Inc"}, []poppyPromptRow{
 			{name: "terminal", mode: modeTerminal, asked: []string{"hints", "web access", "confirm"}, text: "Applying"},
 			{name: "piped", mode: modePiped, reason: "confirmation_required", errText: "--force", text: plan},
 		})
@@ -1834,7 +1926,7 @@ func runHintFlow(t *testing.T, answers []any, extra ...string) (poppyPromptRun, 
 	h := newPoppySetupHarness(t, freshPoppyTenant())
 	h.allowWrites()
 
-	args := freshSetupArgs(t, extra...)
+	args := freshSetupArgs(t, append([]string{"--skip-doctor"}, extra...)...)
 
 	script := &poppyScript{answers: answers}
 	run := h.runHintMode(t, script, args)
@@ -1875,7 +1967,7 @@ func TestPoppySetupHintAnswersEqualTheFlags(t *testing.T) {
 
 	flagged := newPoppySetupHarness(t, freshPoppyTenant())
 	flagged.allowWrites()
-	require.NoError(t, flagged.run(freshSetupArgs(t, "--dry-run",
+	require.NoError(t, flagged.run(freshSetupArgs(t, "--skip-doctor", "--dry-run",
 		"--hint", "orders:read=changes:none,personal_data:false", "--hint", "checkout=changes:irreversible,personal_data:true")...))
 
 	plan := func(out string) string {
@@ -1909,7 +2001,7 @@ func TestPoppySetupHintAnswersWriteTheSameFile(t *testing.T) {
 	flagged := newPoppySetupHarness(t, freshPoppyTenant())
 	flagged.allowWrites()
 
-	args := freshSetupArgs(t, "--force",
+	args := freshSetupArgs(t, "--skip-doctor", "--force",
 		"--hint", "orders:read=changes:none,personal_data:false", "--hint", "checkout=changes:none,personal_data:false")
 	require.NoError(t, flagged.run(args...))
 
@@ -1955,7 +2047,7 @@ func TestPoppySetupHintsAreNotAskedAgain(t *testing.T) {
 	t.Run("a hint in the file of a configured tenant is not asked", func(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
 		args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID,
-			"--out", goldenPoppyConfig(t), "--dry-run"}
+			"--out", goldenPoppyConfig(t), "--skip-doctor", "--dry-run"}
 
 		script := &poppyScript{}
 		run := h.runHintMode(t, script, args)
@@ -1977,7 +2069,7 @@ func TestPoppySetupHintsCtrlC(t *testing.T) {
 	h := newPoppySetupHarness(t, freshPoppyTenant())
 	h.allowWrites()
 
-	args := freshSetupArgs(t)
+	args := freshSetupArgs(t, "--skip-doctor")
 	script := &poppyScript{answers: []any{nil, terminal.InterruptErr}}
 
 	run := h.runHintMode(t, script, args)
@@ -1993,7 +2085,7 @@ func TestPoppySetupHintsCtrlC(t *testing.T) {
 // questions and the plan, but they are on stderr, so that stdout is the JSON
 // document and nothing else.
 func TestPoppyJSONKeepsStdoutClean(t *testing.T) {
-	setupArgs := func(t *testing.T) []string { return freshSetupArgs(t) }
+	setupArgs := func(t *testing.T) []string { return freshSetupArgs(t, "--skip-doctor") }
 
 	tests := []struct {
 		name string

@@ -21,6 +21,30 @@ func TestNormalizeCompanyDomain(t *testing.T) {
 	}
 }
 
+func TestIsBareCompanyDomain(t *testing.T) {
+	tests := map[string]bool{
+		"shop.example":               true,
+		"shop-1.example.com":         true,
+		"https://shop.example":       false,
+		"shop.example/":              false,
+		"shop.example/store":         false,
+		"shop.example:8443":          false,
+		"user@shop.example":          false,
+		"shop.example?x=1":           false,
+		"Shop.example":               false,
+		"shop example":               false,
+		"":                           false,
+		"http://shop.example":        false,
+		"https://shop.example/store": false,
+	}
+
+	for entry, want := range tests {
+		t.Run(entry, func(t *testing.T) {
+			assert.Equal(t, want, IsBareCompanyDomain(entry))
+		})
+	}
+}
+
 func TestHasCompanyDomain(t *testing.T) {
 	assert.True(t, HasCompanyDomain([]string{"a.example", "shop.example"}, "shop.example"))
 	assert.True(t, HasCompanyDomain([]string{"https://shop.example"}, "shop.example"), "an origin written by an older build names the same host")
