@@ -33,7 +33,7 @@ var schemaFlag = Flag{
 func printOperationSchema(cli *cli, method, path string) error {
 	var manager *openapi.SchemaManager
 	if err := ansi.Waiting(func() (err error) {
-		manager, err = openapi.NewSchemaManager()
+		manager, err = newSchemaManager()
 		return err
 	}); err != nil {
 		return fmt.Errorf("failed to load OpenAPI schema: %w", err)

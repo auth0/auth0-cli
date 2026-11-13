@@ -28,9 +28,9 @@ type DataJSONHandler struct {
 	manager *openapi.SchemaManager
 }
 
-// newSchemaManager builds the schema manager backing --data validation. It is a
-// package var so tests can inject a fixture-backed manager and keep the unit
-// suite off the network.
+// newSchemaManager builds the schema manager backing --data validation and
+// --schema. It is a package var so tests can inject a fixture-backed manager and
+// keep the unit suite off the network.
 var newSchemaManager = openapi.NewSchemaManager
 
 // NewDataJSONHandler creates a new data JSON handler.
