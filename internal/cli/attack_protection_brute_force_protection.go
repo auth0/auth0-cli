@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -66,6 +67,8 @@ type (
 		AllowList   []string
 		Mode        string
 		MaxAttempts int
+		Data        string
+		Schema      bool
 	}
 )
 
@@ -116,8 +119,17 @@ func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
   auth0 ap bfp update --enabled=true --allowlist "156.156.156.156,175.175.175.175"
   auth0 ap bfp update --enabled=false --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3
   auth0 ap bfp update --enabled=true --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip
-  auth0 ap bfp update --enabled=false --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip --shields user_notification 
-  auth0 ap bfp update -e=true -l "156.156.156.156,175.175.175.175" -a 3 -m count_per_identifier_and_ip -s user_notification --json`,
+  auth0 ap bfp update --enabled=false --allowlist "156.156.156.156,175.175.175.175" --max-attempts 3 --mode count_per_identifier_and_ip --shields user_notification
+  auth0 ap bfp update -e=true -l "156.156.156.156,175.175.175.175" -a 3 -m count_per_identifier_and_ip -s user_notification --json
+
+  # Discover the payload schema
+  auth0 ap bfp update --schema
+  auth0 ap bfp update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ap bfp update --data '{"enabled":true,"max_attempts":5,"shields":["block","user_notification"]}'
+  auth0 ap bfp update --data @brute-force-protection.json
+  cat brute-force-protection.json | auth0 ap bfp update`,
 		RunE: updateBruteForceDetectionCmdRun(cli, &inputs),
 	}
 
@@ -128,6 +140,10 @@ func updateBruteForceProtectionCmd(cli *cli) *cobra.Command {
 	bfpFlags.AllowList.RegisterStringSliceU(cmd, &inputs.AllowList, []string{})
 	bfpFlags.Mode.RegisterString(cmd, &inputs.Mode, "")
 	bfpFlags.MaxAttempts.RegisterIntU(cmd, &inputs.MaxAttempts, 1)
+
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -154,8 +170,20 @@ func updateBruteForceDetectionCmdRun(
 	inputs *bruteForceProtectionInputs,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		if inputs.Schema {
+			return printOperationSchema(cli, "PATCH", "/attack-protection/brute-force-protection")
+		}
+
+		payload, provided, err := ResolveData(cmd)
+		if err != nil {
+			return err
+		}
+		if provided {
+			return updateBruteForceProtectionFromJSON(cli, cmd, payload)
+		}
+
 		var bfp *management.BruteForceProtection
-		err := ansi.Waiting(func() (err error) {
+		err = ansi.Waiting(func() (err error) {
 			bfp, err = cli.api.AttackProtection.GetBruteForceProtection(cmd.Context())
 			return err
 		})
@@ -219,4 +247,21 @@ func updateBruteForceDetectionCmdRun(
 
 		return nil
 	}
+}
+
+func updateBruteForceProtectionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	bfp, err := runJSONWrite[management.BruteForceProtection](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/attack-protection/brute-force-protection",
+		URI:        cli.api.HTTPClient.URI("attack-protection", "brute-force-protection"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 protection brute-force-protection update",
+	})
+	if err != nil {
+		return err
+	}
+
+	cli.renderer.BruteForceProtectionUpdate(bfp)
+
+	return nil
 }

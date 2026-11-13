@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
@@ -54,6 +55,8 @@ type (
 		Shields                    []string
 		AdminNotificationFrequency []string
 		Method                     string
+		Data                       string
+		Schema                     bool
 	}
 )
 
@@ -107,7 +110,16 @@ func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
   auth0 ap bpd update --enabled=true --admin-notification-frequency weekly
   auth0 ap bpd update --enabled=false --admin-notification-frequency weekly --method enhanced
   auth0 ap bpd update --enabled=true --admin-notification-frequency weekly --method enhanced --shields admin_notification
-  auth0 ap bpd update -e=true -f weekly -m enhanced -s admin_notification --json`,
+  auth0 ap bpd update -e=true -f weekly -m enhanced -s admin_notification --json
+
+  # Discover the payload schema
+  auth0 ap bpd update --schema
+  auth0 ap bpd update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ap bpd update --data '{"enabled":true,"shields":["admin_notification"],"admin_notification_frequency":["weekly"]}'
+  auth0 ap bpd update --data @breached-password-detection.json
+  cat breached-password-detection.json | auth0 ap bpd update`,
 		RunE: updateBreachedPasswordDetectionCmdRun(cli, &inputs),
 	}
 
@@ -117,6 +129,10 @@ func updateBreachedPasswordDetectionCmd(cli *cli) *cobra.Command {
 	bpdFlags.Shields.RegisterStringSliceU(cmd, &inputs.Shields, []string{})
 	bpdFlags.AdminNotificationFrequency.RegisterStringSliceU(cmd, &inputs.AdminNotificationFrequency, []string{})
 	bpdFlags.Method.RegisterString(cmd, &inputs.Method, "")
+
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -143,8 +159,20 @@ func updateBreachedPasswordDetectionCmdRun(
 	inputs *breachedPasswordDetectionInputs,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		if inputs.Schema {
+			return printOperationSchema(cli, "PATCH", "/attack-protection/breached-password-detection")
+		}
+
+		payload, provided, err := ResolveData(cmd)
+		if err != nil {
+			return err
+		}
+		if provided {
+			return updateBreachedPasswordDetectionFromJSON(cli, cmd, payload)
+		}
+
 		var bpd *management.BreachedPasswordDetection
-		err := ansi.Waiting(func() (err error) {
+		err = ansi.Waiting(func() (err error) {
 			bpd, err = cli.api.AttackProtection.GetBreachedPasswordDetection(cmd.Context())
 			return err
 		})
@@ -199,4 +227,21 @@ func updateBreachedPasswordDetectionCmdRun(
 
 		return nil
 	}
+}
+
+func updateBreachedPasswordDetectionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	bpd, err := runJSONWrite[management.BreachedPasswordDetection](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/attack-protection/breached-password-detection",
+		URI:        cli.api.HTTPClient.URI("attack-protection", "breached-password-detection"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 protection breached-password-detection update",
+	})
+	if err != nil {
+		return err
+	}
+
+	cli.renderer.BreachedPasswordDetectionUpdate(bpd)
+
+	return nil
 }
