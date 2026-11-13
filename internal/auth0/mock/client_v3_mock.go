@@ -43,6 +43,25 @@ func (m *MockClientAPIV3) EXPECT() *MockClientAPIV3MockRecorder {
 	return m.recorder
 }
 
+// Delete mocks base method.
+func (m *MockClientAPIV3) Delete(ctx context.Context, id string, opts ...option.RequestOption) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Delete", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockClientAPIV3MockRecorder) Delete(ctx, id any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClientAPIV3)(nil).Delete), varargs...)
+}
+
 // Get mocks base method.
 func (m *MockClientAPIV3) Get(ctx context.Context, id string, request *management.GetClientRequestParameters, opts ...option.RequestOption) (*management.GetClientResponseContent, error) {
 	m.ctrl.T.Helper()
@@ -83,6 +102,46 @@ func (mr *MockClientAPIV3MockRecorder) List(ctx, request any, opts ...any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientAPIV3)(nil).List), varargs...)
 }
 
+// PreviewCimdMetadata mocks base method.
+func (m *MockClientAPIV3) PreviewCimdMetadata(ctx context.Context, request *management.PreviewCimdMetadataRequestContent, opts ...option.RequestOption) (*management.PreviewCimdMetadataResponseContent, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PreviewCimdMetadata", varargs...)
+	ret0, _ := ret[0].(*management.PreviewCimdMetadataResponseContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PreviewCimdMetadata indicates an expected call of PreviewCimdMetadata.
+func (mr *MockClientAPIV3MockRecorder) PreviewCimdMetadata(ctx, request any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreviewCimdMetadata", reflect.TypeOf((*MockClientAPIV3)(nil).PreviewCimdMetadata), varargs...)
+}
+
+// RegisterCimdClient mocks base method.
+func (m *MockClientAPIV3) RegisterCimdClient(ctx context.Context, request *management.RegisterCimdClientRequestContent, opts ...option.RequestOption) (*management.RegisterCimdClientResponseContent, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RegisterCimdClient", varargs...)
+	ret0, _ := ret[0].(*management.RegisterCimdClientResponseContent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RegisterCimdClient indicates an expected call of RegisterCimdClient.
+func (mr *MockClientAPIV3MockRecorder) RegisterCimdClient(ctx, request any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterCimdClient", reflect.TypeOf((*MockClientAPIV3)(nil).RegisterCimdClient), varargs...)
+}
+
 // Update mocks base method.
 func (m *MockClientAPIV3) Update(ctx context.Context, id string, request *management.UpdateClientRequestContent, opts ...option.RequestOption) (*management.UpdateClientResponseContent, error) {
 	m.ctrl.T.Helper()
@@ -101,4 +160,48 @@ func (mr *MockClientAPIV3MockRecorder) Update(ctx, id, request any, opts ...any)
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, id, request}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockClientAPIV3)(nil).Update), varargs...)
+}
+
+// MockClientCredentialAPIV3 is a mock of ClientCredentialAPIV3 interface.
+type MockClientCredentialAPIV3 struct {
+	ctrl     *gomock.Controller
+	recorder *MockClientCredentialAPIV3MockRecorder
+	isgomock struct{}
+}
+
+// MockClientCredentialAPIV3MockRecorder is the mock recorder for MockClientCredentialAPIV3.
+type MockClientCredentialAPIV3MockRecorder struct {
+	mock *MockClientCredentialAPIV3
+}
+
+// NewMockClientCredentialAPIV3 creates a new mock instance.
+func NewMockClientCredentialAPIV3(ctrl *gomock.Controller) *MockClientCredentialAPIV3 {
+	mock := &MockClientCredentialAPIV3{ctrl: ctrl}
+	mock.recorder = &MockClientCredentialAPIV3MockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockClientCredentialAPIV3) EXPECT() *MockClientCredentialAPIV3MockRecorder {
+	return m.recorder
+}
+
+// List mocks base method.
+func (m *MockClientCredentialAPIV3) List(ctx context.Context, clientID string, opts ...option.RequestOption) ([]*management.ClientCredential, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, clientID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "List", varargs...)
+	ret0, _ := ret[0].([]*management.ClientCredential)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockClientCredentialAPIV3MockRecorder) List(ctx, clientID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, clientID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientCredentialAPIV3)(nil).List), varargs...)
 }

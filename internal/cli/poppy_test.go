@@ -75,6 +75,18 @@ func TestPoppyCommands(t *testing.T) {
 				"web-unscoped", "overwrite-config", "json", "json-compact",
 			},
 		},
+		{
+			name: "agents register",
+			path: []string{"agents", "register"},
+			flags: []string{
+				"api", "poppy", "name", "config", "force", "scopes", "all-scopes", "require-dpop", "json", "json-compact",
+			},
+		},
+		{
+			name:  "agents unregister",
+			path:  []string{"agents", "unregister"},
+			flags: []string{"force", "dry-run", "poppy", "json", "json-compact"},
+		},
 	}
 
 	for _, test := range tests {
@@ -99,6 +111,29 @@ func TestPoppyCommands(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("agents register rejects --scopes with --all-scopes", func(t *testing.T) {
+		root := newPoppyTestRoot()
+		root.SetArgs([]string{"agents", "register", "--scopes", "orders:read", "--all-scopes"})
+
+		err := root.Execute()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "scopes")
+		assert.Contains(t, err.Error(), "all-scopes")
+	})
+
+	t.Run("agents has no remove command", func(t *testing.T) {
+		agentsCmd, _, err := newPoppyTestRoot().Find([]string{"agents"})
+		require.NoError(t, err)
+
+		var names []string
+		for _, sub := range agentsCmd.Commands() {
+			names = append(names, sub.Name())
+		}
+
+		assert.ElementsMatch(t, []string{"list", "show", "create", "update", "delete", "register", "unregister"}, names)
+	})
 
 	t.Run("auth0 test poppy is not registered", func(t *testing.T) {
 		testCmd, _, err := newPoppyTestRoot().Find([]string{"test"})
@@ -1989,6 +2024,31 @@ func TestPoppyJSONKeepsStdoutClean(t *testing.T) {
 				return h.runPromptMode(t, mode, args)
 			},
 			wantErr: []string{"Poppy config for shop.example", "Hints for your scopes"},
+		},
+		{
+			name: "agents register",
+			mode: modeAgentPrompting,
+			run: func(t *testing.T, mode poppyPromptMode) poppyPromptRun {
+				h := newAgentsHarness(t)
+				h.allowRegistration()
+
+				return h.runPromptMode(t, mode, []string{"register", poppyTestAgentURL, "--poppy", "--scopes", "orders:read", "--config", filepath.Join(t.TempDir(), "none.json")})
+			},
+			wantErr: []string{"Agent metadata", "This will", "Register the agent"},
+		},
+		{
+			name: "agents unregister",
+			mode: modeTerminalJSON,
+			run: func(t *testing.T, mode poppyPromptMode) poppyPromptRun {
+				h := newAgentsHarness(t)
+				h.expectRemovalLookup(testGrant("cgr_shop", poppyTestAPI, "orders:read"))
+				h.grants.EXPECT().Delete(gomock.Any(), "cgr_shop").Return(nil).AnyTimes()
+				h.agents.EXPECT().Delete(gomock.Any(), poppyTestAgentID).Return(nil).AnyTimes()
+				h.clients.EXPECT().Delete(gomock.Any(), poppyTestClientID).Return(nil).AnyTimes()
+
+				return h.runPromptMode(t, mode, []string{"unregister", poppyTestAgentURL})
+			},
+			wantErr: []string{"This will remove:", "Unregister the agent"},
 		},
 	}
 
