@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -1226,6 +1227,7 @@ func TestDefaultPortForFramework(t *testing.T) {
 		{"fastify", 3000},
 		{"hono", 3000},
 		{"sveltekit", 5173},
+		{"tanstack-start", 3000},
 		{"rails", 3000},
 		{"vanilla-go", 3000},
 		{"django", 8000},
@@ -1264,6 +1266,7 @@ func TestFrameworksForType(t *testing.T) {
 	t.Run("regular", func(t *testing.T) {
 		fws := frameworksForType("regular")
 		assert.Contains(t, fws, "nextjs")
+		assert.Contains(t, fws, "tanstack-start")
 		assert.Contains(t, fws, "nuxt")
 		assert.Contains(t, fws, "fastify")
 		assert.Contains(t, fws, "sveltekit")
@@ -1313,6 +1316,7 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 		wantKey        string
 		wantBuildTool  string
 		wantAutoSelect bool
+		wantPort       int // Asserted only when non-zero.
 	}{
 		// SPA .
 		// Auth0 qs setup --app --type spa --framework react --build-tool vite.
@@ -1326,6 +1330,38 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			name:           "spa react build-tool none auto-selects vite",
 			inputs:         SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "none", Port: 5173},
 			wantKey:        "spa:react:vite",
+			wantBuildTool:  "vite",
+			wantAutoSelect: true,
+		},
+		// Auth0 qs setup --app --type spa --framework react --build-tool webpack.
+		{
+			name:          "spa react webpack",
+			inputs:        SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "webpack"},
+			wantKey:       "spa:react:webpack",
+			wantBuildTool: "webpack",
+			wantPort:      8080, // Webpack-dev-server default, resolved after the build tool.
+		},
+		// Auth0 qs setup --app --type spa --framework vanilla-javascript --build-tool webpack.
+		{
+			name:          "spa vanilla-javascript webpack",
+			inputs:        SetupInputs{App: true, Type: "spa", Framework: "vanilla-javascript", BuildTool: "webpack"},
+			wantKey:       "spa:vanilla-javascript:webpack",
+			wantBuildTool: "webpack",
+			wantPort:      8080,
+		},
+		// React now has two build tools (vite, webpack); "none" must still auto-select vite (first, sorted).
+		{
+			name:           "spa react build-tool none auto-selects vite with port 5173",
+			inputs:         SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "none"},
+			wantKey:        "spa:react:vite",
+			wantBuildTool:  "vite",
+			wantAutoSelect: true,
+			wantPort:       5173,
+		},
+		{
+			name:           "spa vanilla-javascript build-tool none auto-selects vite",
+			inputs:         SetupInputs{App: true, Type: "spa", Framework: "vanilla-javascript", BuildTool: "none"},
+			wantKey:        "spa:vanilla-javascript:vite",
 			wantBuildTool:  "vite",
 			wantAutoSelect: true,
 		},
@@ -1372,6 +1408,14 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			inputs:        SetupInputs{App: true, Type: "regular", Framework: "nextjs", BuildTool: "none", Port: 3000},
 			wantKey:       "regular:nextjs:none",
 			wantBuildTool: "none",
+		},
+		// Auth0 qs setup --app --type regular --framework tanstack-start.
+		{
+			name:          "regular tanstack-start none",
+			inputs:        SetupInputs{App: true, Type: "regular", Framework: "tanstack-start", BuildTool: "none"},
+			wantKey:       "regular:tanstack-start:none",
+			wantBuildTool: "none",
+			wantPort:      3000,
 		},
 		// Auth0 qs setup --app --type regular --framework nuxt.
 		{
@@ -1574,6 +1618,9 @@ func TestGetQuickstartConfigKey(t *testing.T) {
 			assert.Equal(t, tc.wantAutoSelect, wasAuto)
 			if tc.inputs.App {
 				assert.Equal(t, tc.wantBuildTool, tc.inputs.BuildTool)
+			}
+			if tc.wantPort != 0 {
+				assert.Equal(t, tc.wantPort, tc.inputs.Port)
 			}
 		})
 	}
@@ -2324,9 +2371,12 @@ func TestGetSupportedQuickstartTypes(t *testing.T) {
 		"spa:vue:vite",
 		"spa:svelte:vite",
 		"spa:vanilla-javascript:vite",
+		"spa:react:webpack",
+		"spa:vanilla-javascript:webpack",
 		"spa:flutter-web:none",
 		// Regular.
 		"regular:nextjs:none",
+		"regular:tanstack-start:none",
 		"regular:nuxt:none",
 		"regular:fastify:none",
 		"regular:sveltekit:none",
@@ -2437,11 +2487,13 @@ func TestSetupQuickstartCmd_SPAFrameworks(t *testing.T) {
 		{"vue", "vite", "5173"},
 		{"svelte", "vite", "5173"},
 		{"vanilla-javascript", "vite", "5173"},
+		{"react", "webpack", "8080"},
+		{"vanilla-javascript", "webpack", "8080"},
 		{"flutter-web", "none", "3000"},
 	}
 
 	for _, tc := range spaTests {
-		t.Run(tc.framework, func(t *testing.T) {
+		t.Run(tc.framework+"-"+tc.buildTool, func(t *testing.T) {
 			cliObj := &cli{}
 			cmd := setupQuickstartCmd(cliObj)
 			cmd.SetArgs([]string{
@@ -2469,6 +2521,7 @@ func TestSetupQuickstartCmd_RegularFrameworks(t *testing.T) {
 		port      string
 	}{
 		{"nextjs", "none", "3000"},
+		{"tanstack-start", "none", "3000"},
 		{"nuxt", "none", "3000"},
 		{"fastify", "none", "3000"},
 		{"sveltekit", "none", "3000"},
@@ -3028,4 +3081,239 @@ func TestReadIOSBundleID_RootXcodeproj(t *testing.T) {
 	writeTestFile(t, dir, filepath.Join("MyApp.xcodeproj", "project.pbxproj"),
 		`PRODUCT_BUNDLE_IDENTIFIER = com.example.native;`)
 	assert.Equal(t, "com.example.native", readIOSBundleID(dir))
+}
+
+// -- DetectProject - webpack SPAs (#2) --.
+
+// Auth0 qs setup --app --type spa --framework react --build-tool webpack.
+func TestDetectProject_ReactWebpack(t *testing.T) {
+	for _, cfg := range []string{"webpack.config.js", "webpack.config.ts", "webpack.config.cjs", "webpack.config.mjs"} {
+		t.Run(cfg, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTestFile(t, dir, cfg, "")
+			writeTestFile(t, dir, "package.json", `{"name":"my-app","dependencies":{"react":"^18","react-dom":"^18"}}`)
+
+			got := DetectProject(dir)
+			assert.True(t, got.Detected)
+			assert.Equal(t, "spa", got.Type)
+			assert.Equal(t, "react", got.Framework)
+			assert.Equal(t, "webpack", got.BuildTool)
+		})
+	}
+}
+
+// Auth0 qs setup --app --type spa --framework vanilla-javascript --build-tool webpack.
+func TestDetectProject_VanillaJavaScriptWebpack(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "webpack.config.js", "")
+	writeTestFile(t, dir, "package.json", `{"name":"my-app","devDependencies":{"webpack":"^5","webpack-dev-server":"^5"}}`)
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "spa", got.Type)
+	assert.Equal(t, "vanilla-javascript", got.Framework)
+	assert.Equal(t, "webpack", got.BuildTool)
+}
+
+// A webpack config alone is not an SPA signal: it needs react or webpack-dev-server, and the
+// framework-specific rules that run earlier keep their projects.
+func TestDetectProject_WebpackConfigDoesNotOverrideOtherFrameworks(t *testing.T) {
+	tests := []struct {
+		name      string
+		files     map[string]string
+		wantFw    string
+		wantFound bool
+	}{
+		{
+			name: "aspnet csproj",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"app.csproj":        `<Project Sdk="Microsoft.NET.Sdk.Web"><ItemGroup><PackageReference Include="Microsoft.AspNetCore.Mvc"/></ItemGroup></Project>`,
+			},
+			wantFw: "aspnet-mvc", wantFound: true,
+		},
+		{
+			name: "spring boot pom",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"pom.xml":           `<project><parent><artifactId>spring-boot-starter-parent</artifactId></parent></project>`,
+			},
+			wantFw: "spring-boot", wantFound: true,
+		},
+		{
+			name: "node server bundle with express",
+			files: map[string]string{
+				"webpack.config.js": "module.exports = { target: 'node' };",
+				"package.json":      `{"dependencies":{"express":"^4"},"devDependencies":{"webpack":"^5","webpack-dev-server":"^5"}}`,
+			},
+			wantFw: "express", wantFound: true,
+		},
+		{
+			name: "go module",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"go.mod":            "module example.com/app\n",
+			},
+			wantFw: "vanilla-go", wantFound: true,
+		},
+		{
+			name: "vue has no webpack quickstart",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"package.json":      `{"dependencies":{"vue":"^3"},"devDependencies":{"webpack-dev-server":"^5"}}`,
+			},
+			wantFound: false,
+		},
+		{
+			name: "angular has no webpack quickstart",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"package.json":      `{"dependencies":{"@angular/core":"^17"},"devDependencies":{"webpack-dev-server":"^5"}}`,
+			},
+			wantFound: false,
+		},
+		{
+			name: "config with no client-side dependency",
+			files: map[string]string{
+				"webpack.config.js": "",
+				"package.json":      `{"devDependencies":{"webpack":"^5"}}`,
+			},
+			wantFound: false,
+		},
+		{
+			name:      "config with no package.json",
+			files:     map[string]string{"webpack.config.js": ""},
+			wantFound: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			for name, content := range tc.files {
+				writeTestFile(t, dir, name, content)
+			}
+
+			got := DetectProject(dir)
+			assert.Equal(t, tc.wantFound, got.Detected)
+			assert.NotEqual(t, "webpack", got.BuildTool)
+			if tc.wantFound {
+				assert.Equal(t, tc.wantFw, got.Framework)
+			}
+		})
+	}
+}
+
+// The vite.config rule runs before the webpack rule.
+func TestDetectProject_ViteBeatsWebpack(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "vite.config.ts", "")
+	writeTestFile(t, dir, "webpack.config.js", "")
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"react":"^18"}}`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "react", got.Framework)
+	assert.Equal(t, "vite", got.BuildTool)
+}
+
+// D4: legacy Expo-web projects ship webpack.config.js; the Expo rule must win.
+func TestDetectProject_ExpoWithWebpackConfigStaysExpo(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "app.json", `{"expo":{"name":"my-app","slug":"my-app"}}`)
+	writeTestFile(t, dir, "webpack.config.js", "")
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"expo":"~49.0.0","react":"18.2.0","react-native":"0.72.0"}}`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "expo", got.Framework)
+	assert.Equal(t, "native", got.Type)
+	assert.NotEqual(t, "webpack", got.BuildTool)
+}
+
+// Next.js config wins over a webpack config.
+func TestDetectProject_NextJSWithWebpackConfigStaysNextJS(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "next.config.js", "")
+	writeTestFile(t, dir, "webpack.config.js", "")
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"next":"^14","react":"^18"}}`)
+
+	got := DetectProject(dir)
+	assert.Equal(t, "nextjs", got.Framework)
+	assert.Equal(t, "regular", got.Type)
+}
+
+// -- DetectProject - TanStack Start (#7) --.
+
+// Auth0 qs setup --app --type regular --framework tanstack-start.
+func TestDetectProject_TanStackStart(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@tanstack/react-start":"^1.120.0","react":"^19"}}`)
+
+	got := DetectProject(dir)
+	assert.True(t, got.Detected)
+	assert.Equal(t, "regular", got.Type)
+	assert.Equal(t, "tanstack-start", got.Framework)
+	assert.Empty(t, got.BuildTool, "tanstack-start must not set a build tool (key is :none)")
+	assert.Empty(t, got.AmbiguousFrameworks)
+}
+
+// TanStack Start projects have vite.config + react; the TanStack rule must run first.
+func TestDetectProject_TanStackStartBeatsVite(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, dir, "vite.config.ts", "")
+	writeTestFile(t, dir, "package.json", `{"dependencies":{"@tanstack/react-start":"^1.120.0","react":"^19","react-dom":"^19"}}`)
+
+	got := DetectProject(dir)
+	require.True(t, got.Detected)
+	assert.Equal(t, "regular", got.Type)
+	assert.Equal(t, "tanstack-start", got.Framework)
+	assert.Empty(t, got.BuildTool)
+
+	inputs := SetupInputs{App: true}
+	applyDetectionToInputs(&inputs, got)
+	inputs.Framework = got.Framework
+	key, _, err := getQuickstartConfigKey(&cobra.Command{}, &inputs)
+	require.NoError(t, err)
+	assert.Equal(t, "regular:tanstack-start:none", key)
+	_, ok := auth0.QuickstartConfigs[key]
+	assert.True(t, ok)
+	assert.Equal(t, 3000, inputs.Port)
+}
+
+// -- handleProjectDetection - multiple build tools (react/vanilla-js: vite + webpack) --.
+
+func TestHandleProjectDetection_MultipleBuildTools_NoInputPicksFirst(t *testing.T) {
+	for _, fw := range []string{"react", "vanilla-javascript"} {
+		t.Run(fw, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+
+			msgs := &bytes.Buffer{}
+			c := &cli{renderer: &display.Renderer{MessageWriter: msgs, ResultWriter: io.Discard}}
+			cmd := setupQuickstartCmd(c)
+			require.NoError(t, cmd.ParseFlags([]string{"--app", "--type", "spa", "--framework", fw}))
+
+			inputs := SetupInputs{App: true, Type: "spa", Framework: fw, BuildTool: "none"}
+			require.NoError(t, handleProjectDetection(cmd, c, &inputs, false))
+
+			assert.Equal(t, "vite", inputs.BuildTool)
+			assert.Contains(t, msgs.String(), "Multiple build tools available")
+			assert.Contains(t, msgs.String(), "--build-tool")
+		})
+	}
+}
+
+// An explicit --build-tool webpack is never overridden by the auto-select.
+func TestHandleProjectDetection_ExplicitWebpackKept(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	c := &cli{renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: io.Discard}}
+	cmd := setupQuickstartCmd(c)
+	require.NoError(t, cmd.ParseFlags([]string{"--app", "--type", "spa", "--framework", "react", "--build-tool", "webpack"}))
+
+	inputs := SetupInputs{App: true, Type: "spa", Framework: "react", BuildTool: "webpack"}
+	require.NoError(t, handleProjectDetection(cmd, c, &inputs, false))
+	assert.Equal(t, "webpack", inputs.BuildTool)
+}
+
+func TestFrameworkDisplayName_TanStackStart(t *testing.T) {
+	assert.Equal(t, "TanStack Start", frameworkDisplayName("tanstack-start"))
 }
