@@ -197,11 +197,23 @@ func listedBinding(actionID, actionName, displayName string) map[string]any {
 	}
 }
 
-func TestOfflineAccessActionSource(t *testing.T) {
-	assert.NotEmpty(t, OfflineAccessActionSource)
-	assert.Contains(t, OfflineAccessActionSource, "onExecutePostLogin")
-	assert.Contains(t, OfflineAccessActionSource, "addTargetScope('offline_access')")
-	assert.Contains(t, OfflineAccessActionSource, "event.agent")
+// testActionAPIs are the Poppy APIs the Action of the tests acts for, and
+// testActionCode is its code.
+var testActionAPIs = []string{"https://api.shop.example"}
+
+var testActionCode = OfflineAccessActionCode(testActionAPIs)
+
+func TestOfflineAccessActionCode(t *testing.T) {
+	code := OfflineAccessActionCode([]string{"https://b.example", "https://a.example", "https://b.example"})
+
+	assert.Contains(t, code, "onExecutePostLogin")
+	assert.Contains(t, code, "addTargetScope('offline_access')")
+	assert.Contains(t, code, "event.agent")
+	assert.Contains(t, code, `const POPPY_APIS = ["https://a.example","https://b.example"];`, "sorted, without duplicates")
+	assert.NotContains(t, code, apisPlaceholder)
+	assert.Contains(t, OfflineAccessActionCode(nil), "const POPPY_APIS = [];")
+	assert.Equal(t, code, OfflineAccessActionCode([]string{"https://a.example", "https://b.example"}), "the order of the input does not matter")
+	assert.Contains(t, OfflineAccessActionCode([]string{`https://x.example/"; evil("`}), `\"; evil(\"`, "identifiers are escaped")
 }
 
 func TestFlagsParseAlwaysIssueRefreshTokens(t *testing.T) {
@@ -257,7 +269,7 @@ func TestCommandAlwaysIssueRefreshTokens(t *testing.T) {
 
 func TestReadAction(t *testing.T) {
 	ours := OfflineAccessActionName
-	code := OfflineAccessActionSource
+	code := testActionCode
 
 	tests := []struct {
 		name     string
@@ -267,37 +279,37 @@ func TestReadAction(t *testing.T) {
 	}{
 		{
 			name: "no Action and an empty flow",
-			want: ActionState{Flow: []FlowAction{}},
+			want: ActionState{Code: code, Flow: []FlowAction{}},
 		},
 		{
 			name:    "the Action exists with the code and is deployed",
 			actions: []map[string]any{actionNamed("act_1", ours, code, true)},
-			want:    ActionState{ID: "act_1", CodeCurrent: true, Deployed: true, Flow: []FlowAction{}},
+			want:    ActionState{Code: code, ID: "act_1", CodeCurrent: true, Deployed: true, Flow: []FlowAction{}},
 		},
 		{
 			name:    "the Action has other code",
 			actions: []map[string]any{actionNamed("act_1", ours, "old code", true)},
-			want:    ActionState{ID: "act_1", Flow: []FlowAction{}},
+			want:    ActionState{Code: code, ID: "act_1", Flow: []FlowAction{}},
 		},
 		{
 			name:    "the code is current but the draft is not deployed",
 			actions: []map[string]any{actionNamed("act_1", ours, code, false)},
-			want:    ActionState{ID: "act_1", CodeCurrent: true, Flow: []FlowAction{}},
+			want:    ActionState{Code: code, ID: "act_1", CodeCurrent: true, Flow: []FlowAction{}},
 		},
 		{
 			name:    "an Action with a similar name is not the one",
 			actions: []map[string]any{actionNamed("act_9", ours+" (copy)", code, true), actionNamed("act_1", ours, code, true)},
-			want:    ActionState{ID: "act_1", CodeCurrent: true, Deployed: true, Flow: []FlowAction{}},
+			want:    ActionState{Code: code, ID: "act_1", CodeCurrent: true, Deployed: true, Flow: []FlowAction{}},
 		},
 		{
 			name:    "only a similar name",
 			actions: []map[string]any{actionNamed("act_9", ours+" (copy)", code, true)},
-			want:    ActionState{Flow: []FlowAction{}},
+			want:    ActionState{Code: code, Flow: []FlowAction{}},
 		},
 		{
 			name:     "the flow keeps its order and the display names",
 			bindings: []map[string]any{listedBinding("act_a", "Enrich", "Enrich profile"), listedBinding("act_b", "Audit", "")},
-			want: ActionState{Flow: []FlowAction{
+			want: ActionState{Code: code, Flow: []FlowAction{
 				{BindingID: "bnd_act_a", RefType: "action_id", RefValue: "act_a", DisplayName: "Enrich profile", Name: "Enrich profile"},
 				{BindingID: "bnd_act_b", RefType: "action_id", RefValue: "act_b", Name: "Audit"},
 			}},
@@ -309,10 +321,37 @@ func TestReadAction(t *testing.T) {
 			server, api := newActionServer(t)
 			server.actions, server.bindings = test.actions, test.bindings
 
-			state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+			state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 			require.NoError(t, err)
 			assert.Equal(t, test.want, *state)
+		})
+	}
+}
+
+func TestReadActionKeepsTheAPIsOfEarlierRuns(t *testing.T) {
+	earlier := OfflineAccessActionCode([]string{"https://api.crm.example"})
+
+	tests := []struct {
+		name     string
+		existing string
+		want     []string
+	}{
+		{"a new API joins the written ones", earlier, []string{"https://api.crm.example", "https://api.shop.example"}},
+		{"an API that is already there stays once", OfflineAccessActionCode(testActionAPIs), testActionAPIs},
+		{"edited code with no list is replaced", "old code", testActionAPIs},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server, api := newActionServer(t)
+			server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, test.existing, true)}
+
+			state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
+
+			require.NoError(t, err)
+			assert.Equal(t, OfflineAccessActionCode(test.want), state.Code)
+			assert.Equal(t, test.existing == state.Code, state.CodeCurrent)
 		})
 	}
 }
@@ -325,9 +364,9 @@ func TestReadActionPaginates(t *testing.T) {
 		server.bindings = append(server.bindings, listedBinding(id, "Action "+id, ""))
 		server.actions = append(server.actions, actionNamed(id, "Other "+id, "code", true))
 	}
-	server.actions = append(server.actions, actionNamed("act_ours", OfflineAccessActionName, OfflineAccessActionSource, true))
+	server.actions = append(server.actions, actionNamed("act_ours", OfflineAccessActionName, testActionCode, true))
 
-	state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+	state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 	require.NoError(t, err)
 	assert.Equal(t, "act_ours", state.ID, "the Action is on the second page")
@@ -350,7 +389,7 @@ func TestReadActionPagesFollowTheServerCap(t *testing.T) {
 			server.bindings = append(server.bindings, listedBinding(fmt.Sprintf("act_%d", i), "A", ""))
 		}
 
-		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 		require.NoError(t, err)
 		require.Len(t, state.Flow, 45)
@@ -368,7 +407,7 @@ func TestReadActionPagesFollowTheServerCap(t *testing.T) {
 			server.bindings = append(server.bindings, listedBinding(fmt.Sprintf("act_%d", i), "A", ""))
 		}
 
-		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 		require.NoError(t, err)
 		assert.Len(t, state.Flow, 45)
@@ -393,7 +432,7 @@ func TestReadActionPagesFollowTheServerCap(t *testing.T) {
 					server.bindings = append(server.bindings, listedBinding(fmt.Sprintf("act_%d", i), "A", ""))
 				}
 
-				state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+				state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 				assert.Nil(t, state)
 				assert.ErrorContains(t, err, fmt.Sprintf("says the list has %d", test.total))
@@ -406,7 +445,7 @@ func TestReadActionPagesFollowTheServerCap(t *testing.T) {
 			server.actionsTotal = &seven
 			server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, "code", true)}
 
-			_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+			_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 			assert.ErrorContains(t, err, "says the list has 7")
 		})
@@ -437,7 +476,7 @@ func TestReadActionFailures(t *testing.T) {
 				server, api := newActionServer(t)
 				server.bindings = []map[string]any{test.binding}
 
-				_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+				_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 				var input *InputError
 				require.ErrorAs(t, err, &input)
@@ -452,7 +491,7 @@ func TestReadActionFailures(t *testing.T) {
 		server, api := newActionServer(t)
 		server.bindings = []map[string]any{{"id": "bnd_1", "display_name": "By name", "ref": map[string]any{"type": "action_name", "value": "Enrich"}}}
 
-		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 		require.NoError(t, err)
 		assert.Equal(t, []FlowAction{{BindingID: "bnd_1", RefType: "action_name", RefValue: "Enrich", DisplayName: "By name", Name: "By name"}}, state.Flow)
@@ -468,7 +507,7 @@ func TestReadActionFailures(t *testing.T) {
 			server, api := newActionServer(t)
 			server.fail[key] = http.StatusForbidden
 
-			_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+			_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 			assert.ErrorContains(t, err, want)
 		}
@@ -481,7 +520,7 @@ func TestReadActionFailures(t *testing.T) {
 			server.bindings = append(server.bindings, listedBinding(fmt.Sprintf("act_%d", i), "A", ""))
 		}
 
-		_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+		_, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 
 		assert.ErrorContains(t, err, "did not end after")
 	})
@@ -727,14 +766,14 @@ func TestApplyAction(t *testing.T) {
 		},
 		{
 			name:         "current code that is not deployed: deploy only",
-			actions:      []map[string]any{actionNamed("act_1", ours, OfflineAccessActionSource, false)},
+			actions:      []map[string]any{actionNamed("act_1", ours, testActionCode, false)},
 			bindings:     []map[string]any{listedBinding("act_1", ours, ours)},
 			state:        ActionState{ID: "act_1", CodeCurrent: true, Flow: []FlowAction{oursFlowAction()}},
 			wantRequests: []string{"GET actions/act_1", "POST actions/act_1/deploy"},
 		},
 		{
 			name:         "deployed and not last: only the bindings",
-			actions:      []map[string]any{actionNamed("act_1", ours, OfflineAccessActionSource, true)},
+			actions:      []map[string]any{actionNamed("act_1", ours, testActionCode, true)},
 			bindings:     []map[string]any{listedBinding("act_1", ours, ours), listedBinding("act_a", "Enrich", "")},
 			state:        ActionState{ID: "act_1", CodeCurrent: true, Deployed: true, Flow: []FlowAction{oursFlowAction(), {BindingID: "bnd_act_a", RefType: "action_id", RefValue: "act_a", Name: "Enrich"}}},
 			wantRequests: []string{"GET triggers/post-login/bindings", "PATCH triggers/post-login/bindings"},
@@ -765,13 +804,13 @@ func TestApplyAction(t *testing.T) {
 func TestApplyActionCreatesTheAction(t *testing.T) {
 	server, api := newActionServer(t)
 
-	require.NoError(t, applyAction(t, api, &ActionState{}))
+	require.NoError(t, applyAction(t, api, &ActionState{Code: testActionCode}))
 
 	var created map[string]any
 	require.NoError(t, json.Unmarshal(server.bodies["POST actions"], &created))
 
 	assert.Equal(t, OfflineAccessActionName, created["name"])
-	assert.Equal(t, OfflineAccessActionSource, created["code"])
+	assert.Equal(t, testActionCode, created["code"])
 	assert.Equal(t, []any{map[string]any{"id": "post-login", "version": "v3"}}, created["supported_triggers"])
 	assert.NotContains(t, created, "deploy", "the deploy is a call of its own, after the build")
 	assert.NotContains(t, created, "runtime", "the runtime is the default of the API")
@@ -782,14 +821,14 @@ func TestApplyActionUpdatesTheCode(t *testing.T) {
 	server, api := newActionServer(t)
 	server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, "old", true)}
 
-	state := &ActionState{ID: "act_1", Flow: []FlowAction{oursFlowAction()}}
+	state := &ActionState{ID: "act_1", Code: testActionCode, Flow: []FlowAction{oursFlowAction()}}
 	require.NoError(t, applyAction(t, api, state))
 
 	// The API takes the request as the whole Action, so the name and the trigger go with the code.
 	assert.JSONEq(t, `{
 		"name":"Poppy: always issue refresh tokens",
 		"supported_triggers":[{"id":"post-login","version":"v3"}],
-		"code":`+strconv.Quote(OfflineAccessActionSource)+`
+		"code":`+strconv.Quote(testActionCode)+`
 	}`, string(server.bodies["PATCH actions/act_1"]))
 }
 
@@ -798,7 +837,7 @@ func TestApplyActionBindingsBody(t *testing.T) {
 	// order and with its display name, then the Action of setup. The old entry of the
 	// Action of setup is dropped from its place.
 	server, api := newActionServer(t)
-	server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, OfflineAccessActionSource, true)}
+	server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, testActionCode, true)}
 	server.bindings = []map[string]any{
 		listedBinding("act_a", "Enrich", "Enrich profile"),
 		listedBinding("act_1", OfflineAccessActionName, OfflineAccessActionName),
@@ -806,7 +845,7 @@ func TestApplyActionBindingsBody(t *testing.T) {
 		{"id": "bnd_legacy", "display_name": "Legacy by name", "ref": map[string]any{"type": "action_name", "value": "Legacy"}},
 	}
 
-	state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+	state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 	require.NoError(t, err)
 	require.True(t, state.CodeCurrent && state.Deployed)
 
@@ -825,7 +864,7 @@ func TestApplyActionWaitsForTheBuild(t *testing.T) {
 	server, api := newActionServer(t)
 	server.buildChecks = 3
 
-	require.NoError(t, applyAction(t, api, &ActionState{}))
+	require.NoError(t, applyAction(t, api, &ActionState{Code: testActionCode}))
 
 	assert.Equal(t, []string{
 		"POST actions", "GET actions/act_new", "GET actions/act_new", "GET actions/act_new", "GET actions/act_new",
@@ -901,10 +940,10 @@ func TestApplyActionStaleFlow(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			server, api := newActionServer(t)
-			server.actions = []map[string]any{actionNamed("act_1", ours, OfflineAccessActionSource, true)}
+			server.actions = []map[string]any{actionNamed("act_1", ours, testActionCode, true)}
 			server.bindings = start()
 
-			state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+			state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 			require.NoError(t, err)
 
 			server.bindings = test.change(server.bindings)
@@ -930,14 +969,14 @@ func TestApplyActionStaleFlow(t *testing.T) {
 
 	t.Run("a change on the last page of a long flow is seen", func(t *testing.T) {
 		server, api := newActionServer(t)
-		server.actions = []map[string]any{actionNamed("act_1", ours, OfflineAccessActionSource, true)}
+		server.actions = []map[string]any{actionNamed("act_1", ours, testActionCode, true)}
 		server.bindings = start()
 
 		for i := range 40 {
 			server.bindings = append(server.bindings, listedBinding(fmt.Sprintf("act_x%d", i), "X", ""))
 		}
 
-		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 		require.NoError(t, err)
 
 		server.bindings[len(server.bindings)-1] = listedBinding("act_other", "Other", "")
@@ -952,10 +991,10 @@ func TestApplyActionStaleFlow(t *testing.T) {
 
 	t.Run("a failed read of the bindings stops the update", func(t *testing.T) {
 		server, api := newActionServer(t)
-		server.actions = []map[string]any{actionNamed("act_1", ours, OfflineAccessActionSource, true)}
+		server.actions = []map[string]any{actionNamed("act_1", ours, testActionCode, true)}
 		server.bindings = start()
 
-		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context())
+		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
 		require.NoError(t, err)
 
 		server.fail["GET triggers/post-login/bindings"] = http.StatusForbidden
@@ -1009,7 +1048,7 @@ func TestApplyActionFailures(t *testing.T) {
 				server.buildStatus = test.buildStatus
 			}
 
-			err := applyAction(t, api, &ActionState{})
+			err := applyAction(t, api, &ActionState{Code: testActionCode})
 
 			assert.ErrorContains(t, err, test.wantErr)
 			assert.Equal(t, test.wantRequests, server.stored())
@@ -1018,7 +1057,7 @@ func TestApplyActionFailures(t *testing.T) {
 
 	t.Run("a build that does not end is given up on when the context ends", func(t *testing.T) {
 		server, api := newActionServer(t)
-		server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, OfflineAccessActionSource, false)}
+		server.actions = []map[string]any{actionNamed("act_1", OfflineAccessActionName, testActionCode, false)}
 		server.buildChecks = 1000
 
 		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)

@@ -160,7 +160,7 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 			}
 		}
 
-		if state.Action, err = cli.readPoppyAction(cmd.Context()); err != nil {
+		if state.Action, err = cli.readPoppyAction(cmd.Context(), state.APIs); err != nil {
 			return err
 		}
 	}
@@ -417,12 +417,19 @@ func (c *cli) readPoppyState(ctx context.Context, apis []string, app string, fil
 }
 
 // readPoppyAction reads the post-login Action of setup and the flow it runs in.
-func (c *cli) readPoppyAction(ctx context.Context) (*setup.ActionState, error) {
+// The Action acts for the APIs of this run, and for the ones an earlier run of
+// setup wrote into it.
+func (c *cli) readPoppyAction(ctx context.Context, selected []setup.API) (*setup.ActionState, error) {
 	reader := c.poppyReader()
+
+	identifiers := make([]string, len(selected))
+	for i, api := range selected {
+		identifiers[i] = api.Identifier
+	}
 
 	var action *setup.ActionState
 	err := ansi.Waiting(func() (err error) {
-		action, err = reader.ReadAction(ctx)
+		action, err = reader.ReadAction(ctx, identifiers)
 
 		return err
 	})

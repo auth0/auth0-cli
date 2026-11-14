@@ -172,10 +172,12 @@ func (r *Reader) Read(ctx context.Context, apis []string, app string) (*State, e
 }
 
 // ReadAction reads the Action of setup that always issues refresh tokens, if the
-// tenant has it, and the post-login flow it runs in. The Action is found by its
+// tenant has it, and the post-login flow it runs in. The apis are the identifiers
+// of the APIs of this run. The Action acts for them and for the APIs that an
+// earlier run wrote into it, and that list decides its code. The Action is found by its
 // exact name. It stops with an *InputError when the flow has a binding that
 // setup could not write back as it is.
-func (r *Reader) ReadAction(ctx context.Context) (*ActionState, error) {
+func (r *Reader) ReadAction(ctx context.Context, apis []string) (*ActionState, error) {
 	actions, err := pages(func(page int) ([]*management.Action, int, error) {
 		list, err := r.Actions.List(ctx, management.Parameter("actionName", OfflineAccessActionName), management.Page(page), management.PerPage(actionPageSize))
 		if err != nil {
@@ -193,7 +195,7 @@ func (r *Reader) ReadAction(ctx context.Context) (*ActionState, error) {
 		return nil, err
 	}
 
-	state := &ActionState{}
+	state := &ActionState{Code: OfflineAccessActionCode(apis)}
 	if state.Flow, err = flowOf(bindings); err != nil {
 		return nil, err
 	}
@@ -202,8 +204,11 @@ func (r *Reader) ReadAction(ctx context.Context) (*ActionState, error) {
 	if i := slices.IndexFunc(actions, func(a *management.Action) bool { return a.GetName() == OfflineAccessActionName }); i >= 0 {
 		action := actions[i]
 
+		// The APIs an earlier run wrote stay in the list, so that setting up a
+		// second API does not take the first away.
+		state.Code = OfflineAccessActionCode(append(slices.Clone(apis), apisOf(action.GetCode())...))
 		state.ID = action.GetID()
-		state.CodeCurrent = action.GetCode() == OfflineAccessActionSource
+		state.CodeCurrent = action.GetCode() == state.Code
 		state.Deployed = state.CodeCurrent && action.DeployedVersion != nil && action.AllChangesDeployed
 	}
 

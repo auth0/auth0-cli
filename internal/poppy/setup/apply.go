@@ -403,7 +403,7 @@ func (a *Applier) deployAction(ctx context.Context, state *ActionState) (string,
 	action := &management.Action{
 		Name:              auth0.String(OfflineAccessActionName),
 		SupportedTriggers: []management.ActionTrigger{{ID: auth0.String(postLoginTrigger), Version: auth0.String(postLoginTriggerVersion)}},
-		Code:              auth0.String(OfflineAccessActionSource),
+		Code:              auth0.String(state.Code),
 	}
 
 	switch {

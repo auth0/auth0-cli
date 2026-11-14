@@ -83,7 +83,7 @@ var (
 	poppyAlwaysIssueRefreshTokens = Flag{
 		Name:     "Always Issue Refresh Tokens",
 		LongForm: "always-issue-refresh-tokens",
-		Help:     "Create a post-login Action that always issues refresh tokens to Poppy agents, deploy it, and bind it as the last Action of the post-login flow. Existing bindings keep their order. Setup never removes the Action. Needs the read:actions, create:actions and update:actions scopes. Asked in a terminal when the flag is not given. Without it, or with =false, the post-login flow is left alone.",
+		Help:     "Create a post-login Action that always issues refresh tokens to Poppy agents, deploy it, and bind it as the last Action of the post-login flow. The Action acts only for sign-ins to the APIs you set up, and setup writes their list into it. Setting up another API adds it to the list. Existing bindings keep their order. Setup never removes the Action. Needs the read:actions, create:actions and update:actions scopes. Asked in a terminal when the flag is not given. Without it, or with =false, the post-login flow is left alone.",
 	}
 	poppySetupNoAPI = Flag{
 		Name:     "No API",

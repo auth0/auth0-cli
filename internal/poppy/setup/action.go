@@ -2,7 +2,11 @@ package setup
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
+	"regexp"
+	"slices"
+	"strings"
 
 	"github.com/auth0/go-auth0/management"
 )
@@ -18,17 +22,37 @@ const (
 	postLoginTriggerVersion = "v3"
 )
 
-// OfflineAccessActionSource is the code of the Action.
-//
+// apisPlaceholder is where the template of the Action takes the list of APIs.
+const apisPlaceholder = "__POPPY_APIS__"
+
 //go:embed offline_access_action.js
-var OfflineAccessActionSource string
+var offlineAccessActionTemplate string
+
+// OfflineAccessActionCode returns the code of the Action for the identifiers of
+// the Poppy APIs it acts for. The list is sorted and has no duplicates, so the
+// same APIs always give the same code.
+func OfflineAccessActionCode(identifiers []string) string {
+	list := slices.Clone(identifiers)
+	slices.Sort(list)
+	list = slices.Compact(list)
+
+	// A list of strings always marshals, and JSON is a valid JavaScript array.
+	encoded, _ := json.Marshal(list)
+	if list == nil {
+		encoded = []byte("[]")
+	}
+
+	return strings.Replace(offlineAccessActionTemplate, apisPlaceholder, string(encoded), 1)
+}
 
 // ActionState is the post-login Action that always issues refresh tokens, and the
 // flow it runs in.
 type ActionState struct {
 	// ID is the ID of the Action, empty when the tenant has no Action of that name.
 	ID string
-	// CodeCurrent tells whether the code of the Action is the code setup ships.
+	// Code is the code the Action should have: the template with the Poppy APIs.
+	Code string
+	// CodeCurrent tells whether the code of the Action is that code.
 	CodeCurrent bool
 	// Deployed tells whether that code is the deployed version.
 	Deployed bool
@@ -89,4 +113,23 @@ func (s *ActionState) position() string {
 	}
 
 	return "not bound"
+}
+
+// writtenAPIs matches the list of APIs that OfflineAccessActionCode wrote.
+var writtenAPIs = regexp.MustCompile(`const POPPY_APIS = (\[[^\]]*\]);`)
+
+// apisOf returns the identifiers written into the code of an Action of setup.
+// It returns none when the code has no list, such as code someone edited.
+func apisOf(code string) []string {
+	match := writtenAPIs.FindStringSubmatch(code)
+	if match == nil {
+		return nil
+	}
+
+	var identifiers []string
+	if err := json.Unmarshal([]byte(match[1]), &identifiers); err != nil {
+		return nil
+	}
+
+	return identifiers
 }

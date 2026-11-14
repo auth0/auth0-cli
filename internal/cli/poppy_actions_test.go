@@ -170,7 +170,7 @@ func actionArgs(t *testing.T, extra ...string) []string {
 }
 
 func TestPoppySetupRefreshTokens(t *testing.T) {
-	code := setup.OfflineAccessActionSource
+	code := setup.OfflineAccessActionCode([]string{poppyTestAPI})
 
 	tests := []struct {
 		name    string
@@ -323,7 +323,7 @@ func TestPoppySetupRefreshTokensCallsTheRightRequests(t *testing.T) {
 	assert.Equal(t, setup.OfflineAccessActionName, tenant.created.GetName())
 	assert.Equal(t, "post-login", tenant.created.SupportedTriggers[0].GetID())
 	assert.Equal(t, "v3", tenant.created.SupportedTriggers[0].GetVersion())
-	assert.NotEmpty(t, tenant.created.GetCode())
+	assert.Equal(t, setup.OfflineAccessActionCode([]string{poppyTestAPI}), tenant.created.GetCode(), "the code names the Poppy API")
 
 	body, err := json.Marshal(map[string]any{"bindings": tenant.patched})
 	require.NoError(t, err)
@@ -404,7 +404,7 @@ func TestPoppySetupRefreshTokensDryRun(t *testing.T) {
 	t.Run("an Action that is in place is a plan with nothing to change", func(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
 		h.serveActions(&poppyActionTenant{
-			actions:  []*management.Action{poppyOurAction(setup.OfflineAccessActionSource, true)},
+			actions:  []*management.Action{poppyOurAction(setup.OfflineAccessActionCode([]string{poppyTestAPI}), true)},
 			bindings: append(poppyOthers(), poppyBinding("act_ours", setup.OfflineAccessActionName)),
 		})
 
