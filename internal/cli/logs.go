@@ -257,13 +257,10 @@ func tailLogsQuery(lastLogID, filter string) string {
 func getLatestLogs(ctx context.Context, cli *cli, numRequested int, filter string) ([]*management.Log, error) {
 	page := 0
 	logs := []*management.Log{}
+	perPage := min(numRequested, logsPerPageLimit)
 
+	// Page offsets depend on per_page, so keep it constant across requests.
 	for {
-		perPage := logsPerPageLimit
-		if numRequested < (page+1)*logsPerPageLimit {
-			perPage = numRequested % logsPerPageLimit
-		}
-
 		queryParams := []management.RequestOption{
 			management.Parameter("sort", "date:-1"),
 			management.Parameter("page", fmt.Sprintf("%d", page)),
@@ -283,6 +280,10 @@ func getLatestLogs(ctx context.Context, cli *cli, numRequested int, filter strin
 		if page == 10 || (page*logsPerPageLimit) >= numRequested {
 			break
 		}
+	}
+
+	if len(logs) > numRequested {
+		logs = logs[:numRequested]
 	}
 
 	return logs, nil
