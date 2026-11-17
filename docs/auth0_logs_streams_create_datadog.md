@@ -27,6 +27,8 @@ auth0 logs streams create datadog [flags]
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact
+  auth0 logs streams create datadog --schema
+  auth0 logs streams create datadog --data '{"name":"my-stream","sink":{"datadogRegion":"us","datadogApiKey":"<api-key>"}}'
 ```
 
 
@@ -34,6 +36,7 @@ auth0 logs streams create datadog [flags]
 
 ```
   -k, --api-key string      Datadog API Key. To obtain a key, see the Datadog Authentication documentation (https://docs.datadoghq.com/api/latest/authentication).
+      --data string         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
                             Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
@@ -45,6 +48,7 @@ auth0 logs streams create datadog [flags]
                              (default "{}")
   -r, --region string       The region in which the datadog dashboard is created.
                             If you are in the datadog EU site ('app.datadoghq.eu'), the Region should be EU otherwise it should be US.
+      --schema              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

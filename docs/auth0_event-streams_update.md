@@ -11,6 +11,9 @@ To update interactively, use `auth0 event-streams update` with no arguments.
 
 To update non-interactively, supply the event id, name, status, subscriptions and configuration through the flags. An event stream type CANNOT be updated hence the configuration should match the schema based on the type of event stream. Configuration for `eventbridge` streams cannot be updated.Only deployed actions can be used for action configuration
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the JSON payload. It is sent as-is and validated by the API.
+
 ## Usage
 ```
 auth0 event-streams update [flags]
@@ -27,6 +30,9 @@ auth0 event-streams update [flags]
   auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}'
   auth0 event-streams create <event-id> --name my-event-stream --subscriptions "user.updated" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
+  auth0 event-streams update --schema
+  auth0 event-streams update <event-id> --data '{"status":"disabled"}'
+  auth0 event-streams update <event-id> --data @event-stream.json
 ```
 
 
@@ -36,9 +42,11 @@ auth0 event-streams update [flags]
   -c, --configuration string    Configuration of the Event Stream. Formatted as JSON. 
                                 Webhook Example: {"webhook_endpoint":"https://my-webhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}} 
                                 Eventbridge Example: {"aws_account_id":"7832467231933","aws_region":"us-east-2"}
+      --data string             JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                    Output in json format.
       --json-compact            Output in compact json format.
   -n, --name string             Name of the Event Stream.
+      --schema                  Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
       --status string           Status of the Event Stream. (enabled/disabled)
   -s, --subscriptions strings   Subscriptions of the Event Stream. Formatted as comma separated string. Eg. user.created,user.updated
 ```

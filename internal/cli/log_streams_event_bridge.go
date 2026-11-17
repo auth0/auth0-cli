@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -35,6 +36,8 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 		awsRegion    string
 		piiConfig    string
 		filters      string
+		data         string
+		schema       bool
 	}
 
 	cmd := &cobra.Command{
@@ -52,8 +55,22 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventbridge --name <name> --aws-id <aws-id> --aws-region <aws-region> --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
-  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact`,
+  auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact
+  auth0 logs streams create eventbridge --schema
+  auth0 logs streams create eventbridge --data '{"name":"my-stream","sink":{"awsAccountId":"123456789012","awsRegion":"us-east-1"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPost, "/log-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createLogStreamFromJSON(cli, cmd, logStreamTypeAmazonEventBridge, payload)
+			}
+
 			if err := logStreamName.Ask(cmd, &inputs.name, nil); err != nil {
 				return err
 			}
@@ -118,6 +135,10 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	awsAccountID.RegisterString(cmd, &inputs.awsAccountID, "")
 	awsRegion.RegisterString(cmd, &inputs.awsRegion, "")
 
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
 }
 
@@ -127,6 +148,8 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 		name      string
 		piiConfig string
 		filters   string
+		data      string
+		schema    bool
 	}
 
 	cmd := &cobra.Command{
@@ -143,8 +166,14 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams update eventbridge <log-stream-id> --name <name>  --pii-config '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json
-  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json-compact`,
+  auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json-compact
+  auth0 logs streams update eventbridge --schema
+  auth0 logs streams update eventbridge <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.schema {
+				return printOperationSchema(cli, http.MethodPatch, "/log-streams/{id}")
+			}
+
 			if len(args) == 0 {
 				err := logStreamID.Pick(cmd, &inputs.id, cli.logStreamPickerOptionsByType(logStreamTypeAmazonEventBridge))
 				if err != nil {
@@ -152,6 +181,11 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.id = args[0]
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
 			}
 
 			var oldLogStream *management.LogStream
@@ -164,6 +198,10 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 
 			if oldLogStream.GetType() != string(logStreamTypeAmazonEventBridge) {
 				return errInvalidLogStreamType(inputs.id, oldLogStream.GetType(), string(logStreamTypeAmazonEventBridge))
+			}
+
+			if provided {
+				return updateLogStreamFromJSON(cli, cmd, logStreamTypeAmazonEventBridge, inputs.id, payload)
 			}
 
 			if err := logStreamName.AskU(cmd, &inputs.name, oldLogStream.Name); err != nil {
@@ -219,6 +257,10 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
 	logStreamName.RegisterStringU(cmd, &inputs.name, "")
 	logStreamPIIConfig.RegisterStringU(cmd, &inputs.piiConfig, "{}")
 	logStreamFilters.RegisterStringU(cmd, &inputs.filters, "[]")
+
+	dataFlag.RegisterString(cmd, &inputs.data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -97,18 +98,38 @@ func eventStreamsCmd(cli *cli) *cobra.Command {
 }
 
 func listEventStreamsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your event streams",
-		Long:    "List your existing event streams. To create one, run: `auth0 event-streams create`.",
+		Long: "List your existing event streams. To create one, run: `auth0 event-streams create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 event-streams list
   auth0 event-streams ls
   auth0 event-streams ls --json
   auth0 event-streams ls --json-compact
-  auth0 event-streams ls --csv`,
+  auth0 event-streams ls --csv
+  auth0 event-streams list --schema
+  auth0 event-streams list --query '{"take":10}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/event-streams")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "event-streams",
+					SchemaCmd: "auth0 event-streams list",
+				}, inputs.Query)
+			}
+
 			var list *management.EventStreamList
 
 			if err := ansi.Waiting(func() (err error) {
@@ -126,6 +147,8 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -178,6 +201,8 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 		Type          string
 		Subscriptions []string
 		Configuration string
+		Data          string
+		Schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -187,13 +212,30 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 		Long: "Create a new event stream.\n\n" +
 			"To create interactively, use `auth0 event-streams create` with no flags.\n\n" +
 			"To create non-interactively, supply the event stream name, type, subscriptions and configuration through the flags. \n" +
-			"Only deployed actions can be used for action configuration",
+			"Only deployed actions can be used for action configuration\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload. It is sent as-is and validated by the API.",
 		Example: `  auth0 event-streams create
   auth0 event-streams create --name my-event-stream --type eventbridge --subscriptions "user.created,user.updated" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
   auth0 event-streams create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
   auth0 event-streams create --name my-event-stream --type action --subscriptions "user.created" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
-  auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'`,
+  auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+  auth0 event-streams create --schema
+  auth0 event-streams create --data '{"name":"my-event-stream","subscriptions":[{"event_type":"user.created"}],"destination":{"type":"eventbridge","configuration":{"aws_account_id":"325235643634","aws_region":"us-east-2"}}}'
+  auth0 event-streams create --data @event-stream.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/event-streams")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createEventStreamFromJSON(cli, cmd, payload)
+			}
+
 			if err := eventStreamName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -250,6 +292,9 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
 	eventStreamType.RegisterString(cmd, &inputs.Type, "")
 	eventStreamSubscriptions.RegisterStringSlice(cmd, &inputs.Subscriptions, nil)
 	eventStreamConfig.RegisterString(cmd, &inputs.Configuration, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -261,6 +306,8 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 		Status        string
 		Subscriptions []string
 		Configuration string
+		Data          string
+		Schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -273,7 +320,9 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 			"configuration through the flags. An event stream type CANNOT be updated hence the configuration " +
 			"should match the schema based on the type of event stream. Configuration for `eventbridge` streams " +
 			"cannot be updated." +
-			"Only deployed actions can be used for action configuration",
+			"Only deployed actions can be used for action configuration\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the JSON payload. It is sent as-is and validated by the API.",
 		Example: `  auth0 event-streams update <event-id>
   auth0 event-streams update <event-id> --name my-event-stream
   auth0 event-streams update <event-id> --name my-event-stream --status enabled
@@ -281,8 +330,15 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
   auth0 event-streams update <event-id> --name my-event-stream --status disabled --subscriptions "user.deleted" --configuration '{"aws_account_id":"325235643634","aws_region":"us-east-2"}'
   auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}'
   auth0 event-streams create <event-id> --name my-event-stream --subscriptions "user.updated" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
-  auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}`,
+  auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
+  auth0 event-streams update --schema
+  auth0 event-streams update <event-id> --data '{"status":"disabled"}'
+  auth0 event-streams update <event-id> --data @event-stream.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPatch, "/event-streams/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
@@ -291,8 +347,16 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateEventStreamFromJSON(cli, cmd, inputs.ID, payload)
+			}
+
 			var oldEventStream *management.EventStream
-			err := ansi.Waiting(func() (err error) {
+			err = ansi.Waiting(func() (err error) {
 				oldEventStream, err = cli.api.EventStream.Read(cmd.Context(), inputs.ID)
 				return err
 			})
@@ -362,8 +426,43 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
 	eventStreamStatus.RegisterStringU(cmd, &inputs.Status, "")
 	eventStreamSubscriptions.RegisterStringSliceU(cmd, &inputs.Subscriptions, nil)
 	eventStreamConfig.RegisterStringU(cmd, &inputs.Configuration, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+// The OpenAPI webhook_authorization variants omit the secret fields (token, password)
+// the API accepts, so --data skips local schema validation and lets the API validate.
+func createEventStreamFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	eventStream, err := runJSONWrite[management.EventStream](cli, cmd, jsonWriteSpec{
+		Method:         http.MethodPost,
+		SchemaPath:     "/event-streams",
+		URI:            cli.api.HTTPClient.URI("event-streams"),
+		Data:           dataStr,
+		SchemaCmd:      "auth0 event-streams create",
+		SkipValidation: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create event stream: %w", err)
+	}
+	return cli.renderer.EventStreamCreate(eventStream)
+}
+
+func updateEventStreamFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	eventStream, err := runJSONWrite[management.EventStream](cli, cmd, jsonWriteSpec{
+		Method:         http.MethodPatch,
+		SchemaPath:     "/event-streams/{id}",
+		URI:            cli.api.HTTPClient.URI("event-streams", id),
+		Data:           dataStr,
+		SchemaCmd:      "auth0 event-streams update",
+		SkipValidation: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update event stream with ID %q: %w", id, err)
+	}
+	return cli.renderer.EventStreamUpdate(eventStream)
 }
 
 func deleteEventStreamCmd(cli *cli) *cobra.Command {

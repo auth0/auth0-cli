@@ -130,6 +130,8 @@ func flowVaultConnectionsCmd(cli *cli) *cobra.Command {
 func listVaultConnectionsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -137,11 +139,26 @@ func listVaultConnectionsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your vault connections",
-		Long:    "List your existing vault connections. To create one, run: `auth0 flows vault connections create`.",
+		Long: "List your existing vault connections. To create one, run: `auth0 flows vault connections create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 flows vault connections list
   auth0 flows vault connections ls --number 100
-  auth0 flows vault connections ls --json`,
+  auth0 flows vault connections ls --json
+  auth0 flows vault connections list --schema
+  auth0 flows vault connections list --query '{"per_page":50,"include_totals":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/flows/vault/connections")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "flows/vault/connections",
+					SchemaCmd: "auth0 flows vault connections list",
+				}, inputs.Query)
+			}
+
 			params := &managementv3.ListFlowsVaultConnectionsRequestParameters{}
 
 			var connections []*managementv3.FlowsVaultConnectionSummary
@@ -161,6 +178,8 @@ func listVaultConnectionsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -208,6 +227,8 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 		AppID         string
 		File          string
 		SetupTemplate bool
+		Data          string
+		Schema        bool
 	}
 
 	cmd := &cobra.Command{
@@ -217,12 +238,29 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 		Long: "Create a new vault connection.\n\n" +
 			"A name is required, supplied with `--name` or the interactive prompt, along with an app id via `--app-id`. " +
 			"Setup credentials are authored interactively or supplied with `--setup-file`; the file must contain only the setup body, not a name. " +
-			"Run `--setup-template --app-id <APP_ID>` to print the setup credentials template for a given app.",
+			"Run `--setup-template --app-id <APP_ID>` to print the setup credentials template for a given app.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload, including the name and app id (validated against the schema before sending).",
 		Example: `  auth0 flows vault connections create
   auth0 flows vault connections create --name "My Connection" --app-id SLACK
   auth0 flows vault connections create --name "My Connection" --app-id SLACK --setup-file ./setup.json
-  auth0 flows vault connections create --setup-template --app-id SLACK > setup.json`,
+  auth0 flows vault connections create --setup-template --app-id SLACK > setup.json
+  auth0 flows vault connections create --schema
+  auth0 flows vault connections create --data '{"name":"My Connection","app_id":"HTTP","setup":{"type":"BEARER","token":"<token>"}}'
+  auth0 flows vault connections create --data @connection.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/flows/vault/connections")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createVaultConnectionFromJSON(cli, cmd, payload)
+			}
+
 			inputs.AppID = strings.ToUpper(inputs.AppID)
 
 			if inputs.SetupTemplate {
@@ -311,15 +349,20 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
 	vaultConnectionSetupTemplate.RegisterBool(cmd, &inputs.SetupTemplate, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
 
 func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID   string
-		Name string
-		File string
+		ID     string
+		Name   string
+		File   string
+		Data   string
+		Schema bool
 	}
 
 	cmd := &cobra.Command{
@@ -329,16 +372,33 @@ func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 		Long: "Update a vault connection.\n\n" +
 			"Passing `--setup-file` replaces the connection's setup credentials; the file must contain only the setup body, not a name. " +
 			"Passing `--name` renames the connection; omit it to keep the current name. " +
-			"Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.",
+			"Run `auth0 flows vault connections create --setup-template --app-id <APP_ID>` to see the setup schema.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the JSON payload (validated against the schema before sending).",
 		Example: `  auth0 flows vault connections update <connection-id> --name "New Name"
-  auth0 flows vault connections update <connection-id> --setup-file ./setup.json`,
+  auth0 flows vault connections update <connection-id> --setup-file ./setup.json
+  auth0 flows vault connections update --schema
+  auth0 flows vault connections update <connection-id> --data '{"name":"New Name"}'
+  auth0 flows vault connections update <connection-id> --data @connection.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPatch, "/flows/vault/connections/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
 				if err := vaultConnectionID.Pick(cmd, &inputs.ID, cli.flowsVaultConnectionPickerOptions); err != nil {
 					return err
 				}
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateVaultConnectionFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			current, err := cli.vaultConnectionRawGet(cmd.Context(), inputs.ID)
@@ -429,8 +489,39 @@ func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 	vaultConnectionFile.RegisterStringU(cmd, &inputs.File, "")
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createVaultConnectionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	connection, err := runJSONWrite[json.RawMessage](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/flows/vault/connections",
+		URI:        cli.api.HTTPClient.URI("flows", "vault", "connections"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 flows vault connections create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create vault connection: %w", err)
+	}
+	return cli.renderer.FlowVaultConnectionShowRaw("vault connection created", *connection)
+}
+
+func updateVaultConnectionFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	connection, err := runJSONWrite[json.RawMessage](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/flows/vault/connections/{id}",
+		URI:        cli.api.HTTPClient.URI("flows", "vault", "connections", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 flows vault connections update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update vault connection with ID %q: %w", id, err)
+	}
+	return cli.renderer.FlowVaultConnectionShowRaw("vault connection updated", *connection)
 }
 
 func deleteVaultConnectionCmd(cli *cli) *cobra.Command {

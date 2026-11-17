@@ -28,6 +28,8 @@ auth0 logs streams create eventbridge [flags]
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact
+  auth0 logs streams create eventbridge --schema
+  auth0 logs streams create eventbridge --data '{"name":"my-stream","sink":{"awsAccountId":"123456789012","awsRegion":"us-east-1"}}'
 ```
 
 
@@ -36,6 +38,7 @@ auth0 logs streams create eventbridge [flags]
 ```
   -i, --aws-id string       ID of the AWS account.
   -r, --aws-region string   The AWS region in which eventbridge will be created, e.g. 'us-east-2'.
+      --data string         JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -m, --filters string      Events matching these filters will be delivered by the stream, Formatted as JSON. 
                             Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                Output in json format.
@@ -45,6 +48,7 @@ auth0 logs streams create eventbridge [flags]
                             including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
                              Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
                              (default "{}")
+      --schema              Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

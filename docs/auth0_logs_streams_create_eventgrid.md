@@ -29,6 +29,8 @@ auth0 logs streams create eventgrid [flags]
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact
+  auth0 logs streams create eventgrid --schema
+  auth0 logs streams create eventgrid --data '{"name":"my-stream","sink":{"azureSubscriptionId":"00000000-0000-0000-0000-000000000000","azureRegion":"eastus","azureResourceGroup":"<resource-group>"}}'
 ```
 
 
@@ -38,6 +40,7 @@ auth0 logs streams create eventgrid [flags]
   -g, --azure-group string    The name of the Azure resource group.
   -i, --azure-id string       Id of the Azure subscription.
   -r, --azure-region string   The region in which the Azure subscription is hosted.
+      --data string           JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -m, --filters string        Events matching these filters will be delivered by the stream, Formatted as JSON. 
                               Example: "[{"type":"category","name":"auth.login.fail"},{"type":"category","name":"auth.signup.fail"}]" (default "[]")
       --json                  Output in json format.
@@ -47,6 +50,7 @@ auth0 logs streams create eventgrid [flags]
                               including which fields to log (first_name, last_name, username, email, phone, address),the protection method (mask or hash), and the hashing algorithm (xxhash). 
                                Example : {"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}. 
                                (default "{}")
+      --schema                Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
