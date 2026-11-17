@@ -29,6 +29,15 @@ auth0 network-acl update [flags]
   # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"},{"id": "key_456"}]}}}'
+
+  # Discover the payload schema
+  auth0 network-acl update --schema
+  auth0 network-acl update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 network-acl update <id> --data '{"active":false,"priority":5}'
+  auth0 network-acl update <id> --data @network-acl.json
+  cat network-acl.json | auth0 network-acl update <id>
   
 ```
 
@@ -37,10 +46,12 @@ auth0 network-acl update [flags]
 
 ```
       --active string        Whether the network ACL is active ('true' or 'false').
+      --data string          JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string   Description of the network ACL (Eg. "Block suspicious IPs").
       --json                 Output in JSON format
   -p, --priority int         Priority of the network ACL (Eg. 5). (default 1)
       --rule string          Network ACL rule configuration in JSON format (required for non-interactive mode).
+      --schema               Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 
