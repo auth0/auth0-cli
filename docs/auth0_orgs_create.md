@@ -11,6 +11,9 @@ To create interactively, use `auth0 orgs create` with no arguments.
 
 To create non-interactively, supply the name and other information through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 orgs create [flags]
@@ -24,6 +27,15 @@ auth0 orgs create [flags]
   auth0 orgs create -n myorganization --display "My Organization"
   auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
   auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"
+
+  # Discover the payload schema
+  auth0 orgs create --schema
+  auth0 orgs create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 orgs create --data '{"name":"myorganization","display_name":"My Organization"}'
+  auth0 orgs create --data @org.json
+  cat org.json | auth0 orgs create
 ```
 
 
@@ -32,12 +44,14 @@ auth0 orgs create [flags]
 ```
   -a, --accent string             Accent color used to customize the login pages.
   -b, --background string         Background color used to customize the login pages.
+      --data string               JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --display string            Friendly name of the organization.
       --json                      Output in json format.
       --json-compact              Output in compact json format.
   -l, --logo string               URL of the logo to be displayed on the login page.
   -m, --metadata stringToString   Metadata associated with the organization (max 255 chars). Maximum of 10 metadata properties allowed. (default [])
   -n, --name string               Name of the organization.
+      --schema                    Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -70,18 +71,38 @@ func tokenExchangeCmd(cli *cli) *cobra.Command {
 }
 
 func listTokenExchangeProfilesCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your token exchange profiles",
-		Long:    "List your existing token exchange profiles. To create one, run: `auth0 token-exchange create`.",
+		Long: "List your existing token exchange profiles. To create one, run: `auth0 token-exchange create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 token-exchange list
   auth0 token-exchange ls
   auth0 token-exchange ls --json
   auth0 token-exchange ls --json-compact
-  auth0 token-exchange ls --csv`,
+  auth0 token-exchange ls --csv
+  auth0 token-exchange list --schema
+  auth0 token-exchange list --query '{"take":10}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/token-exchange-profiles")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "token-exchange-profiles",
+					SchemaCmd: "auth0 token-exchange list",
+				}, inputs.Query)
+			}
+
 			var list *management.TokenExchangeProfileList
 
 			if err := ansi.Waiting(func() (err error) {
@@ -101,6 +122,8 @@ func listTokenExchangeProfilesCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -155,6 +178,8 @@ func createTokenExchangeProfileCmd(cli *cli) *cobra.Command {
 		SubjectTokenType string
 		ActionID         string
 		Type             string
+		Data             string
+		Schema           bool
 	}
 
 	cmd := &cobra.Command{
@@ -163,14 +188,37 @@ func createTokenExchangeProfileCmd(cli *cli) *cobra.Command {
 		Short: "Create a new token exchange profile",
 		Long: "Create a new token exchange profile.\n\n" +
 			"To create interactively, use `auth0 token-exchange create` with no flags.\n\n" +
-			"To create non-interactively, supply the name, subject token type, action ID, and type through the flags.",
+			"To create non-interactively, supply the name, subject token type, action ID, and type through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 token-exchange create
   auth0 token-exchange create --name "My Token Exchange Profile"
   auth0 token-exchange create --name "My Token Exchange Profile" --subject-token-type "urn:ietf:params:oauth:token-type:jwt"
   auth0 token-exchange create --name "My Token Exchange Profile" --subject-token-type "urn:ietf:params:oauth:token-type:jwt" --action-id "act_123abc" --type "custom_authentication"
   auth0 token-exchange create -n "My Token Exchange Profile" -s "urn:ietf:params:oauth:token-type:jwt" -a "act_123abc" -t "custom_authentication" --json
-  auth0 token-exchange create -n "My Token Exchange Profile" -s "urn:ietf:params:oauth:token-type:jwt" -a "act_123abc" -t "custom_authentication" --json-compact`,
+  auth0 token-exchange create -n "My Token Exchange Profile" -s "urn:ietf:params:oauth:token-type:jwt" -a "act_123abc" -t "custom_authentication" --json-compact
+
+  # Discover the payload schema
+  auth0 token-exchange create --schema
+  auth0 token-exchange create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 token-exchange create --data '{"name":"My Profile","subject_token_type":"urn:acme:legacy-token","action_id":"act_123abc","type":"custom_authentication"}'
+  auth0 token-exchange create --data @profile.json
+  cat profile.json | auth0 token-exchange create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/token-exchange-profiles")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createTokenExchangeProfileFromJSON(cli, cmd, payload)
+			}
+
 			if err := tokenExchangeProfileName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -214,6 +262,9 @@ func createTokenExchangeProfileCmd(cli *cli) *cobra.Command {
 	tokenExchangeProfileSubjectTokenType.RegisterString(cmd, &inputs.SubjectTokenType, "")
 	tokenExchangeProfileActionID.RegisterString(cmd, &inputs.ActionID, "")
 	tokenExchangeProfileType.RegisterString(cmd, &inputs.Type, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -223,6 +274,8 @@ func updateTokenExchangeProfileCmd(cli *cli) *cobra.Command {
 		ID               string
 		Name             string
 		SubjectTokenType string
+		Data             string
+		Schema           bool
 	}
 
 	cmd := &cobra.Command{
@@ -232,20 +285,42 @@ func updateTokenExchangeProfileCmd(cli *cli) *cobra.Command {
 		Long: "Update a token exchange profile.\n\n" +
 			"To update interactively, use `auth0 token-exchange update` with no arguments.\n\n" +
 			"To update non-interactively, supply the profile id, name, and subject token type through the flags.\n\n" +
-			"Note: Only name and subject token type can be updated. Action ID and type are immutable after creation.",
+			"Note: Only name and subject token type can be updated. Action ID and type are immutable after creation.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 token-exchange update
   auth0 token-exchange update <profile-id>
   auth0 token-exchange update <profile-id> --name "Updated Profile Name"
   auth0 token-exchange update <profile-id> --name "Updated Profile Name" --subject-token-type "urn:ietf:params:oauth:token-type:jwt"
   auth0 token-exchange update <profile-id> -n "Updated Profile Name" -s "urn:ietf:params:oauth:token-type:jwt" --json
-  auth0 token-exchange update <profile-id> -n "Updated Profile Name" -s "urn:ietf:params:oauth:token-type:jwt" --json-compact`,
+  auth0 token-exchange update <profile-id> -n "Updated Profile Name" -s "urn:ietf:params:oauth:token-type:jwt" --json-compact
+
+  # Discover the payload schema
+  auth0 token-exchange update --schema
+  auth0 token-exchange update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 token-exchange update <profile-id> --data '{"name":"Updated Profile Name"}'
+  auth0 token-exchange update <profile-id> --data @profile.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPatch, "/token-exchange-profiles/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
 				if err := tokenExchangeProfileID.Pick(cmd, &inputs.ID, cli.tokenExchangeProfilePickerOptions); err != nil {
 					return err
 				}
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateTokenExchangeProfileFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			var current *management.TokenExchangeProfile
@@ -290,8 +365,45 @@ func updateTokenExchangeProfileCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	tokenExchangeProfileName.RegisterStringU(cmd, &inputs.Name, "")
 	tokenExchangeProfileSubjectTokenType.RegisterStringU(cmd, &inputs.SubjectTokenType, "")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createTokenExchangeProfileFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	profile, err := runJSONWrite[management.TokenExchangeProfile](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/token-exchange-profiles",
+		URI:        cli.api.HTTPClient.URI("token-exchange-profiles"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 token-exchange create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create token exchange profile: %w", err)
+	}
+
+	cli.renderer.TokenExchangeProfileCreate(profile)
+
+	return nil
+}
+
+func updateTokenExchangeProfileFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	profile, err := runJSONWrite[management.TokenExchangeProfile](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/token-exchange-profiles/{id}",
+		URI:        cli.api.HTTPClient.URI("token-exchange-profiles", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 token-exchange update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update token exchange profile with ID %q: %w", id, err)
+	}
+
+	cli.renderer.TokenExchangeProfileUpdate(profile)
+
+	return nil
 }
 
 func deleteTokenExchangeProfileCmd(cli *cli) *cobra.Command {
