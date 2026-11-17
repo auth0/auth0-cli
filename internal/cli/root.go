@@ -269,7 +269,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 			// --schema prints a public OpenAPI schema and returns before any
 			// API call, so it needs no session — skip auth for offline discovery.
-			if f := cmd.Flags().Lookup("schema"); f != nil && f.Changed {
+			if schemaRequested(cmd) {
 				return nil
 			}
 

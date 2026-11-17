@@ -64,12 +64,23 @@ func printOperationSchema(cli *cli, method, path string) error {
 	return nil
 }
 
-// requiredBypassFlags supersede the granular required flags: --data and --query
-// carry the whole payload, --schema prints the schema and exits before RunE.
-var requiredBypassFlags = []string{"data", "query", "schema"}
+// schemaRequested reports whether --schema is set to true. Checking only that the
+// flag was passed is not enough: --schema=false must run the command normally.
+func schemaRequested(cmd *cobra.Command) bool {
+	f := cmd.Flags().Lookup(schemaFlag.LongForm)
+	return f != nil && f.Changed && f.Value.String() == "true"
+}
 
-// hasRequiredBypassFlag reports whether the user set one of requiredBypassFlags.
+// requiredBypassFlags supersede the granular required flags because they carry
+// the whole payload.
+var requiredBypassFlags = []string{"data", "query"}
+
+// hasRequiredBypassFlag reports whether the user set one of requiredBypassFlags,
+// or requested --schema, which prints the schema and exits before RunE.
 func hasRequiredBypassFlag(cmd *cobra.Command) bool {
+	if schemaRequested(cmd) {
+		return true
+	}
 	for _, name := range requiredBypassFlags {
 		if f := cmd.Flags().Lookup(name); f != nil && f.Changed {
 			return true
