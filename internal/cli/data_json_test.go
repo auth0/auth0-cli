@@ -301,14 +301,21 @@ func TestDataRejectsEmptyObject(t *testing.T) {
 	t.Run("from a file", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "empty.json")
 		require.NoError(t, os.WriteFile(path, []byte("{}\n"), 0o600))
-		_, err := readJSONInput("@" + path)
+		_, err := readDataInput("@" + path)
 		assert.ErrorContains(t, err, "empty JSON object")
 	})
 
 	t.Run("from stdin", func(t *testing.T) {
 		withPipedStdin(t, "{}", func() {
-			_, err := readJSONInput("-")
+			_, err := readDataInput("-")
 			assert.ErrorContains(t, err, "empty JSON object")
 		})
+	})
+
+	t.Run("other JSON flags still accept {}", func(t *testing.T) {
+		// For example, agents --metadata '{}' clears the metadata.
+		data, err := readJSONInput(`{}`)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{}`, string(data))
 	})
 }
