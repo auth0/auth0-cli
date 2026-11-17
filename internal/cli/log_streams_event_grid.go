@@ -65,7 +65,12 @@ func createLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create eventgrid --schema
+  auth0 logs streams create eventgrid --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create eventgrid --data '{"name":"my-stream","sink":{"azureSubscriptionId":"00000000-0000-0000-0000-000000000000","azureRegion":"eastus","azureResourceGroup":"<resource-group>"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {
@@ -180,7 +185,12 @@ func updateLogStreamsAzureEventGridCmd(cli *cli) *cobra.Command {
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update eventgrid --schema
+  auth0 logs streams update eventgrid --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update eventgrid <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {

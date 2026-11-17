@@ -120,7 +120,12 @@ func listFlowsCmd(cli *cli) *cobra.Command {
   auth0 flows ls --number 100
   auth0 flows ls --hydrate
   auth0 flows ls --json
+
+  # Discover the query schema
   auth0 flows list --schema
+  auth0 flows list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 flows list --query '{"per_page":50,"synchronous":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
@@ -230,7 +235,12 @@ func createFlowCmd(cli *cli) *cobra.Command {
   auth0 flows create --name "My Flow"
   auth0 flows create --actions-template > flow.json
   auth0 flows create --name "My Flow" --actions-file ./action.json
+
+  # Discover the payload schema
   auth0 flows create --schema
+  auth0 flows create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows create --data '{"name":"My Flow","actions":[]}'
   auth0 flows create --data @flow.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -333,7 +343,12 @@ func updateFlowCmd(cli *cli) *cobra.Command {
 			"Use '--data' to supply the JSON payload (validated against the schema before sending).",
 		Example: `  auth0 flows update <flow-id> --name "New Name"
   auth0 flows update <flow-id> --actions-file ./action.json
+
+  # Discover the payload schema
   auth0 flows update --schema
+  auth0 flows update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows update <flow-id> --data '{"name":"New Name"}'
   auth0 flows update <flow-id> --data @flow.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

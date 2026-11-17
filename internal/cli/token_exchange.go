@@ -89,7 +89,12 @@ func listTokenExchangeProfilesCmd(cli *cli) *cobra.Command {
   auth0 token-exchange ls --json
   auth0 token-exchange ls --json-compact
   auth0 token-exchange ls --csv
+
+  # Discover the query schema
   auth0 token-exchange list --schema
+  auth0 token-exchange list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 token-exchange list --query '{"take":10}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {

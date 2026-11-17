@@ -30,7 +30,12 @@ auth0 logs streams update splunk [flags]
   auth0 log streams update splunk <log-stream-id> -n <name> -d <domain> -t <token> -p <port> -s -c null
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json
   auth0 log streams update splunk <log-stream-id> -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s=false --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update splunk --schema
+  auth0 logs streams update splunk --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update splunk <log-stream-id> --data '{"status":"paused"}'
 ```
 

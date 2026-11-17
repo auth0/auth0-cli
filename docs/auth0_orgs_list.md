@@ -24,7 +24,12 @@ auth0 orgs list [flags]
   auth0 orgs ls --json-compact
   auth0 orgs ls --csv
   auth0 orgs ls -n 100
+
+  # Discover the query schema
   auth0 orgs list --schema
+  auth0 orgs list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs list --query '{"per_page":50,"include_totals":true}'
 ```
 

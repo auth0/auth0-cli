@@ -212,7 +212,12 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
   auth0 orgs ls --json-compact
   auth0 orgs ls --csv
   auth0 orgs ls -n 100
+
+  # Discover the query schema
   auth0 orgs list --schema
+  auth0 orgs list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs list --query '{"per_page":50,"include_totals":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
@@ -726,7 +731,12 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs members ls <org-id> -n 100 --json
   auth0 orgs members ls <org-id> -n 100 --json-compact
   auth0 orgs members ls <org-id> --csv
+
+  # Discover the query schema
   auth0 orgs members list --schema
+  auth0 orgs members list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs members list <org-id> --query '{"fields":"user_id,email","include_fields":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
@@ -1246,7 +1256,12 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
   auth0 orgs invs ls --org-id <org-id> -n 50 --json
   auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
   auth0 orgs invs ls --org-id <org-id> --csv
+
+  # Discover the query schema
   auth0 orgs invs list --schema
+  auth0 orgs invs list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs invs list --org-id <org-id> --query '{"sort":"created_at:-1","per_page":20}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {

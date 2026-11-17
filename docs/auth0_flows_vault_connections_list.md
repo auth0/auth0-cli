@@ -21,7 +21,12 @@ auth0 flows vault connections list [flags]
   auth0 flows vault connections list
   auth0 flows vault connections ls --number 100
   auth0 flows vault connections ls --json
+
+  # Discover the query schema
   auth0 flows vault connections list --schema
+  auth0 flows vault connections list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 flows vault connections list --query '{"per_page":50,"include_totals":true}'
 ```
 

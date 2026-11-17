@@ -25,8 +25,12 @@ auth0 apps list [flags]
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv
+
+  # Discover the query schema
   auth0 apps list --schema
   auth0 apps list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apps list --query '{"app_type":"spa"}'
   auth0 apps list --query '{"app_type":"spa"}' --json
 ```

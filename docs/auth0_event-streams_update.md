@@ -30,7 +30,12 @@ auth0 event-streams update [flags]
   auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}'
   auth0 event-streams create <event-id> --name my-event-stream --subscriptions "user.updated" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
+
+  # Discover the payload schema
   auth0 event-streams update --schema
+  auth0 event-streams update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 event-streams update <event-id> --data '{"status":"disabled"}'
   auth0 event-streams update <event-id> --data @event-stream.json
 ```

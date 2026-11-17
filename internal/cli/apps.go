@@ -375,8 +375,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 apps ls -r -n 100 --json
   auth0 apps ls -r -n 100 --json-compact
   auth0 apps ls --csv
+
+  # Discover the query schema
   auth0 apps list --schema
   auth0 apps list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apps list --query '{"app_type":"spa"}'
   auth0 apps list --query '{"app_type":"spa"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

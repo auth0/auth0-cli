@@ -30,9 +30,14 @@ auth0 connections update [flags]
 
 ```
   auth0 connections update <connection-id>
+
+  # Discover the payload schema
+  auth0 connections update --schema
+  auth0 connections update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 connections update <connection-id> --data @connection.json
   auth0 connections update <connection-id> --data '{"options":{...}}'
-  auth0 connections update --schema
 ```
 
 

@@ -59,7 +59,12 @@ func createLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create datadog --schema
+  auth0 logs streams create datadog --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create datadog --data '{"name":"my-stream","sink":{"datadogRegion":"us","datadogApiKey":"<api-key>"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {
@@ -171,7 +176,12 @@ func updateLogStreamsDatadogCmd(cli *cli) *cobra.Command {
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update datadog --schema
+  auth0 logs streams update datadog --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update datadog <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {

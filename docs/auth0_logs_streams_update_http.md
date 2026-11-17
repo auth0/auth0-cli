@@ -30,7 +30,12 @@ auth0 logs streams update http [flags]
   auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization> -c null
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update http --schema
+  auth0 logs streams update http --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update http <log-stream-id> --data '{"status":"paused"}'
 ```
 

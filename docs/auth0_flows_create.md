@@ -24,7 +24,12 @@ auth0 flows create [flags]
   auth0 flows create --name "My Flow"
   auth0 flows create --actions-template > flow.json
   auth0 flows create --name "My Flow" --actions-file ./action.json
+
+  # Discover the payload schema
   auth0 flows create --schema
+  auth0 flows create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows create --data '{"name":"My Flow","actions":[]}'
   auth0 flows create --data @flow.json
 ```

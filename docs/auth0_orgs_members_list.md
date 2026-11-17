@@ -24,7 +24,12 @@ auth0 orgs members list [flags]
   auth0 orgs members ls <org-id> -n 100 --json
   auth0 orgs members ls <org-id> -n 100 --json-compact
   auth0 orgs members ls <org-id> --csv
+
+  # Discover the query schema
   auth0 orgs members list --schema
+  auth0 orgs members list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs members list <org-id> --query '{"fields":"user_id,email","include_fields":true}'
 ```
 

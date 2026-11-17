@@ -28,7 +28,12 @@ auth0 orgs invitations list [flags]
   auth0 orgs invs ls --org-id <org-id> -n 50 --json
   auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
   auth0 orgs invs ls --org-id <org-id> --csv
+
+  # Discover the query schema
   auth0 orgs invs list --schema
+  auth0 orgs invs list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs invs list --org-id <org-id> --query '{"sort":"created_at:-1","per_page":20}'
 ```
 

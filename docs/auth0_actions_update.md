@@ -37,7 +37,9 @@ auth0 actions update [flags]
   auth0 actions update <action-id> --module "module_id=mod_123,module_version_id=ver_456" --json
   auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0" --json-compact
 
-  # Discover the payload schema (add --json for machine-readable output)
+  # JSON input mode (for agents and automation)
+
+  # Discover the payload schema
   auth0 actions update --schema
   auth0 actions update --schema --json
 

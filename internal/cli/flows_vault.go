@@ -145,7 +145,12 @@ func listVaultConnectionsCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 flows vault connections list
   auth0 flows vault connections ls --number 100
   auth0 flows vault connections ls --json
+
+  # Discover the query schema
   auth0 flows vault connections list --schema
+  auth0 flows vault connections list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 flows vault connections list --query '{"per_page":50,"include_totals":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
@@ -245,7 +250,12 @@ func createVaultConnectionCmd(cli *cli) *cobra.Command {
   auth0 flows vault connections create --name "My Connection" --app-id SLACK
   auth0 flows vault connections create --name "My Connection" --app-id SLACK --setup-file ./setup.json
   auth0 flows vault connections create --setup-template --app-id SLACK > setup.json
+
+  # Discover the payload schema
   auth0 flows vault connections create --schema
+  auth0 flows vault connections create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows vault connections create --data '{"name":"My Connection","app_id":"HTTP","setup":{"type":"BEARER","token":"<token>"}}'
   auth0 flows vault connections create --data @connection.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -377,7 +387,12 @@ func updateVaultConnectionCmd(cli *cli) *cobra.Command {
 			"Use '--data' to supply the JSON payload (validated against the schema before sending).",
 		Example: `  auth0 flows vault connections update <connection-id> --name "New Name"
   auth0 flows vault connections update <connection-id> --setup-file ./setup.json
+
+  # Discover the payload schema
   auth0 flows vault connections update --schema
+  auth0 flows vault connections update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows vault connections update <connection-id> --data '{"name":"New Name"}'
   auth0 flows vault connections update <connection-id> --data @connection.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

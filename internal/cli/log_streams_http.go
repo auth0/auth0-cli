@@ -78,7 +78,12 @@ func createLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create http --schema
+  auth0 logs streams create http --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create http --data '{"name":"my-stream","sink":{"httpEndpoint":"https://example.com/logs","httpContentType":"application/json","httpContentFormat":"JSONLINES"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {
@@ -214,7 +219,12 @@ func updateLogStreamsCustomWebhookCmd(cli *cli) *cobra.Command {
   auth0 logs streams update http <log-stream-id> -n <name> -e <endpoint> -t <type> -f <format> -a <authorization> -c null
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
   auth0 logs streams update http <log-stream-id> -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update http --schema
+  auth0 logs streams update http --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update http <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {

@@ -28,7 +28,12 @@ auth0 logs streams create eventbridge [flags]
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create eventbridge --schema
+  auth0 logs streams create eventbridge --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create eventbridge --data '{"name":"my-stream","sink":{"awsAccountId":"123456789012","awsRegion":"us-east-1"}}'
 ```
 
