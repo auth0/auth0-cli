@@ -1,7 +1,11 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -12,6 +16,8 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/openapi"
 )
 
 func TestWithLogStreamType(t *testing.T) {
@@ -131,6 +137,50 @@ func TestLogStreamsUpdateCmdResolvesPayloadBeforeReading(t *testing.T) {
 				assert.ErrorContains(t, cmd.Execute(), "not a file reference")
 			})
 			assert.Empty(t, stub.gotMethod)
+		})
+	}
+}
+
+func TestLogStreamsListCmdSchema(t *testing.T) {
+	doc, err := openapi.LoadDocFromData([]byte(`{"openapi":"3.0.0","info":{"title":"fixture","version":"1"},
+		"paths":{"/log-streams":{"get":{"operationId":"get_log-streams","summary":"Get log streams"}}}}`))
+	require.NoError(t, err)
+	prev := newSchemaManager
+	newSchemaManager = func() (*openapi.SchemaManager, error) { return openapi.NewSchemaManagerFromDoc(doc), nil }
+	t.Cleanup(func() { newSchemaManager = prev })
+
+	var out bytes.Buffer
+	cmd := listLogStreamsCmd(&cli{renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: &out}})
+	cmd.SetArgs([]string{"--schema", "--json-compact"})
+
+	require.NoError(t, cmd.Execute())
+	var printed map[string]interface{}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &printed))
+	assert.Equal(t, http.MethodGet, printed["method"])
+	assert.Equal(t, "/log-streams", printed["path"])
+}
+
+func TestLogStreamsListCmdQuery(t *testing.T) {
+	for _, flag := range []string{"--query", "-q"} {
+		t.Run(flag, func(t *testing.T) {
+			var gotMethod, gotPath string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotMethod, gotPath = r.Method, r.URL.Path
+				_, _ = w.Write([]byte(`[{"id":"lst_123"}]`))
+			}))
+			t.Cleanup(server.Close)
+
+			var out bytes.Buffer
+			cmd := listLogStreamsCmd(&cli{
+				api:      &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+				renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: &out},
+			})
+			cmd.SetArgs([]string{flag, `{}`})
+
+			require.NoError(t, cmd.Execute())
+			assert.Equal(t, http.MethodGet, gotMethod)
+			assert.Equal(t, "/api/v2/log-streams", gotPath)
+			assert.Contains(t, out.String(), "lst_123")
 		})
 	}
 }

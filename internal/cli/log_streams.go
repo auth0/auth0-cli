@@ -80,18 +80,37 @@ func logStreamsCmd(cli *cli) *cobra.Command {
 }
 
 func listLogStreamsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List all log streams",
-		Long:    "List your existing log streams. To create one, run: `auth0 logs streams create`.",
+		Long: "List your existing log streams. To create one, run: `auth0 logs streams create`.\n\n" +
+			"Use '--schema' to see the query parameters the API documents for this operation.\n" +
+			"Use '--query' to pass query parameters as a JSON object and get the raw API response.",
 		Example: `  auth0 logs streams list
   auth0 logs streams ls
   auth0 logs streams ls --json
   auth0 logs streams ls --json-compact
-  auth0 logs streams ls --csv`,
+  auth0 logs streams ls --csv
+  auth0 logs streams list --schema`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/log-streams")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "log-streams",
+					SchemaCmd: "auth0 logs streams list",
+				}, inputs.Query)
+			}
+
 			var list []*management.LogStream
 
 			if err := ansi.Waiting(func() error {
@@ -110,6 +129,8 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }

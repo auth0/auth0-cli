@@ -22,6 +22,7 @@ var (
 		{"flows list", listFlowsCmd},
 		{"flows vault connections list", listVaultConnectionsCmd},
 		{"event-streams list", listEventStreamsCmd},
+		{"logs streams list", listLogStreamsCmd},
 	}
 
 	createJSONFlagsCmds = []jsonFlagsCase{

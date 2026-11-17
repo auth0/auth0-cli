@@ -1,6 +1,7 @@
 package openapi
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -542,4 +543,135 @@ func TestFormatField(t *testing.T) {
 	assert.Contains(t, formatted, "name")
 	assert.Contains(t, formatted, "string")
 	assert.Contains(t, formatted, "The name of an action")
+}
+
+// compositionFixtureDoc covers the shapes behind POST /event-streams (top-level
+// oneOf), PATCH /event-streams/{id} (oneOf field) and flows (a recursive oneOf).
+const compositionFixtureDoc = `{
+  "openapi": "3.0.0",
+  "info": {"title": "fixture", "version": "1.0.0"},
+  "paths": {
+    "/pets": {"post": {"operationId": "post_pet", "requestBody": {"content": {"application/json": {"schema": {
+      "oneOf": [{"$ref": "#/components/schemas/Cat"}, {"$ref": "#/components/schemas/Dog"}]}}}}}},
+    "/owners/{id}": {"patch": {"operationId": "patch_owner", "requestBody": {"content": {"application/json": {"schema": {
+      "type": "object",
+      "properties": {
+        "pet": {"oneOf": [{"$ref": "#/components/schemas/Cat"}, {"$ref": "#/components/schemas/Dog"}]},
+        "pets": {"type": "array", "items": {"oneOf": [{"$ref": "#/components/schemas/Cat"}, {"$ref": "#/components/schemas/Dog"}]}}
+      }}}}}}},
+    "/nodes": {"post": {"operationId": "post_node", "requestBody": {"content": {"application/json": {"schema": {
+      "$ref": "#/components/schemas/Node"}}}}}},
+    "/mixed": {"post": {"operationId": "post_mixed", "requestBody": {"content": {"application/json": {"schema": {
+      "type": "object",
+      "properties": {
+        "merged": {"allOf": [{"$ref": "#/components/schemas/Cat"}, {"type": "object", "properties": {"age": {"type": "integer"}}}]},
+        "either": {"anyOf": [{"$ref": "#/components/schemas/Cat"}, {"$ref": "#/components/schemas/Dog"}]},
+        "tagged": {"type": "array", "items": {"type": "object", "properties": {"tag": {"type": "string"}},
+          "oneOf": [{"$ref": "#/components/schemas/Cat"}, {"$ref": "#/components/schemas/Dog"}]}}
+      }}}}}}}
+  },
+  "components": {"schemas": {
+    "Cat": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "meows": {"type": "boolean"}}},
+    "Dog": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "barks": {"type": "boolean"}}},
+    "Node": {"type": "object", "properties": {
+      "label": {"type": "string"},
+      "next": {"oneOf": [{"$ref": "#/components/schemas/Node"}, {"type": "string"}]}}}
+  }}
+}`
+
+func compositionSchema(t *testing.T, method, path string) *OperationSchema {
+	t.Helper()
+	doc, err := LoadDocFromData([]byte(compositionFixtureDoc))
+	require.NoError(t, err)
+	opSchema, err := NewSchemaManagerFromDoc(doc).GetOperationSchema(method, path)
+	require.NoError(t, err)
+	return opSchema
+}
+
+func TestFormatAsJSON_Composition(t *testing.T) {
+	variants := func(t *testing.T, node interface{}) []map[string]interface{} {
+		t.Helper()
+		raw, ok := node.(map[string]interface{})["oneOf"].([]interface{})
+		require.True(t, ok, "missing oneOf")
+		out := make([]map[string]interface{}, len(raw))
+		for i, v := range raw {
+			out[i] = v.(map[string]interface{})
+		}
+		return out
+	}
+	decode := func(t *testing.T, opSchema *OperationSchema) map[string]interface{} {
+		t.Helper()
+		jsonOutput, err := opSchema.FormatAsJSON()
+		require.NoError(t, err)
+		var out map[string]interface{}
+		require.NoError(t, json.Unmarshal([]byte(jsonOutput), &out))
+		return out["request_schema"].(map[string]interface{})
+	}
+
+	t.Run("top-level oneOf lists each variant with its fields", func(t *testing.T) {
+		pets := variants(t, decode(t, compositionSchema(t, "POST", "/pets")))
+		cat, dog := pets[0], pets[1]
+		assert.Equal(t, "Cat", cat["title"])
+		assert.Equal(t, []interface{}{"name"}, cat["required"])
+		assert.Contains(t, cat["properties"], "meows")
+		assert.Equal(t, "Dog", dog["title"])
+		assert.Contains(t, dog["properties"], "barks")
+	})
+
+	t.Run("oneOf inside a field and inside array items", func(t *testing.T) {
+		props := decode(t, compositionSchema(t, "PATCH", "/owners/{id}"))["properties"].(map[string]interface{})
+		assert.Equal(t, "Cat", variants(t, props["pet"])[0]["title"])
+		assert.Equal(t, "Dog", variants(t, props["pets"].(map[string]interface{})["items"])[1]["title"])
+	})
+
+	t.Run("a recursive schema terminates", func(t *testing.T) {
+		props := decode(t, compositionSchema(t, "POST", "/nodes"))["properties"].(map[string]interface{})
+		next := variants(t, props["next"])
+		assert.Equal(t, recursiveSchemaNote, next[0]["description"])
+		assert.Equal(t, []interface{}{"string"}, next[1]["type"])
+	})
+}
+
+func TestFormatAsText_Composition(t *testing.T) {
+	t.Run("top-level oneOf", func(t *testing.T) {
+		text := compositionSchema(t, "POST", "/pets").FormatAsText()
+		assert.Contains(t, text, "One of:")
+		assert.Contains(t, text, "Variant 1: Cat")
+		assert.Contains(t, text, "- meows (boolean)")
+		assert.Contains(t, text, "Variant 2: Dog")
+		assert.Contains(t, text, "- barks (boolean)")
+	})
+
+	t.Run("oneOf inside a field and inside array items", func(t *testing.T) {
+		text := compositionSchema(t, "PATCH", "/owners/{id}").FormatAsText()
+		assert.Contains(t, text, "- pet\n")
+		assert.Contains(t, text, "Each item:")
+		assert.Equal(t, 2, strings.Count(text, "Variant 2: Dog"), "both pet and pets list their variants")
+	})
+
+	t.Run("a recursive schema terminates", func(t *testing.T) {
+		assert.Contains(t, compositionSchema(t, "POST", "/nodes").FormatAsText(), recursiveSchemaNote)
+	})
+}
+
+func TestFormatComposition_AnyOfAllOf(t *testing.T) {
+	opSchema := compositionSchema(t, "POST", "/mixed")
+
+	jsonOutput, err := opSchema.FormatAsJSON()
+	require.NoError(t, err)
+	var out map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(jsonOutput), &out))
+	props := out["request_schema"].(map[string]interface{})["properties"].(map[string]interface{})
+	branch := func(field, keyword string, i int) map[string]interface{} {
+		return props[field].(map[string]interface{})[keyword].([]interface{})[i].(map[string]interface{})
+	}
+	assert.Equal(t, "Cat", branch("merged", "allOf", 0)["title"])
+	assert.Contains(t, branch("merged", "allOf", 1)["properties"], "age")
+	assert.Equal(t, "Dog", branch("either", "anyOf", 1)["title"])
+
+	text := opSchema.FormatAsText()
+	assert.Contains(t, text, "All of:")
+	assert.Contains(t, text, "- age (integer)")
+	assert.Contains(t, text, "Any of:")
+	assert.Equal(t, 1, strings.Count(text, "- tag (string)"), "array item properties must not be listed twice")
 }

@@ -28,7 +28,7 @@ type DataJSONHandler struct {
 	manager *openapi.SchemaManager
 }
 
-// newSchemaManager builds the schema manager backing --data validation. It is a
+// newSchemaManager builds the schema manager backing --schema and --data. It is a
 // package var so tests can inject a fixture-backed manager and keep the unit
 // suite off the network.
 var newSchemaManager = openapi.NewSchemaManager
@@ -140,24 +140,37 @@ func readJSONInput(input string) ([]byte, error) {
 		return nil, validationError{err: fmt.Errorf("no input provided"), reason: "missing_input"}
 	}
 
-	// "@-" and "-" read the payload from stdin, the common agent/script idiom for
-	// piping a body while still passing the flag explicitly.
-	if input == "@-" || input == "-" {
-		data, err := iostream.PipedInput()
+	var data []byte
+	switch {
+	case input == "@-" || input == "-":
+		// "@-" and "-" read the payload from stdin, the common agent/script idiom for
+		// piping a body while still passing the flag explicitly.
+		piped, err := iostream.PipedInput()
 		if err != nil {
 			return nil, err
 		}
-		if len(data) == 0 {
+		if len(piped) == 0 {
 			return nil, fmt.Errorf("no data received on stdin")
 		}
-		return data, nil
+		data = piped
+	case input[0] == '@': // @file.
+		file, err := os.ReadFile(input[1:])
+		if err != nil {
+			return nil, err
+		}
+		data = file
+	default: // Inline JSON.
+		data = []byte(input)
 	}
 
-	if input[0] == '@' { // @file.
-		return os.ReadFile(input[1:])
+	// An empty object would create nothing and update nothing, so reject it here
+	// rather than let some schemas pass it through as a silent no-op.
+	var obj map[string]json.RawMessage
+	if json.Unmarshal(data, &obj) == nil && obj != nil && len(obj) == 0 {
+		return nil, validationError{err: errors.New("the payload is an empty JSON object; include at least one field")}
 	}
 
-	return []byte(input), nil // Inline JSON.
+	return data, nil
 }
 
 // formatValidationErrors formats validation errors in a user-friendly way.
