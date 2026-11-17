@@ -306,9 +306,6 @@ func updateBotDetectionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) er
 		URI:        cli.api.HTTPClient.URI("attack-protection", "bot-detection"),
 		Data:       dataStr,
 		SchemaCmd:  "auth0 protection bot-detection update",
-		// The allowlist items are a oneOf whose branches differ only by IP and CIDR
-		// formats, which local validation does not check, so every entry would fail.
-		SkipValidation: true,
 	})
 	if err != nil {
 		return err

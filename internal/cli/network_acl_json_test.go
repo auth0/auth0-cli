@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -18,7 +17,7 @@ import (
 )
 
 // networkACLFixtureSchemaDoc mirrors the $ref layout of the live spec for the network ACL
-// operations, including the format-only CIDR oneOf that makes local validation unusable.
+// operations, including the CIDR oneOf whose branches differ only by IP and CIDR format.
 const networkACLFixtureSchemaDoc = `{
   "openapi": "3.0.0",
   "info": {"title": "fixture", "version": "1.0.0"},
@@ -78,7 +77,7 @@ func useNetworkACLFixtureSchema(t *testing.T) {
 const networkACLResponse = `{"id":"acl_123","description":"Block office","active":false,"priority":10,` +
 	`"rule":{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.0.2.0/24","192.0.2.10"]}}}`
 
-// networkACLCIDRData holds a CIDR and a plain address, which the CIDR oneOf rejects locally.
+// networkACLCIDRData holds a CIDR and a plain address, one for each branch of the CIDR oneOf.
 const networkACLCIDRData = `{"description":"Block office","active":false,"priority":10,` +
 	`"rule":{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.0.2.0/24","192.0.2.10"]}}}`
 
@@ -160,8 +159,8 @@ func TestNetworkACLListCmdInvalidQuery(t *testing.T) {
 	assert.ErrorContains(t, cmd.Execute(), "invalid --query value")
 }
 
-// The fixture keeps the live spec's format-only CIDR oneOf, so these cases fail again
-// if local validation is turned back on for network ACL writes.
+// The fixture keeps the live spec's CIDR oneOf, so these cases fail if the IP and CIDR
+// format validators are removed.
 func TestNetworkACLWriteCmdData(t *testing.T) {
 	useNetworkACLFixtureSchema(t)
 
@@ -194,22 +193,32 @@ func TestNetworkACLWriteCmdData(t *testing.T) {
 	}
 }
 
-func TestNetworkACLWriteCmdDataSkipsSchemaValidation(t *testing.T) {
+func TestNetworkACLWriteCmdDataRejectsInvalidSchema(t *testing.T) {
 	useNetworkACLFixtureSchema(t)
 
-	for _, tc := range networkACLWriteCases {
-		t.Run(tc.name+" leaves schema errors to the API", func(t *testing.T) {
-			stub := &jsonWriteStub{err: errors.New("400 Bad Request: Payload validation error: 'Value 500 is greater than maximum 100' on property priority")}
-			cmd := tc.newCmd(newJSONWriteCLI(stub))
-			prepareInteractivity(cmd)
-			cmd.SetArgs(append(append([]string{}, tc.idArgs...), "--data", `{"priority":500}`))
+	invalid := []struct {
+		name, data, field string
+	}{
+		{"priority out of range", `{"priority":500}`, "priority"},
+		{"invalid CIDR", `{"rule":{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.0.2.10","192.0.2.0/33"]}}}`, "rule.match.ipv4_cidrs[1]"},
+	}
 
-			err := cmd.Execute()
-			require.Error(t, err)
-			assert.Equal(t, tc.method, stub.gotMethod, "the payload must reach the API")
-			assert.Contains(t, err.Error(), "greater than maximum 100")
-			assert.NotContains(t, err.Error(), "Expected Request Schema")
-		})
+	for _, tc := range networkACLWriteCases {
+		for _, in := range invalid {
+			t.Run(tc.name+" rejects "+in.name+" before the API", func(t *testing.T) {
+				stub := &jsonWriteStub{}
+				cmd := tc.newCmd(newJSONWriteCLI(stub))
+				prepareInteractivity(cmd)
+				cmd.SetArgs(append(append([]string{}, tc.idArgs...), "--data", in.data))
+
+				err := cmd.Execute()
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "schema validation failed")
+				assert.Contains(t, err.Error(), in.field)
+				assert.NotContains(t, err.Error(), "more than one schema")
+				assert.Empty(t, stub.gotMethod, "must not reach the API when validation fails")
+			})
+		}
 
 		t.Run(tc.name+" rejects a non-object payload before the API", func(t *testing.T) {
 			stub := &jsonWriteStub{}
@@ -217,7 +226,7 @@ func TestNetworkACLWriteCmdDataSkipsSchemaValidation(t *testing.T) {
 			prepareInteractivity(cmd)
 			cmd.SetArgs(append(append([]string{}, tc.idArgs...), "--data", `["192.0.2.0/24"]`))
 
-			assert.ErrorContains(t, cmd.Execute(), "must be a JSON object")
+			assert.ErrorContains(t, cmd.Execute(), "value must be an object")
 			assert.Empty(t, stub.gotMethod, "must not reach the API on a bad payload")
 		})
 	}

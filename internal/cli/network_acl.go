@@ -879,9 +879,6 @@ func createNetworkACLFromJSON(cli *cli, cmd *cobra.Command, dataStr string) erro
 		URI:        cli.api.HTTPClient.URI("network-acls"),
 		Data:       dataStr,
 		SchemaCmd:  "auth0 network-acl create",
-		// The rule's IP and CIDR match lists are a oneOf whose branches differ only by
-		// formats that local validation does not check, so every entry would fail.
-		SkipValidation: true,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create network ACL: %w", err)
@@ -1033,9 +1030,6 @@ func updateNetworkACLFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) 
 		URI:        cli.api.HTTPClient.URI("network-acls", id),
 		Data:       dataStr,
 		SchemaCmd:  "auth0 network-acl update",
-		// The rule's IP and CIDR match lists are a oneOf whose branches differ only by
-		// formats that local validation does not check, so every entry would fail.
-		SkipValidation: true,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update network ACL with ID %q: %w", id, err)

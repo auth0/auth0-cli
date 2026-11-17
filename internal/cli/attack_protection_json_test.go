@@ -3,7 +3,6 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -97,7 +96,6 @@ var attackProtectionUpdateCases = []struct {
 	data     string
 	response string
 	// Invalid targets a field behind a $ref, so the error proves refs were resolved.
-	// It is empty when the command skips local schema validation.
 	invalid      string
 	invalidField string
 	flagArgs     []string
@@ -110,6 +108,8 @@ var attackProtectionUpdateCases = []struct {
 		path:         "/attack-protection/bot-detection",
 		data:         `{"bot_detection_level":"medium","monitoring_mode_enabled":false}`,
 		response:     `{"bot_detection_level":"medium","challenge_password_policy":"never","challenge_passwordless_policy":"never","challenge_password_reset_policy":"never","allowlist":[],"monitoring_mode_enabled":false}`,
+		invalid:      `{"bot_detection_level":"extreme"}`,
+		invalidField: "bot_detection_level",
 		flagArgs:     []string{"--bot-detection-level", "low"},
 		schemaMarker: "medium",
 	},
@@ -219,10 +219,6 @@ func TestAttackProtectionUpdateCmdDataRejectsInvalidSchema(t *testing.T) {
 	useAttackProtectionFixtureSchema(t)
 
 	for _, tc := range attackProtectionUpdateCases {
-		if tc.invalid == "" {
-			continue
-		}
-
 		t.Run(tc.name, func(t *testing.T) {
 			stub := &jsonWriteStub{}
 			cmd := tc.newCmd(newJSONWriteCLI(stub))
@@ -245,14 +241,14 @@ func TestAttackProtectionUpdateCmdDataRejectsInvalidSchema(t *testing.T) {
 	}
 }
 
-// The fixture keeps the live spec's format-only allowlist oneOf, so these cases fail
-// again if local validation is turned back on for bot detection.
-func TestBotDetectionUpdateCmdDataSkipsSchemaValidation(t *testing.T) {
+// The fixture keeps the live spec's allowlist oneOf, whose branches differ only by
+// IP and CIDR format, so these cases fail if the format validators are removed.
+func TestBotDetectionUpdateCmdDataValidatesAllowlist(t *testing.T) {
 	useAttackProtectionFixtureSchema(t)
 
 	t.Run("sends an allowlist of IPs and CIDRs as-is", func(t *testing.T) {
 		data := `{"allowlist":["198.51.100.42","10.0.0.0/24","2001:db8::1","2001:db8::/32"]}`
-		stub := &jsonWriteStub{response: `{"allowlist":["198.51.100.42","10.0.0.0/24","2001:db8::1","2001:db8::/32"]}`}
+		stub := &jsonWriteStub{response: data}
 		cmd := updateBotDetectionCmd(newJSONWriteCLI(stub))
 		prepareInteractivity(cmd)
 		cmd.SetArgs([]string{"--data", data})
@@ -262,27 +258,19 @@ func TestBotDetectionUpdateCmdDataSkipsSchemaValidation(t *testing.T) {
 		assert.Equal(t, data, stub.gotBody)
 	})
 
-	t.Run("leaves schema errors to the API", func(t *testing.T) {
-		stub := &jsonWriteStub{err: errors.New("400 Bad Request: Payload validation error: 'Invalid value for bot_detection_level'")}
-		cmd := updateBotDetectionCmd(newJSONWriteCLI(stub))
-		prepareInteractivity(cmd)
-		cmd.SetArgs([]string{"--data", `{"bot_detection_level":"extreme"}`})
-
-		err := cmd.Execute()
-		require.Error(t, err)
-		assert.Equal(t, http.MethodPatch, stub.gotMethod, "the payload must reach the API")
-		assert.Contains(t, err.Error(), "Invalid value for bot_detection_level")
-		assert.NotContains(t, err.Error(), "Expected Request Schema")
-	})
-
-	t.Run("rejects a non-object payload before the API", func(t *testing.T) {
+	t.Run("rejects an invalid entry before the API", func(t *testing.T) {
 		stub := &jsonWriteStub{}
 		cmd := updateBotDetectionCmd(newJSONWriteCLI(stub))
 		prepareInteractivity(cmd)
-		cmd.SetArgs([]string{"--data", `["198.51.100.42"]`})
+		cmd.SetArgs([]string{"--data", `{"allowlist":["198.51.100.42","198.51.100.0/33"]}`})
 
-		assert.ErrorContains(t, cmd.Execute(), "must be a JSON object")
-		assert.Empty(t, stub.gotMethod, "must not reach the API on a bad payload")
+		err := cmd.Execute()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "schema validation failed")
+		assert.Contains(t, err.Error(), "allowlist[1]")
+		assert.NotContains(t, err.Error(), "allowlist[0]")
+		assert.NotContains(t, err.Error(), "more than one schema")
+		assert.Empty(t, stub.gotMethod, "must not reach the API when validation fails")
 	})
 }
 

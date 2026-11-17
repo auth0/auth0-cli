@@ -166,7 +166,12 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	// Validate against schema. MultiErrors collects every validation failure
 	// instead of stopping at the first, so the caller sees all issues at once.
 	// Some spec patterns use lookarounds, which RE2 can't compile; see compilePattern.
-	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors(), openapi3.SetSchemaRegexCompiler(compilePattern)); err != nil {
+	// IP and CIDR formats need validators for their oneOf branches; see ipStringFormats.
+	if err := requestSchema.Value.VisitJSON(data,
+		openapi3.MultiErrors(),
+		openapi3.SetSchemaRegexCompiler(compilePattern),
+		openapi3.WithStringFormatValidators(ipStringFormats),
+	); err != nil {
 		result.Status = StatusInvalid
 		result.addFieldErrors(fieldValidationErrors(err))
 		return result, nil
