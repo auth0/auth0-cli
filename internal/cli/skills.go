@@ -41,13 +41,15 @@ func skillsCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// agentCmd is the deprecated parent of `auth0 agent skills install`, kept for backward compatibility.
+// agentCmd is the deprecated parent of `auth0 agent skills install`, hidden from help and docs
+// but kept runnable so existing workflows don't break.
 func agentCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "agent",
-		Args:  cobra.NoArgs,
-		Short: "⚠️ Manage Auth0 AI capabilities (DEPRECATED, use `auth0 skills`)",
-		Long:  agentSkillsDeprecationText + "Manage Auth0 AI capabilities including skills for your AI coding assistants.",
+		Use:    "agent",
+		Args:   cobra.NoArgs,
+		Hidden: true,
+		Short:  "⚠️ Manage Auth0 AI capabilities (DEPRECATED, use `auth0 skills`)",
+		Long:   agentSkillsDeprecationText + "Manage Auth0 AI capabilities including skills for your AI coding assistants.",
 	}
 
 	cmd.AddCommand(agentSkillsCmd(cli))
@@ -85,11 +87,12 @@ func deprecatedInstallCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// warnAgentSkillsDeprecated writes to stderr in every mode, agent mode included: the old command
+// is hidden from help, and install already streams npx's plain-text output.
 func warnAgentSkillsDeprecated(cli *cli) {
-	cli.renderer.Warnf("%s %s is deprecated and will be removed in a future release.",
-		ansi.Bold(ansi.Red("DEPRECATED!")), ansi.Bold("auth0 agent skills install"))
-	cli.renderer.Warnf("   Use instead: %s (same flags)", ansi.Bold(ansi.Cyan("auth0 skills install")))
-	cli.renderer.Warnf("   For help: %s", ansi.Bold(ansi.Cyan("auth0 skills install --help")))
+	fmt.Fprintf(cli.renderer.MessageWriter,
+		"%s %s is deprecated and will be removed in a future release. Use %s instead (same flags).\n",
+		ansi.Yellow("DEPRECATED:"), ansi.Bold("auth0 agent skills install"), ansi.Bold(ansi.Cyan("auth0 skills install")))
 }
 
 // installCmd installs the Auth0 skill into the user's AI coding assistants.
