@@ -87,7 +87,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 
 - [auth0 actions](auth0_actions.md) - Manage resources for actions
 - [auth0 acul](auth0_acul.md) - Advanced Customization the Universal Login experience
-- [auth0 agent](auth0_agent.md) - Manage Auth0 AI capabilities
+- [auth0 agent](auth0_agent.md) - ⚠️ Manage Auth0 AI capabilities (DEPRECATED, use `auth0 skills`)
 - [auth0 agents](auth0_agents.md) - Manage agents (Early Access)
 - [auth0 api](auth0_api.md) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
@@ -116,6 +116,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 - [auth0 roles](auth0_roles.md) - Manage resources for roles
 - [auth0 rules](auth0_rules.md) - Manage resources for rules
 - [auth0 sessions](auth0_sessions.md) - Manage resources for sessions
+- [auth0 skills](auth0_skills.md) - Manage Auth0 skills for AI coding assistants
 - [auth0 tenant-settings](auth0_tenant-settings.md) - Manage tenant settings
 - [auth0 tenants](auth0_tenants.md) - Manage configured tenants
 - [auth0 terraform](auth0_terraform.md) - Manage terraform configuration for your Auth0 Tenant

@@ -5,6 +5,9 @@ has_toc: false
 ---
 # auth0 agent skills install
 
+⚠️  DEPRECATION NOTICE: `auth0 agent skills install` is deprecated and will be removed in a future release.
+   Use `auth0 skills install` instead; it accepts the same flags.
+
 Install the Auth0 skill into your AI coding assistants via the pinned skills CLI (skills@1.5.23), run through npx (requires Node.js).
 
 ## Usage
@@ -51,6 +54,6 @@ auth0 agent skills install [flags]
 
 ## Related Commands
 
-- [auth0 agent skills install](auth0_agent_skills_install.md) - Install the Auth0 skill for your AI coding assistants
+- [auth0 agent skills install](auth0_agent_skills_install.md) - ⚠️ Install the Auth0 skill (DEPRECATED, use `auth0 skills install`)
 
 

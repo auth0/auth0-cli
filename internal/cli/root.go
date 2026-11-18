@@ -490,6 +490,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 logout",
 		"auth0 tenants use",
 		"auth0 tenants list",
+		"auth0 skills install",
 		"auth0 agent skills install",
 	}
 
@@ -630,7 +631,8 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))
-	rootCmd.AddCommand(agentCmd(cli))
+	rootCmd.AddCommand(skillsCmd(cli))
+	rootCmd.AddCommand(agentCmd(cli)) // Deprecated: use skillsCmd.
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))

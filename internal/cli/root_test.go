@@ -53,6 +53,8 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 logout", false},
 		{"auth0 tenants use", false},
 		{"auth0 tenants list", false},
+		{"auth0 skills install", false},
+		{"auth0 agent skills install", false},
 	}
 
 	for index, testCase := range testCases {

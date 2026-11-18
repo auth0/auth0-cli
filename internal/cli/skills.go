@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/auth0/auth0-cli/internal/ansi"
 )
 
 const (
@@ -21,13 +23,31 @@ const (
 	skillsCLISpec    = "skills@" + skillsCLIVersion
 )
 
-// agentCmd groups the Auth0 AI capability commands.
+// agentSkillsDeprecationText points users of the deprecated `auth0 agent` commands to `auth0 skills`.
+const agentSkillsDeprecationText = "⚠️  DEPRECATION NOTICE: `auth0 agent skills install` is deprecated and will be removed in a future release.\n" +
+	"   Use `auth0 skills install` instead; it accepts the same flags.\n\n"
+
+// skillsCmd groups the Auth0 skill-management commands.
+func skillsCmd(cli *cli) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "skills",
+		Args:  cobra.NoArgs,
+		Short: "Manage Auth0 skills for AI coding assistants",
+		Long:  "Manage Auth0 skills that provide Auth0-specific guidance to your AI coding assistants.",
+	}
+
+	cmd.AddCommand(installCmd(cli))
+
+	return cmd
+}
+
+// agentCmd is the deprecated parent of `auth0 agent skills install`, kept for backward compatibility.
 func agentCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Args:  cobra.NoArgs,
-		Short: "Manage Auth0 AI capabilities",
-		Long:  "Manage Auth0 AI capabilities including skills for your AI coding assistants.",
+		Short: "⚠️ Manage Auth0 AI capabilities (DEPRECATED, use `auth0 skills`)",
+		Long:  agentSkillsDeprecationText + "Manage Auth0 AI capabilities including skills for your AI coding assistants.",
 	}
 
 	cmd.AddCommand(agentSkillsCmd(cli))
@@ -35,18 +55,41 @@ func agentCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// agentSkillsCmd groups the Auth0 skill-management commands.
+// agentSkillsCmd is the deprecated `auth0 agent skills` group.
 func agentSkillsCmd(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "skills",
 		Args:  cobra.NoArgs,
-		Short: "Manage Auth0 AI skills for coding assistants",
-		Long:  "Manage Auth0 AI skills that provide Auth0-specific guidance to your AI coding assistants.",
+		Short: "⚠️ Manage Auth0 AI skills for coding assistants (DEPRECATED, use `auth0 skills`)",
+		Long:  agentSkillsDeprecationText + "Manage Auth0 AI skills that provide Auth0-specific guidance to your AI coding assistants.",
 	}
 
-	cmd.AddCommand(installCmd(cli))
+	cmd.AddCommand(deprecatedInstallCmd(cli))
 
 	return cmd
+}
+
+// deprecatedInstallCmd is `auth0 agent skills install`: it warns, then runs `auth0 skills install`.
+func deprecatedInstallCmd(cli *cli) *cobra.Command {
+	cmd := installCmd(cli)
+	cmd.Short = "⚠️ Install the Auth0 skill (DEPRECATED, use `auth0 skills install`)"
+	cmd.Long = agentSkillsDeprecationText + cmd.Long
+	cmd.Example = strings.ReplaceAll(cmd.Example, "auth0 skills install", "auth0 agent skills install")
+
+	runE := cmd.RunE
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		warnAgentSkillsDeprecated(cli)
+		return runE(cmd, args)
+	}
+
+	return cmd
+}
+
+func warnAgentSkillsDeprecated(cli *cli) {
+	cli.renderer.Warnf("%s %s is deprecated and will be removed in a future release.",
+		ansi.Bold(ansi.Red("DEPRECATED!")), ansi.Bold("auth0 agent skills install"))
+	cli.renderer.Warnf("   Use instead: %s (same flags)", ansi.Bold(ansi.Cyan("auth0 skills install")))
+	cli.renderer.Warnf("   For help: %s", ansi.Bold(ansi.Cyan("auth0 skills install --help")))
 }
 
 // installCmd installs the Auth0 skill into the user's AI coding assistants.
@@ -63,17 +106,17 @@ func installCmd(_ *cli) *cobra.Command {
 		Long: "Install the Auth0 skill into your AI coding assistants via the pinned skills CLI (" +
 			skillsCLISpec + "), run through npx (requires Node.js).",
 		Example: `  # Choose assistants interactively
-  auth0 agent skills install
+  auth0 skills install
 
   # Install into specific assistants (comma-separated or repeatable)
-  auth0 agent skills install --agent claude-code,cursor
-  auth0 agent skills install --agent claude-code --agent cursor
+  auth0 skills install --agent claude-code,cursor
+  auth0 skills install --agent claude-code --agent cursor
 
   # Install into every supported assistant
-  auth0 agent skills install --agent all
+  auth0 skills install --agent all
 
   # Reinstall without prompting
-  auth0 agent skills install --force`,
+  auth0 skills install --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInstall(cmd, inputs.Agents, inputs.Force)
 		},
