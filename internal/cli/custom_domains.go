@@ -128,8 +128,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 domains ls --json-compact
   auth0 domains ls --csv
   auth0 domains ls --filter "domain:demo* AND status:pending_verification"
+
+  # Discover the query schema
   auth0 domains list --schema
   auth0 domains list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 domains list --query '{"take":10}'
   auth0 domains list --query '{"take":10}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

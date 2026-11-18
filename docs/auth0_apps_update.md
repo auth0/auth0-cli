@@ -35,6 +35,8 @@ auth0 apps update [flags]
   auth0 apps update <app-id> --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps update <app-id> --redirection-policy allow_always
   auth0 apps update <app-id> --organization-usage require --organization-require-behavior pre_login_prompt
+  auth0 apps update <app-id> --agent-id <agent-id>
+  auth0 apps update <app-id> --unlink-agent
 
   # Discover the payload schema
   auth0 apps update --schema
@@ -50,6 +52,7 @@ auth0 apps update [flags]
 ## Flags
 
 ```
+      --agent-id string                          ID of the agent (agt_...) to link the application to (Early Access). An application can be linked to at most one agent; linking to another agent moves the link.
   -p, --allow-any-profile-of-type strings        Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.
   -a, --auth-method string                       Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
   -c, --callbacks strings                        After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.
@@ -76,6 +79,7 @@ auth0 apps update [flags]
                                                  - spa (single page application): a JavaScript front-end app that uses an API.
                                                  - regular: Traditional web app using redirects.
                                                  - m2m (machine to machine): CLIs, daemons or services running on your backend.
+      --unlink-agent                             Remove the application's link to its agent (Early Access).
   -w, --web-origins strings                      Comma-separated list of allowed origins for use with Cross-Origin Authentication, Device Flow, and web message response mode. This sets web_origins and is required for silent authentication in SPAs.
 ```
 

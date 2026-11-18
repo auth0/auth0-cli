@@ -2,8 +2,10 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -78,18 +80,40 @@ func logStreamsCmd(cli *cli) *cobra.Command {
 }
 
 func listLogStreamsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List all log streams",
-		Long:    "List your existing log streams. To create one, run: `auth0 logs streams create`.",
+		Long: "List your existing log streams. To create one, run: `auth0 logs streams create`.\n\n" +
+			"Use '--schema' to see the query parameters the API documents for this operation.\n" +
+			"Use '--query' to pass query parameters as a JSON object and get the raw API response.",
 		Example: `  auth0 logs streams list
   auth0 logs streams ls
   auth0 logs streams ls --json
   auth0 logs streams ls --json-compact
-  auth0 logs streams ls --csv`,
+  auth0 logs streams ls --csv
+
+  # Discover the query schema
+  auth0 logs streams list --schema
+  auth0 logs streams list --schema --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/log-streams")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "log-streams",
+					SchemaCmd: "auth0 logs streams list",
+				}, inputs.Query)
+			}
+
 			var list []*management.LogStream
 
 			if err := ansi.Waiting(func() error {
@@ -108,6 +132,8 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -334,4 +360,72 @@ func errInvalidLogStreamType(id, actual, expected string) error {
 		"use 'auth0 logs streams update %s' to update it instead"
 
 	return fmt.Errorf(message, id, actual, expected, actual)
+}
+
+// createLogStreamFromJSON creates a log stream of the subcommand's type from a --data payload.
+func createLogStreamFromJSON(cli *cli, cmd *cobra.Command, streamType logStreamType, dataStr string) error {
+	payload, err := withLogStreamType(dataStr, streamType)
+	if err != nil {
+		return err
+	}
+
+	logStream, err := runJSONWrite[management.LogStream](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/log-streams",
+		URI:        cli.api.HTTPClient.URI("log-streams"),
+		Data:       payload,
+		SchemaCmd:  "auth0 logs streams create " + string(streamType),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create log stream: %w", err)
+	}
+	return cli.renderer.LogStreamCreate(logStream)
+}
+
+// updateLogStreamFromJSON updates a log stream from a --data payload. The caller has
+// already checked that the stream is of the subcommand's type.
+func updateLogStreamFromJSON(cli *cli, cmd *cobra.Command, streamType logStreamType, id, dataStr string) error {
+	logStream, err := runJSONWrite[management.LogStream](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/log-streams/{id}",
+		URI:        cli.api.HTTPClient.URI("log-streams", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 logs streams update " + string(streamType),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update log stream with ID %q: %w", id, err)
+	}
+	return cli.renderer.LogStreamUpdate(logStream)
+}
+
+// withLogStreamType sets "type" to the subcommand's type when the payload omits it,
+// and rejects a payload that names a different type.
+func withLogStreamType(dataStr string, streamType logStreamType) (string, error) {
+	raw, err := readJSONObject(dataStr)
+	if err != nil {
+		return "", err
+	}
+
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return "", err
+	}
+
+	if rawType, ok := body["type"]; ok {
+		var got string
+		if err := json.Unmarshal(rawType, &got); err != nil || got != string(streamType) {
+			return "", usageError{
+				err:    fmt.Errorf("--data has type %s, but this command creates a %q log stream", rawType, streamType),
+				reason: "invalid_flag_value",
+			}
+		}
+		return string(raw), nil
+	}
+
+	body["type"], err = json.Marshal(streamType)
+	if err != nil {
+		return "", err
+	}
+	out, err := json.Marshal(body)
+	return string(out), err
 }

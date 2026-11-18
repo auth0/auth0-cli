@@ -283,7 +283,12 @@ func createFormCmd(cli *cli) *cobra.Command {
 		Example: `  auth0 forms create
   auth0 forms create --name "My Form"
   auth0 forms create --example > form.json
+
+  # Discover the payload schema
   auth0 forms create --schema
+  auth0 forms create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 forms create --data '{"name":"My Form"}'
   auth0 forms create --data @form.json
   cat form.json | auth0 forms create`,
@@ -424,7 +429,12 @@ func updateFormCmd(cli *cli) *cobra.Command {
 			"`--data` provides the whole payload and cannot be combined with `--name` or the " +
 			"`--language-*` flags. Run `auth0 forms update --schema` to print the accepted payload schema.",
 		Example: `  auth0 forms update <form-id> --name "New Name"
+
+  # Discover the payload schema
   auth0 forms update <form-id> --schema
+  auth0 forms update <form-id> --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 forms update <form-id> --data '{"name":"New Name"}'
   auth0 forms update <form-id> --data @form.json
   cat form.json | auth0 forms update <form-id>`,
@@ -857,7 +867,7 @@ func validateFormData(
 	requireName bool,
 	preClean func(json.RawMessage) (json.RawMessage, error),
 ) (json.RawMessage, error) {
-	raw, err := readJSONInput(dataStr)
+	raw, err := readDataInput(dataStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read JSON input: %w", err)
 	}

@@ -123,6 +123,8 @@ func isInputFlag(name string) bool {
 		return false
 	case name == schemaFlag.LongForm: // Help-class; exits before RunE.
 		return false
+	case name == "org-id": // Fills the request URL, not the payload.
+		return false
 	case outputFlags[name]: // Output/meta.
 		return false
 	default:

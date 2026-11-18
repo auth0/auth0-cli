@@ -38,6 +38,7 @@ auth0 apps create [flags]
   auth0 apps create --name myapp --type resource_server --allow-any-profile-of-type custom_authentication,on_behalf_of_token_exchange
   auth0 apps create --name "My 3P App" --type regular --is-first-party=false --third-party-security-mode strict --redirection-policy open_redirect_protection
   auth0 apps create --name myapp --type regular --organization-usage require --organization-require-behavior pre_login_prompt --organization-discovery-methods email,organization_name
+  auth0 apps create --name my-agent-app --type m2m --agent-id <agent-id>
 
   # Discover the payload schema
   auth0 apps create --schema
@@ -53,6 +54,7 @@ auth0 apps create [flags]
 ## Flags
 
 ```
+      --agent-id string                          ID of the agent (agt_...) to link the application to (Early Access). An application can be linked to at most one agent; linking to another agent moves the link.
   -p, --allow-any-profile-of-type strings        Comma-separated list of enabled token exchange types for this client. Possible values: custom_authentication, on_behalf_of_token_exchange.
   -a, --auth-method string                       Defines the requested authentication method for the token endpoint. Possible values are 'None' (public application without a client secret), 'Post' (application uses HTTP POST parameters) or 'Basic' (application uses HTTP Basic).
   -c, --callbacks strings                        After the user authenticates we will only call back to any of these URLs. You can specify multiple valid URLs by comma-separating them (typically to handle different environments like QA or testing). Make sure to specify the protocol (https://) otherwise the callback may fail in some cases. With the exception of custom URI schemes for native apps, all callbacks should use protocol https://.

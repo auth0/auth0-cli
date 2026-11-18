@@ -60,7 +60,8 @@ func withPipedStdin(t *testing.T, content string, fn func()) {
 func TestReadJSONObject(t *testing.T) {
 	for name, tc := range map[string]struct{ data, wantErr string }{
 		"object":                           {`{"name":"x"}`, ""},
-		"empty object":                     {`{}`, ""},
+		"empty object":                     {`{}`, "empty JSON object"},
+		"empty object with whitespace":     {"{ \n }", "empty JSON object"},
 		"truncated keeps the parse detail": {`{"name":"x",`, "unexpected end of JSON input"},
 		"empty input":                      {``, "no input provided"},
 		"array":                            {`["x"]`, "must be a JSON object"},
@@ -271,4 +272,50 @@ func TestReadAndValidateAttachesStructuredDetails(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "expected a field error for the missing supported_triggers")
+}
+
+func TestDataRejectsEmptyObject(t *testing.T) {
+	// The first three used to send {} to the API: roles update passes the schema,
+	// and event streams skip local validation.
+	for _, tc := range []struct {
+		name   string
+		newCmd func(*cli) *cobra.Command
+		args   []string
+	}{
+		{"roles update", updateRoleCmd, []string{"rol_1"}},
+		{"event-streams create", createEventStreamCmd, nil},
+		{"event-streams update", updateEventStreamCmd, []string{"est_1"}},
+		{"roles create", createRoleCmd, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stub := &jsonWriteStub{}
+			cmd := tc.newCmd(newJSONWriteCLI(stub))
+			prepareInteractivity(cmd)
+			cmd.SetArgs(append(tc.args, "--data", `{}`))
+
+			assert.ErrorContains(t, cmd.Execute(), "empty JSON object")
+			assert.Empty(t, stub.gotMethod, "must not reach the API with an empty payload")
+		})
+	}
+
+	t.Run("from a file", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "empty.json")
+		require.NoError(t, os.WriteFile(path, []byte("{}\n"), 0o600))
+		_, err := readDataInput("@" + path)
+		assert.ErrorContains(t, err, "empty JSON object")
+	})
+
+	t.Run("from stdin", func(t *testing.T) {
+		withPipedStdin(t, "{}", func() {
+			_, err := readDataInput("-")
+			assert.ErrorContains(t, err, "empty JSON object")
+		})
+	})
+
+	t.Run("other JSON flags still accept {}", func(t *testing.T) {
+		// For example, agents --metadata '{}' clears the metadata.
+		data, err := readJSONInput(`{}`)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{}`, string(data))
+	})
 }

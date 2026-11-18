@@ -183,8 +183,12 @@ func listExperimentsCmd(cli *cli) *cobra.Command {
   auth0 experimentation experiments list --json
   auth0 experimentation experiments list --status active
   auth0 experimentation experiments list --feature-flag-id <id>
+
+  # Discover the query schema
   auth0 experimentation experiments list --schema
   auth0 experimentation experiments list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 experimentation experiments list --query '{"status":"active","take":10}'
   auth0 experimentation experiments list --query '{"status":"active"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

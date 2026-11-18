@@ -85,8 +85,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 logs ls --json
   auth0 logs ls --json-compact
   auth0 logs ls --csv
+
+  # Discover the query schema
   auth0 logs list --schema
   auth0 logs list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 logs list --query '{"per_page":5,"include_totals":true}'
   auth0 logs list --query '{"per_page":5}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
