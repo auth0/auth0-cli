@@ -23,7 +23,10 @@ auth0 logs streams list [flags]
   auth0 logs streams ls --json
   auth0 logs streams ls --json-compact
   auth0 logs streams ls --csv
+
+  # Discover the query schema
   auth0 logs streams list --schema
+  auth0 logs streams list --schema --json
 ```
 
 

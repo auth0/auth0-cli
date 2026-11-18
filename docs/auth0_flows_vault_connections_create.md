@@ -24,7 +24,12 @@ auth0 flows vault connections create [flags]
   auth0 flows vault connections create --name "My Connection" --app-id SLACK
   auth0 flows vault connections create --name "My Connection" --app-id SLACK --setup-file ./setup.json
   auth0 flows vault connections create --setup-template --app-id SLACK > setup.json
+
+  # Discover the payload schema
   auth0 flows vault connections create --schema
+  auth0 flows vault connections create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows vault connections create --data '{"name":"My Connection","app_id":"HTTP","setup":{"type":"BEARER","token":"<token>"}}'
   auth0 flows vault connections create --data @connection.json
 ```

@@ -23,7 +23,12 @@ auth0 flows list [flags]
   auth0 flows ls --number 100
   auth0 flows ls --hydrate
   auth0 flows ls --json
+
+  # Discover the query schema
   auth0 flows list --schema
+  auth0 flows list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 flows list --query '{"per_page":50,"synchronous":true}'
 ```
 

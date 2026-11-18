@@ -29,7 +29,12 @@ auth0 logs streams create eventgrid [flags]
   auth0 logs streams create eventgrid -n <name> -i <azure-id> -r <azure-region> -g <azure-group>
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json
   auth0 logs streams create eventgrid -n mylogstream -i "b69a6835-57c7-4d53-b0d5-1c6ae580b6d5" -r northeurope -g "azure-logs-rg" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create eventgrid --schema
+  auth0 logs streams create eventgrid --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create eventgrid --data '{"name":"my-stream","sink":{"azureSubscriptionId":"00000000-0000-0000-0000-000000000000","azureRegion":"eastus","azureResourceGroup":"<resource-group>"}}'
 ```
 

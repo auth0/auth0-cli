@@ -27,7 +27,12 @@ auth0 logs streams update sumo [flags]
   auth0 logs streams update sumo <log-stream-id> -n <name> -s <source> -c null
   auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json
   auth0 logs streams update sumo <log-stream-id> -n "mylogstream" -s "demo.sumo.com" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update sumo --schema
+  auth0 logs streams update sumo --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update sumo <log-stream-id> --data '{"status":"paused"}'
 ```
 

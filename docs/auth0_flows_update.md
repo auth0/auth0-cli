@@ -22,7 +22,12 @@ auth0 flows update [flags]
 ```
   auth0 flows update <flow-id> --name "New Name"
   auth0 flows update <flow-id> --actions-file ./action.json
+
+  # Discover the payload schema
   auth0 flows update --schema
+  auth0 flows update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows update <flow-id> --data '{"name":"New Name"}'
   auth0 flows update <flow-id> --data @flow.json
 ```

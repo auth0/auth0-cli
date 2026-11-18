@@ -27,7 +27,12 @@ auth0 logs streams create datadog [flags]
   auth0 logs streams create datadog -n <name> -r <region> -k <api-key>
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json
   auth0 logs streams create datadog -n mylogstream -r eu -k 121233123455 --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create datadog --schema
+  auth0 logs streams create datadog --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create datadog --data '{"name":"my-stream","sink":{"datadogRegion":"us","datadogApiKey":"<api-key>"}}'
 ```
 

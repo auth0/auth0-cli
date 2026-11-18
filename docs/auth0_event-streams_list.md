@@ -23,7 +23,12 @@ auth0 event-streams list [flags]
   auth0 event-streams ls --json
   auth0 event-streams ls --json-compact
   auth0 event-streams ls --csv
+
+  # Discover the query schema
   auth0 event-streams list --schema
+  auth0 event-streams list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 event-streams list --query '{"take":10}'
 ```
 

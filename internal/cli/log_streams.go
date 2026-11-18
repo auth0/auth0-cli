@@ -98,7 +98,10 @@ func listLogStreamsCmd(cli *cli) *cobra.Command {
   auth0 logs streams ls --json
   auth0 logs streams ls --json-compact
   auth0 logs streams ls --csv
-  auth0 logs streams list --schema`,
+
+  # Discover the query schema
+  auth0 logs streams list --schema
+  auth0 logs streams list --schema --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
 				return printOperationSchema(cli, http.MethodGet, "/log-streams")

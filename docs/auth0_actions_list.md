@@ -23,8 +23,12 @@ auth0 actions list [flags]
   auth0 actions ls --json
   auth0 actions ls --json-compact
   auth0 actions ls --csv
+
+  # Discover the query schema
   auth0 actions list --schema
   auth0 actions list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 actions list --query '{"triggerId":"post-login"}'
   auth0 actions list --query '{"deployed":"true"}' --json
 ```

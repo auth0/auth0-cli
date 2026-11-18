@@ -27,7 +27,12 @@ auth0 logs streams create sumo [flags]
   auth0 logs streams create sumo -n <name> -s <source>
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json
   auth0 logs streams create sumo -n "mylogstream" -s "demo.sumo.com" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create sumo --schema
+  auth0 logs streams create sumo --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create sumo --data '{"name":"my-stream","sink":{"sumoSourceAddress":"https://endpoint.collection.sumologic.com/receiver/v1/http/<token>"}}'
 ```
 

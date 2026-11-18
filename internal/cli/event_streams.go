@@ -116,7 +116,12 @@ func listEventStreamsCmd(cli *cli) *cobra.Command {
   auth0 event-streams ls --json
   auth0 event-streams ls --json-compact
   auth0 event-streams ls --csv
+
+  # Discover the query schema
   auth0 event-streams list --schema
+  auth0 event-streams list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 event-streams list --query '{"take":10}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
@@ -220,7 +225,12 @@ func createEventStreamCmd(cli *cli) *cobra.Command {
   auth0 event-streams create --name my-event-stream --type webhook --subscriptions "user.created,user.deleted" --configuration '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
   auth0 event-streams create --name my-event-stream --type action --subscriptions "user.created" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams create -n my-event-stream -t webhook -s "user.created,user.deleted" -c '{"webhook_endpoint":"https://mywebhook.net","webhook_authorization":{"method":"bearer","token":"123456789"}}'
+
+  # Discover the payload schema
   auth0 event-streams create --schema
+  auth0 event-streams create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 event-streams create --data '{"name":"my-event-stream","subscriptions":[{"event_type":"user.created"}],"destination":{"type":"eventbridge","configuration":{"aws_account_id":"325235643634","aws_region":"us-east-2"}}}'
   auth0 event-streams create --data @event-stream.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -331,7 +341,12 @@ func updateEventStreamCmd(cli *cli) *cobra.Command {
   auth0 event-streams update <event-id> --name my-event-stream --status enabled --subscriptions "user.created" --configuration '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"0909090909"}}'
   auth0 event-streams create <event-id> --name my-event-stream --subscriptions "user.updated" --configuration '{"action_id":"b053e4ca-8b14-4233-b615-bd3bdb353977"}'
   auth0 event-streams update <event-id> -n my-event-stream --status enabled -s "user.created" -c '{"webhook_endpoint":"https://my-new-webhook.net","webhook_authorization":{"method":"bearer","token":"987654321"}}
+
+  # Discover the payload schema
   auth0 event-streams update --schema
+  auth0 event-streams update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 event-streams update <event-id> --data '{"status":"disabled"}'
   auth0 event-streams update <event-id> --data @event-stream.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

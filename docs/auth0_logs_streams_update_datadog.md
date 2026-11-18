@@ -27,7 +27,12 @@ auth0 logs streams update datadog [flags]
   auth0 logs streams update datadog <log-stream-id> -n <name> -r <region> -k <api-key> -c null
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json
   auth0 logs streams update datadog <log-stream-id> -n mylogstream -r eu -k 121233123455 --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update datadog --schema
+  auth0 logs streams update datadog --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update datadog <log-stream-id> --data '{"status":"paused"}'
 ```
 

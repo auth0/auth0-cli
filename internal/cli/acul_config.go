@@ -366,9 +366,14 @@ func aculConfigSetCmd(cli *cli) *cobra.Command {
   auth0 acul config set <screen-name> --file settings.json
   auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id
+
+  # Discover the payload schema
+  auth0 acul config set --schema
+  auth0 acul config set --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 acul config set signup-id --data '{"rendering_mode":"advanced"}'
-  auth0 acul config set signup-id --data @settings.json
-  auth0 acul config set --schema`,
+  auth0 acul config set signup-id --data @settings.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if schema {
 				return printOperationSchema(cli, "PATCH", "/prompts/{prompt}/screen/{screen}/rendering")
@@ -626,7 +631,10 @@ func aculConfigListCmd(cli *cli) *cobra.Command {
 			"Use '--schema' to see available query parameters.",
 		Example: `  auth0 acul config list --prompt reset-password
   auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
-  auth0 acul config list --schema`,
+
+  # Discover the query schema
+  auth0 acul config list --schema
+  auth0 acul config list --schema --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if schema {
 				return printOperationSchema(cli, "GET", "/prompts/rendering")

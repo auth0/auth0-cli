@@ -26,7 +26,12 @@ auth0 logs streams update eventgrid [flags]
   auth0 logs streams update eventgrid <log-stream-id> -n <name> --pii-config  '{"log_fields": ["first_name", "last_name"], "method": "mask", "algorithm": "xxhash"}'
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream -c null --json
   auth0 logs streams update eventgrid <log-stream-id> -n mylogstream --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update eventgrid --schema
+  auth0 logs streams update eventgrid --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update eventgrid <log-stream-id> --data '{"status":"paused"}'
 ```
 

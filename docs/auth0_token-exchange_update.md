@@ -13,6 +13,9 @@ To update non-interactively, supply the profile id, name, and subject token type
 
 Note: Only name and subject token type can be updated. Action ID and type are immutable after creation.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 token-exchange update [flags]
@@ -27,15 +30,25 @@ auth0 token-exchange update [flags]
   auth0 token-exchange update <profile-id> --name "Updated Profile Name" --subject-token-type "urn:ietf:params:oauth:token-type:jwt"
   auth0 token-exchange update <profile-id> -n "Updated Profile Name" -s "urn:ietf:params:oauth:token-type:jwt" --json
   auth0 token-exchange update <profile-id> -n "Updated Profile Name" -s "urn:ietf:params:oauth:token-type:jwt" --json-compact
+
+  # Discover the payload schema
+  auth0 token-exchange update --schema
+  auth0 token-exchange update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 token-exchange update <profile-id> --data '{"name":"Updated Profile Name"}'
+  auth0 token-exchange update <profile-id> --data @profile.json
 ```
 
 
 ## Flags
 
 ```
+      --data string                 JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
   -n, --name string                 Name of the token exchange profile.
+      --schema                      Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --subject-token-type string   Type of the subject token. Must be a valid URI format (e.g., urn:ietf:params:oauth:token-type:jwt). Cannot use reserved prefixes: http://auth0.com, https://auth0.com, http://okta.com, https://okta.com, urn:ietf, urn:auth0, urn:okta.
 ```
 

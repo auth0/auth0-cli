@@ -30,7 +30,12 @@ auth0 logs streams create splunk [flags]
   auth0 log streams create splunk -n <name> -d <domain> -t <token> -p <port> -s
   auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json
   auth0 log streams create splunk -n mylogstream -d "demo.splunk.com" -t "12a34ab5-c6d7-8901-23ef-456b7c89d0c1" -p "8088" -s false --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create splunk --schema
+  auth0 logs streams create splunk --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create splunk --data '{"name":"my-stream","sink":{"splunkDomain":"example.splunkcloud.com","splunkToken":"<token>","splunkPort":"8088","splunkSecure":true}}'
 ```
 

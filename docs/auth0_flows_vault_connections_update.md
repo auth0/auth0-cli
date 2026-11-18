@@ -22,7 +22,12 @@ auth0 flows vault connections update [flags]
 ```
   auth0 flows vault connections update <connection-id> --name "New Name"
   auth0 flows vault connections update <connection-id> --setup-file ./setup.json
+
+  # Discover the payload schema
   auth0 flows vault connections update --schema
+  auth0 flows vault connections update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 flows vault connections update <connection-id> --data '{"name":"New Name"}'
   auth0 flows vault connections update <connection-id> --data @connection.json
 ```

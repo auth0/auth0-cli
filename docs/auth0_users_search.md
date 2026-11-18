@@ -24,6 +24,8 @@ auth0 users search [flags]
   auth0 users search -q name:"Bob" -s "name:1" --number 200
   auth0 users search -q name:"Bob" -s "name:1" -n 200 -p --json
   auth0 users search -q name:"Bob" -s "name:1" -n 200 --csv
+
+  # Discover the query schema
   auth0 users search --schema
   auth0 users search --schema --json
 ```

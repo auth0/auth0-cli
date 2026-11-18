@@ -22,8 +22,12 @@ auth0 experimentation feature-flags list [flags]
   auth0 experimentation feature-flags ls
   auth0 experimentation feature-flags list --json
   auth0 experimentation feature-flags list --status active
+
+  # Discover the query schema
   auth0 experimentation feature-flags list --schema
   auth0 experimentation feature-flags list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 experimentation feature-flags list --query '{"status":"active","take":10}'
   auth0 experimentation feature-flags list --query '{"type":"self"}' --json
 ```

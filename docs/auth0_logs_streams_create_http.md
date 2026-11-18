@@ -30,7 +30,12 @@ auth0 logs streams create http [flags]
   auth0 logs streams create http -n <name> -e <endpoint> -t <type> -f <format> -a <authorization>
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json
   auth0 logs streams create http -n mylogstream -e "https://example.com/webhook/logs" -t "application/json" -f "JSONLINES" -a "AKIAXXXXXXXXXXXXXXXX" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create http --schema
+  auth0 logs streams create http --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create http --data '{"name":"my-stream","sink":{"httpEndpoint":"https://example.com/logs","httpContentType":"application/json","httpContentFormat":"JSONLINES"}}'
 ```
 

@@ -56,7 +56,12 @@ func createLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams create eventbridge -n <name> -i <aws-id> -r <aws-region>
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json
   auth0 logs streams create eventbridge -n mylogstream -i 999999999999 -r "eu-west-1" --json-compact
+
+  # Discover the payload schema
   auth0 logs streams create eventbridge --schema
+  auth0 logs streams create eventbridge --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams create eventbridge --data '{"name":"my-stream","sink":{"awsAccountId":"123456789012","awsRegion":"us-east-1"}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {
@@ -167,7 +172,12 @@ func updateLogStreamsAmazonEventBridgeCmd(cli *cli) *cobra.Command {
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update eventbridge --schema
+  auth0 logs streams update eventbridge --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update eventbridge <log-stream-id> --data '{"status":"paused"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.schema {

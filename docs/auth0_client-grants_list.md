@@ -29,8 +29,12 @@ auth0 client-grants list [flags]
   auth0 client-grants ls --allow-any-organization=true
   auth0 client-grants ls -n 100 --json
   auth0 client-grants ls --csv
+
+  # Discover the query schema
   auth0 client-grants list --schema
   auth0 client-grants list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 client-grants list --query '{"audience":"https://example.com/api"}'
   auth0 client-grants list --query '{"client_id":"<client-id>","per_page":50}' --json
 ```

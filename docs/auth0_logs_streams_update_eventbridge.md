@@ -27,7 +27,12 @@ auth0 logs streams update eventbridge [flags]
   auth0 logs streams update eventbridge <log-stream-id> -n <name> -p null
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json
   auth0 logs streams update eventbridge <log-stream-id> -n mylogstream --json-compact
+
+  # Discover the payload schema
   auth0 logs streams update eventbridge --schema
+  auth0 logs streams update eventbridge --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 logs streams update eventbridge <log-stream-id> --data '{"status":"paused"}'
 ```
 
