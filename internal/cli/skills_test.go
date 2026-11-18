@@ -2,7 +2,6 @@ package cli
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,12 +87,16 @@ func TestSkillsInstallDeprecation(t *testing.T) {
 		assert.Contains(t, legacy.Example, "auth0 agent skills install")
 	})
 
-	for _, agentMode := range []bool{false, true} {
-		t.Run(fmt.Sprintf("legacy command warns with the replacement (agent mode %v)", agentMode), func(t *testing.T) {
-			var buf bytes.Buffer
-			warnAgentSkillsDeprecated(&cli{renderer: &display.Renderer{MessageWriter: &buf, AgentMode: agentMode}})
-			assert.Contains(t, buf.String(), "auth0 agent skills install is deprecated")
-			assert.Contains(t, buf.String(), "Use auth0 skills install instead")
-		})
-	}
+	t.Run("legacy command warns with the replacement", func(t *testing.T) {
+		var buf bytes.Buffer
+		warnAgentSkillsDeprecated(&cli{renderer: &display.Renderer{MessageWriter: &buf}})
+		assert.Contains(t, buf.String(), "auth0 agent skills install is deprecated")
+		assert.Contains(t, buf.String(), "Use auth0 skills install instead")
+	})
+
+	t.Run("legacy warning is suppressed in agent mode", func(t *testing.T) {
+		var buf bytes.Buffer
+		warnAgentSkillsDeprecated(&cli{renderer: &display.Renderer{MessageWriter: &buf, AgentMode: true}})
+		assert.Empty(t, buf.String())
+	})
 }

@@ -87,12 +87,10 @@ func deprecatedInstallCmd(cli *cli) *cobra.Command {
 	return cmd
 }
 
-// warnAgentSkillsDeprecated writes to stderr in every mode, agent mode included: the old command
-// is hidden from help, and install already streams npx's plain-text output.
+// warnAgentSkillsDeprecated points users to `auth0 skills install`; like all warnings, it is suppressed in agent mode.
 func warnAgentSkillsDeprecated(cli *cli) {
-	fmt.Fprintf(cli.renderer.MessageWriter,
-		"%s %s is deprecated and will be removed in a future release. Use %s instead (same flags).\n",
-		ansi.Yellow("DEPRECATED:"), ansi.Bold("auth0 agent skills install"), ansi.Bold(ansi.Cyan("auth0 skills install")))
+	cli.renderer.Warnf("%s %s is deprecated and will be removed in a future release. Use %s instead (same flags).",
+		ansi.Bold(ansi.Yellow("DEPRECATED:")), ansi.Bold("auth0 agent skills install"), ansi.Bold(ansi.Cyan("auth0 skills install")))
 }
 
 // installCmd installs the Auth0 skill into the user's AI coding assistants.
