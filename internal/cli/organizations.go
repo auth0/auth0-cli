@@ -1451,6 +1451,7 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		},
 	}
 
+	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
 	inviterName.RegisterString(cmd, &inputs.InviterName, "")
 	inviteeEmail.RegisterString(cmd, &inputs.InviteeEmail, "")
 	clientID.RegisterString(cmd, &inputs.ClientID, "")
@@ -1466,8 +1467,6 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 	dataFlag.RegisterString(cmd, &inputs.Data, "")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	markDataExclusive(cmd)
-	// Registered after markDataExclusive: --org-id is the URL path, not payload, so it combines with --data.
-	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
 
 	return cmd
 }

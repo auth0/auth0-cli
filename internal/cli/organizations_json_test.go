@@ -166,3 +166,32 @@ func TestOrganizationsCmdQuery(t *testing.T) {
 		})
 	}
 }
+
+func TestOrganizationsInvitationsCreatePipedData(t *testing.T) {
+	useOrganizationsFixtureSchema(t)
+
+	t.Run("piped JSON combines with --org-id", func(t *testing.T) {
+		stub := &jsonWriteStub{response: invitationResponse}
+		cmd := createInvitationOrganizationCmd(newJSONWriteCLI(stub))
+		prepareInteractivity(cmd)
+		cmd.SetArgs([]string{"--org-id", "org_123"})
+
+		withPipedStdin(t, invitationPayload, func() {
+			require.NoError(t, cmd.Execute())
+		})
+		assert.Equal(t, http.MethodPost, stub.gotMethod)
+		assert.Contains(t, stub.gotURI, "/organizations/org_123/invitations")
+	})
+
+	t.Run("piped JSON still rejects payload flags", func(t *testing.T) {
+		stub := &jsonWriteStub{}
+		cmd := createInvitationOrganizationCmd(newJSONWriteCLI(stub))
+		prepareInteractivity(cmd)
+		cmd.SetArgs([]string{"--org-id", "org_123", "--invitee-email", "bo@example.com"})
+
+		withPipedStdin(t, invitationPayload, func() {
+			assert.ErrorContains(t, cmd.Execute(), "cannot combine piped JSON input with individual flags (invitee-email)")
+		})
+		assert.Empty(t, stub.gotMethod)
+	})
+}
