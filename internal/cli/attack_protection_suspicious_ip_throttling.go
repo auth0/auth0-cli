@@ -136,7 +136,9 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.NoArgs,
 		Short: "Update suspicious ip throttling settings",
-		Long:  "Update the suspicious ip throttling settings.",
+		Long: "Update the suspicious ip throttling settings.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 protection suspicious-ip-throttling update
   auth0 ap sit update --enabled=true
   auth0 ap sit update --enabled=true --allowlist "178.178.178.178"

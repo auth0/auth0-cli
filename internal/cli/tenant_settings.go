@@ -102,8 +102,8 @@ func set(cli *cli) *cobra.Command {
 		Long: "Enable selected tenant setting flags.\n\n" +
 			"To enable interactively, use `auth0 tenant-settings update set` with no arguments.\n\n" +
 			"To enable non-interactively, supply the flags.\n\n" +
-			"To update tenant settings with a JSON payload, use `--data` or pipe the JSON. " +
-			"Run `auth0 tenant-settings update set --schema` to see the fields that the payload accepts.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).\n\n" +
 			"The payload schema does not include these flags, so `--data` rejects them: " +
 			"flags.enable_custom_domain_in_emails, flags.enable_legacy_logs_search_v2, flags.universal_login " +
 			"and flags.use_scope_descriptions_for_consent. To change them, use the setting names with " +

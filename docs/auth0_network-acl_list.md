@@ -7,6 +7,9 @@ has_toc: false
 
 List your network ACLs. To create one, run: auth0 network-acl create
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 network-acl list [flags]

@@ -128,7 +128,9 @@ func updateBotDetectionCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.NoArgs,
 		Short: "Update bot detection settings",
-		Long:  "Update the bot detection settings.",
+		Long: "Update the bot detection settings.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 protection bot-detection update
   auth0 ap bd update --bot-detection-level medium --json-compact
   auth0 ap bd update --bot-detection-level low --challenge-password-policy never

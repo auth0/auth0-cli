@@ -100,7 +100,9 @@ func listRulesCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your rules",
-		Long:    rulesDeprecationDocumentationText + "List your existing rules. To create one, run: `auth0 rules create`.",
+		Long: rulesDeprecationDocumentationText + "List your existing rules. To create one, run: `auth0 rules create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 rules list
   auth0 rules ls
   auth0 rules ls --json
@@ -175,7 +177,9 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Short: "Create a new rule",
 		Long: rulesDeprecationDocumentationText + "Create a new rule.\n\n" +
 			"To create interactively, use `auth0 rules create` with no arguments.\n\n" +
-			"To create non-interactively, supply the name, template and other information through the flags.",
+			"To create non-interactively, supply the name, template and other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 rules create
   auth0 rules create --enabled=true
   auth0 rules create --enabled=true --name "My Rule" 
@@ -436,7 +440,9 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Short: "Update a rule",
 		Long: rulesDeprecationDocumentationText + "Update a rule.\n\n" +
 			"To update interactively, use `auth0 rules update` with no arguments.\n\n" +
-			"To update non-interactively, supply the rule id and other information through the flags.",
+			"To update non-interactively, supply the rule id and other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 rules update <id>
   auth0 rules update <rule-id> --enabled=true
   auth0 rules update <rule-id> --enabled=false --name "My Updated Rule"

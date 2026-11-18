@@ -10,6 +10,9 @@ To create interactively, use "auth0 network-acl create" with no arguments.
 To create non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
 The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 network-acl create [flags]

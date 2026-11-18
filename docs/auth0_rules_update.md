@@ -13,6 +13,9 @@ To update interactively, use `auth0 rules update` with no arguments.
 
 To update non-interactively, supply the rule id and other information through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 rules update [flags]

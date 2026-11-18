@@ -9,6 +9,8 @@ Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
 To update non-interactively, supply the description, active, priority, and rule through flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
 
 ## Usage
 ```

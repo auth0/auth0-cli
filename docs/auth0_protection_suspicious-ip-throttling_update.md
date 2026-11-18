@@ -7,6 +7,9 @@ has_toc: false
 
 Update the suspicious ip throttling settings.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 protection suspicious-ip-throttling update [flags]

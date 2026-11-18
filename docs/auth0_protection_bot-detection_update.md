@@ -7,6 +7,9 @@ has_toc: false
 
 Update the bot detection settings.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 protection bot-detection update [flags]

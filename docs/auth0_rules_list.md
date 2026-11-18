@@ -9,6 +9,9 @@ has_toc: false
 
 List your existing rules. To create one, run: `auth0 rules create`.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 rules list [flags]

@@ -663,7 +663,9 @@ func listNetworkACLsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List network ACLs",
-		Long:    "List your network ACLs. To create one, run: auth0 network-acl create",
+		Long: "List your network ACLs. To create one, run: auth0 network-acl create\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 network-acl list
   auth0 network-acl ls
   auth0 network-acl ls --json
@@ -754,7 +756,10 @@ func createNetworkACLCmd(cli *cli) *cobra.Command {
 		Long: `Create a new network ACL.
 To create interactively, use "auth0 network-acl create" with no arguments.
 To create non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
-The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.`,
+The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 network-acl create
   auth0 network-acl create --description "Block IPs" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24","10.0.0.0/8"]}}'
   auth0 network-acl create --description "Geo Block" --priority 2 --active true --rule '{"action":{"block":true},"scope":"authentication","match":{"geo_country_codes":["US","CA"]}}'
@@ -897,7 +902,9 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		Long: `Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
 To update non-interactively, supply the description, active, priority, and rule through flags.
-`,
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5
   auth0 network-acl update <id> --active true
