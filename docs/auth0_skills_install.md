@@ -1,32 +1,32 @@
 ---
 layout: default
-parent: auth0 agent skills
+parent: auth0 skills
 has_toc: false
 ---
-# auth0 agent skills install
+# auth0 skills install
 
 Install the Auth0 skill into your AI coding assistants via the pinned skills CLI (skills@1.5.23), run through npx (requires Node.js).
 
 ## Usage
 ```
-auth0 agent skills install [flags]
+auth0 skills install [flags]
 ```
 
 ## Examples
 
 ```
   # Choose assistants interactively
-  auth0 agent skills install
+  auth0 skills install
 
   # Install into specific assistants (comma-separated or repeatable)
-  auth0 agent skills install --agent claude-code,cursor
-  auth0 agent skills install --agent claude-code --agent cursor
+  auth0 skills install --agent claude-code,cursor
+  auth0 skills install --agent claude-code --agent cursor
 
   # Install into every supported assistant
-  auth0 agent skills install --agent all
+  auth0 skills install --agent all
 
   # Reinstall without prompting
-  auth0 agent skills install --force
+  auth0 skills install --force
 ```
 
 
@@ -51,6 +51,6 @@ auth0 agent skills install [flags]
 
 ## Related Commands
 
-- [auth0 agent skills install](auth0_agent_skills_install.md) - Install the Auth0 skill for your AI coding assistants
+- [auth0 skills install](auth0_skills_install.md) - Install the Auth0 skill for your AI coding assistants
 
 
