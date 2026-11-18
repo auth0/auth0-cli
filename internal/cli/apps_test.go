@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"testing"
@@ -24,6 +25,18 @@ func TestAppsListCmd(t *testing.T) {
 	}{
 		{
 			name: "happy path",
+			assertOutput: func(t testing.TB, out string) {
+				expectTable(t, out,
+					[]string{"CLIENT ID", "NAME", "TYPE", "RESOURCE SERVER"},
+					[][]string{
+						{"some-id", "some-name", "Generic", ""},
+					},
+				)
+			},
+		},
+		{
+			name: "filter by agent id",
+			args: []string{"--agent-id", "agt_001"},
 			assertOutput: func(t testing.TB, out string) {
 				expectTable(t, out,
 					[]string{"CLIENT ID", "NAME", "TYPE", "RESOURCE SERVER"},
@@ -167,6 +180,70 @@ func TestAppsCreateCmd(t *testing.T) {
 // via the API and the command must succeed, treating the failed local
 // default-app write as a non-fatal warning rather than reporting failure for an
 // app that already exists.
+func TestAppsListCmdAgentIDExclusiveWithQuery(t *testing.T) {
+	cmd := listAppsCmd(&cli{})
+	cmd.SetArgs([]string{"--agent-id", "agt_001", "--query", "{}"})
+
+	err := cmd.Execute()
+	assert.ErrorContains(t, err, "query")
+	assert.ErrorContains(t, err, "agent-id")
+}
+
+func TestAppsCreateCmdAgentID(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		assertClient func(t testing.TB, c *management.Client)
+	}{
+		{
+			name: "links the app to the agent when --agent-id is set",
+			args: []string{"--name", "x", "--type", "m2m", "--agent-id", "agt_001"},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Equal(t, "agt_001", c.GetAgentID())
+			},
+		},
+		{
+			name: "leaves agent_id unset when --agent-id is omitted",
+			args: []string{"--name", "x", "--type", "m2m"},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Nil(t, c.AgentID)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			clientAPI.EXPECT().
+				Create(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, c *management.Client, _ ...management.RequestOption) error {
+					test.assertClient(t, c)
+					c.ClientID = auth0.String("created-client-id")
+					return nil
+				})
+
+			cli := &cli{
+				noInput: true,
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  io.Discard,
+				},
+				api: &auth0.API{Client: clientAPI},
+			}
+
+			cmd := createAppCmd(cli)
+			cmd.SetArgs(test.args)
+
+			assert.NoError(t, cmd.Execute())
+		})
+	}
+}
+
 func TestAppsCreateCmdSucceedsWithoutSavedConfig(t *testing.T) {
 	// Point config resolution at an empty temp home so no real config is read or
 	// written and SetDefaultAppIDForTenant fails the way it would in a sandbox.
@@ -316,6 +393,208 @@ func TestAppsUpdateCmdOrganizationFlags(t *testing.T) {
 			}
 
 			test.assertClient(t, captured)
+		})
+	}
+}
+
+func TestAppsUpdateCmdAgentFlags(t *testing.T) {
+	tests := []struct {
+		name          string
+		args          []string
+		returnAgentID *string
+		assertClient  func(t testing.TB, c *management.Client)
+		assertOutput  func(t testing.TB, out string)
+	}{
+		{
+			name:          "links the app to the agent when --agent-id is set",
+			args:          []string{"some-id", "--agent-id", "agt_001"},
+			returnAgentID: auth0.String("agt_001"),
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Equal(t, "agt_001", c.GetAgentID())
+			},
+			assertOutput: func(t testing.TB, out string) {
+				assert.Contains(t, out, "AGENT ID")
+				assert.Contains(t, out, "agt_001")
+			},
+		},
+		{
+			name: "leaves agent_id unset when no agent flag is set",
+			args: []string{"some-id"},
+			assertClient: func(t testing.TB, c *management.Client) {
+				assert.Nil(t, c.AgentID)
+			},
+			assertOutput: func(t testing.TB, out string) {
+				assert.NotContains(t, out, "AGENT ID")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			clientAPI.EXPECT().
+				Read(gomock.Any(), "some-id", gomock.Any()).
+				Return(&management.Client{Name: auth0.String("some-name"), AppType: auth0.String("non_interactive")}, nil)
+			clientAPI.EXPECT().
+				Update(gomock.Any(), "some-id", gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ string, c *management.Client, _ ...management.RequestOption) error {
+					test.assertClient(t, c)
+					c.AgentID = test.returnAgentID
+					return nil
+				})
+
+			stdout := &bytes.Buffer{}
+			cli := &cli{
+				noInput:  true,
+				renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: stdout},
+				api:      &auth0.API{Client: clientAPI},
+			}
+
+			cmd := updateAppCmd(cli)
+			cmd.SetArgs(test.args)
+			assert.NoError(t, cmd.Execute())
+			test.assertOutput(t, stdout.String())
+		})
+	}
+}
+
+func TestAppsUpdateCmdUnlinkAgent(t *testing.T) {
+	tests := []struct {
+		name      string
+		updateErr error
+		wantErr   string
+	}{
+		{name: "unlinks in a single update and shows the app read back"},
+		{
+			name:      "update failure leaves nothing half-applied",
+			updateErr: errors.New("boom"),
+			wantErr:   `failed to update application with ID "some-id": boom`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			existing := &management.Client{Name: auth0.String("some-name"), AppType: auth0.String("non_interactive"), AgentID: auth0.String("agt_001")}
+			read := clientAPI.EXPECT().Read(gomock.Any(), "some-id", gomock.Any()).Return(existing, nil)
+			update := clientAPI.EXPECT().
+				Update(gomock.Any(), "some-id", nil, gomock.Any()).
+				After(read).
+				Return(test.updateErr)
+			if test.updateErr == nil {
+				clientAPI.EXPECT().
+					Read(gomock.Any(), "some-id", gomock.Any()).
+					After(update).
+					Return(&management.Client{Name: auth0.String("some-name"), AppType: auth0.String("non_interactive")}, nil)
+			}
+
+			stdout := &bytes.Buffer{}
+			cli := &cli{
+				noInput:  true,
+				renderer: &display.Renderer{MessageWriter: io.Discard, ResultWriter: stdout},
+				api:      &auth0.API{Client: clientAPI},
+			}
+
+			cmd := updateAppCmd(cli)
+			cmd.SetArgs([]string{"some-id", "--unlink-agent"})
+			err := cmd.Execute()
+
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Contains(t, stdout.String(), "some-name")
+			assert.NotContains(t, stdout.String(), "AGENT ID")
+		})
+	}
+}
+
+func TestUnlinkAgentPatchBody(t *testing.T) {
+	body, err := unlinkAgentPatchBody(&management.Client{Name: auth0.String("renamed")})
+	assert.NoError(t, err)
+
+	var got map[string]interface{}
+	assert.NoError(t, json.Unmarshal(body, &got))
+	assert.Equal(t, map[string]interface{}{"name": "renamed", "agent_id": nil}, got)
+}
+
+func TestAppsUpdateCmdAgentFlagsMutuallyExclusive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	cli := &cli{
+		noInput: true,
+		api:     &auth0.API{Client: mock.NewMockClientAPI(ctrl)},
+	}
+
+	cmd := updateAppCmd(cli)
+	cmd.SetArgs([]string{"some-id", "--agent-id", "agt_001", "--unlink-agent"})
+
+	err := cmd.Execute()
+	assert.ErrorContains(t, err, "agent-id")
+	assert.ErrorContains(t, err, "unlink-agent")
+}
+
+func TestAppsShowCmdAgentID(t *testing.T) {
+	tests := []struct {
+		name         string
+		agentID      *string
+		assertOutput func(t testing.TB, out string)
+	}{
+		{
+			name:    "renders the agent id when the app is linked",
+			agentID: auth0.String("agt_001"),
+			assertOutput: func(t testing.TB, out string) {
+				assert.Contains(t, out, "AGENT ID")
+				assert.Contains(t, out, "agt_001")
+			},
+		},
+		{
+			name: "omits the agent id row when the app is not linked",
+			assertOutput: func(t testing.TB, out string) {
+				assert.NotContains(t, out, "AGENT ID")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			clientAPI := mock.NewMockClientAPI(ctrl)
+			clientAPI.EXPECT().
+				Read(gomock.Any(), "some-id", gomock.Any()).
+				Return(&management.Client{
+					ClientID: auth0.String("some-id"),
+					Name:     auth0.String("some-name"),
+					AppType:  auth0.String("non_interactive"),
+					AgentID:  test.agentID,
+				}, nil)
+
+			stdout := &bytes.Buffer{}
+			cli := &cli{
+				renderer: &display.Renderer{
+					MessageWriter: io.Discard,
+					ResultWriter:  stdout,
+				},
+				api: &auth0.API{Client: clientAPI},
+			}
+
+			cmd := showAppCmd(cli)
+			cmd.SetArgs([]string{"some-id"})
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatal(err)
+			}
+			test.assertOutput(t, stdout.String())
 		})
 	}
 }
