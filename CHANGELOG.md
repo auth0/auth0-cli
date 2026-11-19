@@ -20,11 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add `--schema`, `--data`, and `--query` flags to `auth0 orgs`, `auth0 orgs members`, `auth0 orgs invitations`, and `auth0 token-exchange` commands [#1775]
 - Add `--schema`, `--data`, and `--query` flags to `auth0 protection`, `auth0 network-acl`, `auth0 rules`, and `auth0 tenant-settings update set` commands [#1777]
 
-### Fixed
-- Fix `--data` validation to check IP and CIDR formats, so IP allowlists no longer fail with "matches more than one schema" [#1777]
-
 ### Deprecated
-- Deprecate `auth0 agent skills install` in favor of `auth0 skills install`; the old command still works, is hidden from help, and prints a deprecation warning [#1778]
+- Deprecate `auth0 agent skills install` in favor of `auth0 skills install`; the old command still works [#1778]
+
+### Notes
+- `auth0 rules create` and `auth0 rules update` now warn when piped JSON has unsupported fields or is combined with input flags. Previously these were silently dropped or ignored; they will become errors in an upcoming release [#1777]
 
 # [v1.39.0](https://github.com/auth0/auth0-cli/tree/v1.39.0) (October 28, 2026)
 
