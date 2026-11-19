@@ -271,7 +271,8 @@ func TestPoppyApplyTextCounts(t *testing.T) {
 func TestPoppySetupNext(t *testing.T) {
 	assert.Equal(t, "Next\n"+
 		"  1. Deploy poppy.json with your web and API SDKs.\n"+
-		"  2. auth0 agents register <agent-url>   to allow an agent.\n",
+		"  2. auth0 poppy doctor shop.example   to check the live site.\n"+
+		"  3. auth0 agents register <agent-url>   to allow an agent.\n",
 		poppySetupNext(unicode80, "shop.example", "", 0))
 
 	assert.Contains(t, poppySetupNext(unicode80, "shop.example", "./out/poppy.json", 0), "Deploy ./out/poppy.json with")
@@ -286,7 +287,7 @@ func TestPoppySetupNext(t *testing.T) {
 		out := poppySetupNext(unicode80, "shop.example", "", tc.unhinted)
 		assert.Contains(t, out, tc.want)
 		assert.Contains(t, out, "<scope>=changes:<none|reversible|irreversible>,personal_data:<true|false>")
-		assert.Contains(t, out, "  3. auth0 agents register <agent-url>", "the hint step goes before the last step")
+		assert.Contains(t, out, "  3. auth0 poppy doctor shop.example", "the hint step goes before the check")
 	}
 
 	assert.NotContains(t, poppySetupNext(unicode80, "shop.example", "", 0), "--hint")

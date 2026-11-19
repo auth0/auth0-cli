@@ -70,10 +70,15 @@ var (
 		LongForm: "dry-run",
 		Help:     "Print the plan and change nothing.",
 	}
+	poppySkipDoctor = Flag{
+		Name:     "Skip Doctor",
+		LongForm: "skip-doctor",
+		Help:     "Do not run the doctor checks after setup.",
+	}
 	poppyWebUnscoped = Flag{
 		Name:     "Web Unscoped",
 		LongForm: "web-unscoped",
-		Help:     "Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. Asked in a terminal when the config file has no value.",
+		Help:     "Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. auth0 poppy doctor then reminds you to check the description of poppy:browser-sign-in. Asked in a terminal when the config file has no value.",
 	}
 	poppySetupNoAPI = Flag{
 		Name:     "No API",
@@ -100,6 +105,11 @@ var (
 		LongForm: "overwrite-config",
 		Help:     "Overwrite a config file that belongs to a different issuer.",
 	}
+	poppyConfig = Flag{
+		Name:     "Config",
+		LongForm: "config",
+		Help:     "Config file to check. Used only if it exists. Without this flag, and without the default file, the poppy.json your website serves is checked instead.",
+	}
 )
 
 func poppyCmd(cli *cli) *cobra.Command {
@@ -114,6 +124,7 @@ func poppyCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(poppySetupCmd(cli))
 	cmd.AddCommand(poppyConfigCmd(cli))
+	cmd.AddCommand(poppyDoctorCmd(cli))
 
 	return cmd
 }

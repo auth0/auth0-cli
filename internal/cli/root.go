@@ -488,6 +488,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 help",
 		"auth0 login",
 		"auth0 logout",
+		"auth0 poppy doctor",
 		"auth0 tenants use",
 		"auth0 tenants list",
 		"auth0 agent skills install",

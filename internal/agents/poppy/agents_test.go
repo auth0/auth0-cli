@@ -3,6 +3,7 @@ package poppy
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
@@ -24,6 +25,9 @@ const (
 	museApp   = "client_muse"
 	museAgent = "agt_muse"
 )
+
+// clientFields is the field filter the generic service puts on its client lookups.
+const clientFields = "client_id,name,agent_id,external_client_id,external_metadata_type,external_metadata_status,require_proof_of_possession"
 
 type fixture struct {
 	clients     *mock.MockClientAPIV3
@@ -58,6 +62,10 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
+func known[T any](value T) coreagents.Maybe[T] { return coreagents.Known(value) }
+
+func isURL(ref string) bool { return strings.HasPrefix(ref, "https://") }
+
 func ptr[T any](value T) *T { return &value }
 
 func newPage[C comparable, T, R any](items ...T) *core.Page[C, T, R] {
@@ -67,8 +75,25 @@ func newPage[C comparable, T, R any](items ...T) *core.Page[C, T, R] {
 	}
 }
 
+func clientPage(items ...*managementv3.Client) *auth0.ClientListPage {
+	return newPage[*int, *managementv3.Client, *managementv3.ListClientsOffsetPaginatedResponseContent](items...)
+}
+
+func agentPage(items ...*managementv3.AgentResponseContent) *auth0.AgentListPage {
+	return newPage[*string, *managementv3.AgentResponseContent, *managementv3.ListAgentsResponseContent](items...)
+}
+
+func grantPage(items ...*managementv3.ClientGrantResponseContent) *auth0.ClientGrantPage {
+	return newPage[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent](items...)
+}
+
 func serverPage(items ...*managementv3.ResourceServer) *auth0.ResourceServerPage {
 	return newPage[*int, *managementv3.ResourceServer, *managementv3.ListResourceServerOffsetPaginatedResponseContent](items...)
+}
+
+// apiError builds the error the SDK returns for a failed Management API call.
+func apiError(status int, body string) error {
+	return core.NewAPIError(status, nil, errors.New(body))
 }
 
 func shopServer() *managementv3.ResourceServer {
@@ -93,6 +118,50 @@ func shopAPIValue() coreagents.API {
 		Identifier: shopAPI,
 		Scopes:     []coreagents.Scope{{Name: "orders:read", Description: "See your orders"}, {Name: "checkout", Description: "Place orders"}},
 	}
+}
+
+func agentApp(clientID, url, agentID string) *managementv3.Client {
+	return &managementv3.Client{
+		ClientID:               ptr(clientID),
+		Name:                   ptr("App " + clientID),
+		ExternalClientID:       ptr(url),
+		ExternalMetadataType:   ptr(managementv3.ClientExternalMetadataTypeEnumCimd),
+		ExternalMetadataStatus: ptr(managementv3.ClientExternalMetadataStatusEnumAvailable),
+		AgentID:                ptr(agentID),
+	}
+}
+
+func agentRecord(agentID, name, url string) *managementv3.AgentResponseContent {
+	return &managementv3.AgentResponseContent{AgentID: agentID, Name: name, ExternalAgentID: ptr(url)}
+}
+
+func previewResponse(clientID string) *managementv3.PreviewCimdMetadataResponseContent {
+	resp := &managementv3.PreviewCimdMetadataResponseContent{
+		Validation: &managementv3.CimdValidationResult{Valid: true, Violations: []string{}, Warnings: []string{"logo is small"}},
+		MappedFields: &managementv3.CimdMappedClientFields{
+			Name:      ptr("Meta Muse"),
+			LogoURI:   ptr("https://muse.example/logo.png"),
+			Callbacks: []string{"https://muse.example/oauth/callback"},
+			ClientAuthenticationMethods: &managementv3.CimdMappedClientAuthenticationMethods{
+				PrivateKeyJwt: &managementv3.CimdMappedClientAuthenticationMethodsPrivateKeyJwt{
+					Credentials: []*managementv3.CimdMappedPrivateKeyJwtCredential{
+						{CredentialType: "public_key", Kid: "k1", Alg: "RS256"},
+						{CredentialType: "public_key", Kid: "k2", Alg: "PS256"},
+					},
+				},
+			},
+		},
+	}
+
+	if clientID != "" {
+		resp.ClientID = ptr(clientID)
+	}
+
+	return resp
+}
+
+func grantOf(id, audience string, scopes ...string) *managementv3.ClientGrantResponseContent {
+	return &managementv3.ClientGrantResponseContent{ID: ptr(id), ClientID: ptr(museApp), Audience: ptr(audience), Scope: scopes}
 }
 
 func TestPoppyAPIs(t *testing.T) {

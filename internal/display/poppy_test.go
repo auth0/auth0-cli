@@ -1,6 +1,7 @@
 package display
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/auth0/auth0-cli/internal/poppy/config"
+	"github.com/auth0/auth0-cli/internal/poppy/doctor"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 )
 
@@ -115,6 +117,71 @@ func poppyFreshState(t *testing.T) (*setup.State, setup.Inputs) {
 
 	return state, in
 }
+
+func renderWith(t *testing.T, r doctor.Report, l Layout) string {
+	t.Helper()
+
+	return doctorText(l, r)
+}
+
+func render(t *testing.T, r doctor.Report) string {
+	t.Helper()
+
+	return renderWith(t, r, unicode80)
+}
+
+// greenReport is the report of a site that passes every check, as the doctor
+// produced it.
+func greenReport(t *testing.T) doctor.Report {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join("testdata", "report-green.json"))
+	require.NoError(t, err)
+
+	var report doctor.Report
+	require.NoError(t, json.Unmarshal(data, &report))
+
+	return report
+}
+
+func shopReport(results ...doctor.Result) doctor.Report {
+	return doctor.Report{Domain: "shop.example", ProtocolVersion: "0.3", Issuer: "https://shop.example/", Results: results}
+}
+
+var (
+	issuerPass = doctor.Result{ID: "D3", Spec: "3.2", Level: doctor.Pass, Message: "issuer matches https://shop.example/"}
+
+	protectedFail = doctor.Result{
+		ID:         "D3",
+		Spec:       "3.2",
+		Level:      doctor.Fail,
+		Message:    "protected_resources does not list https://shop.example",
+		FixCommand: "auth0 poppy setup --company-domain shop.example --force",
+	}
+
+	ps384Fail = doctor.Result{
+		ID:                 "D4",
+		Spec:               "4.1",
+		Level:              doctor.Fail,
+		Message:            "client assertions: PS384 not accepted by the issuer",
+		FixHint:            "PS384 needs the HRI SKU. Ask support if you need it",
+		PlatformDependency: true,
+	}
+
+	hintWarn = doctor.Result{
+		ID:         "D5",
+		Spec:       "4.7",
+		Level:      doctor.Warn,
+		Message:    "scope_hints missing for checkout",
+		FixCommand: "auth0 poppy setup --hint checkout=changes:<none|reversible|irreversible>,personal_data:<true|false>",
+	}
+
+	tenantSkipped = doctor.Result{
+		ID:      "D8",
+		Level:   doctor.Skipped,
+		Message: "you are logged in to a different tenant than the one that serves shop.example. Log in to that tenant to run these checks.",
+	}
+)
 
 func TestPoppyChangeCount(t *testing.T) {
 	assert.Equal(t, "1 change", PoppyChangeCount(1))

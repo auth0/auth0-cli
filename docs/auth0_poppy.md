@@ -16,5 +16,6 @@ These commands set that up, write one config file (`poppy.json`) for your web an
 ## Commands
 
 - [auth0 poppy config](auth0_poppy_config.md) - Rebuild the Poppy config file from the tenant
+- [auth0 poppy doctor](auth0_poppy_doctor.md) - Check the Poppy discovery chain end to end
 - [auth0 poppy setup](auth0_poppy_setup.md) - Turn on Poppy for the tenant, an API and a web app
 

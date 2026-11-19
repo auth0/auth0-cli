@@ -13,7 +13,7 @@ The command shows a plan first and marks the tenant-wide changes, then applies i
 
 In a terminal, it lets you pick the API and the web app, and asks for the values that cannot be listed, such as the OpenAPI URL of an API, the Application Login URI of the web app, and the description of each scope that has none. Without a terminal, it names every missing flag at once.
 
-Running it again changes nothing when the tenant already matches, or continues where a failed run stopped.
+Running it again changes nothing when the tenant already matches, or continues where a failed run stopped. It finishes by running `auth0 poppy doctor`, unless `--skip-doctor` is set. A failed check does not fail setup, because your website may not serve the config file until you deploy it.
 
 **Warning:** This command is experimental and is subject to change in future versions.
 
@@ -52,7 +52,8 @@ auth0 poppy setup [flags]
       --out string              Path of the config file. (default "poppy.json")
       --overwrite-config        Overwrite a config file that belongs to a different issuer.
       --scope stringArray       The description of a scope that has none, as name="description". With one API, also adds a scope the API lacks. Repeat for several. Existing descriptions are never edited.
-      --web-unscoped            Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. Asked in a terminal when the config file has no value.
+      --skip-doctor             Do not run the doctor checks after setup.
+      --web-unscoped            Set web.unscoped in the config file: true when your website treats poppy:browser-sign-in as the account's full access on the website. auth0 poppy doctor then reminds you to check the description of poppy:browser-sign-in. Asked in a terminal when the config file has no value.
 ```
 
 
@@ -70,6 +71,7 @@ auth0 poppy setup [flags]
 ## Related Commands
 
 - [auth0 poppy config](auth0_poppy_config.md) - Rebuild the Poppy config file from the tenant
+- [auth0 poppy doctor](auth0_poppy_doctor.md) - Check the Poppy discovery chain end to end
 - [auth0 poppy setup](auth0_poppy_setup.md) - Turn on Poppy for the tenant, an API and a web app
 
 

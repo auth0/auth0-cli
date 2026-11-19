@@ -23,7 +23,7 @@ func poppyConfigText(l Layout, in setup.Inputs, unchanged, headerShown bool, unh
 		result = "unchanged"
 	}
 
-	var next [][2]string
+	next := [][2]string{{"auth0 poppy doctor " + text.Quote(text.Line(in.CompanyDomain)), "to check the live site."}}
 	if unhinted > 0 {
 		next = append(next, [2]string{
 			"auth0 poppy config --hint <scope>=changes:<none|reversible|irreversible>,personal_data:<true|false>",
@@ -44,11 +44,8 @@ func poppyConfigText(l Layout, in setup.Inputs, unchanged, headerShown bool, unh
 	}
 
 	b.WriteString(l.entries([]poppyEntry{{mark: markDone, label: text.Line(in.Out), value: result}}))
-
-	if len(next) > 0 {
-		b.WriteString("\n")
-		b.WriteString(poppyNext(l, next...))
-	}
+	b.WriteString("\n")
+	b.WriteString(poppyNext(l, next...))
 
 	return b.String()
 }

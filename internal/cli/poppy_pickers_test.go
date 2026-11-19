@@ -471,6 +471,7 @@ func TestPoppySetupPicksTheAPIsAndTheApp(t *testing.T) {
 			"setup", "--company-domain", "shop.example",
 			"--api-url", poppyTestAPI + "=" + poppyTestAPI + "/openapi.json",
 			"--out", filepath.Join(t.TempDir(), "poppy.json"),
+			"--skip-doctor",
 		}, extra...)
 	}
 

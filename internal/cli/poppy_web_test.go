@@ -24,6 +24,13 @@ func TestPoppyWebUnscopedFlagIsOnSetupAndConfigOnly(t *testing.T) {
 		flag := cmd.Flags().Lookup("web-unscoped")
 		require.NotNil(t, flag, strings.Join(path, " "))
 		assert.Contains(t, flag.Usage, "poppy:browser-sign-in")
+		assert.Contains(t, flag.Usage, "doctor")
+	}
+
+	for _, path := range [][]string{{"poppy", "doctor"}} {
+		cmd, _, err := root.Find(path)
+		require.NoError(t, err)
+		assert.Nil(t, cmd.Flags().Lookup("web-unscoped"), strings.Join(path, " "))
 	}
 }
 
@@ -93,6 +100,7 @@ func TestPoppyWebUnscopedWording(t *testing.T) {
 	assert.Contains(t, poppyWebUnscopedText, "Answer no to limit access to the permissions the end user approves.")
 	assert.Contains(t, poppyWebUnscopedText, "poppy:browser-sign-in")
 	assert.Contains(t, poppyWebUnscopedText, "web.unscoped is set to true")
+	assert.Contains(t, poppyWebUnscopedNote, "auth0 poppy doctor reminds you")
 }
 
 // webAnswer is what a person does at the question about web.unscoped: a bool
@@ -196,7 +204,7 @@ func TestPoppySetupWebUnscoped(t *testing.T) {
 			h := newPoppySetupHarness(t, freshPoppyTenant())
 			h.allowWrites()
 
-			args := freshSetupArgs(t, append([]string{"--force"}, test.flags...)...)
+			args := freshSetupArgs(t, append([]string{"--force", "--skip-doctor"}, test.flags...)...)
 
 			run, asked := h.runWebMode(t, test.mode, args, test.answer)
 
@@ -241,7 +249,7 @@ func TestPoppySetupWebUnscopedWithAFile(t *testing.T) {
 
 			path := poppyConfigWithWeb(t, test.member)
 			args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID,
-				"--out", path, "--force"}
+				"--out", path, "--skip-doctor", "--force"}
 
 			run, asked := h.runWebMode(t, modeTerminal, append(args, test.flags...), test.answer)
 
@@ -261,14 +269,14 @@ func TestPoppySetupWebUnscopedAsksAfterTheHints(t *testing.T) {
 
 	asked := installPoppyAsker(t, modeTerminal)
 
-	require.NoError(t, h.run(freshSetupArgs(t, "--force")...))
+	require.NoError(t, h.run(freshSetupArgs(t, "--force", "--skip-doctor")...))
 
 	assert.Equal(t, []string{"hints", "web access"}, *asked)
 }
 
 func TestPoppySetupWebUnscopedDryRun(t *testing.T) {
 	h := newPoppySetupHarness(t, freshPoppyTenant())
-	args := freshSetupArgs(t, "--dry-run")
+	args := freshSetupArgs(t, "--dry-run", "--skip-doctor")
 
 	run, asked := h.runWebMode(t, modeTerminal, args, true)
 
@@ -287,7 +295,7 @@ func TestPoppySetupWebUnscopedDryRunFromTheFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID,
-		"--out", path, "--dry-run", "--web-unscoped"}
+		"--out", path, "--skip-doctor", "--dry-run", "--web-unscoped"}
 
 	run, asked := h.runWebMode(t, modePiped, args, true)
 
@@ -305,7 +313,7 @@ func TestPoppySetupWebUnscopedCtrlC(t *testing.T) {
 	h := newPoppySetupHarness(t, freshPoppyTenant())
 	h.allowWrites()
 
-	args := freshSetupArgs(t, "--force")
+	args := freshSetupArgs(t, "--force", "--skip-doctor")
 
 	run, asked := h.runWebMode(t, modeTerminal, args, terminal.InterruptErr)
 
