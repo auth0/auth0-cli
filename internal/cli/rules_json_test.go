@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"testing"
@@ -402,4 +403,23 @@ func TestRulesUpdateCmdPipedInputRuleID(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("no payload id and no argument is a usage error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		ruleAPI := mock.NewMockRuleAPI(ctrl)
+
+		c, _ := newRulePipeCLI(ruleAPI)
+		cmd := updateRuleCmd(c)
+		prepareInteractivity(cmd)
+		cmd.SetArgs([]string{})
+
+		// Piped stdin is not a terminal, so the CLI cannot show the ID picker and returns a usage error.
+		withPipedStdin(t, `{"enabled":false}`, func() {
+			err := cmd.Execute()
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "missing a required argument: Rule ID")
+			var uErr usageError
+			assert.True(t, errors.As(err, &uErr))
+		})
+	})
 }

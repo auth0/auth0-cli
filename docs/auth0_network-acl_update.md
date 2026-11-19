@@ -51,6 +51,7 @@ auth0 network-acl update [flags]
       --data string          JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string   Description of the network ACL (Eg. "Block suspicious IPs").
       --json                 Output in JSON format
+      --json-compact         Output in compact json format.
   -p, --priority int         Priority of the network ACL (Eg. 5). (default 1)
       --rule string          Network ACL rule configuration in JSON format (required for non-interactive mode).
       --schema               Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.

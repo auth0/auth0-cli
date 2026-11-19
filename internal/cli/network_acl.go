@@ -704,6 +704,7 @@ func listNetworkACLsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 	return cmd
@@ -742,6 +743,7 @@ func showNetworkACLCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -1018,6 +1020,7 @@ Use '--data' to supply the full JSON payload (validated against the schema befor
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	networkACLDescription.RegisterStringU(cmd, &inputs.Description, "")
 	networkACLActive.RegisterStringU(cmd, &inputs.ActiveStr, "")
 	networkACLPriority.RegisterIntU(cmd, &inputs.Priority, 1)

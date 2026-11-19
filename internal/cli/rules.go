@@ -463,15 +463,19 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				return printOperationSchema(cli, "PATCH", "/rules/{id}")
 			}
 
+			resolveID := func() error {
+				if len(args) > 0 {
+					inputs.ID = args[0]
+					return nil
+				}
+				return ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+			}
+
 			// Plain piped JSON keeps its lenient legacy handling below, so only an
 			// explicit --data takes the strictly validated path.
 			if HasData(cmd) {
-				if len(args) > 0 {
-					inputs.ID = args[0]
-				} else {
-					if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
-						return err
-					}
+				if err := resolveID(); err != nil {
+					return err
 				}
 
 				dataStr, _ := GetData(cmd)
@@ -492,25 +496,21 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				// The payload "id" keeps priority over the argument, as before; the argument is
 				// used only when the payload has no "id".
 				inputs.ID = updatedRule.GetID()
-				if len(args) > 0 {
-					if inputs.ID == "" {
-						inputs.ID = args[0]
-					} else if inputs.ID != args[0] {
-						cli.renderer.Warnf(
-							"Ignoring the rule ID argument %q because the piped payload has \"id\" %q, which is used instead. "+
-								"A future release will not support \"id\" in piped JSON; remove it from the payload to use the argument.",
-							args[0], inputs.ID,
-						)
+				if inputs.ID == "" {
+					if err := resolveID(); err != nil {
+						return err
 					}
+				} else if len(args) > 0 && inputs.ID != args[0] {
+					cli.renderer.Warnf(
+						"Ignoring the rule ID argument %q because the piped payload has \"id\" %q, which is used instead. "+
+							"A future release will not support \"id\" in piped JSON; remove it from the payload to use the argument.",
+						args[0], inputs.ID,
+					)
 				}
 				updatedRule.ID = nil
 			} else {
-				if len(args) > 0 {
-					inputs.ID = args[0]
-				} else {
-					if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
-						return err
-					}
+				if err := resolveID(); err != nil {
+					return err
 				}
 
 				var oldRule *management.Rule
