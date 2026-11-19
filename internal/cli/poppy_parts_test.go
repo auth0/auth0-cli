@@ -28,6 +28,14 @@ func TestPoppyPartFlagsAreOnSetupAndConfigOnly(t *testing.T) {
 			assert.Equal(t, "false", flag.DefValue)
 		}
 	}
+
+	for _, path := range [][]string{{"agents", "register"}} {
+		cmd, _, err := root.Find(path)
+		require.NoError(t, err)
+
+		assert.Nil(t, cmd.Flags().Lookup("no-api"), strings.Join(path, " "))
+		assert.Nil(t, cmd.Flags().Lookup("no-web"), strings.Join(path, " "))
+	}
 }
 
 func TestAskPoppyPart(t *testing.T) {

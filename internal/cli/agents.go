@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	management1 "github.com/auth0/go-auth0/management"
 	"github.com/auth0/go-auth0/v3/management"
 	"github.com/spf13/cobra"
 
+	coreagents "github.com/auth0/auth0-cli/internal/agents"
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
@@ -71,6 +73,8 @@ func agentsCmd(cli *cli) *cobra.Command {
 			"These commands need the read:agents, create:agents, update:agents and delete:agents scopes, " +
 			"which are available through a machine to machine (M2M) login only. " +
 			"Authorize an M2M application for the Auth0 Management API with these scopes, then log in with it.\n\n" +
+			"To let an agent that publishes a metadata document sign in to your company, use `auth0 agents register <agent-url>`; " +
+			"`auth0 agents unregister` undoes it. `list` and `show` also report the agent's application, its metadata status and the Poppy APIs it can use.\n\n" +
 			"To manage skills for your AI coding assistants, use `auth0 agent` instead.",
 	}
 
@@ -80,6 +84,8 @@ func agentsCmd(cli *cli) *cobra.Command {
 	cmd.AddCommand(showAgentCmd(cli))
 	cmd.AddCommand(updateAgentCmd(cli))
 	cmd.AddCommand(deleteAgentCmd(cli))
+	cmd.AddCommand(registerAgentCmd(cli))
+	cmd.AddCommand(unregisterAgentCmd(cli))
 
 	return cmd
 }
@@ -89,6 +95,7 @@ func listAgentsCmd(cli *cli) *cobra.Command {
 		Number int
 		Schema bool
 		Query  string
+		Poppy  bool
 	}
 
 	cmd := &cobra.Command{
@@ -96,9 +103,13 @@ func listAgentsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your agents",
-		Long:    "List your agents. To create one, run: `auth0 agents create`." + experimentationQueryHelp,
+		Long: "List your agents. To create one, run: `auth0 agents create`.\n\n" +
+			"Besides the agent, each row shows the client ID of the linked app, its metadata status and the APIs the agent has grants on; " +
+			"pass `--poppy` to show only the Poppy APIs. " +
+			"A value that cannot be read, for lack of a scope, shows as unknown." + experimentationQueryHelp,
 		Example: `  auth0 agents list
   auth0 agents ls
+  auth0 agents list --poppy
   auth0 agents list --number 10
   auth0 agents ls -n 10 --json
   auth0 agents list --csv
@@ -131,7 +142,18 @@ func listAgentsCmd(cli *cli) *cobra.Command {
 				return fmt.Errorf("failed to list agents: %w", err)
 			}
 
-			cli.renderer.AgentList(agents)
+			// Reading the extra data never fails the command: what cannot be read is unknown.
+			var (
+				extras    []coreagents.Extras
+				extrasErr error
+			)
+			_ = ansi.Waiting(func() error {
+				extras, extrasErr = cli.agentsService().Extras(cmd.Context(), agents, cli.agentAudiences(inputs.Poppy))
+				return nil
+			})
+
+			cli.renderer.AgentList(agents, extras)
+			cli.warnUnreadable(extrasErr, agentsReadScopes(agentsListScopes, inputs.Poppy), true)
 			return nil
 		},
 	}
@@ -140,6 +162,7 @@ func listAgentsCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	agentsPoppyList.RegisterBool(cmd, &inputs.Poppy, false)
 	agentNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
@@ -149,16 +172,22 @@ func listAgentsCmd(cli *cli) *cobra.Command {
 
 func showAgentCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		ID string
+		ID    string
+		Poppy bool
 	}
 
 	cmd := &cobra.Command{
-		Use:   "show",
+		Use:   "show [agent-url|agent-id]",
 		Args:  cobra.MaximumNArgs(1),
 		Short: "Show an agent",
-		Long:  "Display details about an agent.",
+		Long: "Display details about an agent, given its ID or its URL (the external agent ID).\n\n" +
+			"It also shows the client ID of the linked app, its metadata status (- for an app that is not an agent app), whether DPoP is required and the APIs " +
+			"the agent has grants on, with their scopes; pass `--poppy` to show only the Poppy APIs. For an agent app it checks the agent's metadata document live, and tells you whether the keys Auth0 stored are still current. " +
+			"A value that cannot be read, for lack of a scope, shows as unknown.",
 		Example: `  auth0 agents show
   auth0 agents show <agent-id>
+  auth0 agents show <agent-id> --poppy
+  auth0 agents show https://muse.example/agent.json
   auth0 agents show <agent-id> --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
@@ -169,21 +198,26 @@ func showAgentCmd(cli *cli) *cobra.Command {
 				inputs.ID = args[0]
 			}
 
-			var agent *management.AgentResponseContent
+			var (
+				agent  *management.AgentResponseContent
+				detail *coreagents.DetailExtras
+			)
 			if err := ansi.Waiting(func() (err error) {
-				agent, err = cli.apiv3.Agents.Read(cmd.Context(), inputs.ID)
+				agent, detail, err = cli.readAgentDetail(cmd.Context(), inputs.ID, cli.agentAudiences(inputs.Poppy))
 				return err
 			}); err != nil {
 				return fmt.Errorf("failed to get agent %q: %w", inputs.ID, err)
 			}
 
-			cli.renderer.AgentShow(agent)
+			cli.renderer.AgentShow(agent, detail)
+			cli.warnUnreadable(errors.Join(detail.ReadErrors...), agentsReadScopes(agentsShowScopes, inputs.Poppy), false)
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	agentsPoppyShow.RegisterBool(cmd, &inputs.Poppy, false)
 
 	return cmd
 }
@@ -510,6 +544,83 @@ func deleteAgentCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.force, "force", false, "Skip confirmation.")
 
 	return cmd
+}
+
+// readAgentDetail reads an agent by ID or URL, with the extra data of its agent
+// app. Only the agent itself must be read: the rest degrades to unknown. Only
+// narrows the grants reported to some APIs, every API when it is nil.
+func (c *cli) readAgentDetail(ctx context.Context, ref string, only coreagents.AudienceFilter) (*management.AgentResponseContent, *coreagents.DetailExtras, error) {
+	svc := c.agentsService()
+
+	if !coreagents.IsURL(ref) {
+		agent, err := c.apiv3.Agents.Read(ctx, ref)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		client, lookupErr := svc.LookupApp(ctx, ref)
+
+		return agent, svc.Inspect(ctx, agent, client, lookupErr, only), nil
+	}
+
+	entry, err := svc.Find(ctx, ref)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if entry == nil {
+		// An agent record without an app, such as one made with
+		// `--external-agent-id`, has no client to find by URL.
+		return c.readAgentDetailByRecordURL(ctx, svc, ref, only)
+	}
+
+	if entry.Record == nil {
+		return nil, nil, validationError{
+			err:     fmt.Errorf("no agent record is linked to the agent app %s", entry.Client.GetClientID()),
+			details: agentsNext(c.command("agents", "register", ref)),
+			reason:  "agent_not_linked",
+		}
+	}
+
+	return entry.Record, svc.Inspect(ctx, entry.Record, entry.Client, nil, only), nil
+}
+
+// readAgentDetailByRecordURL reads the agent record whose external agent ID is
+// the URL, then the rest like the lookup by agent ID.
+func (c *cli) readAgentDetailByRecordURL(ctx context.Context, svc *coreagents.Service, ref string, only coreagents.AudienceFilter) (*management.AgentResponseContent, *coreagents.DetailExtras, error) {
+	record, err := svc.RecordByURL(ctx, ref)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if record == nil {
+		return nil, nil, validationError{
+			err:     errors.New("no agent found for this URL"),
+			details: agentsNext(c.command("agents", "register", ref)),
+			reason:  "agent_not_found",
+		}
+	}
+
+	client, lookupErr := svc.LookupApp(ctx, record.GetAgentID())
+
+	return record, svc.Inspect(ctx, record, client, lookupErr, only), nil
+}
+
+// agentsNext is the details of an error that tells the command to run next.
+func agentsNext(command string) json.RawMessage {
+	details, _ := json.Marshal(map[string]string{"next": command})
+
+	return details
+}
+
+// agentsReadScopes are the scopes the extra columns of list and show need,
+// with the one that tells the Poppy APIs from the others when it is read.
+func agentsReadScopes(scopes []string, poppy bool) []string {
+	if !poppy {
+		return scopes
+	}
+
+	return append(slices.Clone(scopes), "read:resource_servers")
 }
 
 func (c *cli) agentPickerOptions(ctx context.Context) (pickerOptions, error) {

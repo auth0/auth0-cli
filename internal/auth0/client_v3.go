@@ -45,4 +45,47 @@ type ClientAPIV3 interface {
 		request *managementv3.UpdateClientRequestContent,
 		opts ...option.RequestOption,
 	) (*managementv3.UpdateClientResponseContent, error)
+
+	// Delete a client.
+	//
+	// Required scope: `delete:clients`.
+	Delete(
+		ctx context.Context,
+		id string,
+		opts ...option.RequestOption,
+	) error
+
+	// PreviewCimdMetadata fetches and validates a Client ID Metadata Document
+	// without creating a client.
+	//
+	// Required scope: `read:clients`.
+	PreviewCimdMetadata(
+		ctx context.Context,
+		request *managementv3.PreviewCimdMetadataRequestContent,
+		opts ...option.RequestOption,
+	) (*managementv3.PreviewCimdMetadataResponseContent, error)
+
+	// RegisterCimdClient creates a client from a Client ID Metadata Document, or
+	// updates the client if one is already registered for it.
+	//
+	// Required scope: `create:clients` when a client is created, `update:clients`
+	// when an existing client is updated.
+	RegisterCimdClient(
+		ctx context.Context,
+		request *managementv3.RegisterCimdClientRequestContent,
+		opts ...option.RequestOption,
+	) (*managementv3.RegisterCimdClientResponseContent, error)
+}
+
+// ClientCredentialAPIV3 is the V3 SDK interface for the
+// /clients/{client_id}/credentials endpoint.
+type ClientCredentialAPIV3 interface {
+	// List the credentials of a client.
+	//
+	// Required scope: `read:client_credentials`.
+	List(
+		ctx context.Context,
+		clientID string,
+		opts ...option.RequestOption,
+	) ([]*managementv3.ClientCredential, error)
 }

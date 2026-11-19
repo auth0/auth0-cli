@@ -20,6 +20,8 @@ const (
 	poppyTestAgentURL = "https://muse.example/agent.json"
 	poppyTestAPI      = "https://api.shop.example"
 	poppyTestOtherAPI = "https://other.example/api"
+	poppyTestClientID = "client_muse"
+	poppyTestAgentID  = "agt_muse"
 )
 
 func testPage[C comparable, T, R any](items ...T) *core.Page[C, T, R] {
@@ -35,6 +37,14 @@ func testServerPage(items ...*managementv3.ResourceServer) *auth0.ResourceServer
 
 func testClientPage(items ...*managementv3.Client) *auth0.ClientListPage {
 	return testPage[*int, *managementv3.Client, *managementv3.ListClientsOffsetPaginatedResponseContent](items...)
+}
+
+func testGrantPage(items ...*managementv3.ClientGrantResponseContent) *auth0.ClientGrantPage {
+	return testPage[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent](items...)
+}
+
+func testAgentPage(items ...*managementv3.AgentResponseContent) *auth0.AgentListPage {
+	return testPage[*string, *managementv3.AgentResponseContent, *managementv3.ListAgentsResponseContent](items...)
 }
 
 func testPtr[T any](value T) *T { return &value }
