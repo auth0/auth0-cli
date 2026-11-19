@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/auth0/auth0-cli-plugins/main/schema/plugin.v1.schema.json",
+  "title": "Auth0 CLI plugin manifest",
+  "description": "The plugin.json manifest that every Auth0 CLI plugin ships with.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "apiVersion", "description", "owner", "platforms", "commands"],
+  "properties": {
+    "$schema": {
+      "description": "URL of the schema the manifest was written against.",
+      "type": "string"
+    },
+    "id": {
+      "description": "Plugin identifier in the form registry/name.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "description": "Plugin version as strict semver, without a leading v.",
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\\+([0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*))?$"
+    },
+    "apiVersion": {
+      "description": "Version of the plugin API contract the plugin targets.",
+      "type": "integer",
+      "const": 1
+    },
+    "description": {
+      "description": "One line summary of the plugin, up to 120 characters.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "homepage": {
+      "description": "HTTPS URL of the plugin home page.",
+      "$ref": "#/$defs/httpsURL"
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["team", "bugs"],
+      "properties": {
+        "team": {
+          "description": "Team that owns the plugin.",
+          "type": "string",
+          "minLength": 1
+        },
+        "bugs": {
+          "description": "HTTPS URL where users can report problems.",
+          "$ref": "#/$defs/httpsURL"
+        }
+      }
+    },
+    "engines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auth0-cli"],
+      "properties": {
+        "auth0-cli": {
+          "description": "Version constraint on the Auth0 CLI that can run the plugin. One or more space separated comparators that must all match, such as >=1.39.0 <2.0.0. Each comparator is one of >=, <=, >, < or = followed by MAJOR.MINOR.PATCH.",
+          "type": "string",
+          "pattern": "^(>=|<=|>|<|=)(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)( (>=|<=|>|<|=)(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*))*$"
+        }
+      }
+    },
+    "platforms": {
+      "description": "Platforms the plugin ships binaries for.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "darwin-arm64",
+          "darwin-x64",
+          "linux-x64",
+          "linux-arm64",
+          "linux-x64-musl",
+          "linux-arm64-musl",
+          "windows-x64"
+        ]
+      }
+    },
+    "commands": {
+      "description": "Commands the plugin adds to the CLI.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/command" }
+    }
+  },
+  "$defs": {
+    "httpsURL": {
+      "type": "string",
+      "pattern": "^https://[^\\s/?#]+([/?#]\\S*)?$"
+    },
+    "text": {
+      "description": "Non-empty free text that feeds the consent hash. It cannot contain control characters (U+0000 to U+001F and U+007F) or the line and paragraph separators U+2028 and U+2029, so that every JSON encoder writes it the same way.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\x00-\\x1f\\x7f\u2028\u2029]+$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flags": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/flag" }
+        },
+        "interactive": {
+          "type": "boolean",
+          "default": false
+        },
+        "timeout": {
+          "description": "Go duration string such as 30s or 10m. Must be greater than zero.",
+          "type": "string",
+          "pattern": "^([0-9]+(\\.[0-9]+)?(ns|us|ms|s|m|h))+$"
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "json": { "type": "boolean" },
+            "csv": { "type": "boolean" },
+            "agentMode": { "type": "boolean" }
+          }
+        },
+        "permissions": { "$ref": "#/$defs/permissions" }
+      }
+    },
+    "flag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "description"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "shorthand": {
+          "description": "Single letter short form of the flag, used as -x.",
+          "type": "string",
+          "pattern": "^[a-zA-Z]$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "bool", "int", "float", "stringArray"]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scopes": {
+          "description": "Management API scopes the plugin needs.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z]+:[a-z0-9_]+$"
+          }
+        },
+        "hosts": {
+          "description": "Hosts the plugin may contact.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["host", "reason"],
+            "properties": {
+              "host": {
+                "description": "Lowercase hostname without scheme, port or path. A single leading *. wildcard is allowed when followed by at least two labels, such as *.amazonaws.com.",
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^([a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*|\\*\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+)$"
+              },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "files": {
+          "description": "File system locations the plugin may access.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "access", "reason"],
+            "properties": {
+              "path": { "$ref": "#/$defs/text" },
+              "access": {
+                "type": "string",
+                "enum": ["read", "write"]
+              },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "env": {
+          "description": "Environment variables the plugin may read.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "reason"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Z_][A-Z0-9_]*$"
+              },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
