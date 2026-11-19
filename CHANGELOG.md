@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.40.0](https://github.com/auth0/auth0-cli/tree/v1.40.0) (November 19, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.39.0...v1.40.0)
+
+### Added
+- Add `auth0 agents` commands to manage agents (EA only) [#1760]
+- Add `--agent-id` and `--unlink-agent` flags to `auth0 apps` to link apps to agents (EA only) [#1760]
+- Add `auth0 skills install` command, replacing `auth0 agent skills install` [#1778]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 flows`, `auth0 flows vault connections`, `auth0 event-streams`, and `auth0 logs streams` commands [#1761]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 orgs`, `auth0 orgs members`, `auth0 orgs invitations`, and `auth0 token-exchange` commands [#1775]
+- Add `--schema`, `--data`, and `--query` flags to `auth0 protection`, `auth0 network-acl`, `auth0 rules`, and `auth0 tenant-settings update set` commands [#1777]
+
+### Fixed
+- Fix `--data` validation to check IP and CIDR formats, so IP allowlists no longer fail with "matches more than one schema" [#1777]
+
+### Deprecated
+- Deprecate `auth0 agent skills install` in favor of `auth0 skills install`; the old command still works, is hidden from help, and prints a deprecation warning [#1778]
+
 # [v1.39.0](https://github.com/auth0/auth0-cli/tree/v1.39.0) (October 28, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.38.0...v1.39.0)
@@ -885,7 +903,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.39.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.40.0...HEAD
+[#1778]: https://github.com/auth0/auth0-cli/pull/1778
+[#1777]: https://github.com/auth0/auth0-cli/pull/1777
+[#1775]: https://github.com/auth0/auth0-cli/pull/1775
+[#1761]: https://github.com/auth0/auth0-cli/pull/1761
+[#1760]: https://github.com/auth0/auth0-cli/pull/1760
 [#1724]: https://github.com/auth0/auth0-cli/pull/1724
 [#1723]: https://github.com/auth0/auth0-cli/pull/1723
 [#1720]: https://github.com/auth0/auth0-cli/pull/1720
