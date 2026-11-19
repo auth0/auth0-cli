@@ -21,7 +21,7 @@ import (
 const unknown = "unknown"
 
 // clientFields limits the clients the commands read to what they use.
-const clientFields = "client_id,name,agent_id,external_client_id,external_metadata_type,external_metadata_status,require_proof_of_possession"
+const clientFields = "client_id,name,agent_id,external_client_id,external_metadata_type,external_metadata_created_by,external_metadata_status,require_proof_of_possession"
 
 // ClientAPI is the part of the clients API the agent commands use.
 type ClientAPI interface {

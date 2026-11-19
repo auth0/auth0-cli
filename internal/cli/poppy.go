@@ -12,6 +12,7 @@ import (
 	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/spf13/cobra"
 
+	cliconfig "github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 )
@@ -83,7 +84,7 @@ var (
 	poppyAlwaysIssueRefreshTokens = Flag{
 		Name:     "Always Issue Refresh Tokens",
 		LongForm: "always-issue-refresh-tokens",
-		Help:     "Create a post-login Action that always issues refresh tokens to Poppy agents, deploy it, and bind it as the last Action of the post-login flow. The Action acts only for sign-ins to the APIs you set up, and setup writes their list into it. Setting up another API adds it to the list. Existing bindings keep their order. Setup never removes the Action. Needs the read:actions, create:actions and update:actions scopes. Asked in a terminal when the flag is not given. Without it, or with =false, the post-login flow is left alone.",
+		Help:     "Create a post-login Action that always issues refresh tokens to Poppy agents, deploy it, and bind it as the last Action of the post-login flow. The Action acts only for sign-ins to the APIs you set up, and setup writes their list into it. Another API is added to the list only when you pass this flag again, and a run without it leaves the Action as it is. The Action acts only for agent sign-ins, which needs agents as principals (Early Access) on the tenant. Existing bindings keep their order. Setup never removes the Action. Needs the read:actions, create:actions and update:actions scopes. Asked in a terminal when the flag is not given. Without it, or with =false, the post-login flow is left alone.",
 	}
 	poppySetupNoAPI = Flag{
 		Name:     "No API",
@@ -167,12 +168,28 @@ func (c *cli) checkPoppyScopes(required []string) error {
 
 	if missing := missingScopes(granted, required); len(missing) > 0 {
 		return authError{
-			err:    fmt.Errorf("missing scope %s. Run: auth0 login --scopes %s", strings.Join(missing, ", "), strings.Join(missing, ",")),
+			err:    errors.New(missingScopesMessage(tenant, missing)),
 			reason: "missing_scopes",
 		}
 	}
 
 	return nil
+}
+
+// missingScopesMessage says how to get the missing scopes. A login with client
+// credentials cannot ask for scopes with auth0 login, so it is told to add them
+// to the grant of the application.
+func missingScopesMessage(tenant cliconfig.Tenant, missing []string) string {
+	if tenant.IsAuthenticatedWithClientCredentials() {
+		it := "it"
+		if len(missing) > 1 {
+			it = "them"
+		}
+
+		return fmt.Sprintf("missing scope %s. Add %s to the application's grant on the Auth0 Management API, then log in again.", strings.Join(missing, ", "), it)
+	}
+
+	return fmt.Sprintf("missing scope %s. Run: auth0 login --scopes %s", strings.Join(missing, ", "), strings.Join(missing, ","))
 }
 
 // poppyUnavailableError reports a 403 that is not a missing scope: the tenant

@@ -239,6 +239,10 @@ func runPoppySetup(cmd *cobra.Command, cli *cli, flags setup.Flags, opts poppySe
 		// Setup has a login, so the doctor checks can read the tenant too.
 		doctorOpts := poppyDoctorTestOptions
 		doctorOpts.Tenant, doctorOpts.ConfigFile = cli.poppyDoctorTenant(), in.Out
+		if cli.tenantExplicit {
+			// The fix commands that the doctor prints must reach this tenant.
+			doctorOpts.TenantFlag = cli.tenant
+		}
 		// The website is usually not deployed yet, so only the tenant is checked.
 		doctorOpts.TenantOnly = true
 
@@ -594,7 +598,7 @@ func (c *cli) askPoppySetup(cmd *cobra.Command, screen *questionScreen, in *setu
 		return nil
 	}
 
-	if err = c.askPoppyRequiredQuestions(cmd, screen, in, domain); err != nil {
+	if err = c.askPoppyRequiredQuestions(cmd, screen, in, file, domain); err != nil {
 		return nil, 0, err
 	}
 
@@ -611,7 +615,7 @@ func (c *cli) askPoppySetup(cmd *cobra.Command, screen *questionScreen, in *setu
 		return nil, 0, err
 	}
 
-	if err = c.askPoppyRequiredQuestions(cmd, screen, in, api); err != nil {
+	if err = c.askPoppyRequiredQuestions(cmd, screen, in, file, api); err != nil {
 		return nil, 0, err
 	}
 
@@ -623,7 +627,7 @@ func (c *cli) askPoppySetup(cmd *cobra.Command, screen *questionScreen, in *setu
 		return nil, 0, err
 	}
 
-	if err = c.askPoppyRequiredQuestions(cmd, screen, in, web); err != nil {
+	if err = c.askPoppyRequiredQuestions(cmd, screen, in, file, web); err != nil {
 		return nil, 0, err
 	}
 
@@ -674,9 +678,9 @@ func askPoppyAPIs(screen *questionScreen, state *setup.State, in *setup.Inputs) 
 // domain, the APIs or the web app. Each of the API and the web app is preceded by
 // the question whether that part is wanted at all, and a part answered no is left
 // out. The API and the web app, which must exist, are picked from the ones of the
-// tenant, and the company domain starts on the one that a custom domain of the
-// tenant suggests.
-func (c *cli) askPoppyRequiredQuestions(cmd *cobra.Command, screen *questionScreen, in *setup.Inputs, questions []setup.Question) error {
+// tenant, and the company domain starts on the one that poppyCompanyDomainDefault
+// gives.
+func (c *cli) askPoppyRequiredQuestions(cmd *cobra.Command, screen *questionScreen, in *setup.Inputs, file *config.Config, questions []setup.Question) error {
 	for _, question := range questions {
 		if question.Part != "" {
 			if err := askPoppyPart(screen, true, question.Part, in); err != nil {
@@ -696,7 +700,7 @@ func (c *cli) askPoppyRequiredQuestions(cmd *cobra.Command, screen *questionScre
 		case setup.PartWeb:
 			in.App, err = c.pickAppOf(cmd.Context(), screen)
 		default:
-			question.Default = c.guessPoppyCompanyDomain(cmd.Context())
+			question.Default = c.poppyCompanyDomainDefault(cmd.Context(), file)
 			err = screen.askText(question, in)
 		}
 

@@ -178,6 +178,20 @@ func (e *UnknownScopeError) Error() string {
 	return fmt.Sprintf("scope %q is not defined on %s", e.Scope, strings.Join(e.APIs, ", "))
 }
 
+// AmbiguousScopeError reports a scope that follows a pinned scope and is
+// offered by several APIs. A list like "<api>=read,write" is split at the
+// comma, so "write" is not pinned to the API; granting it on each API that
+// offers it is almost never what was meant.
+type AmbiguousScopeError struct {
+	Scope string
+	// APIs are the identifiers of the APIs that offer the scope.
+	APIs []string
+}
+
+func (e *AmbiguousScopeError) Error() string {
+	return fmt.Sprintf("scope %q follows a scope pinned to an API, and %s all offer it. Pin it too, with --scopes <api>=%s", e.Scope, strings.Join(e.APIs, ", "), e.Scope)
+}
+
 // NoScopesError reports an API that is left with no scope to grant.
 type NoScopesError struct {
 	API API
@@ -211,8 +225,9 @@ func pinnedScope(apis []API, name string) (index int, scope string) {
 // offers it; "<api>=<scope>" grants it on that API only, which tells apart a
 // name that several APIs offer. A name is listed once per API. It returns
 // ErrScopesRequired when neither names nor all is given, an *UnknownScopeError
-// for a name that no API offers, and a *NoScopesError for an API left with no
-// scope.
+// for a name that no API offers, an *AmbiguousScopeError for a name that follows
+// a pinned one and is offered by several APIs, and a *NoScopesError for an API
+// left with no scope.
 func ChooseScopes(apis []API, names []string, all bool) ([]Grant, error) {
 	var given []string
 
@@ -241,6 +256,8 @@ func ChooseScopes(apis []API, names []string, all bool) ([]Grant, error) {
 		}
 	}
 
+	var pinnedBefore bool
+
 	for _, name := range given {
 		if i, scope := pinnedScope(apis, name); i >= 0 {
 			if !apis[i].offers(scope) {
@@ -249,20 +266,26 @@ func ChooseScopes(apis []API, names []string, all bool) ([]Grant, error) {
 
 			add(i, scope)
 
+			pinnedBefore = true
+
 			continue
 		}
 
-		var offered bool
+		var offeredBy []string
 
 		for i, api := range apis {
 			if api.offers(name) {
 				add(i, name)
 
-				offered = true
+				offeredBy = append(offeredBy, api.Identifier)
 			}
 		}
 
-		if !offered {
+		if pinnedBefore && len(offeredBy) > 1 {
+			return nil, &AmbiguousScopeError{Scope: name, APIs: offeredBy}
+		}
+
+		if len(offeredBy) == 0 {
 			identifiers := make([]string, len(apis))
 			for i, api := range apis {
 				identifiers[i] = api.Identifier

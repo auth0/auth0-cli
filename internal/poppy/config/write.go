@@ -73,6 +73,42 @@ func Write(path string, c *Config) error {
 	return nil
 }
 
+// CheckWritable tells whether Write could replace path, without writing it: the
+// directory of the file must exist, and the file, if there is one, must be a
+// regular file. It creates a temporary file next to the target, as Write does,
+// and removes it again. A symlink is followed, as Write does. Use it to find out
+// before other changes are made.
+func CheckWritable(path string) error {
+	switch resolved, err := filepath.EvalSymlinks(path); {
+	case err == nil:
+		path = resolved
+	case !errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("failed to inspect %s: %w", path, err)
+	}
+
+	dir := filepath.Dir(path)
+
+	switch info, err := os.Stat(dir); {
+	case err != nil:
+		return fmt.Errorf("cannot write %s: %w", path, err)
+	case !info.IsDir():
+		return fmt.Errorf("cannot write %s: %s is not a directory", path, dir)
+	}
+
+	if info, err := os.Stat(path); err == nil && !info.Mode().IsRegular() {
+		return fmt.Errorf("cannot write %s: it is not a regular file", path)
+	}
+
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("cannot write %s: %w", path, err)
+	}
+
+	_ = tmp.Close()
+
+	return os.Remove(tmp.Name())
+}
+
 // writeTemp writes data to a new temporary file next to path, with the given
 // mode, and returns its name. The file is removed again on failure.
 func writeTemp(path string, data []byte, mode fs.FileMode) (string, error) {

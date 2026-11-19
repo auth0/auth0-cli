@@ -180,23 +180,129 @@ func Origin(s string) string {
 	return "https://" + host
 }
 
-// EntriesFor returns the indexes of the apis entries that belong to an API of the
-// tenant: those whose URL is at the origin of the API identifier. The file holds
-// no identifier, so the origin is the link between the two. An identifier that
-// is not an https URL has no entry.
+// EntriesFor returns the indexes of the apis entries that belong to one API of
+// the tenant. It is AssignEntries for a single identifier, so see there how an
+// entry is linked to an API.
 func (c *Config) EntriesFor(identifier string) []int {
-	origin := Origin(identifier)
-	if origin == "" {
-		return nil
-	}
+	return c.AssignEntries([]string{identifier})[identifier]
+}
 
-	var out []int
+// AssignEntries shares the apis entries out to the APIs of the tenant, and returns
+// the indexes of the entries of each identifier in file order. The file holds no
+// identifier, so the origin is the link between the two: only an entry at the
+// origin of an identifier can be its entry. An identifier that is not an https URL
+// has none.
+//
+// APIs on one host tell themselves apart by path, such as
+// https://api.shop.example/orders and https://api.shop.example/users. An entry goes
+// to the API whose path it is at or under, and when several are, to the one with
+// the longest path, so /v1/orders/openapi.json is for /v1/orders and not for /v1.
+//
+// An entry that no API path matches, such as /openapi.json, is shared by the APIs
+// at its origin that have no entry by path: an API with no path, an API with no
+// entry under its path, or all of them when none has. Several entries may then
+// go to one API, which covers one API that is published in several forms, and
+// one entry may go to several, which the caller reports as ambiguous. An API that
+// has an entry by path never takes one of these.
+func (c *Config) AssignEntries(identifiers []string) map[string][]int {
+	assigned := make(map[string][]int, len(identifiers))
 
-	for i, api := range c.APIs {
-		if Origin(api.URL) == origin {
-			out = append(out, i)
+	byOrigin := map[string][]string{}
+
+	for _, id := range identifiers {
+		if origin := Origin(id); origin != "" {
+			if _, seen := assigned[id]; !seen {
+				assigned[id] = nil
+				byOrigin[origin] = append(byOrigin[origin], id)
+			}
 		}
 	}
 
-	return out
+	// Pass one: the entries that an API path matches.
+	var unowned []int
+
+	for i, api := range c.APIs {
+		candidates := byOrigin[Origin(api.URL)]
+		if len(candidates) == 0 {
+			continue
+		}
+
+		longest, owners := 0, []string(nil)
+
+		for _, id := range candidates {
+			if !PathUnder(api.URL, id) {
+				continue
+			}
+
+			switch n := len(strings.TrimRight(pathOf(id), "/")); {
+			case n > longest:
+				longest, owners = n, []string{id}
+			case n == longest:
+				owners = append(owners, id)
+			}
+		}
+
+		if len(owners) == 0 {
+			unowned = append(unowned, i)
+			continue
+		}
+
+		for _, id := range owners {
+			assigned[id] = append(assigned[id], i)
+		}
+	}
+
+	// Pass two: the other entries go to the APIs at their origin with none so far.
+	free := map[string][]string{}
+
+	for origin, ids := range byOrigin {
+		for _, id := range ids {
+			if len(assigned[id]) == 0 {
+				free[origin] = append(free[origin], id)
+			}
+		}
+	}
+
+	for _, i := range unowned {
+		for _, id := range free[Origin(c.APIs[i].URL)] {
+			assigned[id] = append(assigned[id], i)
+		}
+	}
+
+	return assigned
+}
+
+// pathOf returns the path of a URL, empty when it does not parse.
+func pathOf(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+
+	return u.Path
+}
+
+// PathUnder tells whether the path of rawURL is the path of the identifier or is
+// under it, compared by whole segments: /orders/mcp is under /orders and
+// /orders-v2 is not. It is false when the identifier has no path, or when either
+// is not a URL.
+func PathUnder(rawURL, identifier string) bool {
+	base, err := url.Parse(identifier)
+	if err != nil {
+		return false
+	}
+
+	target, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+
+	basePath := strings.TrimRight(base.Path, "/")
+	if basePath == "" {
+		return false
+	}
+
+	targetPath := strings.TrimRight(target.Path, "/")
+
+	return targetPath == basePath || strings.HasPrefix(targetPath, basePath+"/")
 }

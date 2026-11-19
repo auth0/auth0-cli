@@ -301,3 +301,110 @@ func TestEntriesForNormalizesTheOrigin(t *testing.T) {
 	assert.Equal(t, []int{0, 1}, cfg.EntriesFor("https://api.shop.example"))
 	assert.Equal(t, []int{0, 1}, cfg.EntriesFor("https://Api.shop.example:443/v1"))
 }
+
+func TestEntriesForTellsAPIsOnOneHostApartByPath(t *testing.T) {
+	cfg := &Config{APIs: []API{
+		{URL: "https://api.shop.example/orders/openapi.json"},
+		{URL: "https://api.shop.example/users"},
+		{URL: "https://api.shop.example/orders-v2/openapi.json"},
+		{URL: "https://api.shop.example/orders/mcp"},
+	}}
+
+	tests := []struct {
+		name       string
+		identifier string
+		want       []int
+	}{
+		{name: "the entries under the path", identifier: "https://api.shop.example/orders", want: []int{0, 3}},
+		{name: "a trailing slash is the same path", identifier: "https://api.shop.example/orders/", want: []int{0, 3}},
+		{name: "the entry at the path itself", identifier: "https://api.shop.example/users", want: []int{1}},
+		{name: "no entry under the path gives the origin", identifier: "https://api.shop.example/billing", want: []int{0, 1, 2, 3}},
+		{name: "no path gives the origin", identifier: "https://api.shop.example", want: []int{0, 1, 2, 3}},
+		{name: "not an https URL", identifier: "urn:shop:api", want: nil},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, cfg.EntriesFor(test.identifier))
+		})
+	}
+}
+
+func TestAssignEntriesSharesEntriesAcrossAPIs(t *testing.T) {
+	const host = "https://api.shop.example"
+
+	entries := func(paths ...string) *Config {
+		cfg := &Config{}
+		for _, path := range paths {
+			cfg.APIs = append(cfg.APIs, API{URL: host + path})
+		}
+
+		return cfg
+	}
+
+	tests := []struct {
+		name        string
+		cfg         *Config
+		identifiers []string
+		want        map[string][]int
+	}{
+		{
+			name:        "a root API and an API with a path each have their entries",
+			cfg:         entries("/orders/openapi.json", "/openapi.json"),
+			identifiers: []string{host, host + "/orders"},
+			want:        map[string][]int{host: {1}, host + "/orders": {0}},
+		},
+		{
+			name:        "the API with the longest matching path takes the entry",
+			cfg:         entries("/v1/openapi.json", "/v1/orders/openapi.json"),
+			identifiers: []string{host + "/v1", host + "/v1/orders"},
+			want:        map[string][]int{host + "/v1": {0}, host + "/v1/orders": {1}},
+		},
+		{
+			name:        "the order of the identifiers does not matter",
+			cfg:         entries("/v1/openapi.json", "/v1/orders/openapi.json"),
+			identifiers: []string{host + "/v1/orders", host + "/v1"},
+			want:        map[string][]int{host + "/v1": {0}, host + "/v1/orders": {1}},
+		},
+		{
+			name:        "an API with no entry by path takes only the entries no API matches",
+			cfg:         entries("/b/openapi.json", "/x/openapi.json"),
+			identifiers: []string{host + "/a", host + "/b"},
+			want:        map[string][]int{host + "/a": {1}, host + "/b": {0}},
+		},
+		{
+			name:        "an API with an entry by path takes none of the others",
+			cfg:         entries("/a/openapi.json", "/x/mcp"),
+			identifiers: []string{host + "/a"},
+			want:        map[string][]int{host + "/a": {0}},
+		},
+		{
+			name:        "entries that no API matches are shared by the APIs with none",
+			cfg:         entries("/openapi.json"),
+			identifiers: []string{host + "/v1", host + "/v2"},
+			want:        map[string][]int{host + "/v1": {0}, host + "/v2": {0}},
+		},
+		{
+			name:        "one API in several forms takes them all",
+			cfg:         entries("/openapi.json", "/mcp"),
+			identifiers: []string{host},
+			want:        map[string][]int{host: {0, 1}},
+		},
+		{
+			name:        "an API at another origin or that is not a URL has none",
+			cfg:         entries("/openapi.json"),
+			identifiers: []string{"https://other.example", "urn:shop:api"},
+			want:        map[string][]int{"https://other.example": nil, "urn:shop:api": nil},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.cfg.AssignEntries(test.identifiers)
+
+			for identifier, want := range test.want {
+				assert.Equal(t, want, got[identifier], identifier)
+			}
+		})
+	}
+}

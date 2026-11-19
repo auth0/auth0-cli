@@ -129,6 +129,57 @@ func TestLinkAndDescribe(t *testing.T) {
 	}
 }
 
+// createdBy returns the app, registered by who.
+func createdBy(app *managementv3.Client, who managementv3.ClientExternalMetadataCreatedByEnum) *managementv3.Client {
+	registered := *app
+	registered.ExternalMetadataCreatedBy = &who
+
+	return &registered
+}
+
+func TestIsAgentAppByWhoRegistered(t *testing.T) {
+	app := agentApp(museApp, museURL, museAgent)
+	record := agentRecord(museAgent, "Meta Muse", museURL)
+
+	tests := []struct {
+		name  string
+		entry Entry
+		want  bool
+	}{
+		{name: "created by an admin, no record", entry: Entry{Client: createdBy(app, managementv3.ClientExternalMetadataCreatedByEnumAdmin)}, want: true},
+		{name: "created by nobody known, no record", entry: Entry{Client: app}, want: true},
+		{name: "created by the client, no record", entry: Entry{Client: createdBy(app, managementv3.ClientExternalMetadataCreatedByEnumClient)}, want: false},
+		{name: "created by the client, with a record", entry: Entry{Client: createdBy(app, managementv3.ClientExternalMetadataCreatedByEnumClient), Record: record}, want: true},
+		{name: "not a CIMD client", entry: Entry{Client: &managementv3.Client{ClientID: ptr("client_plain")}, Record: record}, want: false},
+		{name: "no client", entry: Entry{Record: record}, want: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, test.entry.IsAgentApp())
+		})
+	}
+}
+
+func TestLinkSelfRegisteredApps(t *testing.T) {
+	selfRegistered := createdBy(agentApp("client_mcp", "https://mcp.example/client.json", "agt_mcp"), managementv3.ClientExternalMetadataCreatedByEnumClient)
+	byAdmin := createdBy(agentApp("client_admin", "https://admin.example/agent.json", "agt_admin"), managementv3.ClientExternalMetadataCreatedByEnumAdmin)
+	selfRegisteredWithRecord := createdBy(agentApp(museApp, museURL, museAgent), managementv3.ClientExternalMetadataCreatedByEnumClient)
+	record := agentRecord(museAgent, "Meta Muse", museURL)
+
+	f := newFixture(t)
+	f.clients.EXPECT().List(gomock.Any(), gomock.Any()).Return(clientPage(selfRegistered, byAdmin, selfRegisteredWithRecord), nil)
+
+	entries, known := f.svc.Link(t.Context(), []*managementv3.AgentResponseContent{record})
+
+	require.True(t, known)
+	require.Len(t, entries, 2)
+	assert.Equal(t, museApp, entries[0].Client.GetClientID())
+	assert.Equal(t, record, entries[0].Record)
+	assert.Equal(t, "client_admin", entries[1].Client.GetClientID())
+	assert.Nil(t, entries[1].Record)
+}
+
 func TestFindUsesOnlyTheClientAskedFor(t *testing.T) {
 	muse := agentApp(museApp, museURL, museAgent)
 	atlas := agentApp("client_atlas", atlasURL, "agt_atlas")

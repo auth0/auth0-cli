@@ -19,8 +19,17 @@ func TestPlanRemoval(t *testing.T) {
 	otherGrant := grantOf("cgr_other", otherAPI, "refund")
 	plain := &managementv3.Client{ClientID: ptr("client_plain"), Name: ptr("Plain"), AgentID: ptr("agt_plain")}
 
+	shopUserGrant := userGrantOf("cgr_shop_user", shopAPI, "orders:read")
+	otherUserGrant := userGrantOf("cgr_other_user", otherAPI, "refund")
+	shopM2MGrant := clientGrantOf("cgr_shop_m2m", shopAPI, "orders:read")
+	otherM2MGrant := clientGrantOf("cgr_other_m2m", otherAPI, "refund")
+
 	shop := Grant{ID: "cgr_shop", Audience: shopAPI, Scopes: []string{"orders:read"}}
 	other := Grant{ID: "cgr_other", Audience: otherAPI, Scopes: []string{"refund"}}
+	shopUser := Grant{ID: "cgr_shop_user", Audience: shopAPI, Scopes: []string{"orders:read"}, SubjectType: "user"}
+	otherUser := Grant{ID: "cgr_other_user", Audience: otherAPI, Scopes: []string{"refund"}, SubjectType: "user"}
+	shopM2M := Grant{ID: "cgr_shop_m2m", Audience: shopAPI, Scopes: []string{"orders:read"}, SubjectType: "client"}
+	otherM2M := Grant{ID: "cgr_other_m2m", Audience: otherAPI, Scopes: []string{"refund"}, SubjectType: "client"}
 
 	tests := []struct {
 		name      string
@@ -83,18 +92,48 @@ func TestPlanRemoval(t *testing.T) {
 			ref:      museURL,
 			app:      agentApp(museApp, museURL, museAgent),
 			narrowed: true,
-			grants:   []*managementv3.ClientGrantResponseContent{shopGrant, otherGrant},
+			grants:   []*managementv3.ClientGrantResponseContent{shopUserGrant, otherUserGrant},
 			want: &Removal{
 				URL: museURL, Name: "Meta Muse", ClientID: museApp, AgentID: museAgent,
-				Grants: []Grant{shop}, OtherGrants: []Grant{other},
+				Grants: []Grant{shopUser}, OtherGrants: []Grant{otherUser},
 			},
+		},
+		{
+			name:     "narrowed, a client grant on those APIs is kept",
+			ref:      museURL,
+			app:      agentApp(museApp, museURL, museAgent),
+			narrowed: true,
+			grants:   []*managementv3.ClientGrantResponseContent{shopUserGrant, shopM2MGrant},
+			want: &Removal{
+				URL: museURL, Name: "Meta Muse", ClientID: museApp, AgentID: museAgent,
+				Grants: []Grant{shopUser}, OtherGrants: []Grant{shopM2M},
+			},
+		},
+		{
+			name:     "narrowed, a client grant on another API is kept",
+			ref:      museURL,
+			app:      agentApp(museApp, museURL, museAgent),
+			narrowed: true,
+			grants:   []*managementv3.ClientGrantResponseContent{shopUserGrant, otherM2MGrant},
+			want: &Removal{
+				URL: museURL, Name: "Meta Muse", ClientID: museApp, AgentID: museAgent,
+				Grants: []Grant{shopUser}, OtherGrants: []Grant{otherM2M},
+			},
+		},
+		{
+			name:     "narrowed, only client grants on those APIs",
+			ref:      museURL,
+			app:      agentApp(museApp, museURL, museAgent),
+			narrowed: true,
+			grants:   []*managementv3.ClientGrantResponseContent{shopM2MGrant},
+			notAgent: &NotAnAgentError{Ref: museURL, NoGrants: true},
 		},
 		{
 			name:     "narrowed, no grant on those APIs",
 			ref:      museURL,
 			app:      agentApp(museApp, museURL, museAgent),
 			narrowed: true,
-			grants:   []*managementv3.ClientGrantResponseContent{otherGrant},
+			grants:   []*managementv3.ClientGrantResponseContent{otherUserGrant},
 			notAgent: &NotAnAgentError{Ref: museURL, NoGrants: true},
 		},
 		{
@@ -232,6 +271,19 @@ func TestPlanRemoval(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPlanRemovalOfAnAppThatRegisteredItself(t *testing.T) {
+	f := newFixture(t)
+	app := createdBy(agentApp(museApp, museURL, ""), managementv3.ClientExternalMetadataCreatedByEnumClient)
+	expectFind(t, f, museURL, app)
+
+	got, err := f.svc.PlanRemoval(t.Context(), museURL, nil)
+
+	var notAgent *NotAnAgentError
+	require.ErrorAs(t, err, &notAgent)
+	assert.Equal(t, &NotAnAgentError{Ref: museURL}, notAgent)
+	assert.Nil(t, got)
 }
 
 func TestNotAnAgentError(t *testing.T) {
@@ -575,7 +627,7 @@ func TestCandidates(t *testing.T) {
 		f.clients.EXPECT().List(gomock.Any(), gomock.Any()).Return(clientPage(muse, shopApp), nil)
 		f.agents.EXPECT().List(gomock.Any(), gomock.Any()).Return(agentPage(), nil)
 		f.grants.EXPECT().List(gomock.Any(), gomock.Any()).Return(grantPage(
-			grantsOfApp(museApp, "cgr_a", shopAPI),
+			grantFor(museApp, userGrantOf("cgr_a", shopAPI, "x")),
 			grantsOfApp(museApp, "cgr_b", otherAPI),
 		), nil)
 
@@ -585,6 +637,40 @@ func TestCandidates(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, got, 2)
+	})
+
+	t.Run("narrowed, leaves out the agents whose only grant on those APIs is a client grant", func(t *testing.T) {
+		f := newFixture(t)
+		f.clients.EXPECT().List(gomock.Any(), gomock.Any()).Return(clientPage(muse, shopApp), nil)
+		f.agents.EXPECT().List(gomock.Any(), gomock.Any()).Return(agentPage(), nil)
+		f.grants.EXPECT().List(gomock.Any(), gomock.Any()).Return(grantPage(
+			grantFor(museApp, clientGrantOf("cgr_a", shopAPI, "x")),
+			grantFor("client_shop", userGrantOf("cgr_b", shopAPI, "x")),
+		), nil)
+
+		only := func(context.Context) (map[string]bool, error) { return map[string]bool{shopAPI: true}, nil }
+
+		got, err := f.svc.Candidates(t.Context(), only)
+
+		require.NoError(t, err)
+		require.Len(t, got, 1)
+		assert.Equal(t, "client_shop", got[0].Client.GetClientID())
+	})
+
+	t.Run("leaves out the apps that registered themselves, unless they have a record", func(t *testing.T) {
+		mcp := createdBy(agentApp("client_mcp", "https://mcp.example/client.json", "agt_mcp"), managementv3.ClientExternalMetadataCreatedByEnumClient)
+		recorded := createdBy(shopApp, managementv3.ClientExternalMetadataCreatedByEnumClient)
+
+		f := newFixture(t)
+		f.clients.EXPECT().List(gomock.Any(), gomock.Any()).Return(clientPage(muse, mcp, recorded), nil)
+		f.agents.EXPECT().List(gomock.Any(), gomock.Any()).Return(agentPage(agentRecord("agt_shop", "Shop", "https://shop.example/agent.json")), nil)
+
+		got, err := f.svc.Candidates(t.Context(), nil)
+
+		require.NoError(t, err)
+		require.Len(t, got, 2)
+		assert.Equal(t, museApp, got[0].Client.GetClientID())
+		assert.Equal(t, "client_shop", got[1].Client.GetClientID())
 	})
 
 	t.Run("the clients cannot be listed", func(t *testing.T) {

@@ -37,7 +37,9 @@ type API struct {
 	Identifier string
 	// Name is the name of the API in the tenant. The config file uses it as the
 	// description of a new apis entry.
-	Name               string
+	Name string
+	// IsSystem tells whether the API belongs to Auth0, such as the Management API.
+	IsSystem           bool
 	Scopes             []Scope
 	AllowOfflineAccess bool
 	AgentSubjectClaims string
@@ -91,11 +93,13 @@ func (s *State) usesCanonicalDomain() bool {
 }
 
 // fileEntries returns the indexes of the apis entries of the existing config
-// file that belong to an API, which are those at the origin of its identifier.
-func (s *State) fileEntries(identifier string) []int {
+// file for each of the identifiers: those of the API whose path they are at or
+// under, the longest path first, and else those that no API path matches. See
+// config.Config.AssignEntries.
+func (s *State) fileEntries(identifiers []string) map[string][]int {
 	if s.File == nil {
 		return nil
 	}
 
-	return s.File.EntriesFor(identifier)
+	return s.File.AssignEntries(identifiers)
 }

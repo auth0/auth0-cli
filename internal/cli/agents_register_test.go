@@ -120,6 +120,40 @@ func testOtherServer() *managementv3.ResourceServer {
 	}
 }
 
+// poppyTestCustomerV2API looks like the Management API of a tenant, and is not.
+const poppyTestCustomerV2API = "https://api.shop.example/api/v2"
+
+// testManagementServer is the Management API of the tenant, a system API.
+func testManagementServer() *managementv3.ResourceServer {
+	return &managementv3.ResourceServer{
+		ID:         testPtr("rs_mgmt"),
+		Identifier: testPtr(poppyTestManagementAPI),
+		Name:       testPtr("Auth0 Management API"),
+		IsSystem:   testPtr(true),
+		Scopes:     []*managementv3.ResourceServerScope{{Value: "read:clients"}, {Value: "delete:clients"}},
+	}
+}
+
+// testCustomerV2Server is an API of the customer whose identifier looks like the
+// one of the Management API.
+func testCustomerV2Server() *managementv3.ResourceServer {
+	return &managementv3.ResourceServer{
+		ID:         testPtr("rs_v2"),
+		Identifier: testPtr(poppyTestCustomerV2API),
+		Name:       testPtr("Shop API v2"),
+		IsSystem:   testPtr(false),
+		Scopes:     []*managementv3.ResourceServerScope{{Value: "orders:read"}},
+	}
+}
+
+// testOtherServerWithShopScopes is the other API, offering the scopes of the shop API too.
+func testOtherServerWithShopScopes() *managementv3.ResourceServer {
+	server := testOtherServer()
+	server.Scopes = append(server.Scopes, &managementv3.ResourceServerScope{Value: "orders:read"}, &managementv3.ResourceServerScope{Value: "checkout"})
+
+	return server
+}
+
 func testAgentApp() *managementv3.Client {
 	return &managementv3.Client{
 		ClientID:               testPtr(poppyTestClientID),
@@ -391,6 +425,28 @@ func TestAgentsRegisterAPIs(t *testing.T) {
 		assert.Empty(t, *created)
 	})
 
+	t.Run("the Management API cannot be granted, by identifier or by ID", func(t *testing.T) {
+		for _, ref := range []string{poppyTestManagementAPI, "rs_mgmt"} {
+			h := newAgentsHarness(t)
+			created := h.allowRegistrationOn(testManagementServer(), testShopServer())
+
+			err := h.root("register", poppyTestAgentURL, "--api", ref, "--all-scopes", "--config", out(t))
+
+			assert.Equal(t, "management_api_not_allowed", errorReason(err), ref)
+			assert.ErrorContains(t, err, "the Auth0 Management API cannot be granted to an agent", ref)
+			assert.Empty(t, *created, ref)
+		}
+	})
+
+	t.Run("an API of the customer at the path of the Management API can be granted", func(t *testing.T) {
+		h := newAgentsHarness(t)
+		created := h.allowRegistrationOn(testManagementServer(), testCustomerV2Server())
+
+		require.NoError(t, h.root("register", poppyTestAgentURL, "--api", poppyTestCustomerV2API, "--all-scopes", "--config", out(t)))
+
+		assert.Equal(t, []string{poppyTestCustomerV2API + " orders:read"}, *created)
+	})
+
 	t.Run("--poppy grants every Poppy API and no other", func(t *testing.T) {
 		h := newAgentsHarness(t)
 		created := h.allowRegistrationOn(testOtherServer(), testShopServer())
@@ -472,7 +528,7 @@ func TestAgentsRegisterAPIs(t *testing.T) {
 	})
 
 	t.Run("the Management API is not offered in the details", func(t *testing.T) {
-		management := &managementv3.ResourceServer{ID: testPtr("rs_mgmt"), Identifier: testPtr(poppyTestManagementAPI), Name: testPtr("Auth0 Management API")}
+		management := testManagementServer()
 
 		h := newAgentsHarness(t)
 		h.clients.EXPECT().PreviewCimdMetadata(gomock.Any(), gomock.Any()).Return(validPreview(), nil).AnyTimes()
@@ -495,6 +551,25 @@ func TestAgentsRegisterAPIs(t *testing.T) {
 		}
 
 		assert.Equal(t, []string{poppyTestAPI, poppyTestOtherAPI}, audiences)
+	})
+
+	t.Run("an API of the customer at the path of the Management API is offered in the details", func(t *testing.T) {
+		h := newAgentsHarness(t)
+		h.clients.EXPECT().PreviewCimdMetadata(gomock.Any(), gomock.Any()).Return(validPreview(), nil).AnyTimes()
+		h.servers.EXPECT().List(gomock.Any(), gomock.Any()).Return(testServerPage(testManagementServer(), testCustomerV2Server()), nil).Times(1)
+
+		run := h.runPromptMode(t, modePiped, []string{"register", poppyTestAgentURL, "--all-scopes", "--config", out(t)})
+
+		assert.Equal(t, "apis_required", errorReason(run.err))
+
+		var details struct {
+			APIs []struct {
+				Audience string `json:"audience"`
+			} `json:"apis"`
+		}
+		require.NoError(t, json.Unmarshal(errorDetails(run.err), &details))
+		require.Len(t, details.APIs, 1)
+		assert.Equal(t, poppyTestCustomerV2API, details.APIs[0].Audience)
 	})
 
 	t.Run("without the scope to list the APIs, apis_required has no details", func(t *testing.T) {
@@ -559,7 +634,7 @@ func TestAgentsRegisterAsksForTheAPIs(t *testing.T) {
 	})
 
 	t.Run("the Management API is not offered in the picker", func(t *testing.T) {
-		management := &managementv3.ResourceServer{ID: testPtr("rs_mgmt"), Identifier: testPtr(poppyTestManagementAPI), Name: testPtr("Auth0 Management API")}
+		management := testManagementServer()
 
 		h := newAgentsHarness(t)
 		h.allowRegistrationOn(management, testShopServer())
@@ -633,6 +708,10 @@ func TestAgentsRegisterAsksForTheAPIs(t *testing.T) {
 func TestAgentsUnregister(t *testing.T) {
 	shop := testGrant("cgr_shop", poppyTestAPI, "orders:read")
 	other := testGrant("cgr_other", poppyTestOtherAPI, "refund")
+	shopUser := testUserGrant(poppyTestClientID, "cgr_shop", poppyTestAPI, "orders:read")
+	otherUser := testUserGrant(poppyTestClientID, "cgr_other", poppyTestOtherAPI, "refund")
+	shopM2M := testGrant("cgr_shop_m2m", poppyTestAPI, "orders:read")
+	shopM2M.SubjectType = testPtr(managementv3.ClientGrantSubjectTypeEnumClient)
 
 	t.Run("not an agent app", func(t *testing.T) {
 		h := newAgentsHarness(t)
@@ -709,7 +788,7 @@ func TestAgentsUnregister(t *testing.T) {
 	t.Run("the output flags print the result object", func(t *testing.T) {
 		for _, flag := range []string{"--json", "--json-compact"} {
 			h := newAgentsHarness(t)
-			h.expectPoppyRemovalLookup(shop, other)
+			h.expectPoppyRemovalLookup(shopUser, otherUser)
 
 			err := h.root("unregister", poppyTestAgentURL, "--poppy", "--dry-run", flag)
 
@@ -768,7 +847,7 @@ func TestAgentsUnregister(t *testing.T) {
 
 	t.Run("limited to Poppy APIs, the other grants stay and so do the record and the app", func(t *testing.T) {
 		h := newAgentsHarness(t)
-		h.expectPoppyRemovalLookup(shop, other)
+		h.expectPoppyRemovalLookup(shopUser, otherUser)
 		h.grants.EXPECT().Delete(gomock.Any(), "cgr_shop").Return(nil)
 
 		h.json = true
@@ -789,9 +868,29 @@ func TestAgentsUnregister(t *testing.T) {
 		assert.Len(t, got["remaining_grants"], 1)
 	})
 
+	t.Run("limited to Poppy APIs, a client grant on a Poppy API stays and so do the record and the app", func(t *testing.T) {
+		h := newAgentsHarness(t)
+		h.expectPoppyRemovalLookup(shopUser, shopM2M)
+		h.grants.EXPECT().Delete(gomock.Any(), "cgr_shop").Return(nil)
+
+		h.json = true
+		h.renderer.Format = display.OutputFormatJSON
+
+		require.NoError(t, h.root("unregister", poppyTestAgentURL, "--poppy", "--force"))
+
+		var got map[string]any
+		require.NoError(t, json.Unmarshal(h.out.Bytes(), &got))
+		assert.Equal(t, []any{map[string]any{"kind": "client_grant", "id": "cgr_shop", "audience": poppyTestAPI}}, got["removed"])
+		assert.Equal(t, []any{
+			map[string]any{"kind": "agent_record", "id": poppyTestAgentID},
+			map[string]any{"kind": "agent_app", "id": poppyTestClientID},
+		}, got["kept"])
+		assert.Len(t, got["remaining_grants"], 1)
+	})
+
 	t.Run("limited to Poppy APIs with no other grant, the record and the app go too", func(t *testing.T) {
 		h := newAgentsHarness(t)
-		h.expectPoppyRemovalLookup(shop)
+		h.expectPoppyRemovalLookup(shopUser)
 		h.grants.EXPECT().Delete(gomock.Any(), "cgr_shop").Return(nil)
 		h.agents.EXPECT().Delete(gomock.Any(), poppyTestAgentID).Return(nil)
 		h.clients.EXPECT().Delete(gomock.Any(), poppyTestClientID).Return(nil)
@@ -803,7 +902,7 @@ func TestAgentsUnregister(t *testing.T) {
 
 	t.Run("limited to Poppy APIs, a dry run says what would be removed and kept", func(t *testing.T) {
 		h := newAgentsHarness(t)
-		h.expectPoppyRemovalLookup(shop, other)
+		h.expectPoppyRemovalLookup(shopUser, otherUser)
 
 		require.NoError(t, h.root("unregister", poppyTestAgentURL, "--poppy", "--dry-run"))
 
@@ -822,7 +921,7 @@ func TestAgentsUnregister(t *testing.T) {
 
 	t.Run("a removal that keeps the app says what was kept", func(t *testing.T) {
 		h := newAgentsHarness(t)
-		h.expectPoppyRemovalLookup(shop, other)
+		h.expectPoppyRemovalLookup(shopUser, otherUser)
 		h.grants.EXPECT().Delete(gomock.Any(), "cgr_shop").Return(nil)
 
 		require.NoError(t, h.root("unregister", poppyTestAgentURL, "--poppy", "--force"))
@@ -1351,6 +1450,27 @@ func TestAgentsRegisterFailures(t *testing.T) {
 		require.NoError(t, h.root(append(apiShopOther, "--scopes", poppyTestAPI+"=checkout,"+poppyTestOtherAPI+"=refund")...))
 
 		assert.ElementsMatch(t, []string{poppyTestAPI + " checkout", poppyTestOtherAPI + " refund"}, *created)
+	})
+
+	t.Run("a scope listed after a pinned one that several APIs offer must be pinned too", func(t *testing.T) {
+		h := newAgentsHarness(t)
+		created := h.allowRegistrationOn(testShopServer(), testOtherServerWithShopScopes())
+
+		err := h.root(append(apiShopOther, "--scopes", poppyTestAPI+"=orders:read,checkout")...)
+
+		assert.Equal(t, "ambiguous_scope", errorReason(err))
+		assert.ErrorContains(t, err, `scope "checkout"`)
+		assert.ErrorContains(t, err, "--scopes <api>=checkout")
+		assert.Empty(t, *created)
+	})
+
+	t.Run("each scope pinned, several APIs offer them", func(t *testing.T) {
+		h := newAgentsHarness(t)
+		created := h.allowRegistrationOn(testShopServer(), testOtherServerWithShopScopes())
+
+		require.NoError(t, h.root(append(apiShopOther, "--scopes", poppyTestAPI+"=orders:read,"+poppyTestAPI+"=checkout,"+poppyTestOtherAPI+"=refund")...))
+
+		assert.ElementsMatch(t, []string{poppyTestAPI + " orders:read,checkout", poppyTestOtherAPI + " refund"}, *created)
 	})
 
 	t.Run("a scope no chosen API offers is unknown, and names the APIs", func(t *testing.T) {

@@ -681,6 +681,24 @@ func TestTenantChecksMutations(t *testing.T) {
 			want: []want{{id: "D14", level: Warn, contains: "could be any of these APIs"}},
 		},
 		{
+			name: "two Poppy APIs on one host have an entry each",
+			mutate: func(f *fakeTenant) {
+				orders, users := f.poppyAPIs[0], f.poppyAPIs[0]
+				orders.Identifier = shopAPI + "/orders"
+				users.ID, users.Identifier = "rs_users", shopAPI+"/users"
+				f.poppyAPIs = []setup.API{orders, users}
+			},
+			file: func(t *testing.T) string {
+				return goldenConfigFile(t, func(c *config.Config) {
+					c.APIs = []config.API{
+						{Type: "openapi", URL: shopAPI + "/orders/openapi.json", Description: "Orders"},
+						{Type: "openapi", URL: shopAPI + "/users/openapi.json", Description: "Users"},
+					}
+				})
+			},
+			want: []want{{id: "D14", level: Pass, contains: "matches the tenant"}},
+		},
+		{
 			name:   "no Poppy API of the tenant is at the origin of an entry",
 			mutate: func(f *fakeTenant) { f.poppyAPIs = nil },
 			want:   []want{{id: "D14", level: Warn, contains: "No API of the tenant is known"}},
@@ -1175,7 +1193,6 @@ func TestTenantChecksBelongToTheCheckedDomain(t *testing.T) {
 				f.hostsErr = errBoom
 				f.settings.CompanyDomains = nil
 			},
-			wantRun: true,
 		},
 		{
 			name:   "the settings cannot be read",
@@ -1222,6 +1239,27 @@ func TestTenantChecksBelongToTheCheckedDomain(t *testing.T) {
 			}
 			assert.Zero(t, Report{Results: results}.ExitCode())
 		})
+	}
+}
+
+func TestHostileIssuerWithUnreadableHostsPrintsNoSetupFix(t *testing.T) {
+	f := healthyTenant()
+	f.hostsErr = errBoom
+	f.settings.CompanyDomains = nil
+
+	// The mock has no expectation, so any tenant check that reaches it fails the test.
+	policies := mock.NewMockGuardianPolicyAPIV3(gomock.NewController(t))
+
+	r := &runner{domain: "evil.example", origin: "https://evil.example"}
+	results, ran := r.checkTenant(t.Context(), Options{Tenant: &Tenant{Domain: "tenant.us.auth0.com", State: f, Agents: f, Policies: policies}}, "https://login.victim.com/", nil, nil)
+
+	assert.False(t, ran)
+	require.NotEmpty(t, results)
+
+	for _, res := range results {
+		assert.Equal(t, SkipDifferentTenant, res.SkipReason)
+		assert.NotContains(t, res.FixCommand, "poppy setup")
+		assert.NotContains(t, res.FixHint, "poppy setup")
 	}
 }
 

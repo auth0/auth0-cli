@@ -32,7 +32,20 @@ const (
 	SkipNoConfigFile    SkipReason = "no_config_file"
 	SkipNotAvailable    SkipReason = "not_available"
 	SkipProtocolVersion SkipReason = "protocol_version"
+	SkipUnreadable      SkipReason = "unreadable"
 )
+
+// CouldNotRun tells whether the reason is that the check could not run, as
+// opposed to a check that does not apply, such as one of a part that is switched
+// off or of an agent that does not exist.
+func (s SkipReason) CouldNotRun() bool {
+	switch s {
+	case SkipNoLogin, SkipMissingScope, SkipDifferentTenant, SkipUnreadable, SkipNoConfigFile:
+		return true
+	default:
+		return false
+	}
+}
 
 // AgentRef identifies the agent a result is about. The message of the result
 // names the agent, and this keeps its URL for a script.
@@ -105,10 +118,23 @@ func (r Report) ExitCode() int {
 	return 0
 }
 
-// StrictExitCode is ExitCode for a run that also counts the checks that did not
-// run as a failure.
+// Incomplete returns how many results are checks that could not run, such as for
+// a missing login or scope. A check that does not apply is not one of them.
+func (r Report) Incomplete() int {
+	n := 0
+	for _, res := range r.Results {
+		if res.Level == Skipped && res.SkipReason.CouldNotRun() {
+			n++
+		}
+	}
+
+	return n
+}
+
+// StrictExitCode is ExitCode for a run that also counts the checks that could
+// not run as a failure.
 func (r Report) StrictExitCode() int {
-	if r.Count(Skipped) > 0 {
+	if r.Incomplete() > 0 {
 		return 1
 	}
 	return r.ExitCode()

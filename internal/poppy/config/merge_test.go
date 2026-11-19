@@ -109,6 +109,83 @@ func TestMerge(t *testing.T) {
 		assert.Empty(t, got.Validate())
 	})
 
+	t.Run("two apis on one host keep their own entries", func(t *testing.T) {
+		orders, users := shopID+"/orders", shopID+"/users"
+
+		existing := exampleConfig()
+		existing.APIs = []API{
+			{Type: "openapi", URL: orders + "/openapi.json", Description: "Orders"},
+			{Type: "openapi", URL: users + "/openapi.json", Description: "Users"},
+		}
+
+		in := Inputs{APIs: map[string]API{orders: {}, users: {}}}
+
+		got, err := Merge(existing, derivedConfig(), in, MergeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, existing.APIs, got.APIs)
+	})
+
+	t.Run("apis on one host are given the entries by path", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			identifiers []string
+			existing    []string
+		}{
+			{
+				name:        "a root API and an API with a path",
+				identifiers: []string{shopID, shopID + "/orders"},
+				existing:    []string{"/orders/openapi.json", "/openapi.json"},
+			},
+			{
+				name:        "nested paths",
+				identifiers: []string{shopID + "/v1", shopID + "/v1/orders"},
+				existing:    []string{"/v1/openapi.json", "/v1/orders/openapi.json"},
+			},
+			{
+				name:        "an API with no entry of its own does not take the entry of another",
+				identifiers: []string{shopID + "/a", shopID + "/b"},
+				existing:    []string{"/b/openapi.json", "/x/openapi.json"},
+			},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				existing := exampleConfig()
+				existing.APIs = nil
+
+				for _, path := range test.existing {
+					existing.APIs = append(existing.APIs, API{Type: "openapi", URL: shopID + path, Description: "Entry " + path})
+				}
+
+				in := Inputs{APIs: map[string]API{}}
+				for _, id := range test.identifiers {
+					in.APIs[id] = API{}
+				}
+
+				got, err := Merge(existing, derivedConfig(), in, MergeOptions{})
+
+				require.NoError(t, err)
+				assert.Equal(t, existing.APIs, got.APIs)
+			})
+		}
+	})
+
+	t.Run("a url that names an entry takes it, and the other API keeps its own", func(t *testing.T) {
+		existing := exampleConfig()
+		existing.APIs = []API{
+			{Type: "openapi", URL: shopID + "/openapi.json", Description: "Shop"},
+			{Type: "openapi", URL: shopID + "/b/openapi.json", Description: "B"},
+		}
+
+		in := Inputs{APIs: map[string]API{shopID: {URL: shopID + "/openapi.json"}, shopID + "/b": {}}}
+
+		got, err := Merge(existing, derivedConfig(), in, MergeOptions{})
+
+		require.NoError(t, err)
+		assert.Equal(t, existing.APIs, got.APIs)
+	})
+
 	t.Run("existing file keeps domain, hints, apis and endpoint", func(t *testing.T) {
 		got, err := Merge(exampleConfig(), derivedConfig(), Inputs{}, MergeOptions{})
 		require.NoError(t, err)

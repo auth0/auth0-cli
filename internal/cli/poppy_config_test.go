@@ -126,7 +126,8 @@ func TestPoppyConfig(t *testing.T) {
 
 	t.Run("the company domain is picked from several without a terminal", func(t *testing.T) {
 		tenant := configuredPoppyTenant()
-		tenant.settings.PersonalAgentProtocolCompanyDomains = []string{"shop.example", "https://shop.test"}
+		domains := []string{"shop.example", "https://shop.test"}
+		tenant.settings.PersonalAgentProtocolCompanyDomains = &domains
 		h := newPoppySetupHarness(t, tenant)
 
 		out := filepath.Join(t.TempDir(), "none.json")
@@ -331,7 +332,8 @@ func TestPoppyConfigPromptRuleCompanyDomain(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tenant := configuredPoppyTenant()
-			tenant.settings.PersonalAgentProtocolCompanyDomains = []string{"shop.example", "https://shop.test"}
+			domains := []string{"shop.example", "https://shop.test"}
+			tenant.settings.PersonalAgentProtocolCompanyDomains = &domains
 
 			h := newPoppySetupHarness(t, tenant)
 			args := []string{"config", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", filepath.Join(t.TempDir(), "poppy.json")}

@@ -38,6 +38,7 @@ type ActionUpdater interface {
 	Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.Action, error)
 	Update(ctx context.Context, id string, a *management.Action, opts ...management.RequestOption) error
 	Deploy(ctx context.Context, id string, opts ...management.RequestOption) (*management.ActionVersion, error)
+	Versions(ctx context.Context, id string, opts ...management.RequestOption) (*management.ActionVersionList, error)
 	Bindings(ctx context.Context, triggerID string, opts ...management.RequestOption) (*management.ActionBindingList, error)
 	UpdateBindings(ctx context.Context, triggerID string, b []*management.ActionBinding, opts ...management.RequestOption) error
 }
@@ -96,7 +97,12 @@ func (e *PartialError) Error() string {
 		fmt.Fprintf(&b, "\n  remaining: %s", strings.Join(e.Remaining, "; "))
 	}
 
-	b.WriteString("\n  Running the command again continues from here.")
+	var failed *buildFailedError
+	if errors.As(e.Err, &failed) {
+		b.WriteString("\n  " + failed.next())
+	} else {
+		b.WriteString("\n  Running the command again continues from here.")
+	}
 
 	return b.String()
 }
@@ -134,7 +140,8 @@ type Applier struct {
 // after the first change returns a *PartialError; a failure of the first change
 // returns the error itself, as no other change was made. A failure of the Action
 // change says that the Action may exist, because its steps (create, deploy, bind)
-// can have been done before one failed. On success it returns the description of
+// can have been done before one failed. A config file path that cannot be written
+// is refused before any change is made. On success it returns the description of
 // each change made.
 func (a *Applier) Apply(ctx context.Context, state *State, in Inputs, plan Plan) ([]string, error) {
 	scopes, err := resolveScopes(state, in)
@@ -145,6 +152,14 @@ func (a *Applier) Apply(ctx context.Context, state *State, in Inputs, plan Plan)
 	cfg, err := derive(state, in, scopes)
 	if err != nil {
 		return nil, err
+	}
+
+	// The file is written last, so a path that cannot be written is found before
+	// anything else is changed.
+	if slices.ContainsFunc(plan.Changes, func(c Change) bool { return c.Kind == KindFile }) {
+		if err := config.CheckWritable(in.Out); err != nil {
+			return nil, err
+		}
 	}
 
 	applied := make([]string, 0, len(plan.Changes))
@@ -177,6 +192,13 @@ func firstFailure(change Change, err error) error {
 	var input *InputError
 	if change.Kind != KindAction || errors.As(err, &input) {
 		return err
+	}
+
+	// A failed build says what to do about it: running the command again does not
+	// continue it, it builds the Action again.
+	var failed *buildFailedError
+	if errors.As(err, &failed) {
+		return fmt.Errorf("%w\n  %s", err, failed.next())
 	}
 
 	return &actionStoppedError{err: err}
@@ -236,7 +258,8 @@ func tenantRequest(change Change, state *State, in Inputs) *managementv3.UpdateT
 		case fieldDefaultAudience:
 			request.DefaultAudience = managementv3.String(field.Value)
 		case FieldCompanyDomains:
-			request.PersonalAgentProtocolCompanyDomains = companyDomainsWith(state.Tenant.CompanyDomains, in.CompanyDomain)
+			domains := companyDomainsWith(state.Tenant.CompanyDomains, in.CompanyDomain)
+			request.PersonalAgentProtocolCompanyDomains = &domains
 		}
 	}
 
@@ -296,7 +319,8 @@ func clientRequest(change Change) *managementv3.UpdateClientRequestContent {
 		case fieldLoginURI:
 			request.InitiateLoginURI = managementv3.String(field.Value)
 		case fieldBrowserJoin:
-			request.AllowPersonalAgentBrowserJoin = managementv3.Bool(true)
+			join := managementv3.Bool(true)
+			request.AllowPersonalAgentBrowserJoin = &join
 		}
 	}
 
@@ -413,7 +437,9 @@ func (a *Applier) deployAction(ctx context.Context, state *ActionState) (string,
 		}
 
 		id = action.GetID()
-	case !state.CodeCurrent:
+	case !state.CodeCurrent || state.BuildFailed:
+		// An Action whose last build failed is sent again even when its code is
+		// current, which is what asks for another build.
 		if err := a.Actions.Update(ctx, id, action); err != nil {
 			return "", fmt.Errorf("failed to update the Action: %w", err)
 		}
@@ -447,7 +473,7 @@ func (a *Applier) waitForBuild(ctx context.Context, id string) error {
 		case management.ActionStatusBuilt:
 			return nil
 		case management.ActionStatusFailed:
-			return errors.New("the Action failed to build")
+			return &buildFailedError{messages: a.buildErrors(ctx, id)}
 		}
 
 		select {
@@ -458,6 +484,59 @@ func (a *Applier) waitForBuild(ctx context.Context, id string) error {
 	}
 
 	return errors.New("the Action was not built in time")
+}
+
+// buildFailedError is a build of the Action that ended in failure. The messages
+// are the errors of the build, when they could be read.
+type buildFailedError struct{ messages []string }
+
+func (e *buildFailedError) Error() string {
+	if len(e.messages) == 0 {
+		return "the Action failed to build"
+	}
+
+	return "the Action failed to build: " + strings.Join(e.messages, "; ")
+}
+
+// next says what to do about it. A run that finds the Action with a failed build
+// sends the code again, which asks for another build, so it does not just
+// continue from the failure.
+func (e *buildFailedError) next() string {
+	if len(e.messages) == 0 {
+		return "Running the command again builds the Action again."
+	}
+
+	return "Running the command again builds the Action again. If it fails the same way, the build errors above say why."
+}
+
+// buildErrors returns the messages of the errors of the latest version of the
+// Action that is not deployed, which is the one that failed to build. It returns
+// none when the versions cannot be read, as the failed build is the error to report.
+func (a *Applier) buildErrors(ctx context.Context, id string) []string {
+	list, err := a.Actions.Versions(ctx, id)
+	if err != nil || list == nil {
+		return nil
+	}
+
+	var latest *management.ActionVersion
+	for _, version := range list.Versions {
+		if version != nil && !version.Deployed && (latest == nil || version.Number > latest.Number) {
+			latest = version
+		}
+	}
+
+	if latest == nil {
+		return nil
+	}
+
+	var messages []string
+	for _, versionErr := range latest.Errors {
+		if versionErr != nil && versionErr.GetMessage() != "" {
+			messages = append(messages, versionErr.GetMessage())
+		}
+	}
+
+	return messages
 }
 
 // flowBindings builds the list that replaces the bindings of the post-login

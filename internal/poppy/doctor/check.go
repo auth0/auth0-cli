@@ -345,7 +345,7 @@ func (r *runner) setupCommand(extra ...string) string {
 	args := append([]string{"poppy", "setup", "--company-domain", quoteArg(r.domain)}, extra...)
 	args = append(args, r.outFlag()...)
 
-	return r.auth0(append(args, "--force")...)
+	return r.auth0(args...)
 }
 
 // configCommand is auth0 poppy config for the domain, which writes the config

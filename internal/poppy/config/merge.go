@@ -109,10 +109,10 @@ func CheckIssuer(existing *Config, issuer string, opts MergeOptions) error {
 // tenant values do not derive stays as it is, with its description and hints,
 // because the derived scopes are only those of the APIs of this run and the file
 // may describe more. The entry of apis for an API of the tenant is found by the
-// URL given, else by the origin of the API identifier; it is updated where it
-// is, and an API with no entry gets a new one at the end. When several entries
-// are at the origin (the same API published as openapi and as mcp, say), all of
-// them are updated, and only the description fill applies to them. Entries of
+// URL given, else by the origin and path of the API identifier (see
+// Config.AssignEntries); it is updated where it is, and an API with no entry
+// gets a new one at the end. When several entries are assigned to it (the same API
+// published as openapi and as mcp, say), all of them are updated, and only the description fill applies to them. Entries of
 // other APIs stay as they are. If a required value is in none of these places,
 // Merge returns a *MissingFieldsError.
 func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, error) {
@@ -214,10 +214,13 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 
 	claimed := map[int]bool{}
 
-	for _, id := range slices.Sorted(maps.Keys(in.APIs)) {
+	ids := slices.Sorted(maps.Keys(in.APIs))
+	assigned := existing.AssignEntries(ids)
+
+	for _, id := range ids {
 		given := in.APIs[id]
 
-		entries, err := entriesOf(existing, id, given, claimed)
+		entries, err := entriesOf(existing, id, assigned[id], given, claimed)
 		if err != nil {
 			return nil, err
 		}
@@ -266,12 +269,13 @@ func Merge(existing, derived *Config, in Inputs, opts MergeOptions) (*Config, er
 }
 
 // entriesOf finds the indexes of the entries of apis for an API of the tenant,
-// or none. An entry with the URL given is the one. Else the entries at the origin
-// of the identifier that no other API has taken are, and when there are several
-// they are all updated, since the same API may be published in several forms.
+// or none. An entry with the URL given is the one. Else the entries that were
+// assigned to the identifier (see Config.AssignEntries) that no other API has
+// taken are, and when there are several they are all updated, since the same API
+// may be published in several forms.
 // With several entries, a value given for the API (URL, type or description)
 // cannot say which entry it is for, so that case is an *AmbiguousAPIError.
-func entriesOf(existing *Config, identifier string, given API, claimed map[int]bool) ([]int, error) {
+func entriesOf(existing *Config, identifier string, assigned []int, given API, claimed map[int]bool) ([]int, error) {
 	if given.URL != "" {
 		if i := slices.IndexFunc(existing.APIs, func(a API) bool { return a.URL == given.URL }); i >= 0 {
 			return []int{i}, nil
@@ -279,7 +283,7 @@ func entriesOf(existing *Config, identifier string, given API, claimed map[int]b
 	}
 
 	var candidates []int
-	for _, i := range existing.EntriesFor(identifier) {
+	for _, i := range assigned {
 		if !claimed[i] {
 			candidates = append(candidates, i)
 		}

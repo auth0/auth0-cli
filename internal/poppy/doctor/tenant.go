@@ -175,7 +175,7 @@ func (r *runner) checkConfig(ctx context.Context, t *Tenant, explicit bool, file
 	case file != nil || fileErr != nil:
 		r.checkConfigFile(ctx, t, local, file, fileErr, c)
 	case !explicit && r.liveConfigErr != nil:
-		c.skip("D14.live_unreadable", "", SkipNotAvailable,
+		c.skip("D14.live_unreadable", "", SkipUnreadable,
 			fmt.Sprintf("there is no config file at %s, and %s cannot be read as one: %v", cmp.Or(r.configFile, config.DefaultFileName), r.liveName(), r.liveConfigErr))
 	case !explicit && r.liveConfig != nil:
 		live := configSource{name: r.liveName(), repair: fix{command: r.configCommand(), hint: "Deploy the file it writes to " + r.origin + wellKnownPoppy + "."}}
@@ -192,9 +192,11 @@ func (r *runner) liveName() string { return "the live poppy.json at " + r.origin
 // tenantServesDomain tells whether the tenant checks apply to the domain: the
 // tenant lists the domain as a company domain, or the issuer is the canonical
 // domain or a custom domain of the tenant (so that a tenant that serves the site
-// but is missing the company domain is still diagnosed). It answers true when it
-// cannot tell, because the tenant cannot be read. Otherwise it returns the name
-// of the tenant, for the message of the skipped checks.
+// but is missing the company domain is still diagnosed). The issuer comes from the
+// site, which may be hostile, so when the hosts of the tenant cannot be read the
+// issuer cannot be trusted to name the tenant, and the checks do not apply. It
+// answers true when the settings cannot be read, because then nothing can be
+// told. It returns the name of the tenant, for the message of the skipped checks.
 func (r *runner) tenantServesDomain(ctx context.Context, t *Tenant, issuer string) (bool, string) {
 	name := t.Domain
 	if name == "" {
@@ -217,7 +219,7 @@ func (r *runner) tenantServesDomain(ctx context.Context, t *Tenant, issuer strin
 
 	hosts, err := t.State.TenantHosts(ctx)
 	if err != nil {
-		return true, name
+		return false, name
 	}
 
 	return slices.ContainsFunc(hosts, func(host string) bool { return strings.EqualFold(host, u.Hostname()) }), name

@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,30 @@ func TestResolveAPIs(t *testing.T) {
 		{name: "two entries of one api give it once", file: file(shopAPI+"/openapi.json", shopAPI+"/mcp"), poppy: poppy, want: []string{shopAPI}},
 		{name: "the origin is compared in lowercase and without the default port", file: file("https://API.Shop.example:443/openapi.json"), poppy: poppy, want: []string{shopAPI}},
 		{name: "an entry no api is at is skipped", file: file("https://mcp.vendor.example/mcp", shopAPI+"/openapi.json"), poppy: poppy, want: []string{shopAPI}},
+		{
+			name:  "apis on one host with their own entries",
+			file:  file(shopAPI+"/users/openapi.json", shopAPI+"/orders/mcp"),
+			poppy: []API{{Identifier: shopAPI + "/orders"}, {Identifier: shopAPI + "/users"}},
+			want:  []string{shopAPI + "/users", shopAPI + "/orders"},
+		},
+		{
+			name:  "a root api and an api with a path each have their entries",
+			file:  file(shopAPI+"/orders/openapi.json", shopAPI+"/openapi.json"),
+			poppy: []API{{Identifier: shopAPI}, {Identifier: shopAPI + "/orders"}},
+			want:  []string{shopAPI + "/orders", shopAPI},
+		},
+		{
+			name:  "the api with the longest path takes the entry",
+			file:  file(shopAPI+"/v1/openapi.json", shopAPI+"/v1/orders/openapi.json"),
+			poppy: []API{{Identifier: shopAPI + "/v1"}, {Identifier: shopAPI + "/v1/orders"}},
+			want:  []string{shopAPI + "/v1", shopAPI + "/v1/orders"},
+		},
+		{
+			name:  "an api with no entry by path does not take the entry of another",
+			file:  file(shopAPI+"/b/openapi.json", shopAPI+"/x/openapi.json"),
+			poppy: []API{{Identifier: shopAPI + "/a"}, {Identifier: shopAPI + "/b"}},
+			want:  []string{shopAPI + "/b", shopAPI + "/a"},
+		},
 		{
 			name:       "no file",
 			poppy:      poppy,
@@ -141,4 +166,123 @@ func TestDeriveWithSeveralFileEntriesAtTheOrigin(t *testing.T) {
 		assert.Contains(t, err.Error(), "FIX  Pass --api-url "+shopAPI+"=<url>")
 		assert.Equal(t, []string{shopAPI + "/openapi.json", shopAPI + "/mcp"}, input.Candidates)
 	})
+}
+
+func TestDeriveWithTwoAPIsOnOneHost(t *testing.T) {
+	orders, users := shopAPI+"/orders", shopAPI+"/users"
+
+	state, in := configuredState(t), configuredInputs()
+
+	second := state.APIs[0]
+	state.APIs[0].Identifier = orders
+	second.ID, second.Identifier = "rs_users", users
+	state.APIs = append(state.APIs, second)
+	state.File.APIs = []config.API{
+		{Type: "openapi", URL: orders + "/openapi.json", Description: "Orders"},
+		{Type: "openapi", URL: users + "/openapi.json", Description: "Users"},
+	}
+	in.APIs = []string{orders, users}
+
+	cfg, err := Derive(state, in)
+
+	require.NoError(t, err)
+	assert.Equal(t, state.File.APIs, cfg.APIs)
+	assert.Empty(t, APIURLQuestions(state, in))
+
+	t.Run("an api that no entry is for is asked for its URL", func(t *testing.T) {
+		state.File.APIs = state.File.APIs[:1]
+
+		questions := APIURLQuestions(state, in)
+
+		require.Len(t, questions, 1)
+		assert.Contains(t, questions[0].Title, users)
+	})
+}
+
+func TestAPIsOnOneHostShareTheFileEntries(t *testing.T) {
+	tests := []struct {
+		name        string
+		identifiers []string
+		urls        map[string]string
+		entries     []string
+		wantAsked   []string
+	}{
+		{
+			name:        "a root API and an API with a path",
+			identifiers: []string{shopAPI, shopAPI + "/orders"},
+			entries:     []string{"/orders/openapi.json", "/openapi.json"},
+		},
+		{
+			name:        "nested paths",
+			identifiers: []string{shopAPI + "/v1", shopAPI + "/v1/orders"},
+			entries:     []string{"/v1/openapi.json", "/v1/orders/openapi.json"},
+		},
+		{
+			name:        "an API with no entry of its own does not take the entry of another",
+			identifiers: []string{shopAPI + "/a", shopAPI + "/b"},
+			entries:     []string{"/b/openapi.json", "/x/openapi.json"},
+		},
+		{
+			name:        "a URL that names an entry claims only that entry",
+			identifiers: []string{shopAPI, shopAPI + "/b"},
+			urls:        map[string]string{shopAPI: shopAPI + "/openapi.json"},
+			entries:     []string{"/openapi.json", "/b/openapi.json"},
+		},
+		{
+			name:        "an API that no entry is for is asked for its URL",
+			identifiers: []string{shopAPI + "/a", shopAPI + "/b"},
+			entries:     []string{"/b/openapi.json"},
+			wantAsked:   []string{shopAPI + "/a"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			state, in := configuredState(t), configuredInputs()
+			in.APIs, in.APIURLs = test.identifiers, test.urls
+
+			state.APIs = nil
+			state.File.APIs = nil
+
+			for i, identifier := range test.identifiers {
+				api := configuredState(t).APIs[0]
+				api.ID, api.Identifier = fmt.Sprintf("rs_%d", i), identifier
+				state.APIs = append(state.APIs, api)
+			}
+
+			for _, path := range test.entries {
+				state.File.APIs = append(state.File.APIs, config.API{Type: "openapi", URL: shopAPI + path, Description: "Entry " + path})
+			}
+
+			var asked []string
+			for _, question := range APIURLQuestions(state, in) {
+				asked = append(asked, question.Title)
+			}
+
+			require.Len(t, asked, len(test.wantAsked))
+
+			for i, identifier := range test.wantAsked {
+				assert.Contains(t, asked[i], identifier)
+			}
+
+			if len(test.wantAsked) > 0 {
+				return
+			}
+
+			cfg, err := Derive(state, in)
+
+			require.NoError(t, err)
+			assert.Equal(t, state.File.APIs, cfg.APIs)
+
+			var poppy []API
+			for _, api := range state.APIs {
+				poppy = append(poppy, API{Identifier: api.Identifier})
+			}
+
+			found, err := ResolveAPIs(state.File, poppy)
+
+			require.NoError(t, err)
+			assert.ElementsMatch(t, test.identifiers, found)
+		})
+	}
 }

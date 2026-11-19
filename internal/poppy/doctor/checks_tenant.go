@@ -99,17 +99,19 @@ func (r *runner) checkAPISettings(apis []setup.API, apisErr error, file *config.
 		return
 	}
 
-	var origins []string
+	var assigned map[string][]int
+
 	if file != nil {
-		for _, entry := range file.APIs {
-			if origin := config.Origin(entry.URL); origin != "" {
-				origins = append(origins, origin)
-			}
+		identifiers := make([]string, len(apis))
+		for i, api := range apis {
+			identifiers[i] = api.Identifier
 		}
+
+		assigned = file.AssignEntries(identifiers)
 	}
 
 	for _, api := range apis {
-		if !api.Poppy && !slices.Contains(origins, config.Origin(api.Identifier)) {
+		if !api.Poppy && len(assigned[api.Identifier]) == 0 {
 			continue
 		}
 

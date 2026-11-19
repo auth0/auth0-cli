@@ -82,7 +82,7 @@ var (
 		Name:     "Scopes",
 		LongForm: "scopes",
 		Help: "Scopes to grant. Repeat the flag or separate scopes with commas. With several APIs, each API gets the listed scopes it offers; " +
-			"to give a scope to one API only, write <api>=<scope>. Without a terminal, pass this or --all-scopes. Mutually exclusive with --all-scopes.",
+			"to give a scope to one API only, write <api>=<scope>, and write it for every scope you list after it that several APIs offer, because a comma only separates scopes. Without a terminal, pass this or --all-scopes. Mutually exclusive with --all-scopes.",
 	}
 	agentsAllScopes = Flag{
 		Name:     "All Scopes",
@@ -350,6 +350,7 @@ func runAgentRegister(cmd *cobra.Command, cli *cli, inputs agentRegisterInputs, 
 
 	var unknownScope *coreagents.UnknownScopeError
 	var noScopes *coreagents.NoScopesError
+	var ambiguousScope *coreagents.AmbiguousScopeError
 
 	switch {
 	case errors.Is(scopeErr, coreagents.ErrScopesRequired) && promptAsk.canPrompt(cmd):
@@ -358,6 +359,8 @@ func runAgentRegister(cmd *cobra.Command, cli *cli, inputs agentRegisterInputs, 
 		return scopesRequiredError("pass --scopes or --all-scopes to choose the scopes to grant.", apis, cfg)
 	case errors.As(scopeErr, &unknownScope):
 		return validationError{err: scopeErr, reason: "unknown_scope"}
+	case errors.As(scopeErr, &ambiguousScope):
+		return validationError{err: scopeErr, reason: "ambiguous_scope"}
 	case errors.As(scopeErr, &noScopes):
 		return scopesRequiredError(scopeErr.Error()+"; pass --scopes with one of its scopes, or --all-scopes.", []coreagents.API{noScopes.API}, cfg)
 	}
@@ -545,7 +548,7 @@ func (c *cli) listAgentAPIs(ctx context.Context, svc *coreagents.Service) (apis 
 		api := coreagents.NewAPI(server)
 
 		// The Management API is the tenant's own, not one an agent is granted.
-		if isPoppyManagementAPI(api.Identifier) {
+		if isAgentManagementAPI(api) {
 			continue
 		}
 
@@ -578,7 +581,27 @@ func (c *cli) pickAPIs(ctx context.Context, svc *coreagents.Service, inputs agen
 		return nil, err
 	}
 
-	return coreagents.PickAPIs(all, inputs.APIs)
+	apis, err := coreagents.PickAPIs(all, inputs.APIs)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, api := range apis {
+		if isAgentManagementAPI(api) {
+			return nil, validationError{
+				err:    fmt.Errorf("the Auth0 Management API cannot be granted to an agent: %s", api.Identifier),
+				reason: "management_api_not_allowed",
+			}
+		}
+	}
+
+	return apis, nil
+}
+
+// isAgentManagementAPI tells whether the API is the Management API of the
+// tenant. An API of the customer at the same path is not.
+func isAgentManagementAPI(api coreagents.API) bool {
+	return api.IsSystem && isPoppyManagementAPI(api.Identifier)
 }
 
 // askAgentAPIs asks which of the tenant's APIs to grant, with the Poppy ones

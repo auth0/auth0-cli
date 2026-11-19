@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,7 +48,7 @@ func TestPoppyAPIOptions(t *testing.T) {
 		{
 			name: "the Management API is left out, and the indexes follow the options",
 			apis: []setup.API{
-				{Name: "Auth0 Management API", Identifier: poppyTestManagementAPI, Poppy: true},
+				{Name: "Auth0 Management API", Identifier: poppyTestManagementAPI, IsSystem: true, Poppy: true},
 				{Name: "Shop API", Identifier: poppyTestAPI, Poppy: true},
 			},
 			wantValues:   []string{poppyTestAPI},
@@ -64,8 +65,17 @@ func TestPoppyAPIOptions(t *testing.T) {
 			wantMarked: []bool{false, false},
 		},
 		{
+			name: "an API of the customer at the path of the Management API is kept",
+			apis: []setup.API{
+				{Name: "Auth0 Management API", Identifier: poppyTestManagementAPI, IsSystem: true},
+				{Name: "Shop API v2", Identifier: "https://api.shop.example/api/v2"},
+			},
+			wantValues: []string{"https://api.shop.example/api/v2"},
+			wantMarked: []bool{false},
+		},
+		{
 			name: "a tenant with only the Management API has nothing to pick",
-			apis: []setup.API{{Name: "Auth0 Management API", Identifier: poppyTestManagementAPI}},
+			apis: []setup.API{{Name: "Auth0 Management API", Identifier: poppyTestManagementAPI, IsSystem: true}},
 		},
 		{
 			name: "no APIs",
@@ -113,6 +123,12 @@ func TestPoppyAPIPickerOptions(t *testing.T) {
 	plain := func(identifier, name string) *managementv3.ResourceServer {
 		return &managementv3.ResourceServer{ID: testPtr("rs_" + name), Identifier: testPtr(identifier), Name: testPtr(name)}
 	}
+	system := func(identifier, name string) *managementv3.ResourceServer {
+		server := plain(identifier, name)
+		server.IsSystem = testPtr(true)
+
+		return server
+	}
 
 	tests := []struct {
 		name         string
@@ -123,13 +139,13 @@ func TestPoppyAPIPickerOptions(t *testing.T) {
 	}{
 		{
 			name:         "the APIs of the tenant, without the Management API, and the Poppy ones selected",
-			servers:      []*managementv3.ResourceServer{plain(poppyTestManagementAPI, "Auth0 Management API"), plain(poppyTestOtherAPI, "Other"), poppyOn(poppyTestAPI, "Shop")},
+			servers:      []*managementv3.ResourceServer{system(poppyTestManagementAPI, "Auth0 Management API"), plain(poppyTestOtherAPI, "Other"), poppyOn(poppyTestAPI, "Shop")},
 			wantValues:   []string{poppyTestOtherAPI, poppyTestAPI},
 			wantSelected: []int{1},
 		},
 		{
 			name:       "a tenant with only the Management API",
-			servers:    []*managementv3.ResourceServer{plain(poppyTestManagementAPI, "Auth0 Management API")},
+			servers:    []*managementv3.ResourceServer{system(poppyTestManagementAPI, "Auth0 Management API")},
 			wantReason: "api_not_found",
 		},
 		{
@@ -282,6 +298,39 @@ func TestPoppyCompanyDomainGuess(t *testing.T) {
 			assert.Equal(t, test.want, poppyCompanyDomainGuess(test.hosts))
 		})
 	}
+}
+
+func TestPoppyCompanyDomainStart(t *testing.T) {
+	guess := func() string { return "guess.example" }
+
+	tests := []struct {
+		name          string
+		fileDomain    string
+		tenantDomains []string
+		want          string
+	}{
+		{name: "the config file wins", fileDomain: "shop.example", tenantDomains: []string{"other.example"}, want: "shop.example"},
+		{name: "the only company domain of the tenant", tenantDomains: []string{"shop.example"}, want: "shop.example"},
+		{name: "the entry of the tenant is normalized", tenantDomains: []string{"https://Shop.Example/"}, want: "shop.example"},
+		{name: "several company domains of the tenant fall back to the guess", tenantDomains: []string{"shop.example", "other.example"}, want: "guess.example"},
+		{name: "no company domain falls back to the guess", want: "guess.example"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, poppyCompanyDomainStart(test.fileDomain, test.tenantDomains, guess))
+		})
+	}
+
+	t.Run("the guess is not made when it is not needed", func(t *testing.T) {
+		got := poppyCompanyDomainStart("shop.example", nil, func() string {
+			t.Fatal("the guess was made")
+
+			return ""
+		})
+
+		assert.Equal(t, "shop.example", got)
+	})
 }
 
 func TestQuestionScreenPickAPIs(t *testing.T) {
@@ -452,7 +501,7 @@ func TestPoppySetupPicksTheAPIsAndTheApp(t *testing.T) {
 	tenantWithMore := func() poppyTenantState {
 		state := freshPoppyTenant()
 		state.moreServers = []*managementv3.ResourceServer{
-			{ID: testPtr("rs_mgmt"), Identifier: testPtr(poppyTestManagementAPI), Name: testPtr("Auth0 Management API")},
+			{ID: testPtr("rs_mgmt"), Identifier: testPtr(poppyTestManagementAPI), Name: testPtr("Auth0 Management API"), IsSystem: testPtr(true)},
 			{ID: testPtr("rs_other"), Identifier: testPtr(poppyTestOtherAPI), Name: testPtr("Other API"), UseForPersonalAgentProtocol: testPtr(true)},
 		}
 		state.moreApps = []*managementv3.GetClientResponseContent{
@@ -549,6 +598,21 @@ func TestPoppySetupPicksTheAPIsAndTheApp(t *testing.T) {
 		assert.Equal(t, "shop.example", run.textDefaults["Domain"], run.textDefaults)
 	})
 
+	t.Run("the company domain starts on the only one the tenant lists, not on the guess", func(t *testing.T) {
+		state := tenantWithMore()
+		state.domains = []*management.CustomDomain{{Domain: testPtr("login.shopauth.example"), Status: testPtr("ready"), IsDefault: testPtr(true)}}
+		state.settings.PersonalAgentProtocolCompanyDomains = testPtr([]string{"shop.example"})
+		h := newPoppySetupHarness(t, state)
+		run := installPoppyPickers(t, []string{poppyTestAPI}, 0)
+
+		args := pickerArgs(t, "--dry-run")
+		args = append(args[:1], args[3:]...)
+
+		require.NoError(t, h.run(args...))
+
+		assert.Equal(t, "shop.example", run.textDefaults["Domain"], run.textDefaults)
+	})
+
 	t.Run("without a custom domain the company domain has no default", func(t *testing.T) {
 		h := newPoppySetupHarness(t, tenantWithMore())
 		run := installPoppyPickers(t, []string{poppyTestAPI}, 0)
@@ -564,6 +628,7 @@ func TestPoppySetupPicksTheAPIsAndTheApp(t *testing.T) {
 	t.Run("a tenant with only the Management API points to apis create", func(t *testing.T) {
 		state := freshPoppyTenant()
 		state.server.Identifier = testPtr(poppyTestManagementAPI)
+		state.server.IsSystem = testPtr(true)
 		h := newPoppySetupHarness(t, state)
 		run := installPoppyPickers(t, nil, 0)
 
