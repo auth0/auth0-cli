@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"net/http"
 	"strings"
 
 	managementv3 "github.com/auth0/go-auth0/v3/management"
@@ -77,6 +78,8 @@ type (
 		ChallengePasswordResetPolicy string
 		AllowList                    []string
 		MonitoringModeEnabled        bool
+		Data                         string
+		Schema                       bool
 	}
 )
 
@@ -125,12 +128,23 @@ func updateBotDetectionCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.NoArgs,
 		Short: "Update bot detection settings",
-		Long:  "Update the bot detection settings.",
+		Long: "Update the bot detection settings.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 protection bot-detection update
   auth0 ap bd update --bot-detection-level medium --json-compact
   auth0 ap bd update --bot-detection-level low --challenge-password-policy never
   auth0 ap bd update --monitoring-mode-enabled=true --allowlist "198.51.100.42,10.0.0.0/24"
-  auth0 ap bd update -l high -a "198.51.100.42" -m=false --json`,
+  auth0 ap bd update -l high -a "198.51.100.42" -m=false --json
+
+  # Discover the payload schema
+  auth0 ap bd update --schema
+  auth0 ap bd update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ap bd update --data '{"bot_detection_level":"medium","monitoring_mode_enabled":false}'
+  auth0 ap bd update --data @bot-detection.json
+  cat bot-detection.json | auth0 ap bd update`,
 		RunE: updateBotDetectionCmdRun(cli, &inputs),
 	}
 
@@ -144,6 +158,10 @@ func updateBotDetectionCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
+
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -167,6 +185,18 @@ func showBotDetectionCmdRun(cli *cli) func(cmd *cobra.Command, args []string) er
 
 func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		if inputs.Schema {
+			return printOperationSchema(cli, "PATCH", "/attack-protection/bot-detection")
+		}
+
+		payload, provided, err := ResolveData(cmd)
+		if err != nil {
+			return err
+		}
+		if provided {
+			return updateBotDetectionFromJSON(cli, cmd, payload)
+		}
+
 		var current *managementv3.GetBotDetectionSettingsResponseContent
 		if err := ansi.Waiting(func() (err error) {
 			current, err = cli.apiv3.AttackProtectionBotDetection.Get(cmd.Context())
@@ -269,4 +299,21 @@ func updateBotDetectionCmdRun(cli *cli, inputs *botDetectionInputs) func(cmd *co
 		cli.renderer.BotDetectionUpdate(updatedBD)
 		return nil
 	}
+}
+
+func updateBotDetectionFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	bd, err := runJSONWrite[managementv3.UpdateBotDetectionSettingsResponseContent](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/attack-protection/bot-detection",
+		URI:        cli.api.HTTPClient.URI("attack-protection", "bot-detection"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 protection bot-detection update",
+	})
+	if err != nil {
+		return err
+	}
+
+	cli.renderer.BotDetectionUpdate(bd)
+
+	return nil
 }

@@ -10,6 +10,9 @@ To create interactively, use "auth0 network-acl create" with no arguments.
 To create non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
 The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 network-acl create [flags]
@@ -29,6 +32,15 @@ auth0 network-acl create [flags]
   # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
   auth0 network-acl create -d "Only Signed" -p 8 --active true --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"}]}}}'
+
+  # Discover the payload schema
+  auth0 network-acl create --schema
+  auth0 network-acl create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 network-acl create --data '{"description":"Block IPs","active":true,"priority":1,"rule":{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}}'
+  auth0 network-acl create --data @network-acl.json
+  cat network-acl.json | auth0 network-acl create
   
 ```
 
@@ -37,11 +49,13 @@ auth0 network-acl create [flags]
 
 ```
       --active string        Whether the network ACL is active ('true' or 'false').
+      --data string          JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -d, --description string   Description of the network ACL (Eg. "Block suspicious IPs").
       --json                 Output in json format.
       --json-compact         Output in compact json format.
   -p, --priority int         Priority of the network ACL (Eg. 5).
       --rule string          Network ACL rule configuration in JSON format (required for non-interactive mode).
+      --schema               Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

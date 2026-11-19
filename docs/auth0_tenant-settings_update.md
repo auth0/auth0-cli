@@ -5,7 +5,9 @@ has_children: true
 ---
 # auth0 tenant-settings update
 
+Update tenant settings by enabling or disabling flags with `set` and `unset`.
 
+To update tenant settings with a JSON payload, use `auth0 tenant-settings update set --data`. Run `auth0 tenant-settings update set --schema` to see the payload schema.
 
 ## Commands
 
