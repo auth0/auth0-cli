@@ -495,3 +495,28 @@ func TestApplyAgentModeDefaults(t *testing.T) {
 		assert.False(t, c.json) // JSON not forced because --csv was explicit.
 	})
 }
+
+func TestRenderErrorMessageEndsWithOnePeriod(t *testing.T) {
+	tests := []struct {
+		name string
+		err  string
+		want string
+	}{
+		{name: "adds the period", err: "something failed", want: "Something failed."},
+		{name: "keeps a period that is there", err: "pass a web app with --app.", want: "Pass a web app with --app."},
+		{name: "after a fix line", err: "app not found.\n  FIX  Create it first: auth0 apps create.", want: "App not found.\n  FIX  Create it first: auth0 apps create."},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var messages strings.Builder
+			renderer := display.NewRenderer()
+			renderer.MessageWriter = &messages
+
+			renderErrorMessage(renderer, errors.New(test.err))
+
+			assert.Contains(t, messages.String(), test.want+"\n")
+			assert.NotContains(t, messages.String(), "..")
+		})
+	}
+}
