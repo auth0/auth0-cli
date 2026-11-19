@@ -71,7 +71,7 @@ func agentsCmd(cli *cli) *cobra.Command {
 			"These commands need the read:agents, create:agents, update:agents and delete:agents scopes, " +
 			"which are available through a machine to machine (M2M) login only. " +
 			"Authorize an M2M application for the Auth0 Management API with these scopes, then log in with it.\n\n" +
-			"To manage skills for your AI coding assistants, use `auth0 agent` instead.",
+			"To manage skills for your AI coding assistants, use `auth0 skills` instead.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
