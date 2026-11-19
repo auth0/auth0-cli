@@ -94,6 +94,10 @@ func Command(in Inputs, opts CommandOptions) []string {
 		parts = append(parts, fmt.Sprintf("--web-unscoped=%t", *in.WebUnscoped))
 	}
 
+	if in.AlwaysIssueRefreshTokens != nil && !opts.Config {
+		parts = append(parts, fmt.Sprintf("--always-issue-refresh-tokens=%t", *in.AlwaysIssueRefreshTokens))
+	}
+
 	if in.ForceConfig {
 		parts = append(parts, "--overwrite-config")
 	}

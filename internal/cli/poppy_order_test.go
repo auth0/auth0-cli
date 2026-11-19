@@ -64,7 +64,7 @@ func TestPoppySetupAsksInTheOrderOfTheParts(t *testing.T) {
 		return state
 	}
 
-	titles := struct{ domain, name, apiPart, apis, openAPI, description, hints, webPart, app, loginURI, unscoped string }{
+	titles := struct{ domain, name, apiPart, apis, openAPI, description, hints, webPart, app, loginURI, unscoped, refresh string }{
 		domain:      "Company domain",
 		name:        "Company name",
 		apiPart:     poppyAPIPartTitle,
@@ -76,11 +76,12 @@ func TestPoppySetupAsksInTheOrderOfTheParts(t *testing.T) {
 		app:         "Web app",
 		loginURI:    "Application Login URI of Shop Web",
 		unscoped:    poppyWebUnscopedTitle,
+		refresh:     poppyRefreshTokensTitle,
 	}
 
 	known := []string{
 		titles.domain, titles.name, titles.apiPart, titles.apis, titles.openAPI, titles.description, titles.hints,
-		titles.webPart, titles.app, titles.loginURI, titles.unscoped,
+		titles.webPart, titles.app, titles.loginURI, titles.unscoped, titles.refresh,
 	}
 
 	tests := []struct {
@@ -94,15 +95,16 @@ func TestPoppySetupAsksInTheOrderOfTheParts(t *testing.T) {
 				titles.domain, titles.name,
 				titles.apiPart, titles.apis, titles.openAPI, titles.description, titles.hints,
 				titles.webPart, titles.app, titles.loginURI,
-				titles.unscoped,
+				titles.unscoped, titles.refresh,
 			},
 		},
 		{
-			name:  "without the web part, nothing follows the API part",
+			name:  "without the web part, the API part is followed by the last two questions only",
 			extra: []string{"--no-web"},
 			want: []string{
 				titles.domain, titles.name,
 				titles.apiPart, titles.apis, titles.openAPI, titles.description, titles.hints,
+				titles.refresh,
 			},
 		},
 		{
@@ -111,7 +113,7 @@ func TestPoppySetupAsksInTheOrderOfTheParts(t *testing.T) {
 			want: []string{
 				titles.domain, titles.name,
 				titles.webPart, titles.app, titles.loginURI,
-				titles.unscoped,
+				titles.unscoped, titles.refresh,
 			},
 		},
 		{
@@ -121,7 +123,7 @@ func TestPoppySetupAsksInTheOrderOfTheParts(t *testing.T) {
 				titles.domain,
 				titles.openAPI, titles.hints,
 				titles.loginURI,
-				titles.unscoped,
+				titles.unscoped, titles.refresh,
 			},
 		},
 	}

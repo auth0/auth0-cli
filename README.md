@@ -257,6 +257,8 @@ auth0 login --domain <domain> --client-id <client-id> --client-assertion-private
 auth0 login --scopes read:agents,create:agents,delete:agents,read:client_credentials
 ```
 
+The option `auth0 poppy setup --always-issue-refresh-tokens`, which adds a post-login Action, needs the `read:actions`, `create:actions` and `update:actions` scopes (a dry run only needs `read:actions`). Setup prints the same `auth0 login --scopes ...` command when one is missing.
+
 `auth0 agents list` and `show` also report each agent's application, its metadata status and the APIs it has grants on. They read these with the `read:clients` and `read:client_grants` scopes, and `show` also uses `read:client_credentials` to compare the stored keys. With `--poppy` they report only the grants on Poppy APIs, which also needs the `read:resource_servers` scope. When a scope is missing they still work: a value they cannot read shows as `unknown` (`null` in JSON, with the field named in `unknown_fields`), and they print one warning with the `auth0 login --scopes ...` command to run.
 
 If a scope is missing, `auth0 agents register` and `unregister` stop before changing anything and print the exact `auth0 login --scopes ...` command to run. The doctor skips the checks that need it and prints the same command.

@@ -306,6 +306,7 @@ func poppyAnswers(l Layout, in setup.Inputs) string {
 	rows = append(rows, poppyPartAnswers(in)...)
 	rows = append(rows, poppyHintAnswers(in)...)
 	rows = append(rows, poppyWebAnswers(in)...)
+	rows = append(rows, poppyActionAnswers(in)...)
 
 	if len(rows) == 0 {
 		return ""
@@ -319,6 +320,7 @@ func poppyAnswers(l Layout, in setup.Inputs) string {
 func poppyHintsText(l Layout, in setup.Inputs) string {
 	rows := append(poppyPartAnswers(in), poppyHintAnswers(in)...)
 	rows = append(rows, poppyWebAnswers(in)...)
+	rows = append(rows, poppyActionAnswers(in)...)
 	if len(rows) == 0 {
 		return ""
 	}
@@ -388,6 +390,16 @@ func poppyWebAnswers(in setup.Inputs) []poppyAnswerRow {
 	return []poppyAnswerRow{{label: "Web access", value: fmt.Sprintf("web.unscoped %t", *in.WebUnscoped)}}
 }
 
+// poppyActionAnswers says that the run installs the post-login Action that always
+// issues refresh tokens, when it was asked to.
+func poppyActionAnswers(in setup.Inputs) []poppyAnswerRow {
+	if !in.WantsRefreshTokenAction() {
+		return nil
+	}
+
+	return []poppyAnswerRow{{label: "Refresh token", value: "always issued, by a post-login Action"}}
+}
+
 // poppyPartAnswers says which part of Poppy the run left out, by a flag, an answer
 // or the config file.
 func poppyPartAnswers(in setup.Inputs) []poppyAnswerRow {
@@ -413,9 +425,9 @@ type poppyRow struct {
 }
 
 // poppyGroups renders the changes, grouped by target, in the order of risk: the
-// tenant, each API, the app and the file.
+// tenant, each API, the app, the post-login Action and the file.
 func poppyGroups(l Layout, p setup.Plan) []string {
-	var tenant, apis, apps, files []string
+	var tenant, apis, apps, actions, files []string
 
 	for _, change := range p.Changes {
 		switch change.Kind {
@@ -425,6 +437,8 @@ func poppyGroups(l Layout, p setup.Plan) []string {
 			apis = append(apis, poppyGroup(l, "API "+poppyClean(change.Target()), "", poppyChangeRows(l, change)))
 		case setup.KindApp:
 			apps = append(apps, poppyGroup(l, "App "+poppyClean(p.App), "", poppyChangeRows(l, change)))
+		case setup.KindAction:
+			actions = append(actions, poppyGroup(l, "Post-login flow", poppyTenantNote(l, change), poppyChangeRows(l, change)))
 		case setup.KindFile:
 			rows := poppyChangeRows(l, change)
 			if !p.NewFile {
@@ -435,7 +449,7 @@ func poppyGroups(l Layout, p setup.Plan) []string {
 	}
 
 	var groups []string
-	for _, kind := range [][]string{tenant, apis, apps, files} {
+	for _, kind := range [][]string{tenant, apis, apps, actions, files} {
 		groups = append(groups, kind...)
 	}
 
@@ -593,6 +607,8 @@ func poppyStepLabel(p setup.Plan, c setup.Change) string {
 		return "API"
 	case setup.KindApp:
 		return "App " + poppyClean(p.App)
+	case setup.KindAction:
+		return "Post-login Action"
 	default:
 		return poppyClean(strings.TrimPrefix(c.Description, "write "))
 	}

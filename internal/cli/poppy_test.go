@@ -65,7 +65,7 @@ func TestPoppyCommands(t *testing.T) {
 			path: []string{"poppy", "setup"},
 			flags: []string{
 				"company-domain", "api", "api-url", "app", "no-api", "no-web", "scope", "hint", "company-name", "login-uri", "out",
-				"dry-run", "force", "skip-doctor", "web-unscoped", "overwrite-config", "json", "json-compact",
+				"dry-run", "force", "skip-doctor", "web-unscoped", "always-issue-refresh-tokens", "overwrite-config", "json", "json-compact",
 			},
 		},
 		{
@@ -197,8 +197,9 @@ type poppyPromptRun struct {
 
 // installPoppyAsker makes the Poppy commands behave as if run in the terminal
 // of the mode, or without one. A person answers yes to every question, except
-// the one that offers to set the hints of the scopes, which is turned down. The
-// questions are kept in the order they were asked.
+// the one that offers to set the hints of the scopes and the one about the
+// post-login Action, which are turned down. The questions are kept in the order
+// they were asked.
 func installPoppyAsker(t *testing.T, mode poppyPromptMode) *[]string {
 	t.Helper()
 
@@ -230,6 +231,9 @@ func installPoppyAsker(t *testing.T, mode poppyPromptMode) *[]string {
 		case message == poppyAPIPartText, message == poppyWebPartText:
 			// A person wants both parts, and the questions are not kept in the order of the others.
 			return true, nil
+		case message == poppyRefreshTokensText:
+			// The post-login flow is left alone unless a test asks for the Action.
+			return false, nil
 		}
 
 		asked = append(asked, "confirm")
@@ -360,7 +364,10 @@ type poppySetupHarness struct {
 	grants   *mock.MockClientGrantAPIV3
 	agents   *mock.MockAgentsAPI
 	policies *mock.MockGuardianPolicyAPIV3
-	run      func(args ...string) error
+	// Actions has no calls until a test serves the Actions API, so a setup that
+	// does not ask for the post-login Action cannot call it.
+	actions *mock.MockActionAPI
+	run     func(args ...string) error
 
 	// Runs the command in agent mode when set.
 	agentMode bool
@@ -412,6 +419,7 @@ func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarn
 		grants:   mock.NewMockClientGrantAPIV3(ctrl),
 		agents:   mock.NewMockAgentsAPI(ctrl),
 		policies: mock.NewMockGuardianPolicyAPIV3(ctrl),
+		actions:  mock.NewMockActionAPI(ctrl),
 		fail:     map[string]error{},
 	}
 
@@ -494,7 +502,7 @@ func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarn
 	testCLI := &cli{
 		renderer: renderer,
 		tenant:   poppySetupTenant,
-		api:      &auth0.API{CustomDomain: h.domains},
+		api:      &auth0.API{CustomDomain: h.domains, Action: h.actions},
 		apiv3: &auth0.APIV3{
 			TenantSettings:   h.tenant,
 			ResourceServerV3: h.servers,
