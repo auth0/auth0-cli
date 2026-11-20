@@ -106,6 +106,7 @@ type APIV3 struct {
 	Agents                       AgentsAPI
 	ResourceServerV3             ResourceServerAPIV3
 	ClientV3                     ClientAPIV3
+	OrganizationV3               OrganizationAPIV3
 }
 
 func NewAPIV3(m *managementv3.Management) *APIV3 {
@@ -142,6 +143,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		Agents:                       m.Agents,
 		ResourceServerV3:             m.ResourceServers,
 		ClientV3:                     m.Clients,
+		OrganizationV3:               m.Organizations,
 	}
 }
 

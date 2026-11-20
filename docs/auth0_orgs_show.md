@@ -50,6 +50,7 @@ auth0 orgs show [flags]
 - [auth0 orgs members](auth0_orgs_members.md) - Manage members of an organization
 - [auth0 orgs open](auth0_orgs_open.md) - Open the settings page of an organization
 - [auth0 orgs roles](auth0_orgs_roles.md) - Manage roles of an organization
+- [auth0 orgs search](auth0_orgs_search.md) - Search your organizations (Early Access)
 - [auth0 orgs show](auth0_orgs_show.md) - Show an organization
 - [auth0 orgs update](auth0_orgs_update.md) - Update an organization
 
