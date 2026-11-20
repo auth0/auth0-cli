@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
@@ -145,6 +146,16 @@ var (
 		ShortForm: "n",
 		Help:      "Number of apps to retrieve. Minimum 1, maximum 1000.",
 	}
+	appSearchFilter = searchFilterFlag(
+		[]string{
+			"client_id", "external_client_id", "name", "app_type", "is_first_party", "updated_at", "metadata.{key}",
+			"client_grant.organization_id", "client_grant.allow_any_organization",
+		},
+		`app_type:spa`,
+		`name co "billing" and is_first_party eq true`,
+	)
+	appSearchSort       = searchSortFlag(clientSortFields...)
+	appSearchFields     = searchFieldsFlag("client_id", "name", "app_type")
 	appSTCanCreateToken = Flag{
 		Name:         "Can Create Token",
 		LongForm:     "can-create-token",
@@ -294,6 +305,7 @@ func appsCmd(cli *cli) *cobra.Command {
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(useAppCmd(cli))
 	cmd.AddCommand(listAppsCmd(cli))
+	cmd.AddCommand(searchAppsCmd(cli))
 	cmd.AddCommand(createAppCmd(cli))
 	cmd.AddCommand(showAppCmd(cli))
 	cmd.AddCommand(updateAppCmd(cli))
@@ -463,6 +475,126 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 	markQueryFilterExclusive(cmd, appListAgentID.LongForm)
 
 	return cmd
+}
+
+func searchAppsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		searchInputs
+		Query  string
+		Schema bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "search",
+		Args:  cobra.NoArgs,
+		Short: "Search your applications (Early Access)",
+		Long: `[Early Access] Search your applications using Lucene or SCIM filter syntax.
+Results are eventually consistent; use ` + "`auth0 apps list`" + ` for up-to-date data.
+Client secrets and keys are never returned.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
+		Example: `  auth0 apps search
+  auth0 apps search --filter 'name:"My App"'
+  auth0 apps search --filter 'app_type:spa' --sort name
+  auth0 apps search --parser scim --filter 'name co "billing"' -s name:1
+  auth0 apps search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
+  auth0 apps search --filter 'client_grant.organization_id:<org-id>' --fields client_id,name --json
+  auth0 apps search --schema
+  auth0 apps search --query '{"q":"name co \"billing\"","parser":"scim","sort":"name"}'`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{
+				Path:      "clients/search",
+				SchemaCmd: "auth0 apps search",
+			}, "applications", inputs.Schema, inputs.Query); handled {
+				return err
+			}
+
+			if err := validateSearchNumber(inputs.Number); err != nil {
+				return err
+			}
+
+			request, err := buildClientSearchRequest(inputs.searchInputs)
+			if err != nil {
+				return err
+			}
+
+			fields := parseSearchFields(inputs.Fields)
+			if err := validateSearchCSV(cli, display.ApplicationSearchColumns, fields, inputs.ExcludeFields); err != nil {
+				return err
+			}
+
+			results, err := collectV3Pages(cmd.Context(), inputs.Number,
+				func(ctx context.Context) (*auth0.ClientSearchPage, error) {
+					return cli.apiv3.ClientV3.Search(ctx, request)
+				})
+			if err != nil {
+				return searchError("applications", err)
+			}
+
+			warnSearchLimit(cli, len(results), inputs.Number)
+
+			cli.renderer.ApplicationSearchList(results, fields, inputs.ExcludeFields)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+
+	appSearchFilter.RegisterString(cmd, &inputs.Filter, "")
+	searchParser.RegisterString(cmd, &inputs.Parser, "lucene")
+	appSearchSort.RegisterString(cmd, &inputs.Sort, "")
+	appSearchFields.RegisterString(cmd, &inputs.Fields, "")
+	searchExcludeFields.RegisterBool(cmd, &inputs.ExcludeFields, false)
+	appNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	searchQueryFlag.RegisterString(cmd, &inputs.Query, "")
+	markQueryExclusive(cmd)
+
+	return cmd
+}
+
+// buildClientSearchRequest validates the flag values and maps them onto the SDK request.
+func buildClientSearchRequest(inputs searchInputs) (*managementv3.SearchClientsRequestParameters, error) {
+	params, err := parseSearchInputs(inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	request := &managementv3.SearchClientsRequestParameters{
+		Q:             params.Q,
+		Parser:        params.Parser,
+		Fields:        params.Fields,
+		IncludeFields: params.IncludeFields,
+		Take:          params.Take,
+	}
+
+	if inputs.Sort != "" {
+		field, err := clientSortField(inputs.Sort)
+		if err != nil {
+			return nil, err
+		}
+		request.Sort = field.Ptr()
+	}
+
+	return request, nil
+}
+
+// clientSortFields are the fields `apps search` can sort by.
+var clientSortFields = []string{
+	string(managementv3.ClientSortFieldEnumName),
+	string(managementv3.ClientSortFieldEnumUpdatedAt),
+}
+
+// clientSortField maps 'field' or 'field:1' onto the SDK enum.
+func clientSortField(s string) (managementv3.ClientSortFieldEnum, error) {
+	field, err := parseSearchSort(s, clientSortFields...)
+
+	return managementv3.ClientSortFieldEnum(field), err
 }
 
 func showAppCmd(cli *cli) *cobra.Command {
