@@ -134,6 +134,21 @@ func testManagementServer() *managementv3.ResourceServer {
 	}
 }
 
+// poppyTestMyAccountAPI is the My Account API of the tenant, a system API that is
+// not the Management API.
+const poppyTestMyAccountAPI = "https://shop.us.auth0.com/me/"
+
+// testMyAccountServer is the My Account API of the tenant, a system API.
+func testMyAccountServer() *managementv3.ResourceServer {
+	return &managementv3.ResourceServer{
+		ID:         testPtr("rs_me"),
+		Identifier: testPtr(poppyTestMyAccountAPI),
+		Name:       testPtr("Auth0 My Account API"),
+		IsSystem:   testPtr(true),
+		Scopes:     []*managementv3.ResourceServerScope{{Value: "create:me:authentication_methods"}, {Value: "delete:me:authentication_methods"}},
+	}
+}
+
 // testCustomerV2Server is an API of the customer whose identifier looks like the
 // one of the Management API.
 func testCustomerV2Server() *managementv3.ResourceServer {
@@ -425,15 +440,15 @@ func TestAgentsRegisterAPIs(t *testing.T) {
 		assert.Empty(t, *created)
 	})
 
-	t.Run("the Management API cannot be granted, by identifier or by ID", func(t *testing.T) {
-		for _, ref := range []string{poppyTestManagementAPI, "rs_mgmt"} {
+	t.Run("a system API cannot be granted, by identifier or by ID", func(t *testing.T) {
+		for _, ref := range []string{poppyTestManagementAPI, "rs_mgmt", poppyTestMyAccountAPI, "rs_me"} {
 			h := newAgentsHarness(t)
-			created := h.allowRegistrationOn(testManagementServer(), testShopServer())
+			created := h.allowRegistrationOn(testManagementServer(), testMyAccountServer(), testShopServer())
 
 			err := h.root("register", poppyTestAgentURL, "--api", ref, "--all-scopes", "--config", out(t))
 
-			assert.Equal(t, "management_api_not_allowed", errorReason(err), ref)
-			assert.ErrorContains(t, err, "the Auth0 Management API cannot be granted to an agent", ref)
+			assert.Equal(t, "system_api_not_allowed", errorReason(err), ref)
+			assert.ErrorContains(t, err, "an Auth0 system API cannot be granted to an agent", ref)
 			assert.Empty(t, *created, ref)
 		}
 	})

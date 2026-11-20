@@ -547,8 +547,8 @@ func (c *cli) listAgentAPIs(ctx context.Context, svc *coreagents.Service) (apis 
 	for _, server := range servers {
 		api := coreagents.NewAPI(server)
 
-		// The Management API is the tenant's own, not one an agent is granted.
-		if isAgentManagementAPI(api) {
+		// A system API is the tenant's own, not one an agent is granted.
+		if api.IsSystem {
 			continue
 		}
 
@@ -587,21 +587,15 @@ func (c *cli) pickAPIs(ctx context.Context, svc *coreagents.Service, inputs agen
 	}
 
 	for _, api := range apis {
-		if isAgentManagementAPI(api) {
+		if api.IsSystem {
 			return nil, validationError{
-				err:    fmt.Errorf("the Auth0 Management API cannot be granted to an agent: %s", api.Identifier),
-				reason: "management_api_not_allowed",
+				err:    fmt.Errorf("an Auth0 system API cannot be granted to an agent: %s", api.Identifier),
+				reason: "system_api_not_allowed",
 			}
 		}
 	}
 
 	return apis, nil
-}
-
-// isAgentManagementAPI tells whether the API is the Management API of the
-// tenant. An API of the customer at the same path is not.
-func isAgentManagementAPI(api coreagents.API) bool {
-	return api.IsSystem && isPoppyManagementAPI(api.Identifier)
 }
 
 // askAgentAPIs asks which of the tenant's APIs to grant, with the Poppy ones
