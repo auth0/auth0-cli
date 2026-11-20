@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/utils"
@@ -51,35 +53,100 @@ func show(cli *cli) *cobra.Command {
 	return cmd
 }
 
+// tenantSettingsJSONHint points callers of `tenant-settings update --data/--schema`
+// to `update set`, which is where the JSON payload options live.
+const tenantSettingsJSONHint = "--data and --schema are not available on `auth0 tenant-settings update`; " +
+	"use them with `auth0 tenant-settings update set`, for example:\n" +
+	"  auth0 tenant-settings update set --schema --json\n" +
+	"  auth0 tenant-settings update set --data '{\"friendly_name\":\"Acme\"}'\n" +
+	"  cat tenant-settings.json | auth0 tenant-settings update set\n" +
+	"Run `auth0 tenant-settings update set --help` for more examples"
+
 func update(cli *cli) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update tenant settings by enabling or disabling flags",
+		Long: "Update tenant settings by enabling or disabling flags with `set` and `unset`.\n\n" +
+			"To update tenant settings with a JSON payload, use `auth0 tenant-settings update set --data`. " +
+			"Run `auth0 tenant-settings update set --schema` to see the payload schema.",
 	}
 
 	cmd.AddCommand(set(cli))
 	cmd.AddCommand(unset(cli))
 
+	// When --data or --schema is passed to `update` itself, return a custom error that
+	// points to `update set` (where these flags live) instead of a bare "unknown flag".
+	// The handler is inherited by set and unset, so it only acts for update itself and
+	// passes every other flag error to the root handler unchanged.
+	cmd.SetFlagErrorFunc(func(c *cobra.Command, err error) error {
+		msg := err.Error()
+		if c == cmd && len(c.Flags().Args()) == 0 &&
+			(msg == "unknown flag: --data" || msg == "unknown flag: --schema") {
+			return usageError{err: errors.New(tenantSettingsJSONHint)}
+		}
+		return wrapFlagError(c, err)
+	})
+
 	return cmd
 }
 
 func set(cli *cli) *cobra.Command {
+	var inputs struct {
+		Data   string
+		Schema bool
+	}
+
 	cmd := &cobra.Command{
 		Use:   "set",
 		Short: "Enable tenant setting flags",
 		Long: "Enable selected tenant setting flags.\n\n" +
 			"To enable interactively, use `auth0 tenant-settings update set` with no arguments.\n\n" +
-			"To enable non-interactively, supply the flags.",
+			"To enable non-interactively, supply the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).\n\n" +
+			"The payload schema does not include these flags, so `--data` rejects them: " +
+			"flags.enable_custom_domain_in_emails, flags.enable_legacy_logs_search_v2, flags.universal_login " +
+			"and flags.use_scope_descriptions_for_consent. To change them, use the setting names with " +
+			"`auth0 tenant-settings update set` or `auth0 tenant-settings update unset`",
 		Example: `auth0 tenant-settings update set
 auth0 tenant-settings update set <setting1> <setting2> <setting3>
 auth0 tenant-settings update set flags.enable_client_connections mtls.enable_endpoint_aliases pushed_authorization_requests_supported
-auth0 tenant-settings update set flags.enable_sso --json`,
+auth0 tenant-settings update set flags.enable_sso --json
+
+# Discover the payload schema
+auth0 tenant-settings update set --schema
+auth0 tenant-settings update set --schema --json
+
+# JSON input mode (for agents and automation)
+auth0 tenant-settings update set --data '{"friendly_name":"Acme","support_email":"support@example.com"}'
+auth0 tenant-settings update set --data @tenant-settings.json
+cat tenant-settings.json | auth0 tenant-settings update set`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/tenants/settings")
+			}
+
+			// A JSON payload (--data or piped input) replaces the setting names, so the
+			// two cannot be combined; without a payload, the names keep the existing path.
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				if len(args) > 0 {
+					return usageError{
+						err: errors.New("cannot combine setting names with a JSON payload (--data or piped input); " +
+							"provide the whole payload as JSON or pass setting names, not both"),
+						reason: "incompatible_flags",
+					}
+				}
+				return updateTenantSettingsFromJSON(cli, cmd, payload)
+			}
+
 			var (
 				tenant        = &management.Tenant{}
 				tenantFlags   = &management.TenantFlags{}
 				selectedFlags []string
-				err           error
 			)
 			if len(args) != 0 {
 				selectedFlags = append(selectedFlags, args...)
@@ -107,8 +174,28 @@ auth0 tenant-settings update set flags.enable_sso --json`,
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func updateTenantSettingsFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	tenant, err := runJSONWrite[management.Tenant](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/tenants/settings",
+		URI:        cli.api.HTTPClient.URI("tenants", "settings"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 tenant-settings update set",
+	})
+	if err != nil {
+		return err
+	}
+
+	cli.renderer.TenantSettingsUpdate(tenant)
+
+	return nil
 }
 
 func unset(cli *cli) *cobra.Command {

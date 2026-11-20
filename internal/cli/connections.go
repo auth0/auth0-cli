@@ -115,7 +115,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 connections ls
   auth0 connections ls --json
   auth0 connections ls --csv
+
+  # Discover the query schema
   auth0 connections list --schema
+  auth0 connections list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 connections list --query '{"strategy":["auth0"]}'
   auth0 connections list --query '{"name":"my-connection"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -219,8 +224,11 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
   # Flag-based mode
   auth0 connections create --name my-db --strategy auth0
 
-  # JSON mode
+  # Discover the payload schema
   auth0 connections create --schema
+  auth0 connections create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 connections create --data @connection.json
   auth0 connections create --data '{"name":"my-db","strategy":"auth0"}'
   cat connection.json | auth0 connections create`,
@@ -303,9 +311,14 @@ Use '--schema' to print the request payload schema, then '--data' to provide
 connection data as JSON (inline, @file, or piped stdin). The JSON is validated
 against the OpenAPI schema before sending to the API.`,
 		Example: `  auth0 connections update <connection-id>
+
+  # Discover the payload schema
+  auth0 connections update --schema
+  auth0 connections update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 connections update <connection-id> --data @connection.json
-  auth0 connections update <connection-id> --data '{"options":{...}}'
-  auth0 connections update --schema`,
+  auth0 connections update <connection-id> --data '{"options":{...}}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
 				return printOperationSchema(cli, "PATCH", "/connections/{id}")
@@ -484,9 +497,14 @@ JSON array of objects with 'client_id' and 'status' fields (up to 50 per request
 Use '--schema' to print the request payload schema.`,
 		Example: `  auth0 connections enabled-clients update
   auth0 connections enabled-clients update <connection-id>
+
+  # Discover the payload schema
+  auth0 connections enabled-clients update --schema
+  auth0 connections enabled-clients update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 connections enabled-clients update <connection-id> --data @clients.json
-  auth0 connections enabled-clients update <connection-id> --data '[{"client_id":"abc","status":true}]'
-  auth0 connections enabled-clients update --schema`,
+  auth0 connections enabled-clients update <connection-id> --data '[{"client_id":"abc","status":true}]'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if inputs.Schema {
 				return printOperationSchema(cli, "PATCH", "/connections/{id}/clients")

@@ -24,8 +24,12 @@ auth0 apis list [flags]
   auth0 apis ls -n 100 --json
   auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv
+
+  # Discover the query schema
   auth0 apis list --schema
   auth0 apis list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apis list --query '{"identifiers":["https://my-api"]}'
   auth0 apis list --query '{"identifiers":["https://my-api"]}' --json
 ```

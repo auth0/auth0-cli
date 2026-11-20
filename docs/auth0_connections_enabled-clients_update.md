@@ -25,9 +25,14 @@ auth0 connections enabled-clients update [flags]
 ```
   auth0 connections enabled-clients update
   auth0 connections enabled-clients update <connection-id>
+
+  # Discover the payload schema
+  auth0 connections enabled-clients update --schema
+  auth0 connections enabled-clients update --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 connections enabled-clients update <connection-id> --data @clients.json
   auth0 connections enabled-clients update <connection-id> --data '[{"client_id":"abc","status":true}]'
-  auth0 connections enabled-clients update --schema
 ```
 
 

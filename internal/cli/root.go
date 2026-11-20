@@ -269,7 +269,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 			// --schema prints a public OpenAPI schema and returns before any
 			// API call, so it needs no session — skip auth for offline discovery.
-			if f := cmd.Flags().Lookup("schema"); f != nil && f.Changed {
+			if schemaRequested(cmd) {
 				return nil
 			}
 
@@ -491,6 +491,7 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 poppy doctor",
 		"auth0 tenants use",
 		"auth0 tenants list",
+		"auth0 skills install",
 		"auth0 agent skills install",
 	}
 
@@ -633,7 +634,8 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 
 	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))
-	rootCmd.AddCommand(agentCmd(cli))
+	rootCmd.AddCommand(skillsCmd(cli))
+	rootCmd.AddCommand(agentCmd(cli)) // Deprecated: use skillsCmd.
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))

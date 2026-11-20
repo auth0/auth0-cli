@@ -24,8 +24,12 @@ auth0 roles list [flags]
   auth0 roles ls -n 100 --json
   auth0 roles ls -n 100 --json-compact
   auth0 roles ls --csv
+
+  # Discover the query schema
   auth0 roles list --schema
   auth0 roles list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 roles list --query '{"name_filter":"admin"}'
   auth0 roles list --query '{"name_filter":"admin"}' --json
 ```

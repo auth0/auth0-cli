@@ -144,8 +144,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 actions ls --json
   auth0 actions ls --json-compact
   auth0 actions ls --csv
+
+  # Discover the query schema
   auth0 actions list --schema
   auth0 actions list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 actions list --query '{"triggerId":"post-login"}'
   auth0 actions list --query '{"deployed":"true"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -270,7 +274,9 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
   auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 --json
   auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -s "API_KEY=value" --json-compact
 
-  # Discover the payload schema (add --json for machine-readable output)
+  # JSON input mode (for agents and automation)
+
+  # Discover the payload schema
   auth0 actions create --schema
   auth0 actions create --schema --json
 
@@ -423,7 +429,9 @@ The JSON is validated against the OpenAPI schema before sending to the API.`,
   auth0 actions update <action-id> --module "module_id=mod_123,module_version_id=ver_456" --json
   auth0 actions update <action-id> -n myaction -c "$(cat path/to/code.js)" -d "lodash=4.0.0" --json-compact
 
-  # Discover the payload schema (add --json for machine-readable output)
+  # JSON input mode (for agents and automation)
+
+  # Discover the payload schema
   auth0 actions update --schema
   auth0 actions update --schema --json
 

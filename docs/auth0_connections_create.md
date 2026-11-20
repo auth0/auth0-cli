@@ -36,8 +36,11 @@ auth0 connections create [flags]
   # Flag-based mode
   auth0 connections create --name my-db --strategy auth0
 
-  # JSON mode
+  # Discover the payload schema
   auth0 connections create --schema
+  auth0 connections create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 connections create --data @connection.json
   auth0 connections create --data '{"name":"my-db","strategy":"auth0"}'
   cat connection.json | auth0 connections create
