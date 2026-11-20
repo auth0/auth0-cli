@@ -13,6 +13,7 @@ Manage client grants. A client grant authorizes an application (client) to reque
 - [auth0 client-grants delete](auth0_client-grants_delete.md) - Delete a client grant
 - [auth0 client-grants list](auth0_client-grants_list.md) - List your client grants
 - [auth0 client-grants organizations](auth0_client-grants_organizations.md) - Manage organizations of a client grant
+- [auth0 client-grants search](auth0_client-grants_search.md) - Search your client grants (Early Access)
 - [auth0 client-grants show](auth0_client-grants_show.md) - Show a client grant
 - [auth0 client-grants update](auth0_client-grants_update.md) - Update a client grant
 

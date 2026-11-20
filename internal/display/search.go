@@ -9,10 +9,13 @@ import (
 // searchEmptyHint is the empty-state hint of the search commands.
 const searchEmptyHint = "Try a broader --filter; results may lag very recent writes"
 
-// TableColumn is a table column and the API field it shows.
+// TableColumn is a table column and the API field it shows. Also lists other fields
+// the column's cell is built from; the column stays in the table when any of its
+// fields is in the response.
 type TableColumn struct {
 	Field  string
 	Header string
+	Also   []string
 }
 
 // TableColumns lists the columns of a table in display order.
@@ -31,9 +34,13 @@ func (c TableColumns) Fields() []string {
 // Left returns the fields of the columns left in the response by a --fields list
 // (or, with exclude, by --exclude-fields). Empty fields keeps every column.
 func (c TableColumns) Left(fields []string, exclude bool) []string {
+	returned := func(field string) bool {
+		return len(fields) == 0 || slices.Contains(fields, field) != exclude
+	}
+
 	var left []string
 	for _, column := range c {
-		if len(fields) == 0 || slices.Contains(fields, column.Field) != exclude {
+		if returned(column.Field) || slices.ContainsFunc(column.Also, returned) {
 			left = append(left, column.Field)
 		}
 	}

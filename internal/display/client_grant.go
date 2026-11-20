@@ -99,15 +99,32 @@ type clientGrantTableView struct {
 	Audience string
 	Scopes   string
 
-	raw interface{}
+	// Fields limits the columns to these API fields; empty shows every column.
+	fields []string
+	raw    interface{}
+}
+
+// ClientGrantTableColumns are the `client-grants list` and `client-grants search` table
+// columns, keyed by their API field name. The Client ID cell falls back to default_for,
+// and the Scopes cell reads allow_all_scopes, so those fields also keep their column.
+var ClientGrantTableColumns = TableColumns{
+	{Field: "id", Header: "ID"},
+	{Field: "client_id", Header: "Client ID", Also: []string{"default_for"}},
+	{Field: "audience", Header: "Audience"},
+	{Field: "scope", Header: "Scopes", Also: []string{"allow_all_scopes"}},
 }
 
 func (v *clientGrantTableView) AsTableHeader() []string {
-	return []string{"ID", "Client ID", "Audience", "Scopes"}
+	return ClientGrantTableColumns.headers(v.fields)
 }
 
 func (v *clientGrantTableView) AsTableRow() []string {
-	return []string{ansi.Faint(v.ID), v.ClientID, v.Audience, v.Scopes}
+	return ClientGrantTableColumns.row(v.fields, map[string]string{
+		"id":        ansi.Faint(v.ID),
+		"client_id": v.ClientID,
+		"audience":  v.Audience,
+		"scope":     v.Scopes,
+	})
 }
 
 func (v *clientGrantTableView) Object() interface{} {
@@ -115,21 +132,29 @@ func (v *clientGrantTableView) Object() interface{} {
 }
 
 func (r *Renderer) ClientGrantList(grants []*managementv3.ClientGrantResponseContent) {
-	resource := "client grants"
+	views := make([]View, 0, len(grants))
+	for _, grant := range grants {
+		views = append(views, makeClientGrantTableView(grant))
+	}
 
-	r.Heading(fmt.Sprintf("%s (%d)", resource, len(grants)))
+	r.tableResults("client grants", "Use 'auth0 client-grants create' to add one", views)
+}
 
-	if len(grants) == 0 {
-		r.EmptyState(resource, "Use 'auth0 client-grants create' to add one")
+// ClientGrantSearchList renders search results, limiting the table to the columns left by fields.
+func (r *Renderer) ClientGrantSearchList(grants []*managementv3.ClientGrantResponseContent, fields []string, exclude bool) {
+	columns := ClientGrantTableColumns.Left(fields, exclude)
+	if r.searchJSONFallback(ClientGrantTableColumns, columns, len(grants), grants) {
 		return
 	}
 
-	var results []View
+	views := make([]View, 0, len(grants))
 	for _, grant := range grants {
-		results = append(results, makeClientGrantTableView(grant))
+		view := makeClientGrantTableView(grant)
+		view.fields = columns
+		views = append(views, view)
 	}
 
-	r.Results(results)
+	r.tableResults("client grants", searchEmptyHint, views)
 }
 
 func (r *Renderer) ClientGrantShow(grant *managementv3.GetClientGrantResponseContent) {
