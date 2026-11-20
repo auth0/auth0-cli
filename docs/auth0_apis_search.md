@@ -7,6 +7,7 @@ has_toc: false
 
 [Early Access] Search your APIs using Lucene or SCIM filter syntax.
 Results are eventually consistent; use `auth0 apis list` for up-to-date data.
+'updated_at' can be filtered and sorted on, but is never returned.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
@@ -40,17 +41,17 @@ auth0 apis search [flags]
 ```
       --csv              Output in csv format.
       --exclude-fields   Exclude the --fields list from the response instead of returning only those fields.
-      --fields string    Comma-separated list of fields to include in the response, e.g. 'id,name,identifier'. 'updated_at' can be filtered and sorted on but is never returned.
-      --filter string    Filter expression, sent as the API's 'q' parameter. Lucene syntax by default, or SCIM with --parser scim. Supported fields: id, identifier, name, updated_at. Maximum 5 filter operations.
+      --fields string    Comma-separated list of fields to include in the response, e.g. 'id,name,identifier'.
+      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: id,identifier,name,updated_at. Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                          
-                         For example: 'name:"My API"' or, with --parser scim, 'name co "billing" and updated_at gt "2026-01-01"'. Equivalent to --query '{"q":"<expression>"}'.
+                         For example: 'name:"My API"' or, with --parser scim, 'name co "billing" and updated_at gt "2026-01-01"'.
       --json             Output in json format.
       --json-compact     Output in compact json format.
   -n, --number int       Number of APIs to retrieve. Minimum 1, maximum 1000. (default 100)
       --parser string    Syntax of --filter: 'lucene' or 'scim'. (default "lucene")
   -q, --query string     Search with a JSON object of query parameters, sent as-is. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. Returns one page: set "take" (max 100) for the page size, and "from" to the previous response's "next" to fetch the next page.
       --schema           Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
-  -s, --sort string      Field to sort by, ascending only: 'name', 'identifier' or 'updated_at'. The 'field:1' form is also accepted. Defaults to insertion order.
+  -s, --sort string      Field to sort by, in ascending order only. One of: name,identifier,updated_at. The 'field:1' form is also accepted. Defaults to insertion order.
 ```
 
 
