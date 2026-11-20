@@ -24,7 +24,12 @@ auth0 forms create [flags]
   auth0 forms create
   auth0 forms create --name "My Form"
   auth0 forms create --example > form.json
+
+  # Discover the payload schema
   auth0 forms create --schema
+  auth0 forms create --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 forms create --data '{"name":"My Form"}'
   auth0 forms create --data @form.json
   cat form.json | auth0 forms create

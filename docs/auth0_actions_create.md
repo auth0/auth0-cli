@@ -38,7 +38,9 @@ auth0 actions create [flags]
   auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -r node18 --json
   auth0 actions create -n myaction -t post-login -c "$(cat path/to/code.js)" -d "lodash=4.0.0" -s "API_KEY=value" --json-compact
 
-  # Discover the payload schema (add --json for machine-readable output)
+  # JSON input mode (for agents and automation)
+
+  # Discover the payload schema
   auth0 actions create --schema
   auth0 actions create --schema --json
 

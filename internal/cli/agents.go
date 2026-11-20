@@ -75,7 +75,7 @@ func agentsCmd(cli *cli) *cobra.Command {
 			"Authorize an M2M application for the Auth0 Management API with these scopes, then log in with it.\n\n" +
 			"To let an agent that publishes a metadata document sign in to your company, use `auth0 agents register <agent-url>`; " +
 			"`auth0 agents unregister` undoes it. `list` and `show` also report the agent's application, its metadata status and the Poppy APIs it can use.\n\n" +
-			"To manage skills for your AI coding assistants, use `auth0 agent` instead.",
+			"To manage skills for your AI coding assistants, use `auth0 skills` instead.",
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())

@@ -23,9 +23,14 @@ auth0 acul config set [flags]
   auth0 acul config set <screen-name> --file settings.json
   auth0 acul config set signup-id --file settings.json
   auth0 acul config set login-id
+
+  # Discover the payload schema
+  auth0 acul config set --schema
+  auth0 acul config set --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 acul config set signup-id --data '{"rendering_mode":"advanced"}'
   auth0 acul config set signup-id --data @settings.json
-  auth0 acul config set --schema
 ```
 
 

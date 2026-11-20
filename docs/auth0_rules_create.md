@@ -13,6 +13,9 @@ To create interactively, use `auth0 rules create` with no arguments.
 
 To create non-interactively, supply the name, template and other information through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 rules create [flags]
@@ -29,16 +32,27 @@ auth0 rules create [flags]
   auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
   auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json-compact
   echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create
+
+  # Discover the payload schema
+  auth0 rules create --schema
+  auth0 rules create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 rules create --data '{"name":"my-rule","script":"function (user, context, callback) { callback(null, user, context); }","enabled":true}'
+  auth0 rules create --data @rule.json
+  cat rule.json | auth0 rules create
 ```
 
 
 ## Flags
 
 ```
+      --data string       JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -e, --enabled           Enable (or disable) a rule. (default true)
       --json              Output in json format.
       --json-compact      Output in compact json format.
   -n, --name string       Name of the rule.
+      --schema            Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --script string     Script contents for the rule.
   -t, --template string   Template to use for the rule.
 ```

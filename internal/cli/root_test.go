@@ -53,6 +53,8 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 		{"auth0 logout", false},
 		{"auth0 tenants use", false},
 		{"auth0 tenants list", false},
+		{"auth0 skills install", false},
+		{"auth0 agent skills install", false},
 	}
 
 	for index, testCase := range testCases {
@@ -64,7 +66,8 @@ func TestCommandRequiresAuthentication(t *testing.T) {
 }
 
 // TestPersistentPreRunSkipsAuthForSchema verifies --schema skips the auth gate:
-// with an empty HOME only the --schema case passes; without it, auth is required.
+// with an empty HOME only the --schema case passes; without it, or with
+// --schema=false, auth is required.
 func TestPersistentPreRunSkipsAuthForSchema(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 
@@ -84,12 +87,17 @@ func TestPersistentPreRunSkipsAuthForSchema(t *testing.T) {
 		{"apis", "create"},
 		{"apis", "update"},
 		{"acul", "config", "set"},
+		{"tenant-settings", "update", "set"},
 	}
 
 	for _, path := range testCases {
 		t.Run(strings.Join(path, " "), func(t *testing.T) {
 			root, cmd := findCommand(t, path...)
 			require.Error(t, root.PersistentPreRunE(cmd, nil), "auth must be required without --schema")
+
+			root, cmd = findCommand(t, path...)
+			require.NoError(t, cmd.Flags().Set("schema", "false"))
+			require.Error(t, root.PersistentPreRunE(cmd, nil), "auth must be required with --schema=false")
 
 			root, cmd = findCommand(t, path...)
 			require.NoError(t, cmd.Flags().Set("schema", "true"))

@@ -20,7 +20,12 @@ auth0 forms update [flags]
 
 ```
   auth0 forms update <form-id> --name "New Name"
+
+  # Discover the payload schema
   auth0 forms update <form-id> --schema
+  auth0 forms update <form-id> --schema --json
+
+  # JSON input mode (for agents and automation)
   auth0 forms update <form-id> --data '{"name":"New Name"}'
   auth0 forms update <form-id> --data @form.json
   cat form.json | auth0 forms update <form-id>

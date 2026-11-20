@@ -184,7 +184,7 @@ func TestRunJSONWriteUnvalidatedSignal(t *testing.T) {
 			Method:     http.MethodPost,
 			SchemaPath: "/actions/actions/{id}/deploy",
 			URI:        "https://example.com/api/v2/actions/actions/act_1/deploy",
-			Data:       `{}`,
+			Data:       `{"name":"x"}`,
 			SchemaCmd:  "auth0 actions deploy",
 		})
 

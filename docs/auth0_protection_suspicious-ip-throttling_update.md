@@ -7,6 +7,9 @@ has_toc: false
 
 Update the suspicious ip throttling settings.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 protection suspicious-ip-throttling update [flags]
@@ -20,6 +23,15 @@ auth0 protection suspicious-ip-throttling update [flags]
   auth0 ap sit update --enabled=true --allowlist "178.178.178.178"
   auth0 ap sit update --enabled=false --allowlist "178.178.178.178" --shields block
   auth0 ap sit update -e=true -l "178.178.178.178" -s block --json
+
+  # Discover the payload schema
+  auth0 ap sit update --schema
+  auth0 ap sit update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ap sit update --data '{"enabled":true,"stage":{"pre-login":{"max_attempts":100,"rate":864000}}}'
+  auth0 ap sit update --data @suspicious-ip-throttling.json
+  cat suspicious-ip-throttling.json | auth0 ap sit update
 ```
 
 
@@ -27,6 +39,7 @@ auth0 protection suspicious-ip-throttling update [flags]
 
 ```
   -l, --allowlist strings           List of trusted IP addresses that will not have attack protection enforced against them. Comma-separated.
+      --data string                 JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -e, --enabled                     Enable (or disable) suspicious ip throttling.
       --json                        Output in json format.
       --json-compact                Output in compact json format.
@@ -34,6 +47,7 @@ auth0 protection suspicious-ip-throttling update [flags]
       --pre-login-rate int          Configuration options that apply before every login attempt. Interval of time, given in milliseconds, at which new attempts are granted. (default 34560)
       --pre-registration-max int    Configuration options that apply before every user registration attempt. Total number of attempts allowed. (default 1)
       --pre-registration-rate int   Configuration options that apply before every user registration attempt. Interval of time, given in milliseconds, at which new attempts are granted. (default 1200)
+      --schema                      Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --shields strings             Action to take when a suspicious IP throttling threshold is violated. Possible values: block, admin_notification. Comma-separated.
 ```
 

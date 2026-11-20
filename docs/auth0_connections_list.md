@@ -22,7 +22,12 @@ auth0 connections list [flags]
   auth0 connections ls
   auth0 connections ls --json
   auth0 connections ls --csv
+
+  # Discover the query schema
   auth0 connections list --schema
+  auth0 connections list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 connections list --query '{"strategy":["auth0"]}'
   auth0 connections list --query '{"name":"my-connection"}' --json
 ```
