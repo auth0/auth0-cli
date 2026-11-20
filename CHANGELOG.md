@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.41.0-beta.0](https://github.com/auth0/auth0-cli/tree/v1.41.0-beta.0) (November 20, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.40.0...v1.41.0-beta.0)
+
+### Added
+- Add `auth0 poppy setup` and `auth0 poppy config` commands to prepare a tenant for personal agents using the Personal Agent Protocol (Poppy) and to write the `poppy.json` config file (Experimental, Beta) [#1755]
+- Add `auth0 poppy doctor` command to check the Poppy files on your website, Auth0's issuer metadata, your tenant, registered agents, and the config file; `auth0 poppy setup` also runs the tenant checks at the end, which `--skip-doctor` turns off (Experimental, Beta) [#1768]
+- Add `--always-issue-refresh-tokens` flag to `auth0 poppy setup` to create a post-login Action that makes sure Poppy agents always receive a refresh token (Experimental, Beta) [#1770]
+- Add `auth0 agents register` and `auth0 agents unregister` commands to register an agent from its metadata URL, grant it access to APIs, and remove that access again (Experimental, Beta) [#1767]
+
+### Changed
+- `auth0 agents list` and `auth0 agents show` now also report the agent's client ID, its metadata status, and the APIs it has user grants on [#1767]
+
+
 # [v1.40.0](https://github.com/auth0/auth0-cli/tree/v1.40.0) (November 19, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.39.0...v1.40.0)
@@ -925,12 +939,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.40.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.41.0-beta.0...HEAD
 [#1778]: https://github.com/auth0/auth0-cli/pull/1778
 [#1777]: https://github.com/auth0/auth0-cli/pull/1777
 [#1775]: https://github.com/auth0/auth0-cli/pull/1775
+[#1770]: https://github.com/auth0/auth0-cli/pull/1770
+[#1768]: https://github.com/auth0/auth0-cli/pull/1768
+[#1767]: https://github.com/auth0/auth0-cli/pull/1767
 [#1761]: https://github.com/auth0/auth0-cli/pull/1761
 [#1760]: https://github.com/auth0/auth0-cli/pull/1760
+[#1755]: https://github.com/auth0/auth0-cli/pull/1755
 [#1724]: https://github.com/auth0/auth0-cli/pull/1724
 [#1723]: https://github.com/auth0/auth0-cli/pull/1723
 [#1720]: https://github.com/auth0/auth0-cli/pull/1720
