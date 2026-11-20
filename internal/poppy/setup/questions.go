@@ -213,16 +213,50 @@ func NameQuestions(state *State, in Inputs) []Question {
 // that neither the inputs nor the config file give one for. It needs no web app in
 // the state.
 func APIURLQuestions(state *State, in Inputs) []Question {
+	// The entries of the file are shared out as the merge shares them: one
+	// assignment across all the APIs, then in the order of the identifiers, an entry
+	// named by a given URL first and each entry to one API. An API whose entries
+	// another API has taken has none, and is asked for its URL.
+	claimed := map[int]bool{}
+	needsURL := map[string]bool{}
+
+	identifiers := make([]string, len(state.APIs))
+	for i, api := range state.APIs {
+		identifiers[i] = api.Identifier
+	}
+
+	slices.Sort(identifiers)
+
+	assigned := state.fileEntries(identifiers)
+
+	for _, identifier := range identifiers {
+		given := in.APIURLs[identifier]
+
+		if state.File != nil && given != "" {
+			if i := slices.IndexFunc(state.File.APIs, func(a config.API) bool { return a.URL == given }); i >= 0 {
+				claimed[i] = true
+				continue
+			}
+		}
+
+		var free []int
+
+		for _, i := range assigned[identifier] {
+			if !claimed[i] {
+				free = append(free, i)
+				claimed[i] = true
+			}
+		}
+
+		needsURL[identifier] = given == "" && len(free) == 0
+	}
+
 	var questions []Question
 
 	for _, api := range state.APIs {
-		identifier := api.Identifier
-
-		if in.APIURLs[identifier] != "" || len(state.fileEntries(identifier)) > 0 {
-			continue
+		if needsURL[api.Identifier] {
+			questions = append(questions, apiURLQuestion(api.Identifier))
 		}
-
-		questions = append(questions, apiURLQuestion(identifier))
 	}
 
 	return questions

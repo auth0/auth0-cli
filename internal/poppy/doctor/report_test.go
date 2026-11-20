@@ -268,7 +268,10 @@ func TestStrictExitCode(t *testing.T) {
 	}{
 		{name: "all passed", results: []Result{{Level: Pass}}},
 		{name: "a warning", results: []Result{{Level: Warn}, {Level: Pass}}},
-		{name: "a skipped check", results: []Result{{Level: Pass}, {Level: Skipped}}, strict: 1},
+		{name: "a check that does not apply", results: []Result{{Level: Pass}, {Level: Skipped, SkipReason: SkipNotAvailable}}},
+		{name: "a part that is switched off", results: []Result{{Level: Pass}, {Level: Skipped, SkipReason: SkipWebOff}, {Level: Skipped, SkipReason: SkipAPIOff}}},
+		{name: "a check that could not run", results: []Result{{Level: Pass}, {Level: Skipped, SkipReason: SkipNoLogin}}, strict: 1},
+		{name: "a check that could not read the tenant", results: []Result{{Level: Pass}, {Level: Skipped, SkipReason: SkipUnreadable}}, strict: 1},
 		{name: "a failure", results: []Result{{Level: Fail}}, want: 1, strict: 1},
 	}
 
@@ -282,6 +285,41 @@ func TestStrictExitCode(t *testing.T) {
 	}
 }
 
+func TestCouldNotRun(t *testing.T) {
+	could := []SkipReason{SkipNoLogin, SkipMissingScope, SkipDifferentTenant, SkipUnreadable, SkipNoConfigFile}
+	not := []SkipReason{SkipWebOff, SkipAPIOff, SkipNotAvailable, SkipProtocolVersion, ""}
+
+	for _, reason := range could {
+		assert.True(t, reason.CouldNotRun(), reason)
+	}
+
+	for _, reason := range not {
+		assert.False(t, reason.CouldNotRun(), reason)
+	}
+
+	report := Report{Results: []Result{
+		{Level: Skipped, SkipReason: SkipNoLogin},
+		{Level: Skipped, SkipReason: SkipNotAvailable},
+		{Level: Pass, SkipReason: SkipNoLogin},
+	}}
+	assert.Equal(t, 1, report.Incomplete(), "only skipped results count")
+}
+
+func TestStrictExitCodeOfAHealthySetupWithNoAgents(t *testing.T) {
+	f := healthyTenant()
+	f.apis, f.list = nil, nil
+
+	policies := mock.NewMockGuardianPolicyAPIV3(gomock.NewController(t))
+	policies.EXPECT().List(gomock.Any()).Return(managementv3.ListGuardianPoliciesResponseContent{}, nil).AnyTimes()
+
+	report := validSite().runWith(t, Options{Tenant: &Tenant{State: f, Agents: f, Policies: policies}, ConfigFile: goldenConfigFile(t, nil)})
+
+	assert.Zero(t, report.ExitCode(), "%+v", nonPass(report))
+	assert.True(t, report.TenantChecked)
+	assert.Equal(t, 3, report.Count(Skipped), "D11, D12 and D13 have no agent to check: %+v", nonPass(report))
+	assert.Zero(t, report.StrictExitCode(), "%+v", nonPass(report))
+}
+
 func TestFixCommands(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -293,13 +331,13 @@ func TestFixCommands(t *testing.T) {
 			name:  "setup",
 			r:     runner{domain: "shop.example", configFile: "poppy.json"},
 			check: func(r *runner) string { return r.setupCommand() },
-			want:  "auth0 poppy setup --company-domain shop.example --force",
+			want:  "auth0 poppy setup --company-domain shop.example",
 		},
 		{
 			name:  "setup with an API, a config file and a tenant",
 			r:     runner{domain: "shop.example", configFile: "./config/poppy.json", tenantFlag: "dev.us.auth0.com"},
 			check: func(r *runner) string { return r.setupCommand("--api", quoteArg("https://api.shop.example")) },
-			want:  "auth0 poppy setup --company-domain shop.example --api https://api.shop.example --out ./config/poppy.json --force --tenant dev.us.auth0.com",
+			want:  "auth0 poppy setup --company-domain shop.example --api https://api.shop.example --out ./config/poppy.json --tenant dev.us.auth0.com",
 		},
 		{
 			name:  "a config file with a space",
@@ -350,7 +388,7 @@ func TestFixCommandsOfTheTenantChecks(t *testing.T) {
 		byCode[res.Code] = res
 	}
 
-	assert.Equal(t, "auth0 poppy setup --company-domain shop.example --out "+quoteArg(path)+" --force --tenant dev.us.auth0.com", byCode["D8.cimd_off"].FixCommand)
+	assert.Equal(t, "auth0 poppy setup --company-domain shop.example --out "+quoteArg(path)+" --tenant dev.us.auth0.com", byCode["D8.cimd_off"].FixCommand)
 	assert.Equal(t, "auth0 agents register "+museURL+" --api https://api.other.example --tenant dev.us.auth0.com", byCode["D13.partially_granted"].FixCommand)
 	assert.Empty(t, byCode["D13.partially_granted"].FixHint)
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/display"
+	"github.com/auth0/auth0-cli/internal/poppy/config"
 	"github.com/auth0/auth0-cli/internal/poppy/setup"
 	"github.com/auth0/auth0-cli/internal/text"
 )
@@ -48,12 +49,13 @@ func isPoppyManagementAPI(identifier string) bool {
 }
 
 // poppyAPIOptions builds the options of the picker of the APIs: the Management API
-// is left out, an API that has Poppy on is marked, and the indexes of the marked
+// of the tenant, a system API, is left out; an API of the customer at the same
+// path is kept, an API that has Poppy on is marked, and the indexes of the marked
 // ones are returned, to start the picker with them selected. The value of an
 // option is the identifier of the API, which is what --api takes.
 func poppyAPIOptions(apis []setup.API) (opts pickerOptions, selected []int) {
 	for _, api := range apis {
-		if isPoppyManagementAPI(api.Identifier) {
+		if api.IsSystem && isPoppyManagementAPI(api.Identifier) {
 			continue
 		}
 
@@ -299,6 +301,44 @@ func poppyCompanyDomainGuess(hosts []string) string {
 // poppySecondLevelLabels are the labels that country domains put under their top
 // level, such as co in shop.co.uk.
 var poppySecondLevelLabels = map[string]bool{"co": true, "com": true, "org": true, "net": true, "gov": true, "edu": true, "ac": true}
+
+// poppyCompanyDomainDefault returns the company domain that the question starts
+// on, so that Enter on a rerun changes nothing: the one in the config file, else
+// the only one the tenant lists, else the guess of the custom domains.
+func (c *cli) poppyCompanyDomainDefault(ctx context.Context, file *config.Config) string {
+	var fileDomain string
+	if file != nil {
+		fileDomain = file.Organization.Domain
+	}
+
+	var tenantDomains []string
+
+	if fileDomain == "" {
+		_ = ansi.Waiting(func() error {
+			tenant, _ := c.poppyReader().Settings(ctx)
+			tenantDomains = tenant.CompanyDomains
+
+			return nil
+		})
+	}
+
+	return poppyCompanyDomainStart(fileDomain, tenantDomains, func() string { return c.guessPoppyCompanyDomain(ctx) })
+}
+
+// poppyCompanyDomainStart picks the company domain that the question starts on:
+// the one of the config file, else the only one the tenant lists, else the guess.
+// The guess is only made when it is needed.
+func poppyCompanyDomainStart(fileDomain string, tenantDomains []string, guess func() string) string {
+	if fileDomain != "" {
+		return fileDomain
+	}
+
+	if len(tenantDomains) == 1 {
+		return setup.NormalizeCompanyDomain(tenantDomains[0])
+	}
+
+	return guess()
+}
 
 // guessPoppyCompanyDomain reads the custom domains of the tenant to suggest a
 // company domain. It suggests none when they cannot be read: the suggestion is a

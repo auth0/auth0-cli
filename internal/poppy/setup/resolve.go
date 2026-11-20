@@ -32,7 +32,8 @@ func (r *Reader) ListPoppyAPIs(ctx context.Context) ([]API, error) {
 // ResolveAPIs returns the identifiers of the APIs of the tenant that the config
 // file describes. The file holds the URL of each API and no identifier, so an
 // entry of apis is linked to the Poppy API of the tenant whose identifier is at
-// the origin of its URL. An entry that no Poppy API is at, such as a third-party
+// the origin of its URL, or the one with the longest path the URL is under when
+// several are at that origin (see config.Config.AssignEntries). An entry that no Poppy API is at, such as a third-party
 // MCP server, is not an API of the tenant and is skipped.
 //
 // It returns an *InputError, with a FIX line that says to pass --api, when the
@@ -42,16 +43,21 @@ func ResolveAPIs(file *config.Config, poppy []API) ([]string, error) {
 	var found []string
 
 	if file != nil {
-		for _, entry := range file.APIs {
-			origin := config.Origin(entry.URL)
-			if origin == "" {
-				continue
-			}
+		identifiers := make([]string, len(poppy))
+		for i, api := range poppy {
+			identifiers[i] = api.Identifier
+		}
 
+		// The entries are shared out across all the APIs at once, so that an API on
+		// the same host with a longer path takes its own entries first.
+		assigned := file.AssignEntries(identifiers)
+
+		for i, entry := range file.APIs {
 			var matches []string
-			for _, api := range poppy {
-				if config.Origin(api.Identifier) == origin {
-					matches = append(matches, api.Identifier)
+
+			for _, identifier := range identifiers {
+				if slices.Contains(assigned[identifier], i) && !slices.Contains(matches, identifier) {
+					matches = append(matches, identifier)
 				}
 			}
 

@@ -56,6 +56,9 @@ type ActionState struct {
 	CodeCurrent bool
 	// Deployed tells whether that code is the deployed version.
 	Deployed bool
+	// BuildFailed tells whether the last build of the Action failed. The code is
+	// sent again then, even when it is current, to build it again.
+	BuildFailed bool
 	// Flow lists the Actions bound to the post-login trigger, in the order they run.
 	Flow []FlowAction
 }

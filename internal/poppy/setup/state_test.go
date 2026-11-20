@@ -3,6 +3,7 @@ package setup
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -124,7 +125,7 @@ func (f *readerFixture) expectTenant() {
 		ResourceParameterProfile:                   ptr(managementv3.TenantSettingsResourceParameterProfileCompatibility),
 		DefaultAudience:                            ptr(shopAPI),
 		FriendlyName:                               ptr("Shop"),
-		PersonalAgentProtocolCompanyDomains:        []string{"https://shop.example"},
+		PersonalAgentProtocolCompanyDomains:        ptr([]string{"https://shop.example"}),
 	}, nil)
 }
 
@@ -274,6 +275,79 @@ func TestTenantHosts(t *testing.T) {
 	_, err = f.reader.TenantHosts(t.Context())
 
 	require.ErrorContains(t, err, "failed to list the custom domains")
+}
+
+// fakeManagementError is a v1 management.Error.
+type fakeManagementError struct {
+	status  int
+	code    string
+	message string
+}
+
+func (e fakeManagementError) Status() int   { return e.status }
+func (e fakeManagementError) Code() string  { return e.code }
+func (e fakeManagementError) Error() string { return e.message }
+
+func TestCustomDomainsOfATenantWithoutThem(t *testing.T) {
+	t.Run("403 is no custom domains", func(t *testing.T) {
+		f := newReaderFixture(t)
+		f.expectTenant()
+		f.domains.EXPECT().List(gomock.Any()).Return(nil, fmt.Errorf("wrapped: %w", fakeManagementError{status: http.StatusForbidden, code: "forbidden"})).Times(1)
+
+		hosts, err := f.reader.TenantHosts(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, []string{tenantURL}, hosts)
+
+		state, err := f.reader.Read(t.Context(), nil, "")
+		require.NoError(t, err)
+		assert.Empty(t, state.CustomDomain)
+	})
+
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{name: "403 with a missing scope", err: fakeManagementError{status: http.StatusForbidden, code: "insufficient_scope"}},
+		{name: "500", err: fakeManagementError{status: http.StatusInternalServerError}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f := newReaderFixture(t)
+			f.domains.EXPECT().List(gomock.Any()).Return(nil, test.err)
+
+			_, err := f.reader.TenantHosts(t.Context())
+
+			require.ErrorContains(t, err, "failed to list the custom domains")
+		})
+	}
+}
+
+func TestFindAPIRefusesSystemAPIs(t *testing.T) {
+	system := &managementv3.ResourceServer{ID: ptr("rs_system"), Identifier: ptr("https://" + tenantURL + "/api/v2/"), IsSystem: ptr(true)}
+
+	t.Run("by identifier", func(t *testing.T) {
+		f := newReaderFixture(t)
+		f.servers.EXPECT().List(gomock.Any(), gomock.Any()).Return(serverPages([]*managementv3.ResourceServer{system}), nil)
+
+		_, err := f.reader.findAPI(t.Context(), system.GetIdentifier())
+
+		var input *InputError
+		require.ErrorAs(t, err, &input)
+		assert.Equal(t, ReasonAPISystem, input.Reason)
+		assert.Contains(t, input.Message, "system API")
+	})
+
+	t.Run("by ID", func(t *testing.T) {
+		f := newReaderFixture(t)
+		f.servers.EXPECT().List(gomock.Any(), gomock.Any()).Times(2).Return(serverPages([]*managementv3.ResourceServer{system}), nil)
+
+		_, err := f.reader.findAPI(t.Context(), "rs_system")
+
+		var input *InputError
+		require.ErrorAs(t, err, &input)
+		assert.Equal(t, ReasonAPISystem, input.Reason)
+	})
 }
 
 func TestCustomDomainsAreListedOncePerRun(t *testing.T) {

@@ -27,7 +27,7 @@ const (
 )
 
 // clientFields is the field filter the generic service puts on its client lookups.
-const clientFields = "client_id,name,agent_id,external_client_id,external_metadata_type,external_metadata_status,require_proof_of_possession"
+const clientFields = "client_id,name,agent_id,external_client_id,external_metadata_type,external_metadata_created_by,external_metadata_status,require_proof_of_possession"
 
 type fixture struct {
 	clients     *mock.MockClientAPIV3

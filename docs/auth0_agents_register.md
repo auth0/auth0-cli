@@ -43,7 +43,7 @@ auth0 agents register [agent-url] [flags]
       --name string       The agent's name.
       --poppy             Limit the APIs to Poppy APIs. On its own it grants every Poppy API of the tenant. With --api, every API named must be a Poppy API.
       --require-dpop      Require DPoP-bound tokens for the agent. Off by default.
-      --scopes strings    Scopes to grant. Repeat the flag or separate scopes with commas. With several APIs, each API gets the listed scopes it offers; to give a scope to one API only, write <api>=<scope>. Without a terminal, pass this or --all-scopes. Mutually exclusive with --all-scopes.
+      --scopes strings    Scopes to grant. Repeat the flag or separate scopes with commas. With several APIs, each API gets the listed scopes it offers; to give a scope to one API only, write <api>=<scope>, and write it for every scope you list after it that several APIs offer, because a comma only separates scopes. Without a terminal, pass this or --all-scopes. Mutually exclusive with --all-scopes.
 ```
 
 

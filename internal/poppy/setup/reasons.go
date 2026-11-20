@@ -10,6 +10,8 @@ const (
 	// ReasonAPINotFound is an API that is not in the tenant, or that no config file
 	// entry points at.
 	ReasonAPINotFound = "api_not_found"
+	// ReasonAPISystem is an API that belongs to Auth0, such as the Management API.
+	ReasonAPISystem = "api_system"
 	// ReasonAmbiguousAPI is a config file entry that could be any of several APIs.
 	ReasonAmbiguousAPI = "ambiguous_api"
 	// ReasonAmbiguousAPIEntry is an API that several config file entries point at.

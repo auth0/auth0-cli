@@ -372,6 +372,8 @@ func TestPoppyDoctorCommandWithoutLogin(t *testing.T) {
 func TestPoppyDoctorError(t *testing.T) {
 	passed := doctor.Result{ID: "D1", Level: doctor.Pass}
 	skipped := doctor.Result{ID: "D8", Level: doctor.Skipped}
+	couldNotRun := doctor.Result{ID: "D8", Level: doctor.Skipped, SkipReason: doctor.SkipNoLogin}
+	notApplicable := doctor.Result{ID: "D9", Level: doctor.Skipped, SkipReason: doctor.SkipAPIOff}
 	warned := doctor.Result{ID: "D5", Level: doctor.Warn}
 	failed := doctor.Result{ID: "D3", Level: doctor.Fail}
 
@@ -399,12 +401,13 @@ func TestPoppyDoctorError(t *testing.T) {
 			wantDetails: `{"failed":1,"warnings":0,"skipped":1}`,
 		},
 		{
-			name:        "a skipped check fails with --strict",
-			results:     []doctor.Result{passed, skipped},
+			name:        "a skipped check that could not run fails with --strict",
+			results:     []doctor.Result{passed, couldNotRun},
 			strict:      true,
 			want:        errPoppyDoctorIncomplete,
 			wantDetails: `{"failed":0,"warnings":0,"skipped":1}`,
 		},
+		{name: "a skipped check that does not apply passes with --strict", results: []doctor.Result{passed, notApplicable}, strict: true},
 	}
 
 	for _, test := range tests {

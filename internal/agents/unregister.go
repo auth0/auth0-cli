@@ -40,7 +40,8 @@ type Removal struct {
 	// reference any more.
 	Gone bool `json:"gone"`
 	// Grants are the app's grants to remove. OtherGrants are the grants that a
-	// removal narrowed to some APIs leaves alone; it is empty otherwise.
+	// removal narrowed to some APIs leaves alone, which include the client
+	// grants on those APIs; it is empty otherwise.
 	Grants      []Grant `json:"grants"`
 	OtherGrants []Grant `json:"other_grants"`
 }
@@ -92,7 +93,9 @@ func (s *Service) PlanRemoval(ctx context.Context, ref string, only AudienceFilt
 	}
 
 	for _, grant := range grants {
-		if audiences.has(grant.Audience) {
+		// A narrowed removal takes back what register gives, the user grants on
+		// the APIs. A client grant of the app, for machine access, stays.
+		if audiences.has(grant.Audience) && (!audiences.narrowed || grant.IsUserGrant()) {
 			removal.Grants = append(removal.Grants, grant)
 		} else {
 			removal.OtherGrants = append(removal.OtherGrants, grant)
@@ -153,7 +156,7 @@ func (s *Service) planRecordRemoval(ctx context.Context, ref string) (*Removal, 
 // an agent app. With only, it leaves out those that have grants but none on the
 // APIs it covers, since a removal narrowed to them would find nothing to remove.
 func (s *Service) Candidates(ctx context.Context, only AudienceFilter) ([]Entry, error) {
-	apps, err := s.listAgentApps(ctx)
+	apps, err := s.listCimdApps(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list the agent apps: %w", err)
 	}
@@ -168,6 +171,8 @@ func (s *Service) Candidates(ctx context.Context, only AudienceFilter) ([]Entry,
 		return nil, err
 	}
 
+	apps = onlyAgentApps(apps, records)
+
 	var grants map[string][]Grant
 
 	if audiences.narrowed {
@@ -181,17 +186,12 @@ func (s *Service) Candidates(ctx context.Context, only AudienceFilter) ([]Entry,
 	for _, app := range apps {
 		if audiences.narrowed {
 			held := grants[app.GetClientID()]
-			if len(held) > 0 && !slices.ContainsFunc(held, func(grant Grant) bool { return audiences.has(grant.Audience) }) {
+			if len(held) > 0 && !slices.ContainsFunc(held, func(grant Grant) bool { return grant.IsUserGrant() && audiences.has(grant.Audience) }) {
 				continue
 			}
 		}
 
-		e := Entry{Client: app}
-		if i := slices.IndexFunc(records, func(record *managementv3.AgentResponseContent) bool { return record.GetAgentID() == app.GetAgentID() }); i >= 0 && app.GetAgentID() != "" {
-			e.Record = records[i]
-		}
-
-		entries = append(entries, e)
+		entries = append(entries, Entry{Client: app, Record: recordOf(records, app)})
 	}
 
 	return entries, nil

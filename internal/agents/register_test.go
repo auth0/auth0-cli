@@ -152,6 +152,8 @@ func TestRegisterSteps(t *testing.T) {
 func TestChooseScopes(t *testing.T) {
 	other := API{ID: "rs_two", Identifier: otherAPI, Scopes: []Scope{{Name: "orders:read"}, {Name: "refund"}}}
 	disjoint := API{ID: "rs_three", Identifier: "https://crm.example/api", Scopes: []Scope{{Name: "contacts:read"}}}
+	readWriteShop := API{ID: "rs_one", Identifier: shopAPI, Scopes: []Scope{{Name: "read"}, {Name: "write"}}}
+	readWriteOther := API{ID: "rs_two", Identifier: otherAPI, Scopes: []Scope{{Name: "read"}, {Name: "write"}}}
 
 	tests := []struct {
 		name      string
@@ -214,6 +216,39 @@ func TestChooseScopes(t *testing.T) {
 			names: []string{shopAPI + "=orders:read", "refund"},
 			want: []Grant{
 				{Audience: shopAPI, Scopes: []string{"orders:read"}},
+				{Audience: otherAPI, Scopes: []string{"refund"}},
+			},
+		},
+		{
+			name:      "an unpinned scope after a pinned one, offered by several APIs, is ambiguous",
+			apis:      []API{readWriteShop, readWriteOther},
+			names:     []string{shopAPI + "=read", "write"},
+			wantError: `scope "write" follows a scope pinned to an API, and ` + shopAPI + ", " + otherAPI + ` all offer it. Pin it too, with --scopes <api>=write`,
+		},
+		{
+			name:  "every scope pinned, offered by several APIs",
+			apis:  []API{readWriteShop, readWriteOther},
+			names: []string{shopAPI + "=read", shopAPI + "=write", otherAPI + "=read"},
+			want: []Grant{
+				{Audience: shopAPI, Scopes: []string{"read", "write"}},
+				{Audience: otherAPI, Scopes: []string{"read"}},
+			},
+		},
+		{
+			name:  "an unpinned scope before a pinned one, offered by several APIs",
+			apis:  []API{readWriteShop, readWriteOther},
+			names: []string{"read", shopAPI + "=write"},
+			want: []Grant{
+				{Audience: shopAPI, Scopes: []string{"read", "write"}},
+				{Audience: otherAPI, Scopes: []string{"read"}},
+			},
+		},
+		{
+			name:  "an unpinned scope after a pinned one, offered by one API",
+			apis:  []API{readWriteShop, other},
+			names: []string{shopAPI + "=read", "refund"},
+			want: []Grant{
+				{Audience: shopAPI, Scopes: []string{"read"}},
 				{Audience: otherAPI, Scopes: []string{"refund"}},
 			},
 		},

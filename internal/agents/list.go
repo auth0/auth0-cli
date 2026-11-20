@@ -28,9 +28,20 @@ type Entry struct {
 	Client *managementv3.Client
 }
 
-// IsAgentApp reports whether the entry has an agent app.
+// IsAgentApp reports whether the entry has an agent app: a CIMD client that an
+// admin registered, or that has an agent record. A client that registered itself
+// through CIMD and has no agent record, such as an MCP client, is not an agent.
 func (e Entry) IsAgentApp() bool {
-	return e.Client != nil && e.Client.GetExternalMetadataType() == managementv3.ClientExternalMetadataTypeEnumCimd
+	if e.Client == nil || e.Client.GetExternalMetadataType() != managementv3.ClientExternalMetadataTypeEnumCimd {
+		return false
+	}
+
+	return e.Record != nil || !selfRegistered(e.Client)
+}
+
+// selfRegistered tells whether the client registered itself through CIMD.
+func selfRegistered(client *managementv3.Client) bool {
+	return client.GetExternalMetadataCreatedBy() == managementv3.ClientExternalMetadataCreatedByEnumClient
 }
 
 // Records returns every agent record.
@@ -77,16 +88,38 @@ func (s *Service) listClients(ctx context.Context) ([]*managementv3.Client, erro
 	return Collect(ctx, page)
 }
 
-// listAgentApps returns every client that is an agent app.
-func (s *Service) listAgentApps(ctx context.Context) ([]*managementv3.Client, error) {
+// listCimdApps returns every CIMD client. Whether one is an agent app also
+// depends on its agent record, so callers narrow it with onlyAgentApps.
+func (s *Service) listCimdApps(ctx context.Context) ([]*managementv3.Client, error) {
 	clients, err := s.listClients(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return slices.DeleteFunc(clients, func(client *managementv3.Client) bool {
-		return !Entry{Client: client}.IsAgentApp()
+		return client.GetExternalMetadataType() != managementv3.ClientExternalMetadataTypeEnumCimd
 	}), nil
+}
+
+// recordOf returns the agent record linked to the app, nil when there is none.
+func recordOf(records []*managementv3.AgentResponseContent, app *managementv3.Client) *managementv3.AgentResponseContent {
+	if app.GetAgentID() == "" {
+		return nil
+	}
+
+	i := slices.IndexFunc(records, func(record *managementv3.AgentResponseContent) bool { return record.GetAgentID() == app.GetAgentID() })
+	if i < 0 {
+		return nil
+	}
+
+	return records[i]
+}
+
+// onlyAgentApps keeps the CIMD clients that are agent apps, given the records.
+func onlyAgentApps(apps []*managementv3.Client, records []*managementv3.AgentResponseContent) []*managementv3.Client {
+	return slices.DeleteFunc(apps, func(app *managementv3.Client) bool {
+		return !Entry{Client: app, Record: recordOf(records, app)}.IsAgentApp()
+	})
 }
 
 // LinkApps pairs each of the records with the client whose agent ID is the
@@ -115,7 +148,8 @@ func (s *Service) LinkApps(ctx context.Context, records []*managementv3.AgentRes
 // that have no record. The apps are known when they could be listed; when they
 // could not, only the records are returned and known is false.
 func (s *Service) Link(ctx context.Context, records []*managementv3.AgentResponseContent) (entries []Entry, known bool) {
-	apps, appsErr := s.listAgentApps(ctx)
+	apps, appsErr := s.listCimdApps(ctx)
+	apps = onlyAgentApps(apps, records)
 
 	linked := make(map[string]bool, len(records))
 

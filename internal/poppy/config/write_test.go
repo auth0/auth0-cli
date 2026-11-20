@@ -159,3 +159,76 @@ func TestWrite(t *testing.T) {
 		}
 	})
 }
+
+func TestCheckWritable(t *testing.T) {
+	t.Run("a new file in an existing directory", func(t *testing.T) {
+		dir := t.TempDir()
+
+		require.NoError(t, CheckWritable(filepath.Join(dir, DefaultFileName)))
+		assert.Empty(t, dirEntries(t, dir), "no temporary file is left")
+	})
+
+	t.Run("an existing file is not changed", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, DefaultFileName)
+		require.NoError(t, os.WriteFile(path, []byte("original"), 0o644))
+
+		require.NoError(t, CheckWritable(path))
+
+		got, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, "original", string(got))
+		assert.Equal(t, []string{DefaultFileName}, dirEntries(t, dir))
+	})
+
+	t.Run("a symlink is followed", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("symlinks need privileges on Windows")
+		}
+
+		dir := t.TempDir()
+		target := filepath.Join(dir, "real.json")
+		require.NoError(t, os.WriteFile(target, []byte("original"), 0o644))
+		link := filepath.Join(dir, DefaultFileName)
+		require.NoError(t, os.Symlink(target, link))
+
+		require.NoError(t, CheckWritable(link))
+	})
+
+	t.Run("a directory that does not exist", func(t *testing.T) {
+		err := CheckWritable(filepath.Join(t.TempDir(), "missing", DefaultFileName))
+
+		require.ErrorContains(t, err, "cannot write")
+		assert.ErrorIs(t, err, os.ErrNotExist)
+	})
+
+	t.Run("a directory that is a file", func(t *testing.T) {
+		dir := t.TempDir()
+		notDir := filepath.Join(dir, "file")
+		require.NoError(t, os.WriteFile(notDir, nil, 0o644))
+
+		err := CheckWritable(filepath.Join(notDir, DefaultFileName))
+
+		require.Error(t, err)
+	})
+
+	t.Run("a target that is a directory", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, DefaultFileName)
+		require.NoError(t, os.Mkdir(path, 0o755))
+
+		require.ErrorContains(t, CheckWritable(path), "not a regular file")
+	})
+
+	t.Run("a directory that cannot be written", func(t *testing.T) {
+		if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+			t.Skip("directory permissions are not enforced here")
+		}
+
+		dir := t.TempDir()
+		require.NoError(t, os.Chmod(dir, 0o555))
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+		require.ErrorContains(t, CheckWritable(filepath.Join(dir, DefaultFileName)), "cannot write")
+	})
+}

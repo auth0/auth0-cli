@@ -30,6 +30,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/auth0/mock"
+	cliconfig "github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/poppy/config"
 	"github.com/auth0/auth0-cli/internal/poppy/doctor"
@@ -336,7 +337,7 @@ func configuredPoppyTenant() poppyTenantState {
 		ResourceParameterProfile:                   testPtr(managementv3.TenantSettingsResourceParameterProfileCompatibility),
 		DefaultAudience:                            testPtr(poppyTestAPI),
 		FriendlyName:                               testPtr("Shop"),
-		PersonalAgentProtocolCompanyDomains:        []string{"shop.example"},
+		PersonalAgentProtocolCompanyDomains:        testPtr([]string{"shop.example"}),
 	}
 	state.domains = []*management.CustomDomain{{Domain: testPtr("auth.shop.example"), Status: testPtr("ready"), IsDefault: testPtr(true)}}
 	state.server.Scopes = append(state.server.Scopes, &managementv3.ResourceServerScope{Value: setup.BrowserSignInScope, Description: testPtr(setup.BrowserSignInDescription)})
@@ -368,6 +369,9 @@ type poppySetupHarness struct {
 	// does not ask for the post-login Action cannot call it.
 	actions *mock.MockActionAPI
 	run     func(args ...string) error
+	// The CLI the commands run on, for a test that sets what the root command
+	// would, such as the tenant that --tenant chose.
+	cli *cli
 
 	// Runs the command in agent mode when set.
 	agentMode bool
@@ -512,6 +516,8 @@ func newPoppySetupHarness(t *testing.T, tenant poppyTenantState) *poppySetupHarn
 			GuardianPolicy:   h.policies,
 		},
 	}
+
+	h.cli = testCLI
 
 	h.run = func(args ...string) error {
 		root := buildRootCmd(testCLI)
@@ -1081,6 +1087,29 @@ func TestPoppySetupApply(t *testing.T) {
 		assert.NotContains(t, h.out.String(), "Checking your setup")
 	})
 
+	t.Run("the fix commands of doctor repeat the tenant that --tenant chose", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			explicit bool
+			want     string
+		}{
+			{name: "an explicit tenant is repeated", explicit: true, want: "auth0 agents register https://muse.example/agent.json --api https://api.shop.example --tenant staging\n"},
+			{name: "the default tenant is not named", want: "auth0 agents register https://muse.example/agent.json --api https://api.shop.example\n"},
+		}
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				h := newPoppySetupHarness(t, configuredPoppyTenant())
+				h.cli.tenantExplicit, h.cli.tenant = test.explicit, "staging"
+				args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", goldenPoppyConfig(t)}
+
+				require.NoError(t, h.run(args...))
+
+				assert.Contains(t, h.out.String(), test.want)
+			})
+		}
+	})
+
 	t.Run("an empty plan asks for nothing", func(t *testing.T) {
 		h := newPoppySetupHarness(t, configuredPoppyTenant())
 		args := []string{"setup", "--company-domain", "shop.example", "--api", poppyTestAPI, "--app", poppySetupAppID, "--out", goldenPoppyConfig(t), "--skip-doctor"}
@@ -1424,6 +1453,33 @@ func TestPoppySetupPreflight(t *testing.T) {
 	assert.Empty(t, *asked, "no question was asked")
 }
 
+func TestMissingScopesMessage(t *testing.T) {
+	tests := []struct {
+		name    string
+		tenant  cliconfig.Tenant
+		missing []string
+		want    string
+	}{
+		{
+			name:    "a user login runs auth0 login",
+			missing: []string{"read:agents", "create:agents"},
+			want:    "missing scope read:agents, create:agents. Run: auth0 login --scopes read:agents,create:agents",
+		},
+		{
+			name:    "a client credentials login adds the scope to the grant",
+			tenant:  cliconfig.Tenant{ClientID: "client"},
+			missing: []string{"read:agents", "create:agents"},
+			want:    "missing scope read:agents, create:agents. Add them to the application's grant on the Auth0 Management API, then log in again.",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, missingScopesMessage(test.tenant, test.missing))
+		})
+	}
+}
+
 func TestCheckPoppyScopesModes(t *testing.T) {
 	keyring.MockInit()
 
@@ -1450,6 +1506,24 @@ func TestCheckPoppyScopesModes(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Equal(t, "missing_scopes", errorReason(err))
+	})
+
+	t.Run("a saved login with client credentials is told to add the scope to the grant", func(t *testing.T) {
+		t.Setenv(authModeEnvVar, "")
+
+		saved, err := json.Marshal(map[string]any{
+			"default_tenant": poppySetupTenant,
+			"tenants":        map[string]any{poppySetupTenant: map[string]any{"domain": poppySetupTenant, "client_id": "client", "access_token": token}},
+		})
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(home, ".config", "auth0", "config.json"), saved, 0o600))
+
+		err = (&cli{tenant: poppySetupTenant}).checkPoppyScopes([]string{"read:clients"})
+
+		require.Error(t, err)
+		assert.Equal(t, "missing_scopes", errorReason(err))
+		assert.Contains(t, err.Error(), "missing scope read:clients. Add it to the application's grant")
+		assert.NotContains(t, err.Error(), "auth0 login --scopes")
 	})
 
 	t.Run("the saved login is not consulted in env auth mode", func(t *testing.T) {

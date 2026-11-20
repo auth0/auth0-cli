@@ -42,6 +42,9 @@ const (
 	// does not accept, such as a field that does not exist yet.
 	invalidQueryString = "invalid_query_string"
 
+	// InsufficientScope is the error code of a request the token has no scope for.
+	insufficientScope = "insufficient_scope"
+
 	// ActionPageSize is the page size of the Actions API lists, and maxActionPages
 	// the most pages read from one.
 	actionPageSize = 50
@@ -210,6 +213,7 @@ func (r *Reader) ReadAction(ctx context.Context, apis []string) (*ActionState, e
 		state.ID = action.GetID()
 		state.CodeCurrent = action.GetCode() == state.Code
 		state.Deployed = state.CodeCurrent && action.DeployedVersion != nil && action.AllChangesDeployed
+		state.BuildFailed = action.GetStatus() == management.ActionStatusFailed
 	}
 
 	return state, nil
@@ -341,6 +345,15 @@ func (r *Reader) customDomains(ctx context.Context) ([]*management.CustomDomain,
 
 	domains, err := r.Domains.List(ctx)
 	if err != nil {
+		// A free tenant that doesn't have custom domains answers 403. That is no
+		// custom domains, not a failure. A missing scope is still a failure.
+		var apiErr management.Error
+		if errors.As(err, &apiErr) && apiErr.Status() == http.StatusForbidden && apiErr.Code() != insufficientScope {
+			r.domains, r.domainsRead = nil, true
+
+			return nil, nil
+		}
+
 		return nil, fmt.Errorf("failed to list the custom domains: %w", err)
 	}
 
@@ -412,7 +425,19 @@ func (r *Reader) findAPI(ctx context.Context, ref string) (API, error) {
 		}
 	}
 
-	return apiFromServer(servers[0]), nil
+	api := apiFromServer(servers[0])
+
+	// Setup updates the tenant before the API, and an Auth0 system API rejects the
+	// update, so it is refused before anything is changed.
+	if api.IsSystem {
+		return API{}, &InputError{
+			Reason:  ReasonAPISystem,
+			Message: fmt.Sprintf("API %s is an Auth0 system API, Poppy cannot be set up on it.", ref),
+			Fix:     "Use one of your own APIs: auth0 apis create",
+		}
+	}
+
+	return api, nil
 }
 
 // apiFromServer reads the settings that Poppy changes from a resource server.
@@ -421,6 +446,7 @@ func apiFromServer(server *managementv3.ResourceServer) API {
 		ID:                 server.GetID(),
 		Identifier:         server.GetIdentifier(),
 		Name:               server.GetName(),
+		IsSystem:           server.GetIsSystem(),
 		AllowOfflineAccess: server.GetAllowOfflineAccess(),
 		AgentSubjectClaims: string(server.GetAgentSubjectClaims()),
 		Poppy:              server.GetUseForPersonalAgentProtocol(),

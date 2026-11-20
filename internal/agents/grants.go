@@ -49,6 +49,8 @@ type API struct {
 	Name       string  `json:"name,omitempty"`
 	Identifier string  `json:"identifier"`
 	Scopes     []Scope `json:"scopes"`
+	// IsSystem is true for an API that Auth0 provides, such as the Management API.
+	IsSystem bool `json:"-"`
 }
 
 // Scope is a scope an API offers.
@@ -59,7 +61,7 @@ type Scope struct {
 
 // NewAPI describes a resource server as an API.
 func NewAPI(server *managementv3.ResourceServer) API {
-	api := API{ID: server.GetID(), Name: server.GetName(), Identifier: server.GetIdentifier()}
+	api := API{ID: server.GetID(), Name: server.GetName(), Identifier: server.GetIdentifier(), IsSystem: server.GetIsSystem()}
 	for _, scope := range server.GetScopes() {
 		api.Scopes = append(api.Scopes, Scope{Name: scope.GetValue(), Description: scope.GetDescription()})
 	}

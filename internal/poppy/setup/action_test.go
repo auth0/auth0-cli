@@ -39,6 +39,8 @@ type actionServer struct {
 	buildChecks int
 	// BuildStatus is the status a read answers once the build is over.
 	buildStatus string
+	// Versions are the versions of an Action, as the versions list shows them.
+	versions []map[string]any
 	// ActionsTotal and bindingsTotal replace the total a list reports, which is the
 	// number of items it has.
 	actionsTotal  *int
@@ -125,6 +127,8 @@ func (s *actionServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		reply(http.StatusOK, map[string]any{"bindings": s.bindings})
+	case strings.HasPrefix(key, "GET actions/") && strings.HasSuffix(key, "/versions"):
+		reply(http.StatusOK, map[string]any{"versions": s.versions, "total": len(s.versions)})
 	case strings.HasPrefix(key, "GET actions/"):
 		action := s.find(strings.TrimPrefix(key, "GET actions/"))
 		if action == nil {
@@ -1023,8 +1027,8 @@ func TestApplyActionFailures(t *testing.T) {
 		{
 			name:         "the build fails",
 			buildStatus:  management.ActionStatusFailed,
-			wantErr:      "the Action failed to build",
-			wantRequests: []string{"POST actions", "GET actions/act_new"},
+			wantErr:      "the Action failed to build: Cannot find module 'x'; Unexpected token",
+			wantRequests: []string{"POST actions", "GET actions/act_new", "GET actions/act_new/versions"},
 		},
 		{
 			name:         "the deploy fails",
@@ -1044,6 +1048,10 @@ func TestApplyActionFailures(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			server, api := newActionServer(t)
 			server.fail = test.fail
+			server.versions = []map[string]any{
+				{"id": "ver_0", "number": 1, "deployed": true, "errors": []map[string]any{{"id": "old", "msg": "An error of a version that was replaced"}}},
+				{"id": "ver_1", "number": 2, "deployed": false, "errors": []map[string]any{{"id": "e1", "msg": "Cannot find module 'x'"}, {"id": "e2", "msg": "Unexpected token"}}},
+			}
 			if test.buildStatus != "" {
 				server.buildStatus = test.buildStatus
 			}
@@ -1054,6 +1062,36 @@ func TestApplyActionFailures(t *testing.T) {
 			assert.Equal(t, test.wantRequests, server.stored())
 		})
 	}
+
+	t.Run("a build that fails without readable errors still fails", func(t *testing.T) {
+		server, api := newActionServer(t)
+		server.buildStatus = management.ActionStatusFailed
+		server.fail["GET actions/act_new/versions"] = http.StatusForbidden
+
+		err := applyAction(t, api, &ActionState{Code: testActionCode})
+
+		var failed *buildFailedError
+		require.ErrorAs(t, err, &failed)
+		assert.Equal(t, "the Action failed to build", err.Error())
+	})
+
+	t.Run("an Action that is current and failed to build is sent again", func(t *testing.T) {
+		server, api := newActionServer(t)
+		failed := actionNamed("act_1", OfflineAccessActionName, testActionCode, false)
+		failed["status"] = management.ActionStatusFailed
+		server.actions = []map[string]any{failed}
+		server.bindings = []map[string]any{}
+
+		state, err := (&Reader{Actions: api.Action}).ReadAction(t.Context(), testActionAPIs)
+		require.NoError(t, err)
+		require.True(t, state.CodeCurrent)
+		require.True(t, state.BuildFailed)
+
+		require.NoError(t, applyAction(t, api, state))
+
+		assert.Contains(t, server.stored(), "PATCH actions/act_1")
+		assert.Contains(t, server.stored(), "POST actions/act_1/deploy")
+	})
 
 	t.Run("a build that does not end is given up on when the context ends", func(t *testing.T) {
 		server, api := newActionServer(t)
@@ -1125,6 +1163,28 @@ func TestApplyPlanWithTheAction(t *testing.T) {
 		assert.NotContains(t, err.Error(), "stopped partway")
 		assert.Contains(t, server.stored(), "POST actions")
 		assert.NoFileExists(t, failing.Out)
+	})
+
+	t.Run("a failed build does not promise that running the command again continues", func(t *testing.T) {
+		server, api := newActionServer(t)
+		server.buildStatus = management.ActionStatusFailed
+		failing := in
+		failing.Out = t.TempDir() + "/poppy.json"
+
+		_, err := (&Applier{Actions: api.Action, BuildPoll: time.Millisecond}).Apply(t.Context(), state, failing, buildPlan(t, state, failing))
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "the Action failed to build")
+		assert.ErrorContains(t, err, "builds the Action again")
+		assert.NotContains(t, err.Error(), "fix the build errors")
+		assert.NotContains(t, err.Error(), "finds it and continues")
+		assert.NoFileExists(t, failing.Out)
+
+		partial := &PartialError{Applied: []string{"a"}, Failed: "b", Err: &buildFailedError{messages: []string{"syntax error"}}}
+		assert.NotContains(t, partial.Error(), "continues from here")
+		assert.Contains(t, partial.Error(), "builds the Action again")
+		assert.Contains(t, partial.Error(), "the build errors above say why")
+		assert.NotContains(t, partial.Error(), "fix the build errors")
 	})
 
 	t.Run("a flow that changed is not overwritten and the error says to run setup again", func(t *testing.T) {

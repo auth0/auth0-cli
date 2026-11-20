@@ -111,7 +111,7 @@ func TestApplyFreshTenant(t *testing.T) {
 		AuthorizationResponseIssParameterSupported: managementv3.Bool(true),
 		ResourceParameterProfile:                   ptr(managementv3.TenantSettingsResourceParameterProfileCompatibility),
 		DefaultAudience:                            managementv3.String(shopAPI),
-		PersonalAgentProtocolCompanyDomains:        []string{"other.example", "shop.example"},
+		PersonalAgentProtocolCompanyDomains:        ptr([]string{"other.example", "shop.example"}),
 	}, h.tenant, "the company domain is appended to the ones the tenant lists, each as a bare host")
 	assert.Equal(t, []string{"https://other.example"}, state.Tenant.CompanyDomains, "the state is not changed")
 
@@ -136,7 +136,7 @@ func TestApplyFreshTenant(t *testing.T) {
 	assert.Equal(t, shopApp, h.clientID)
 	assert.Equal(t, &managementv3.UpdateClientRequestContent{
 		InitiateLoginURI:              managementv3.String(loginURI),
-		AllowPersonalAgentBrowserJoin: managementv3.Bool(true),
+		AllowPersonalAgentBrowserJoin: ptr(managementv3.Bool(true)),
 	}, h.client, "no callbacks and no session transfer")
 
 	written, err := config.Read(in.Out)
@@ -237,7 +237,7 @@ func TestApplyOnlyWhatChanges(t *testing.T) {
 			},
 		},
 	}, h.server, "no scopes are sent when none changes")
-	assert.Equal(t, &managementv3.UpdateClientRequestContent{AllowPersonalAgentBrowserJoin: managementv3.Bool(true)}, h.client)
+	assert.Equal(t, &managementv3.UpdateClientRequestContent{AllowPersonalAgentBrowserJoin: ptr(managementv3.Bool(true))}, h.client)
 }
 
 func TestApplyKeepsTheOtherSubjectTypePolicies(t *testing.T) {
@@ -304,7 +304,7 @@ func TestApplyIsIdempotent(t *testing.T) {
 	after.Tenant.IssParameter = *h.tenant.AuthorizationResponseIssParameterSupported
 	after.Tenant.ResourceParameterProfile = string(*h.tenant.ResourceParameterProfile)
 	after.Tenant.DefaultAudience = *h.tenant.DefaultAudience
-	after.Tenant.CompanyDomains = h.tenant.PersonalAgentProtocolCompanyDomains
+	after.Tenant.CompanyDomains = *h.tenant.PersonalAgentProtocolCompanyDomains
 
 	api := state.APIs[0]
 	api.Scopes = nil
@@ -318,7 +318,7 @@ func TestApplyIsIdempotent(t *testing.T) {
 	after.APIs = []API{api}
 
 	after.App.LoginURI = *h.client.InitiateLoginURI
-	after.App.BrowserJoin = *h.client.AllowPersonalAgentBrowserJoin
+	after.App.BrowserJoin = **h.client.AllowPersonalAgentBrowserJoin
 
 	after.File, err = config.Read(in.Out)
 	require.NoError(t, err)
@@ -348,10 +348,8 @@ func TestApplyFailures(t *testing.T) {
 			name: "the app", fail: "app", wantCalls: []string{"tenant", "api", "app"},
 			wantApplied: []string{"tenant", "api"}, wantRemaining: []string{"file"},
 		},
-		{
-			name: "the file", fail: "file", wantCalls: []string{"tenant", "api", "app"},
-			wantApplied: []string{"tenant", "api", "app"}, wantRemaining: []string{},
-		},
+		// A path that cannot be written is found before anything is changed.
+		{name: "the file", fail: "file"},
 	}
 
 	for _, test := range tests {
@@ -382,7 +380,12 @@ func TestApplyFailures(t *testing.T) {
 			if test.wantApplied == nil {
 				var partial *PartialError
 				assert.False(t, errors.As(err, &partial), "nothing was changed")
-				assert.ErrorIs(t, err, apiErr)
+
+				if test.fail == "file" {
+					assert.ErrorContains(t, err, "cannot write")
+				} else {
+					assert.ErrorIs(t, err, apiErr)
+				}
 
 				return
 			}
@@ -395,9 +398,7 @@ func TestApplyFailures(t *testing.T) {
 			assert.Contains(t, partial.Error(), "Running the command again continues")
 			assert.Contains(t, partial.Error(), "failed: "+byKind[test.fail])
 
-			if test.fail != "file" {
-				assert.ErrorIs(t, err, apiErr)
-			}
+			assert.ErrorIs(t, err, apiErr)
 		})
 	}
 }
