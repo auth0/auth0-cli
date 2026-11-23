@@ -311,7 +311,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 orgs search --parser scim --filter 'display_name co "Acme"' -s name:1
   auth0 orgs search --parser scim --filter 'created_at gt "2026-01-01"' -n 200 --csv
   auth0 orgs search --filter 'id:<org-id>' --json
+
+  # Discover the query schema
   auth0 orgs search --schema
+  auth0 orgs search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs search --query '{"q":"name sw \"acme\"","parser":"scim","sort":"name"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{

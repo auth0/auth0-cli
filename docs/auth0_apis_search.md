@@ -42,7 +42,8 @@ auth0 apis search [flags]
       --csv              Output in csv format.
       --exclude-fields   Exclude the --fields list from the response instead of returning only those fields.
       --fields string    Comma-separated list of fields to include in the response, e.g. 'id,name,identifier'.
-      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: id,identifier,name,updated_at. Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
+      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: id,identifier,name,updated_at.
+                          Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                          
                          For example: 'name:"My API"' or, with --parser scim, 'name co "billing" and updated_at gt "2026-01-01"'.
       --json             Output in json format.

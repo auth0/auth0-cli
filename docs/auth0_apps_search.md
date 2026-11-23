@@ -26,7 +26,12 @@ auth0 apps search [flags]
   auth0 apps search --parser scim --filter 'name co "billing"' -s name:1
   auth0 apps search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
   auth0 apps search --filter 'client_grant.organization_id:<org-id>' --fields client_id,name --json
+
+  # Discover the query schema
   auth0 apps search --schema
+  auth0 apps search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apps search --query '{"q":"name co \"billing\"","parser":"scim","sort":"name"}'
 ```
 
@@ -37,7 +42,8 @@ auth0 apps search [flags]
       --csv              Output in csv format.
       --exclude-fields   Exclude the --fields list from the response instead of returning only those fields.
       --fields string    Comma-separated list of fields to include in the response, e.g. 'client_id,name,app_type'.
-      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: client_id,external_client_id,name,app_type,is_first_party,updated_at,metadata.{key},client_grant.organization_id,client_grant.allow_any_organization. Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
+      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: client_id,external_client_id,name,app_type,is_first_party,updated_at,metadata.{key},client_grant.organization_id,client_grant.allow_any_organization.
+                          Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                          
                          For example: 'app_type:spa' or, with --parser scim, 'name co "billing" and is_first_party eq true'.
       --json             Output in json format.

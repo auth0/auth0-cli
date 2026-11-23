@@ -26,7 +26,12 @@ auth0 orgs search [flags]
   auth0 orgs search --parser scim --filter 'display_name co "Acme"' -s name:1
   auth0 orgs search --parser scim --filter 'created_at gt "2026-01-01"' -n 200 --csv
   auth0 orgs search --filter 'id:<org-id>' --json
+
+  # Discover the query schema
   auth0 orgs search --schema
+  auth0 orgs search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 orgs search --query '{"q":"name sw \"acme\"","parser":"scim","sort":"name"}'
 ```
 
@@ -35,7 +40,8 @@ auth0 orgs search [flags]
 
 ```
       --csv             Output in csv format.
-      --filter string   Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: id,name,display_name,created_at,metadata.{key}. Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
+      --filter string   Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: id,name,display_name,created_at,metadata.{key}.
+                         Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                         
                         For example: 'name:"acme"' or, with --parser scim, 'display_name co "Acme" and created_at gt "2026-01-01"'.
       --json            Output in json format.

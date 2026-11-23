@@ -324,7 +324,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 client-grants search --parser scim --filter 'audience co "example" and organization_id eq "<org-id>"' -s audience:1
   auth0 client-grants search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
   auth0 client-grants search --filter 'default_for:third_party_clients' --fields id,default_for,audience --json
+
+  # Discover the query schema
   auth0 client-grants search --schema
+  auth0 client-grants search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{

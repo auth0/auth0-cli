@@ -500,7 +500,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 apps search --parser scim --filter 'name co "billing"' -s name:1
   auth0 apps search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
   auth0 apps search --filter 'client_grant.organization_id:<org-id>' --fields client_id,name --json
+
+  # Discover the query schema
   auth0 apps search --schema
+  auth0 apps search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apps search --query '{"q":"name co \"billing\"","parser":"scim","sort":"name"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{

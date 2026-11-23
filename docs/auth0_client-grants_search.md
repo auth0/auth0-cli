@@ -27,7 +27,12 @@ auth0 client-grants search [flags]
   auth0 client-grants search --parser scim --filter 'audience co "example" and organization_id eq "<org-id>"' -s audience:1
   auth0 client-grants search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
   auth0 client-grants search --filter 'default_for:third_party_clients' --fields id,default_for,audience --json
+
+  # Discover the query schema
   auth0 client-grants search --schema
+  auth0 client-grants search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience"}'
 ```
 
@@ -38,7 +43,8 @@ auth0 client-grants search [flags]
       --csv              Output in csv format.
       --exclude-fields   Exclude the --fields list from the response instead of returning only those fields.
       --fields string    Comma-separated list of fields to include in the response, e.g. 'id,client_id,audience'.
-      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: audience,client_id,subject_type,allow_any_organization,organization_id,updated_at,default_for. Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
+      --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: audience,client_id,subject_type,allow_any_organization,organization_id,updated_at,default_for.
+                          Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                          
                          For example: 'audience:"https://api.example.com"' or, with --parser scim, 'client_id eq "<client-id>" and subject_type eq "client"'.
       --json             Output in json format.
