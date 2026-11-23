@@ -637,6 +637,12 @@ func TestSetup_RejectsWhatItCannotRun(t *testing.T) {
 			wantErr: new(*portals.UsageError),
 		},
 		{
+			name:    "a logout URL that is not an absolute http or https URL",
+			options: portals.SetupOptions{Template: portals.TemplateConsumer, Name: "Acme", Slug: "acme", LogoutURL: "app.acme.com"},
+			want:    `The logout URL "app.acme.com" must be an absolute http or https URL`,
+			wantErr: new(*portals.UsageError),
+		},
+		{
 			name:    "a business portal with nobody to ask for the user",
 			options: portals.SetupOptions{Template: portals.TemplateBusiness, Name: "Acme", Slug: "acme"},
 			want:    "A Business portal needs the user who will test it",
@@ -785,4 +791,77 @@ func TestSetup_ASlugLeftEmptyIsMadeFromTheName(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "acme-account", tenant.Portals()[0].Slug)
 	assert.Equal(t, portals.StatusCreated, result.Portal.Status)
+}
+
+func TestSetup_TheLogoutURL(t *testing.T) {
+	t.Parallel()
+
+	withLogout := func(url string) portals.SetupOptions {
+		options := consumerOptions()
+		options.LogoutURL = url
+
+		return options
+	}
+
+	logoutURLs := func(t *testing.T, tenant *portalstest.Tenant, clientID string) []string {
+		t.Helper()
+
+		client, err := tenant.ReadClient(context.Background(), clientID)
+		require.NoError(t, err)
+
+		return client.AllowedLogoutURLs
+	}
+
+	t.Run("a new application without one sends users to the host of the portal", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		result := runSetup(t, tenant, consumerOptions())
+
+		assert.Equal(t, []string{"https://" + tenantDomain}, logoutURLs(t, tenant, result.Application.ClientID))
+	})
+
+	t.Run("the one given is the first, where the portal sends users after they log out", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		result := runSetup(t, tenant, withLogout("https://app.acme.com"))
+
+		assert.Equal(t, []string{"https://app.acme.com"}, logoutURLs(t, tenant, result.Application.ClientID))
+	})
+
+	t.Run("a rerun without one keeps the URLs the application has", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		result := runSetup(t, tenant, withLogout("https://app.acme.com"))
+		runSetup(t, tenant, consumerOptions())
+
+		assert.Equal(t, []string{"https://app.acme.com"}, logoutURLs(t, tenant, result.Application.ClientID))
+	})
+
+	t.Run("a rerun with one replaces them", func(t *testing.T) {
+		t.Parallel()
+
+		tenant := portalstest.New()
+		result := runSetup(t, tenant, withLogout("https://app.acme.com"))
+		runSetup(t, tenant, withLogout("https://www.acme.com/account"))
+
+		assert.Equal(t, []string{"https://www.acme.com/account"}, logoutURLs(t, tenant, result.Application.ClientID))
+	})
+}
+
+func TestSetup_ARerunKeepsTheLeewayOfTheRefreshToken(t *testing.T) {
+	t.Parallel()
+
+	tenant := portalstest.New()
+	result := runSetup(t, tenant, consumerOptions())
+	tenant.ModifyClient(result.Application.ClientID, func(client *portals.Client) { client.RefreshToken.Leeway = intPointer(7) })
+
+	runSetup(t, tenant, consumerOptions())
+
+	client, err := tenant.ReadClient(context.Background(), result.Application.ClientID)
+	require.NoError(t, err)
+	require.NotNil(t, client.RefreshToken.Leeway, "the API resets a leeway that is not sent")
+	assert.Equal(t, 7, *client.RefreshToken.Leeway)
 }

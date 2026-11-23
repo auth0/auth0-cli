@@ -1,0 +1,19 @@
+Poppy setup for shop.example                          tenant tenant.us.auth0.com
+Dry run: nothing will be changed.
+
+Checked
+  ✓ API       https://api.shop.example
+  ✓ Web app   Shop Web (first party)
+  ✓ Scopes    all described
+  ! Note      Something else to look at.
+
+Plan: 3 changes
+
+App Shop Web
+  ~ Application Login URI  none → https://shop.example/login
+  ~ browser join           ? → on
+
+File
+  ~ poppy.json  updated
+
+To apply:  auth0 poppy setup

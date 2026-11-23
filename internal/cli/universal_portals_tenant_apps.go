@@ -173,6 +173,7 @@ func refreshTokenToSDK(token *portals.RefreshToken) *management.ClientRefreshTok
 		InfiniteTokenLifetime:     token.InfiniteTokenLifetime,
 		IdleTokenLifetime:         token.IdleTokenLifetime,
 		InfiniteIdleTokenLifetime: token.InfiniteIdleTokenLifetime,
+		Leeway:                    token.Leeway,
 	}
 	setString(&refresh.RotationType, token.RotationType)
 	setString(&refresh.ExpirationType, token.ExpirationType)
@@ -229,6 +230,7 @@ func clientFromSDK(client *management.Client) portals.Client {
 			InfiniteTokenLifetime:     token.InfiniteTokenLifetime,
 			IdleTokenLifetime:         token.IdleTokenLifetime,
 			InfiniteIdleTokenLifetime: token.InfiniteIdleTokenLifetime,
+			Leeway:                    token.Leeway,
 		}
 
 		if token.Policies != nil {

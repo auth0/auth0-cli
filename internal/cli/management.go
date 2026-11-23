@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/rehttp"
@@ -19,13 +20,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
-func initializeManagementClient(tenantDomain string, accessToken string, invokerMetadata string) (*management.Management, error) {
-	return initializeManagementClientWith(tenantDomain, accessToken, customClientWithRetries(invokerMetadata))
-}
-
-// initializeManagementClientWith builds the client over an HTTP client of the caller, which is how a
-// command sees or changes the requests of the client.
-func initializeManagementClientWith(tenantDomain string, accessToken string, httpClient *http.Client) (*management.Management, error) {
+func initializeManagementClient(tenantDomain string, accessToken string, httpClient *http.Client) (*management.Management, error) {
 	client, err := management.New(
 		tenantDomain,
 		management.WithStaticToken(accessToken),
@@ -38,12 +33,7 @@ func initializeManagementClientWith(tenantDomain string, accessToken string, htt
 	return client, err
 }
 
-func initializeManagementClientV3(tenantDomain string, accessToken string, invokerMetadata string) (*managementv3.Management, error) {
-	return initializeManagementClientV3With(tenantDomain, accessToken, customClientWithRetries(invokerMetadata))
-}
-
-// initializeManagementClientV3With is initializeManagementClientWith for the v3 client.
-func initializeManagementClientV3With(tenantDomain string, accessToken string, httpClient *http.Client) (*managementv3.Management, error) {
+func initializeManagementClientV3(tenantDomain string, accessToken string, httpClient *http.Client) (*managementv3.Management, error) {
 	client, err := managementv3.New(
 		tenantDomain,
 		option.WithToken(accessToken),
@@ -56,6 +46,41 @@ func initializeManagementClientV3With(tenantDomain string, accessToken string, h
 		option.WithHTTPClient(httpClient),
 	)
 	return client, err
+}
+
+// switchableTransport sends the requests of the Management API clients. A command can put a transport
+// in front of it for as long as it runs, for example to keep the writes of a dry run.
+type switchableTransport struct {
+	base http.RoundTripper
+
+	mu    sync.RWMutex
+	front http.RoundTripper
+}
+
+// RoundTrip implements http.RoundTripper.
+func (t *switchableTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	t.mu.RLock()
+	next := t.front
+	t.mu.RUnlock()
+
+	if next == nil {
+		next = t.base
+	}
+
+	return next.RoundTrip(request)
+}
+
+// use sends the requests through front until restore is called.
+func (t *switchableTransport) use(front http.RoundTripper) (restore func()) {
+	t.mu.Lock()
+	t.front = front
+	t.mu.Unlock()
+
+	return func() {
+		t.mu.Lock()
+		t.front = nil
+		t.mu.Unlock()
+	}
 }
 
 func customClientWithRetries(invokerMetadata string) *http.Client {

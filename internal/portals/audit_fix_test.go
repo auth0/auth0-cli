@@ -232,12 +232,17 @@ func TestFix_Remedies(t *testing.T) {
 		t.Parallel()
 
 		portal := newAuditedPortal(t)
-		portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) { client.RefreshToken.RotationType = "rotating" })
+		portal.tenant.ModifyClient(portal.clientID, func(client *portals.Client) {
+			client.RefreshToken.RotationType = "rotating"
+			client.RefreshToken.Leeway = intPointer(7)
+		})
 
 		portal.fixOnly(t, "P013")
 
 		token := portal.client(t, portal.clientID).RefreshToken
 		assert.Equal(t, "non-rotating", token.RotationType)
+		require.NotNil(t, token.Leeway, "the API resets a leeway that is not sent")
+		assert.Equal(t, 7, *token.Leeway)
 		assert.Equal(t, 3600, *token.IdleTokenLifetime)
 		assert.Equal(t, 86400, *token.TokenLifetime)
 		require.Len(t, token.Policies, 1)
@@ -426,6 +431,21 @@ func TestFix_AMissingApplication(t *testing.T) {
 		assert.Equal(t, "client_secret_post", link.TokenEndpointAuthMethod)
 		assert.Equal(t, link.ClientID, portal.portal(t).Client.ClientID, "the portal points at the new application")
 		assert.Len(t, portal.tenant.Clients(), 2, "the new application and the forms vault")
+	})
+
+	t.Run("P009: without the custom domain, the application is not created on a host that may be wrong", func(t *testing.T) {
+		t.Parallel()
+
+		portal := newAuditedPortal(t)
+		portal.tenant.ModifyPortal(portal.portalID, func(p *portals.Portal) { p.Client = nil })
+		portal.tenant.DeleteClient(portal.clientID)
+		portal.tenant.Deny("GET custom-domains/default", "Insufficient scope, expected any of: read:custom_domains")
+
+		finding := findingNamed(t, portal.findings(t), "P009")
+
+		assert.False(t, finding.CanFix(), "the fix waits for a session that can read the custom domain")
+		require.NotNil(t, finding.Remedy)
+		assert.Equal(t, "auth0 login --scopes read:custom_domains", finding.Remedy.Command)
 	})
 
 	t.Run("P009: a link that fails after the application was created does not create a second one on rerun", func(t *testing.T) {

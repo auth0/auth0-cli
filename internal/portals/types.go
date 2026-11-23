@@ -54,7 +54,9 @@ type RefreshToken struct {
 	InfiniteTokenLifetime     *bool
 	IdleTokenLifetime         *int
 	InfiniteIdleTokenLifetime *bool
-	Policies                  []RefreshTokenPolicy
+	// Leeway is the rotation overlap period. The API resets it when it is not sent with the token.
+	Leeway   *int
+	Policies []RefreshTokenPolicy
 }
 
 // RefreshTokenPolicy limits what a refresh token can ask for on one API.

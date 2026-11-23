@@ -7,6 +7,9 @@ has_toc: false
 
 List your network ACLs. To create one, run: auth0 network-acl create
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 network-acl list [flags]
@@ -19,13 +22,23 @@ auth0 network-acl list [flags]
   auth0 network-acl ls
   auth0 network-acl ls --json
   auth0 network-acl ls --json-compact
+
+  # Discover the query schema
+  auth0 network-acl list --schema
+  auth0 network-acl list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 network-acl list --query '{"per_page":10,"include_totals":true}'
 ```
 
 
 ## Flags
 
 ```
-      --json   Output in JSON format
+      --json           Output in JSON format
+      --json-compact   Output in compact json format.
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

@@ -13,6 +13,9 @@ To update interactively, use `auth0 rules update` with no arguments.
 
 To update non-interactively, supply the rule id and other information through the flags.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 rules update [flags]
@@ -27,18 +30,28 @@ auth0 rules update [flags]
   auth0 rules update <rule-id> --enabled=true --name "My Updated Rule" --script "$(cat path/to/script.js)"
   auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
   auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json-compact
-  echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update
+
+  # Discover the payload schema
+  auth0 rules update --schema
+  auth0 rules update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 rules update <rule-id> --data '{"enabled":false,"order":2}'
+  auth0 rules update <rule-id> --data @rule.json
+  cat rule.json | auth0 rules update <rule-id>
 ```
 
 
 ## Flags
 
 ```
+      --data string     JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
   -e, --enabled         Enable (or disable) a rule. (default true)
       --force           Skip confirmation.
       --json            Output in json format.
       --json-compact    Output in compact json format.
   -n, --name string     Name of the rule.
+      --schema          Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
   -s, --script string   Script contents for the rule.
 ```
 

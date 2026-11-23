@@ -7,7 +7,7 @@ has_toc: false
 
 Checks a Universal Portal and its application against what setup makes, and tells what is wrong and how to fix it.
 
-An error breaks the portal or one of its components, and a warning is something degraded or different from the setup guide. The command fails when there is an error, and with --strict when there is a warning too.
+An error breaks the portal or one of its components, and a warning is something degraded or different from the setup guide. The command fails when there is an error, and with --strict when there is a warning or a check that could not run too.
 
 With a terminal it offers to fix the errors the CLI can fix, and with --fix it fixes them without asking. Warnings are never changed, because they may be intentional.
 
@@ -32,7 +32,7 @@ auth0 universal-portals audit <portal-id or slug> [flags]
       --fix                   Apply the errors the CLI can fix, without asking. Warnings are never changed.
       --json                  Output in json format.
   -o, --organization string   Business only: the ID of the organization the portal opens in, to check that it shares a connection with the application.
-      --strict                Also fail when there are warnings.
+      --strict                Also fail when there are warnings, or when a check could not run because the session cannot read what it needs.
 ```
 
 

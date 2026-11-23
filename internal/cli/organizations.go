@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"sort"
 	"strings"
@@ -193,6 +194,8 @@ func organizationsCmd(cli *cli) *cobra.Command {
 func listOrganizationsCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -200,14 +203,34 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your organizations",
-		Long:    "List your existing organizations. To create one, run: `auth0 orgs create`.",
+		Long: "List your existing organizations. To create one, run: `auth0 orgs create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 orgs list
   auth0 orgs ls
   auth0 orgs ls --json
   auth0 orgs ls --json-compact
   auth0 orgs ls --csv
-  auth0 orgs ls -n 100`,
+  auth0 orgs ls -n 100
+
+  # Discover the query schema
+  auth0 orgs list --schema
+  auth0 orgs list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 orgs list --query '{"per_page":50,"include_totals":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/organizations")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "organizations",
+					SchemaCmd: "auth0 orgs list",
+				}, inputs.Query)
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
@@ -249,6 +272,8 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 
 	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -306,6 +331,8 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		AccentColor     string
 		BackgroundColor string
 		Metadata        map[string]string
+		Data            string
+		Schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -314,13 +341,36 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "Create a new organization",
 		Long: "Create a new organization.\n\n" +
 			"To create interactively, use `auth0 orgs create` with no arguments.\n\n" +
-			"To create non-interactively, supply the name and other information through the flags.",
+			"To create non-interactively, supply the name and other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 orgs create
   auth0 orgs create --name myorganization
   auth0 orgs create -n myorganization --display "My Organization"
   auth0 orgs create -n myorganization -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-  auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+  auth0 orgs create -n myorganization -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"
+
+  # Discover the payload schema
+  auth0 orgs create --schema
+  auth0 orgs create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 orgs create --data '{"name":"myorganization","display_name":"My Organization"}'
+  auth0 orgs create --data @org.json
+  cat org.json | auth0 orgs create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/organizations")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createOrganizationFromJSON(cli, cmd, payload)
+			}
+
 			if err := organizationName.Ask(cmd, &inputs.Name, nil); err != nil {
 				return err
 			}
@@ -378,6 +428,9 @@ func createOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -390,6 +443,8 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		AccentColor     string
 		BackgroundColor string
 		Metadata        map[string]string
+		Data            string
+		Schema          bool
 	}
 
 	cmd := &cobra.Command{
@@ -399,12 +454,26 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 		Long: "Update an organization.\n\n" +
 			"To update interactively, use `auth0 orgs update` with no arguments.\n\n" +
 			"To update non-interactively, supply the organization id and " +
-			"other information through the flags.",
+			"other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 orgs update <org-id>
   auth0 orgs update <org-id> --display "My Organization"
   auth0 orgs update <org-id> -d "My Organization" -l "https://example.com/logo.png" -a "#635DFF" -b "#2A2E35"
-  auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"`,
+  auth0 orgs update <org-id> -d "My Organization" -m "KEY=value" -m "OTHER_KEY=other_value"
+
+  # Discover the payload schema
+  auth0 orgs update --schema
+  auth0 orgs update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 orgs update <org-id> --data '{"display_name":"My Organization"}'
+  auth0 orgs update <org-id> --data @org.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPatch, "/organizations/{id}")
+			}
+
 			if len(args) > 0 {
 				inputs.ID = args[0]
 			} else {
@@ -413,8 +482,16 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 				}
 			}
 
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateOrganizationFromJSON(cli, cmd, inputs.ID, payload)
+			}
+
 			var oldOrg *management.Organization
-			err := ansi.Waiting(func() (err error) {
+			err = ansi.Waiting(func() (err error) {
 				oldOrg, err = cli.api.Organization.Read(cmd.Context(), inputs.ID)
 				return err
 			})
@@ -494,8 +571,45 @@ func updateOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createOrganizationFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	org, err := runJSONWrite[management.Organization](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/organizations",
+		URI:        cli.api.HTTPClient.URI("organizations"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 orgs create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create organization: %w", err)
+	}
+
+	cli.renderer.OrganizationCreate(org)
+
+	return nil
+}
+
+func updateOrganizationFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	org, err := runJSONWrite[management.Organization](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/organizations/{id}",
+		URI:        cli.api.HTTPClient.URI("organizations", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 orgs update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update organization with ID %q: %w", id, err)
+	}
+
+	cli.renderer.OrganizationUpdate(org)
+
+	return nil
 }
 
 func deleteOrganizationCmd(cli *cli) *cobra.Command {
@@ -599,6 +713,8 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		ID     string
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -606,14 +722,27 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 		Aliases: []string{"ls"},
 		Args:    cobra.MaximumNArgs(1),
 		Short:   "List members of an organization",
-		Long:    "List the members of an organization.",
+		Long: "List the members of an organization.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 orgs members list
   auth0 orgs members ls <org-id>
   auth0 orgs members list <org-id> --number 100
   auth0 orgs members ls <org-id> -n 100 --json
   auth0 orgs members ls <org-id> -n 100 --json-compact
-  auth0 orgs members ls <org-id> --csv`,
+  auth0 orgs members ls <org-id> --csv
+
+  # Discover the query schema
+  auth0 orgs members list --schema
+  auth0 orgs members list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 orgs members list <org-id> --query '{"fields":"user_id,email","include_fields":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/organizations/{id}/members")
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
@@ -624,6 +753,13 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 				}
 			} else {
 				inputs.ID = args[0]
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "organizations/" + inputs.ID + "/members",
+					SchemaCmd: "auth0 orgs members list",
+				}, inputs.Query)
 			}
 
 			members, err := cli.getOrgMembersWithSpinner(cmd.Context(), inputs.ID, inputs.Number)
@@ -641,6 +777,8 @@ func listMembersOrganizationCmd(cli *cli) *cobra.Command {
 
 	organizationNumber.Help = "Number of organization members to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
@@ -1098,6 +1236,8 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	var inputs struct {
 		OrgID  string
 		Number int
+		Schema bool
+		Query  string
 	}
 
 	cmd := &cobra.Command{
@@ -1107,20 +1247,40 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 		Short:   "List invitations of an organization",
 		Long: "List the invitations of an organization.\n\n" +
 			"To list interactively, use `auth0 orgs invs list` with no flags.\n\n" +
-			"To list non-interactively, supply the organization id through the flags.",
+			"To list non-interactively, supply the organization id through the flags.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 orgs invs list
   auth0 orgs invs ls --org-id <org-id>
   auth0 orgs invs list --org-id <org-id> --number 100
   auth0 orgs invs ls --org-id <org-id> -n 50 --json
   auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
-  auth0 orgs invs ls --org-id <org-id> --csv`,
+  auth0 orgs invs ls --org-id <org-id> --csv
+
+  # Discover the query schema
+  auth0 orgs invs list --schema
+  auth0 orgs invs list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 orgs invs list --org-id <org-id> --query '{"sort":"created_at:-1","per_page":20}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodGet, "/organizations/{id}/invitations")
+			}
+
 			if inputs.Number < 1 || inputs.Number > 1000 {
 				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
 			}
 
 			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
 				return err
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "organizations/" + inputs.OrgID + "/invitations",
+					SchemaCmd: "auth0 orgs invs list",
+				}, inputs.Query)
 			}
 
 			invitations, err := cli.getOrgInvitations(cmd.Context(), inputs.OrgID, inputs.Number)
@@ -1136,6 +1296,8 @@ func listInvitationsOrganizationCmd(cli *cli) *cobra.Command {
 	organizationIDFlag.RegisterString(cmd, &inputs.OrgID, "")
 	organizationNumber.Help = "Number of organization invitations to retrieve. Minimum 1, maximum 1000."
 	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
@@ -1197,6 +1359,8 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Roles               []string
 		AppMetadata         string
 		UserMetadata        string
+		Data                string
+		Schema              bool
 	}
 
 	cmd := &cobra.Command{
@@ -1205,16 +1369,38 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 		Short: "Create a new invitation to an organization",
 		Long: "Create a new invitation to an organization with required and optional parameters.\n\n" +
 			"To create interactively, use `auth0 orgs invs create` with no flags and answer the prompts.\n\n" +
-			"To create non-interactively, supply the organization id and the other parameters through flags.",
+			"To create non-interactively, supply the organization id and the other parameters through flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' with '--org-id' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 orgs invs create
   auth0 orgs invs create --org-id <org-id>
   auth0 orgs invs create --org-id <org-id> --inviter-name "Inviter Name" --invitee-email "invitee@example.com"
   auth0 orgs invs create --org-id <org-id> --invitee-email "invitee@example.com" --client-id "client_id"
   auth0 orgs invs create --org-id <org-id> -n "Inviter Name" -e "invitee@example.com" --client-id "client_id" --connection-id "connection_id" -t 86400
-  auth0 orgs invs create --org-id <org-id> --json --send-email=false --inviter-name "Inviter Name"`,
+  auth0 orgs invs create --org-id <org-id> --json --send-email=false --inviter-name "Inviter Name"
+
+  # Discover the payload schema
+  auth0 orgs invs create --schema
+  auth0 orgs invs create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 orgs invs create --org-id <org-id> --data '{"inviter":{"name":"Inviter Name"},"invitee":{"email":"invitee@example.com"},"client_id":"<client-id>"}'
+  auth0 orgs invs create --org-id <org-id> --data @invitation.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, http.MethodPost, "/organizations/{id}/invitations")
+			}
+
 			if err := organizationIDFlag.Pick(cmd, &inputs.OrgID, cli.organizationPickerOptions); err != nil {
 				return err
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createInvitationFromJSON(cli, cmd, inputs.OrgID, payload)
 			}
 			if err := clientID.Pick(cmd, &inputs.ClientID, cli.appPickerOptions()); err != nil {
 				return err
@@ -1278,8 +1464,28 @@ func createInvitationOrganizationCmd(cli *cli) *cobra.Command {
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
+}
+
+func createInvitationFromJSON(cli *cli, cmd *cobra.Command, orgID, dataStr string) error {
+	invitation, err := runJSONWrite[management.OrganizationInvitation](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/organizations/{id}/invitations",
+		URI:        cli.api.HTTPClient.URI("organizations", orgID, "invitations"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 orgs invs create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create invitation for organization with ID %q: %w", orgID, err)
+	}
+
+	cli.renderer.InvitationsCreate(*invitation)
+
+	return nil
 }
 
 func deleteInvitationOrganizationCmd(cli *cli) *cobra.Command {

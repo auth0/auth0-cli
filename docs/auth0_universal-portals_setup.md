@@ -19,6 +19,7 @@ auth0 universal-portals setup [flags]
 ```
   auth0 universal-portals setup
   auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 universal-portals setup --template consumer --name "Acme Account" --logout-url https://app.acme.com
   auth0 universal-portals setup --template consumer --name "Acme Account" --dry-run
   auth0 up setup --no-input --template consumer --name "Acme Account" --json
 ```
@@ -29,6 +30,7 @@ auth0 universal-portals setup [flags]
 ```
       --dry-run               Show what setup would create, without changing the tenant. The permission checks still send write requests with an empty body, which the API rejects.
       --json                  Output in json format.
+      --logout-url string     URL of your application, where users land after they log out of the portal. Defaults to the host of the portal for a new application; a rerun without it keeps the logout URLs the application has.
   -n, --name string           Name of the portal. Asked when omitted.
   -o, --organization string   Business only: the ID or name of the organization, when the user has several.
   -s, --slug string           URL slug of the portal, for example acme-account. Defaults to a slug made from the name.

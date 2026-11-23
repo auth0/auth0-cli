@@ -11,6 +11,9 @@ To list interactively, use `auth0 orgs invs list` with no flags.
 
 To list non-interactively, supply the organization id through the flags.
 
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
+
 ## Usage
 ```
 auth0 orgs invitations list [flags]
@@ -25,6 +28,13 @@ auth0 orgs invitations list [flags]
   auth0 orgs invs ls --org-id <org-id> -n 50 --json
   auth0 orgs invs ls --org-id <org-id> -n 500 --json-compact
   auth0 orgs invs ls --org-id <org-id> --csv
+
+  # Discover the query schema
+  auth0 orgs invs list --schema
+  auth0 orgs invs list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 orgs invs list --org-id <org-id> --query '{"sort":"created_at:-1","per_page":20}'
 ```
 
 
@@ -36,6 +46,8 @@ auth0 orgs invitations list [flags]
       --json-compact    Output in compact json format.
   -n, --number int      Number of organization invitations to retrieve. Minimum 1, maximum 1000. (default 100)
       --org-id string   ID of the organization.
+  -q, --query string    Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema          Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

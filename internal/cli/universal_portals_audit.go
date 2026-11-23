@@ -26,7 +26,7 @@ var (
 	upStrict = Flag{
 		Name:     "Strict",
 		LongForm: "strict",
-		Help:     "Also fail when there are warnings.",
+		Help:     "Also fail when there are warnings, or when a check could not run because the session cannot read what it needs.",
 	}
 )
 
@@ -45,7 +45,7 @@ func universalPortalsAuditCmd(cli *cli) *cobra.Command {
 		Short: "Check a Universal Portal",
 		Long: `Checks a Universal Portal and its application against what setup makes, and tells what is wrong and how to fix it.
 
-An error breaks the portal or one of its components, and a warning is something degraded or different from the setup guide. The command fails when there is an error, and with --strict when there is a warning too.
+An error breaks the portal or one of its components, and a warning is something degraded or different from the setup guide. The command fails when there is an error, and with --strict when there is a warning or a check that could not run too.
 
 With a terminal it offers to fix the errors the CLI can fix, and with --fix it fixes them without asking. Warnings are never changed, because they may be intentional.`,
 		Example: `  auth0 universal-portals audit up_123
@@ -145,6 +145,10 @@ func auditFailure(outcome portals.AuditOutcome, strict bool) error {
 
 	if strict && outcome.Result.Warnings > 0 {
 		reasons = append(reasons, fmt.Sprintf("%d warning(s) in a strict audit", outcome.Result.Warnings))
+	}
+
+	if strict && len(outcome.Result.Unchecked) > 0 {
+		reasons = append(reasons, fmt.Sprintf("%d check(s) not run in a strict audit", len(outcome.Result.Unchecked)))
 	}
 
 	if outcome.FixesFailed > 0 {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/auth0/go-auth0/management"
 	"github.com/spf13/cobra"
@@ -12,6 +14,7 @@ import (
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/iostream"
+	"github.com/auth0/auth0-cli/internal/openapi"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -87,18 +90,44 @@ func rulesCmd(cli *cli) *cobra.Command {
 }
 
 func listRulesCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List your rules",
-		Long:    rulesDeprecationDocumentationText + "List your existing rules. To create one, run: `auth0 rules create`.",
+		Long: rulesDeprecationDocumentationText + "List your existing rules. To create one, run: `auth0 rules create`.\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 rules list
   auth0 rules ls
   auth0 rules ls --json
   auth0 rules ls --json-compact
-  auth0 rules ls --csv`,
+  auth0 rules ls --csv
+
+  # Discover the query schema
+  auth0 rules list --schema
+  auth0 rules list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 rules list --query '{"enabled":true,"per_page":10,"include_totals":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/rules")
+			}
+
+			if inputs.Query != "" {
+				cli.renderer.Warnf(rulesDeprecationLogText)
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "rules",
+					SchemaCmd: "auth0 rules list",
+				}, inputs.Query)
+			}
+
 			var rules []*management.Rule
 
 			err := ansi.Waiting(func() error {
@@ -126,6 +155,8 @@ func listRulesCmd(cli *cli) *cobra.Command {
 	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
 }
@@ -136,6 +167,8 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Template string
 		Script   string
 		Enabled  bool
+		Data     string
+		Schema   bool
 	}
 
 	cmd := &cobra.Command{
@@ -144,7 +177,9 @@ func createRuleCmd(cli *cli) *cobra.Command {
 		Short: "Create a new rule",
 		Long: rulesDeprecationDocumentationText + "Create a new rule.\n\n" +
 			"To create interactively, use `auth0 rules create` with no arguments.\n\n" +
-			"To create non-interactively, supply the name, template and other information through the flags.",
+			"To create non-interactively, supply the name, template and other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 rules create
   auth0 rules create --enabled=true
   auth0 rules create --enabled=true --name "My Rule" 
@@ -152,8 +187,28 @@ func createRuleCmd(cli *cli) *cobra.Command {
   auth0 rules create --enabled=true --name "My Rule" --template "Empty rule" --script "$(cat path/to/script.js)"
   auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json
   auth0 rules create -e=true -n "My Rule" -t "Empty rule" -s "$(cat path/to/script.js)" --json-compact
-  echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create`,
+  echo "{\"name\":\"piping-name\",\"script\":\"console.log('test')\"}" | auth0 rules create
+
+  # Discover the payload schema
+  auth0 rules create --schema
+  auth0 rules create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 rules create --data '{"name":"my-rule","script":"function (user, context, callback) { callback(null, user, context); }","enabled":true}'
+  auth0 rules create --data @rule.json
+  cat rule.json | auth0 rules create`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/rules")
+			}
+
+			// Plain piped JSON keeps its lenient legacy handling below, so only an
+			// explicit --data takes the strictly validated path.
+			if HasData(cmd) {
+				dataStr, _ := GetData(cmd)
+				return createRuleFromJSON(cli, cmd, dataStr)
+			}
+
 			rule := &management.Rule{}
 			pipedInput, err := iostream.PipedInput()
 			if err != nil {
@@ -164,6 +219,7 @@ func createRuleCmd(cli *cli) *cobra.Command {
 				if err := json.Unmarshal(pipedInput, rule); err != nil {
 					return fmt.Errorf("failed to unmarshal JSON input: %w", err)
 				}
+				warnOnPipedRuleInput(cli, cmd, pipedInput, "POST", "/rules", "auth0 rules create")
 			} else {
 				if err := ruleName.Ask(cmd, &inputs.Name, nil); err != nil {
 					return err
@@ -211,7 +267,59 @@ func createRuleCmd(cli *cli) *cobra.Command {
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
 	ruleScript.RegisterString(cmd, &inputs.Script, "")
 
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
+}
+
+func createRuleFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	rule, err := runJSONWrite[management.Rule](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/rules",
+		URI:        cli.api.HTTPClient.URI("rules"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 rules create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create rule: %w", err)
+	}
+
+	cli.renderer.Warnf(rulesDeprecationLogText)
+	cli.renderer.RuleCreate(rule)
+
+	return nil
+}
+
+// warnOnPipedRuleInput reports what ResolveData rejects for other resources (input flags
+// set alongside piped JSON, and a payload that fails the schema) but only warns: existing
+// scripts keep working until a future release turns these into errors.
+func warnOnPipedRuleInput(cli *cli, cmd *cobra.Command, payload []byte, method, path, schemaCmd string) {
+	if ignored := setInputFlagNames(cmd); len(ignored) > 0 {
+		cli.renderer.Warnf(
+			"Ignoring flags (%s) because JSON was piped; a future release will reject piped JSON combined with individual flags. "+
+				"Provide the whole payload as JSON, or use the flags without piped input.",
+			strings.Join(ignored, ", "),
+		)
+	}
+
+	manager, err := newSchemaManager()
+	if err != nil {
+		return
+	}
+
+	result, err := manager.ValidateRequest(method, path, payload)
+	if err != nil || result.Status != openapi.StatusInvalid {
+		return
+	}
+
+	cli.renderer.Warnf(
+		"The piped JSON does not match the rule schema:\n%s\n"+
+			"It is still sent for now, but a future release will reject it. "+
+			"Use --data to validate the payload before it is sent, or run '%s --schema' to see the expected payload.",
+		formatValidationErrors(result.Errors), schemaCmd,
+	)
 }
 
 func showRuleCmd(cli *cli) *cobra.Command {
@@ -322,6 +430,8 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Name    string
 		Script  string
 		Enabled bool
+		Data    string
+		Schema  bool
 	}
 
 	cmd := &cobra.Command{
@@ -330,15 +440,48 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 		Short: "Update a rule",
 		Long: rulesDeprecationDocumentationText + "Update a rule.\n\n" +
 			"To update interactively, use `auth0 rules update` with no arguments.\n\n" +
-			"To update non-interactively, supply the rule id and other information through the flags.",
+			"To update non-interactively, supply the rule id and other information through the flags.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 rules update <id>
   auth0 rules update <rule-id> --enabled=true
   auth0 rules update <rule-id> --enabled=false --name "My Updated Rule"
   auth0 rules update <rule-id> --enabled=true --name "My Updated Rule" --script "$(cat path/to/script.js)"
   auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json
   auth0 rules update <rule-id> -e=true -n "My Updated Rule" -s "$(cat path/to/script.js)" --json-compact
-  echo "{\"id\":\"rul_ks3dUazcU3b6PqkH\",\"name\":\"piping-name\"}" | auth0 rules update`,
+
+  # Discover the payload schema
+  auth0 rules update --schema
+  auth0 rules update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 rules update <rule-id> --data '{"enabled":false,"order":2}'
+  auth0 rules update <rule-id> --data @rule.json
+  cat rule.json | auth0 rules update <rule-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/rules/{id}")
+			}
+
+			resolveID := func() error {
+				if len(args) > 0 {
+					inputs.ID = args[0]
+					return nil
+				}
+				return ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions)
+			}
+
+			// Plain piped JSON keeps its lenient legacy handling below, so only an
+			// explicit --data takes the strictly validated path.
+			if HasData(cmd) {
+				if err := resolveID(); err != nil {
+					return err
+				}
+
+				dataStr, _ := GetData(cmd)
+				return updateRuleFromJSON(cli, cmd, inputs.ID, dataStr)
+			}
+
 			updatedRule := &management.Rule{}
 			pipedInput, err := iostream.PipedInput()
 			if err != nil {
@@ -348,16 +491,26 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 				if err := json.Unmarshal(pipedInput, updatedRule); err != nil {
 					return fmt.Errorf("invalid JSON input: %w", err)
 				}
+				warnOnPipedRuleInput(cli, cmd, pipedInput, "PATCH", "/rules/{id}", "auth0 rules update")
 
+				// The payload "id" keeps priority over the argument, as before; the argument is
+				// used only when the payload has no "id".
 				inputs.ID = updatedRule.GetID()
-				updatedRule.ID = nil
-			} else {
-				if len(args) > 0 {
-					inputs.ID = args[0]
-				} else {
-					if err := ruleID.Pick(cmd, &inputs.ID, cli.rulePickerOptions); err != nil {
+				if inputs.ID == "" {
+					if err := resolveID(); err != nil {
 						return err
 					}
+				} else if len(args) > 0 && inputs.ID != args[0] {
+					cli.renderer.Warnf(
+						"Ignoring the rule ID argument %q because the piped payload has \"id\" %q, which is used instead. "+
+							"A future release will not support \"id\" in piped JSON; remove it from the payload to use the argument.",
+						args[0], inputs.ID,
+					)
+				}
+				updatedRule.ID = nil
+			} else {
+				if err := resolveID(); err != nil {
+					return err
 				}
 
 				var oldRule *management.Rule
@@ -428,7 +581,29 @@ func updateRuleCmd(cli *cli) *cobra.Command {
 	ruleEnabled.RegisterBool(cmd, &inputs.Enabled, true)
 	ruleScript.RegisterStringU(cmd, &inputs.Script, "")
 
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
+}
+
+func updateRuleFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	rule, err := runJSONWrite[management.Rule](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/rules/{id}",
+		URI:        cli.api.HTTPClient.URI("rules", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 rules update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update rule with ID %q: %w", id, err)
+	}
+
+	cli.renderer.Warnf(rulesDeprecationLogText)
+	cli.renderer.RuleUpdate(rule)
+
+	return nil
 }
 
 func enableRuleCmd(cli *cli) *cobra.Command {

@@ -7,6 +7,9 @@ has_toc: false
 
 Update the bot detection settings.
 
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).
+
 ## Usage
 ```
 auth0 protection bot-detection update [flags]
@@ -20,6 +23,15 @@ auth0 protection bot-detection update [flags]
   auth0 ap bd update --bot-detection-level low --challenge-password-policy never
   auth0 ap bd update --monitoring-mode-enabled=true --allowlist "198.51.100.42,10.0.0.0/24"
   auth0 ap bd update -l high -a "198.51.100.42" -m=false --json
+
+  # Discover the payload schema
+  auth0 ap bd update --schema
+  auth0 ap bd update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ap bd update --data '{"bot_detection_level":"medium","monitoring_mode_enabled":false}'
+  auth0 ap bd update --data @bot-detection.json
+  cat bot-detection.json | auth0 ap bd update
 ```
 
 
@@ -31,9 +43,11 @@ auth0 protection bot-detection update [flags]
       --challenge-password-policy string         Determines how often to challenge users with a CAPTCHA for password-based login. Possible values: never, when_risky, always.
       --challenge-password-reset-policy string   Determines how often to challenge users with a CAPTCHA for password reset. Possible values: never, when_risky, always.
       --challenge-passwordless-policy string     Determines how often to challenge users with a CAPTCHA for passwordless login. Possible values: never, when_risky, always.
+      --data string                              JSON payload for the operation, as a JSON string or file path (@file.json). Can also be piped via stdin.
       --json                                     Output in json format.
       --json-compact                             Output in compact json format.
   -m, --monitoring-mode-enabled                  Enable (or disable) monitoring mode. When enabled, logs but does not block.
+      --schema                                   Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

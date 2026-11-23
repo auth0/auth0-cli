@@ -23,8 +23,12 @@ auth0 actions modules list [flags]
   auth0 actions modules list --number 100
   auth0 actions modules list -n 100 --json
   auth0 actions modules list --csv
+
+  # Discover the query schema
   auth0 actions modules list --schema
   auth0 actions modules list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 actions modules list --query '{"per_page":50}'
   auth0 actions modules list --query '{"page":1,"per_page":10}' --json
 ```

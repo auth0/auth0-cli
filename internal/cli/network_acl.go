@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -61,6 +62,8 @@ type networkACLBasicInputs struct {
 	ActiveStr   string
 	Priority    int
 	RuleJSON    string
+	Data        string
+	Schema      bool
 }
 
 // validateNetworkACLDescription ensures the description is non-empty and within the API length limit.
@@ -650,17 +653,42 @@ country codes, anonymous proxies, and other criteria.`,
 }
 
 func listNetworkACLsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		Schema bool
+		Query  string
+	}
+
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		Short:   "List network ACLs",
-		Long:    "List your network ACLs. To create one, run: auth0 network-acl create",
+		Long: "List your network ACLs. To create one, run: auth0 network-acl create\n\n" +
+			"Use '--schema' to see available query parameters.\n" +
+			"Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).",
 		Example: `  auth0 network-acl list
   auth0 network-acl ls
   auth0 network-acl ls --json
-  auth0 network-acl ls --json-compact`,
+  auth0 network-acl ls --json-compact
+
+  # Discover the query schema
+  auth0 network-acl list --schema
+  auth0 network-acl list --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 network-acl list --query '{"per_page":10,"include_totals":true}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "GET", "/network-acls")
+			}
+
+			if inputs.Query != "" {
+				return runJSONQuery(cli, cmd, jsonQuerySpec{
+					Path:      "network-acls",
+					SchemaCmd: "auth0 network-acl list",
+				}, inputs.Query)
+			}
+
 			var list []*management.NetworkACL
 			if err := ansi.Waiting(func() error {
 				var err error
@@ -676,6 +704,9 @@ func listNetworkACLsCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 	return cmd
 }
 
@@ -712,6 +743,7 @@ func showNetworkACLCmd(cli *cli) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 
 	return cmd
 }
@@ -726,7 +758,10 @@ func createNetworkACLCmd(cli *cli) *cobra.Command {
 		Long: `Create a new network ACL.
 To create interactively, use "auth0 network-acl create" with no arguments.
 To create non-interactively, supply the required parameters (description, active, priority, and rule) through flags.
-The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.`,
+The --rule parameter is required and must contain a valid JSON object with action, scope, and match properties.
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 network-acl create
   auth0 network-acl create --description "Block IPs" --priority 1 --active true --rule '{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24","10.0.0.0/8"]}}'
   auth0 network-acl create --description "Geo Block" --priority 2 --active true --rule '{"action":{"block":true},"scope":"authentication","match":{"geo_country_codes":["US","CA"]}}'
@@ -738,8 +773,29 @@ The --rule parameter is required and must contain a valid JSON object with actio
   # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl create -d "Curated Blocklist" -p 6 --active true --rule '{"action":{"log":true},"scope":"tenant","not_match":{"auth0_managed":["auth0.vpn","auth0.proxy"]}}'
   auth0 network-acl create -d "Only Signed" -p 8 --active true --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"}]}}}'
+
+  # Discover the payload schema
+  auth0 network-acl create --schema
+  auth0 network-acl create --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 network-acl create --data '{"description":"Block IPs","active":true,"priority":1,"rule":{"action":{"block":true},"scope":"tenant","match":{"ipv4_cidrs":["192.168.1.0/24"]}}}'
+  auth0 network-acl create --data @network-acl.json
+  cat network-acl.json | auth0 network-acl create
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "POST", "/network-acls")
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return createNetworkACLFromJSON(cli, cmd, payload)
+			}
+
 			// Validate --rule JSON up front, before prompting for other fields, so
 			// an invalid rule fails immediately instead of after the prompts.
 			var rule *management.NetworkACLRule
@@ -816,7 +872,26 @@ The --rule parameter is required and must contain a valid JSON object with actio
 	networkACLPriority.RegisterInt(cmd, &inputs.Priority, 0)
 	networkACLRule.RegisterString(cmd, &inputs.RuleJSON, "")
 
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
+}
+
+func createNetworkACLFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	acl, err := runJSONWrite[management.NetworkACL](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPost,
+		SchemaPath: "/network-acls",
+		URI:        cli.api.HTTPClient.URI("network-acls"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 network-acl create",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create network ACL: %w", err)
+	}
+
+	return cli.renderer.NetworkACLCreate(acl)
 }
 
 func updateNetworkACLCmd(cli *cli) *cobra.Command {
@@ -829,7 +904,9 @@ func updateNetworkACLCmd(cli *cli) *cobra.Command {
 		Long: `Update a network ACL.
 To update interactively, use "auth0 network-acl update" with no arguments.
 To update non-interactively, supply the description, active, priority, and rule through flags.
-`,
+
+Use '--schema' to print the request payload schema and exit.
+Use '--data' to supply the full JSON payload (validated against the schema before sending).`,
 		Example: `  auth0 network-acl update <id>
   auth0 network-acl update <id> --priority 5
   auth0 network-acl update <id> --active true
@@ -841,8 +918,21 @@ To update non-interactively, supply the description, active, priority, and rule 
   # Early Access (auth0_managed and http_message_signature match/not_match value):
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"tenant","match":{"auth0_managed":["auth0.low_reputation"]}}'
   auth0 network-acl update <id> --rule '{"action":{"allow":true},"scope":"authentication","match":{"http_message_signature":{"keys":[{"id": "key_123"},{"id": "key_456"}]}}}'
+
+  # Discover the payload schema
+  auth0 network-acl update --schema
+  auth0 network-acl update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 network-acl update <id> --data '{"active":false,"priority":5}'
+  auth0 network-acl update <id> --data @network-acl.json
+  cat network-acl.json | auth0 network-acl update <id>
   `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if inputs.Schema {
+				return printOperationSchema(cli, "PATCH", "/network-acls/{id}")
+			}
+
 			// Get the network ACL ID.
 			if len(args) > 0 {
 				inputs.ID = args[0]
@@ -850,6 +940,14 @@ To update non-interactively, supply the description, active, priority, and rule 
 				if err := networkACLID.Pick(cmd, &inputs.ID, cli.networkACLPickerOptions); err != nil {
 					return err
 				}
+			}
+
+			payload, provided, err := ResolveData(cmd)
+			if err != nil {
+				return err
+			}
+			if provided {
+				return updateNetworkACLFromJSON(cli, cmd, inputs.ID, payload)
 			}
 
 			// Check if we're in non-interactive mode (any flags provided).
@@ -876,7 +974,7 @@ To update non-interactively, supply the description, active, priority, and rule 
 
 			// Full interactive mode - read the current ACL to use its values as defaults.
 			var currentACL *management.NetworkACL
-			err := ansi.Waiting(func() (err error) {
+			err = ansi.Waiting(func() (err error) {
 				currentACL, err = cli.api.NetworkACL.Read(cmd.Context(), inputs.ID)
 				return err
 			})
@@ -922,12 +1020,32 @@ To update non-interactively, supply the description, active, priority, and rule 
 	}
 
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in JSON format")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
 	networkACLDescription.RegisterStringU(cmd, &inputs.Description, "")
 	networkACLActive.RegisterStringU(cmd, &inputs.ActiveStr, "")
 	networkACLPriority.RegisterIntU(cmd, &inputs.Priority, 1)
 	networkACLRule.RegisterStringU(cmd, &inputs.RuleJSON, "")
 
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
+
 	return cmd
+}
+
+func updateNetworkACLFromJSON(cli *cli, cmd *cobra.Command, id, dataStr string) error {
+	acl, err := runJSONWrite[management.NetworkACL](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/network-acls/{id}",
+		URI:        cli.api.HTTPClient.URI("network-acls", id),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 network-acl update",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update network ACL with ID %q: %w", id, err)
+	}
+
+	return cli.renderer.NetworkACLUpdate(acl)
 }
 
 func deleteNetworkACLCmd(cli *cli) *cobra.Command {

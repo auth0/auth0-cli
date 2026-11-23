@@ -87,7 +87,7 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 
 - [auth0 actions](auth0_actions.md) - Manage resources for actions
 - [auth0 acul](auth0_acul.md) - Advanced Customization the Universal Login experience
-- [auth0 agent](auth0_agent.md) - Manage Auth0 AI capabilities
+- [auth0 agents](auth0_agents.md) - Manage agents (Early Access)
 - [auth0 api](auth0_api.md) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](auth0_apis.md) - Manage resources for APIs
 - [auth0 apps](auth0_apps.md) - Manage resources for applications
@@ -109,12 +109,14 @@ The help for any command can also be emitted as JSON by combining `--help` with 
 - [auth0 network-acl](auth0_network-acl.md) - Manage network ACL settings
 - [auth0 orgs](auth0_orgs.md) - Manage resources for organizations
 - [auth0 phone](auth0_phone.md) - Manage phone providers
+- [auth0 poppy](auth0_poppy.md) - Set up your company for personal agents
 - [auth0 protection](auth0_protection.md) - Manage resources for attack protection
 - [auth0 quickstarts](auth0_quickstarts.md) - Quickstart support for getting bootstrapped
 - [auth0 refresh-tokens](auth0_refresh-tokens.md) - Manage resources for refresh tokens
 - [auth0 roles](auth0_roles.md) - Manage resources for roles
 - [auth0 rules](auth0_rules.md) - Manage resources for rules
 - [auth0 sessions](auth0_sessions.md) - Manage resources for sessions
+- [auth0 skills](auth0_skills.md) - Manage Auth0 skills for AI coding assistants
 - [auth0 tenant-settings](auth0_tenant-settings.md) - Manage tenant settings
 - [auth0 tenants](auth0_tenants.md) - Manage configured tenants
 - [auth0 terraform](auth0_terraform.md) - Manage terraform configuration for your Auth0 Tenant

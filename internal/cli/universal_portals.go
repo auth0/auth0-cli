@@ -51,6 +51,11 @@ var (
 		ShortForm: "o",
 		Help:      "Business only: the ID or name of the organization, when the user has several.",
 	}
+	upLogoutURL = Flag{
+		Name:     "Logout URL",
+		LongForm: "logout-url",
+		Help:     "URL of your application, where users land after they log out of the portal. Defaults to the host of the portal for a new application; a rerun without it keeps the logout URLs the application has.",
+	}
 )
 
 // universalPortalsCmd groups the Universal Portals commands.
@@ -78,6 +83,7 @@ type universalPortalsSetupInputs struct {
 	Slug         string
 	User         string
 	Organization string
+	LogoutURL    string
 	DryRun       bool
 }
 
@@ -89,6 +95,7 @@ func (i universalPortalsSetupInputs) options() portals.SetupOptions {
 		Slug:         i.Slug,
 		UserQuery:    i.User,
 		Organization: i.Organization,
+		LogoutURL:    i.LogoutURL,
 	}
 }
 
@@ -123,6 +130,7 @@ func universalPortalsSetupCmd(cli *cli) *cobra.Command {
 Running the command again after a failure resumes: what exists is reused.`,
 		Example: `  auth0 universal-portals setup
   auth0 universal-portals setup --template business --name "Acme Admin" --user jane@acme.com
+  auth0 universal-portals setup --template consumer --name "Acme Account" --logout-url https://app.acme.com
   auth0 universal-portals setup --template consumer --name "Acme Account" --dry-run
   auth0 up setup --no-input --template consumer --name "Acme Account" --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -135,6 +143,7 @@ Running the command again after a failure resumes: what exists is reused.`,
 	upSlug.RegisterString(cmd, &inputs.Slug, "")
 	upUser.RegisterString(cmd, &inputs.User, "")
 	upOrganization.RegisterString(cmd, &inputs.Organization, "")
+	upLogoutURL.RegisterString(cmd, &inputs.LogoutURL, "")
 	upDryRun.RegisterBool(cmd, &inputs.DryRun, false)
 	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
 
@@ -159,10 +168,8 @@ func runUniversalPortalsSetup(cmd *cobra.Command, cli *cli, inputs universalPort
 	target := portalsSetupTarget{api: tenant, hasWritten: tenant.hasWritten}
 
 	if inputs.DryRun {
-		dryTenant, plan, err := dryRunTenant(cli.apiAccess)
-		if err != nil {
-			return err
-		}
+		dryTenant, plan, restore := dryRunTenant(cli.transport, cli.api, cli.apiv3)
+		defer restore()
 
 		// The checks of the permissions go to the tenant: they are rejected, and change nothing.
 		target = portalsSetupTarget{api: dryTenant, prober: tenant, hasWritten: tenant.hasWritten, planned: plan.planned}

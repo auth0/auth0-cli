@@ -7,6 +7,9 @@ has_toc: false
 
 List your existing log streams. To create one, run: `auth0 logs streams create`.
 
+Use '--schema' to see the query parameters the API documents for this operation.
+Use '--query' to pass query parameters as a JSON object and get the raw API response.
+
 ## Usage
 ```
 auth0 logs streams list [flags]
@@ -20,6 +23,10 @@ auth0 logs streams list [flags]
   auth0 logs streams ls --json
   auth0 logs streams ls --json-compact
   auth0 logs streams ls --csv
+
+  # Discover the query schema
+  auth0 logs streams list --schema
+  auth0 logs streams list --schema --json
 ```
 
 
@@ -29,6 +36,8 @@ auth0 logs streams list [flags]
       --csv            Output in csv format.
       --json           Output in json format.
       --json-compact   Output in compact json format.
+  -q, --query string   Filter results with a JSON object of query parameters. Any API-supported parameter works immediately. Run '--schema' to see documented parameters. On offset-paginated endpoints, add "include_totals":true to receive total counts and a pagination hint (without it the API returns a bare array and no hint can be given).
+      --schema         Print the request payload schema for this command and exit. Use with --json or --json-compact for machine-readable output.
 ```
 
 

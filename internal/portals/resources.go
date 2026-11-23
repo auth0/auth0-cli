@@ -140,9 +140,25 @@ func ensurePortalClient(ctx context.Context, store ClientStore, app portalApplic
 		return ensured[credentials]{}, &NameInUseError{Name: app.name, OwnerSlug: owner}
 	}
 
+	// A rerun keeps the logout URLs the application has, unless it was given one.
+	var logoutURLs []string
+	if app.logoutURL != "" {
+		logoutURLs = settings.AllowedLogoutURLs
+	}
+
+	current, err := store.ReadClient(ctx, existing.ID)
+	if err != nil {
+		return ensured[credentials]{}, fmt.Errorf("read application %q: %w", app.name, err)
+	}
+
+	// The API resets the leeway of a refresh token that is sent without it.
+	if current.RefreshToken != nil {
+		settings.RefreshToken.Leeway = current.RefreshToken.Leeway
+	}
+
 	update := ClientSettings{
 		Callbacks:                   settings.Callbacks,
-		AllowedLogoutURLs:           settings.AllowedLogoutURLs,
+		AllowedLogoutURLs:           logoutURLs,
 		GrantTypes:                  settings.GrantTypes,
 		OrganizationUsage:           settings.OrganizationUsage,
 		OrganizationRequireBehavior: settings.OrganizationRequireBehavior,

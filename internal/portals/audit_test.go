@@ -417,7 +417,10 @@ func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 		assert.Equal(t, "organization", outcome.Result.Unchecked[0].Check)
 		assert.Equal(t, []string{"P022"}, outcome.Result.Unchecked[0].Rules)
 		assert.Contains(t, outcome.Result.Unchecked[0].Reason, "read:organization_connections")
-		assert.False(t, outcome.Failed())
+		assert.True(t, outcome.Failed(), "a check that could not run fails a strict audit")
+
+		lenient, _ := portal.audit(t, portals.AuditOptions{Organization: "org_2"})
+		assert.False(t, lenient.Failed(), "it does not fail an audit that is not strict")
 	})
 
 	t.Run("a read that is not refused for a scope still stops the audit", func(t *testing.T) {
@@ -433,16 +436,19 @@ func TestAudit_WhatTheSessionCannotReadIsNotChecked(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("what could not be read does not fail the audit, even a strict one", func(t *testing.T) {
+	t.Run("what could not be read fails a strict audit only", func(t *testing.T) {
 		t.Parallel()
 
 		portal := newAuditedPortal(t)
 		portal.tenant.Deny("GET custom-domains/default", "Insufficient scope, expected any of: read:custom_domains")
 
-		outcome, _ := portal.audit(t, portals.AuditOptions{Strict: true})
+		strict, _ := portal.audit(t, portals.AuditOptions{Strict: true})
+		assert.True(t, strict.Failed())
+		assert.Len(t, strict.Result.Unchecked, 1)
 
-		assert.False(t, outcome.Failed())
-		assert.Len(t, outcome.Result.Unchecked, 1)
+		lenient, _ := portal.audit(t, portals.AuditOptions{})
+		assert.False(t, lenient.Failed())
+		assert.Len(t, lenient.Result.Unchecked, 1)
 	})
 
 	t.Run("a portal with nothing unread has no unchecked field in its JSON", func(t *testing.T) {

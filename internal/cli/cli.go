@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -58,18 +59,10 @@ type cli struct {
 	detectedAgent       string
 	executedCommandPath string
 
-	// What the Management API clients were built with, for a command that builds a client of its own.
-	apiAccess apiAccess
+	// The transport of the Management API clients, so a command can see or keep their requests.
+	transport *switchableTransport
 
 	Config config.Config
-}
-
-// apiAccess is the tenant and the token the Management API clients were built with, and the metadata
-// they send with each request.
-type apiAccess struct {
-	domain          string
-	accessToken     string
-	invokerMetadata string
 }
 
 // setupWithAuthentication will fetch the tenant from the config.json
@@ -184,17 +177,8 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 			if err != nil {
 				return authError{err: err, reason: "login_failed"}
 			}
-		} else if err := tenant.RegenerateAccessToken(ctx); err != nil {
-			errorMessage := fmt.Errorf(
-				"failed to fetch access token using client credentials: %w\n\n"+
-					"This may occur if the designated Auth0 application has been deleted, "+
-					"the client secret has been rotated or previous failure to store client "+
-					"secret in the keyring.\n\n"+
-					"Please re-authenticate by running: %s",
-				err,
-				ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
-			)
-			return authError{err: errorMessage, reason: "credentials_refresh_failed"}
+		} else if err := refreshClientCredentials(ctx, &tenant); err != nil {
+			return err
 		}
 
 		if err := c.Config.AddTenant(tenant); err != nil {
@@ -216,23 +200,49 @@ func (c *cli) setupWithAuthentication(ctx context.Context) error {
 		}
 	}
 
-	invokerMetadata := c.invokerMetadataHeaderValue()
-
 	// Reuse the token resolved above across both SDK clients so the keyring is not
 	// read again here.
-	api, err := initializeManagementClient(tenant.Domain, accessToken, invokerMetadata)
+	return c.initManagementClients(tenant.Domain, accessToken)
+}
+
+// refreshClientCredentials gets a new access token for a tenant that logged in
+// with client credentials. It needs no person, so it can run without a terminal.
+func refreshClientCredentials(ctx context.Context, tenant *config.Tenant) error {
+	if err := tenant.RegenerateAccessToken(ctx); err != nil {
+		errorMessage := fmt.Errorf(
+			"failed to fetch access token using client credentials: %w\n\n"+
+				"This may occur if the designated Auth0 application has been deleted, "+
+				"the client secret has been rotated or previous failure to store client "+
+				"secret in the keyring.\n\n"+
+				"Please re-authenticate by running: %s",
+			err,
+			ansi.Bold("auth0 login --domain <tenant-domain> --client-id <client-id> --client-secret <client-secret>"),
+		)
+		return authError{err: errorMessage, reason: "credentials_refresh_failed"}
+	}
+
+	return nil
+}
+
+// initManagementClients builds the Management API clients of the tenant from an
+// access token that was already resolved, so the keyring is not read again.
+func (c *cli) initManagementClients(domain, accessToken string) error {
+	c.transport = &switchableTransport{base: customClientWithRetries(c.invokerMetadataHeaderValue()).Transport}
+	httpClient := &http.Client{Transport: c.transport}
+
+	api, err := initializeManagementClient(domain, accessToken, httpClient)
 	if err != nil {
 		return authError{err: err, reason: "client_init_failed"}
 	}
 
-	apiv3, err := initializeManagementClientV3(tenant.Domain, accessToken, invokerMetadata)
+	apiv3, err := initializeManagementClientV3(domain, accessToken, httpClient)
 	if err != nil {
 		return authError{err: err, reason: "client_init_failed"}
 	}
 
 	c.api = auth0.NewAPI(api)
 	c.apiv3 = auth0.NewAPIV3(apiv3)
-	c.apiAccess = apiAccess{domain: tenant.Domain, accessToken: accessToken, invokerMetadata: invokerMetadata}
+
 	return nil
 }
 

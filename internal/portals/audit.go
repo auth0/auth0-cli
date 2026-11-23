@@ -12,7 +12,7 @@ type AuditOptions struct {
 	PortalID string
 	// Organization is the ID of the organization a business portal opens in.
 	Organization string
-	// Strict fails the audit for a warning too.
+	// Strict fails the audit for a warning too, and for a check the session could not read for.
 	Strict bool
 	// Fix applies the errors the CLI can fix, without asking.
 	Fix bool
@@ -34,7 +34,7 @@ type AuditResult struct {
 	Errors   int       `json:"errors"`
 	Warnings int       `json:"warnings"`
 	Failed   bool      `json:"failed"`
-	// Unchecked is what the session was not allowed to read. It does not fail the audit.
+	// Unchecked is what the session was not allowed to read. It fails only a strict audit.
 	Unchecked []UncheckedCheck `json:"unchecked,omitempty"`
 	// Fixes is what each fix did, when the audit fixed anything.
 	Fixes []FixRecord `json:"fixes,omitempty"`
@@ -73,7 +73,8 @@ type AuditOutcome struct {
 	FixesFailed int
 }
 
-// Failed reports whether the audit failed: it found errors, or warnings in a strict audit, or a fix failed.
+// Failed reports whether the audit failed: it found errors, or warnings or checks it could not run in a
+// strict audit, or a fix failed.
 func (o AuditOutcome) Failed() bool {
 	return o.Result.Failed || o.FixesFailed > 0
 }
@@ -250,7 +251,7 @@ func (r *auditRun) audit(ctx context.Context) (AuditResult, error) {
 		Findings: findings,
 		Errors:   errors,
 		Warnings: warnings,
-		Failed:   errors > 0 || (r.options.Strict && warnings > 0),
+		Failed:   errors > 0 || (r.options.Strict && (warnings > 0 || len(current.Unchecked) > 0)),
 
 		Unchecked: current.Unchecked,
 	}, nil

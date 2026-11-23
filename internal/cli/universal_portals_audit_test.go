@@ -271,6 +271,12 @@ func TestAuditFailure(t *testing.T) {
 			strict:  true,
 			want:    "the audit failed: 3 warning(s) in a strict audit",
 		},
+		{
+			name:    "checks that could not run count in a strict audit",
+			outcome: portals.AuditOutcome{Result: portals.AuditResult{Unchecked: []portals.UncheckedCheck{{Check: "custom domain"}}}},
+			strict:  true,
+			want:    "the audit failed: 1 check(s) not run in a strict audit",
+		},
 	}
 
 	for _, tt := range tests {

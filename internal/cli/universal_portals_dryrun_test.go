@@ -216,9 +216,9 @@ func TestPortalsDryRun(t *testing.T) {
 	})
 }
 
-// newDryRunServer starts a local TLS server for a tenant with nothing in it, and returns the access to
-// it. A dry run and a run of the checks of the permissions both go to this server.
-func newDryRunServer(t *testing.T) (*portalsServer, *httptest.Server, apiAccess) {
+// newDryRunServer starts a local TLS server for a tenant with nothing in it, and returns its host. A
+// dry run and a run of the checks of the permissions both go to this server.
+func newDryRunServer(t *testing.T) (*portalsServer, *httptest.Server, string) {
 	t.Helper()
 
 	server := &portalsServer{t: t, routes: map[string]func(receivedRequest) (int, string){}}
@@ -251,22 +251,27 @@ func newDryRunServer(t *testing.T) (*portalsServer, *httptest.Server, apiAccess)
 	server.reply(http.MethodPatch, "client-grants/cgr_preflight0000000", 404, `{"statusCode":404,"message":"The grant does not exist"}`)
 	server.reply(http.MethodPatch, "flows/vault/connections/ac_preflight0000000000000", 404, `{"statusCode":404,"message":"Connection not found"}`)
 
-	return server, tls, apiAccess{domain: host, accessToken: "token"}
+	return server, tls, host
 }
 
-// newTenantsOver returns the tenant of a dry run, the plan, and the tenant that sends the checks.
-func newTenantsOver(t *testing.T, tls *httptest.Server, access apiAccess) (*portalsTenant, *portalsDryRun, *portalsTenant) {
+// newTenantsOver returns the tenant of a dry run, the plan, and the tenant that sends the checks. Both
+// tenants use the same clients, as in the CLI, with the dry run in front of their transport.
+func newTenantsOver(t *testing.T, tls *httptest.Server, host string) (*portalsTenant, *portalsDryRun, *portalsTenant) {
 	t.Helper()
 
-	dry, plan, err := dryRunTenantOver(tls.Client().Transport, access)
+	transport := &switchableTransport{base: tls.Client().Transport}
+	httpClient := &http.Client{Transport: transport}
+
+	v1, err := initializeManagementClient(host, "token", httpClient)
+	require.NoError(t, err)
+	v3, err := initializeManagementClientV3(host, "token", httpClient)
 	require.NoError(t, err)
 
-	v1, err := initializeManagementClientWith(access.domain, access.accessToken, tls.Client())
-	require.NoError(t, err)
-	v3, err := initializeManagementClientV3With(access.domain, access.accessToken, tls.Client())
-	require.NoError(t, err)
+	api, apiv3 := auth0.NewAPI(v1), auth0.NewAPIV3(v3)
+	dry, plan, restore := dryRunTenant(transport, api, apiv3)
+	t.Cleanup(restore)
 
-	return dry, plan, newPortalsTenant(auth0.NewAPI(v1), auth0.NewAPIV3(v3))
+	return dry, plan, newPortalsTenant(api, apiv3)
 }
 
 func dryRunDeps(dry portals.API, prober portals.Prober) (portals.SetupDeps, *portalstest.Reporter) {
@@ -284,8 +289,8 @@ func dryRunDeps(dry portals.API, prober portals.Prober) (portals.SetupDeps, *por
 // The tests below build the clients the way the CLI does, and the SDK changes a map that all its
 // clients share when one is built, so they do not run in parallel with each other.
 func TestPortalsDryRun_SetupOfAConsumerPortal(t *testing.T) {
-	server, tls, access := newDryRunServer(t)
-	dry, plan, checker := newTenantsOver(t, tls, access)
+	server, tls, host := newDryRunServer(t)
+	dry, plan, checker := newTenantsOver(t, tls, host)
 	deps, _ := dryRunDeps(dry, checker)
 
 	result, err := portals.Setup(context.Background(), consumerOptionsForDryRun(), deps)
@@ -348,7 +353,7 @@ func consumerOptionsForDryRun() portals.SetupOptions {
 }
 
 func TestPortalsDryRun_ASecretReadFromTheTenantNeverReachesThePlan(t *testing.T) {
-	server, tls, access := newDryRunServer(t)
+	server, tls, host := newDryRunServer(t)
 
 	// The application of an earlier run exists, and its secret is read to plan the portal.
 	server.reply(http.MethodGet, "clients", 200, `{"clients":[
@@ -356,7 +361,7 @@ func TestPortalsDryRun_ASecretReadFromTheTenantNeverReachesThePlan(t *testing.T)
 		 "session_transfer":{"allowed_authentication_methods":["query"]}}],"start":0,"limit":100,"total":1}`)
 	server.reply(http.MethodGet, "clients/cli_existing", 200, `{"client_id":"cli_existing","client_secret":"real-secret-xyz"}`)
 
-	dry, plan, checker := newTenantsOver(t, tls, access)
+	dry, plan, checker := newTenantsOver(t, tls, host)
 	deps, reporter := dryRunDeps(dry, checker)
 
 	result, err := portals.Setup(context.Background(), consumerOptionsForDryRun(), deps)
@@ -434,7 +439,7 @@ func TestReportPortalsPlan(t *testing.T) {
 // a member. The organization the plan makes does not exist, so the reads that follow its creation are
 // answered from the plan.
 func TestPortalsDryRun_SetupOfABusinessPortalThatCreatesAnOrganization(t *testing.T) {
-	server, tls, access := newDryRunServer(t)
+	server, tls, host := newDryRunServer(t)
 
 	server.reply(http.MethodGet, "users", 200, `{"start":0,"limit":50,"length":1,"total":1,"users":[{"user_id":"auth0|a","email":"jane@acme.com","name":"jane"}]}`)
 	server.reply(http.MethodGet, "users/auth0%7Ca/organizations", 200, `{"organizations":[],"total":0}`)
@@ -463,7 +468,7 @@ func TestPortalsDryRun_SetupOfABusinessPortalThatCreatesAnOrganization(t *testin
 		server.reply(http.MethodGet, path, 404, `{"statusCode":404,"message":"Not found"}`)
 	}
 
-	dry, plan, checker := newTenantsOver(t, tls, access)
+	dry, plan, checker := newTenantsOver(t, tls, host)
 	deps, _ := dryRunDeps(dry, checker)
 	deps.Interactive = true
 

@@ -149,6 +149,7 @@ func patchRefresh(ctx context.Context, api API, app Client, change func(token *R
 
 		token.InfiniteTokenLifetime = current.InfiniteTokenLifetime
 		token.InfiniteIdleTokenLifetime = current.InfiniteIdleTokenLifetime
+		token.Leeway = current.Leeway
 
 		if current.TokenLifetime != nil {
 			token.TokenLifetime = current.TokenLifetime

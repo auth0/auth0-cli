@@ -187,7 +187,7 @@ func firstFlowID(flows json.RawMessage) string {
 
 // Probe implements portals.Prober.
 func (t *portalsTenant) Probe(ctx context.Context, method, path string, body any) error {
-	_, err := t.rawJSON(ctx, method, path, body)
+	_, err := t.rawJSON(withProbe(ctx), method, path, body)
 
 	return err
 }

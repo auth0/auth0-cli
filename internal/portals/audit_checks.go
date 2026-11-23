@@ -280,17 +280,28 @@ func (a *portalAudit) formsAndCustomCode() {
 func (a *portalAudit) application() bool {
 	app := a.current.Application
 	if app == nil {
+		remedy := &Remedy{
+			Summary: "Create the portal application with the portal defaults and link it to the portal",
+			apply: func(ctx context.Context, api API) error {
+				return createPortalApplication(ctx, api, a.current, a.uses("my_organization"))
+			},
+		}
+
+		// The callback of a new application is on the host the portal is served from. Without the custom
+		// domain, that host is not known, and an application on the tenant domain would break the sign-in.
+		if !a.current.wasChecked("custom domain") {
+			remedy = &Remedy{
+				Summary: "Log in with read:custom_domains and run the audit again, so the application is created on the domain the portal is served from",
+				Command: "auth0 login --scopes read:custom_domains",
+			}
+		}
+
 		a.add(Finding{
 			ID:       "P009",
 			Severity: SeverityError,
 			Check:    "application",
 			Message:  "The portal has no application linked to it.",
-			Remedy: &Remedy{
-				Summary: "Create the portal application with the portal defaults and link it to the portal",
-				apply: func(ctx context.Context, api API) error {
-					return createPortalApplication(ctx, api, a.current, a.uses("my_organization"))
-				},
-			},
+			Remedy:   remedy,
 		})
 
 		return false

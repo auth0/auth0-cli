@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/auth0/auth0-cli/internal/auth"
-	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/config"
 )
 
@@ -158,23 +157,7 @@ func (c *cli) setupWithEnvAuthentication(ctx context.Context) error {
 	c.tenant = domain
 	c.renderer.Tenant = domain
 
-	invokerMetadata := c.invokerMetadataHeaderValue()
-
-	api, err := initializeManagementClient(domain, accessToken, invokerMetadata)
-	if err != nil {
-		return authError{err: err, reason: "client_init_failed"}
-	}
-
-	apiv3, err := initializeManagementClientV3(domain, accessToken, invokerMetadata)
-	if err != nil {
-		return authError{err: err, reason: "client_init_failed"}
-	}
-
-	c.api = auth0.NewAPI(api)
-	c.apiv3 = auth0.NewAPIV3(apiv3)
-	c.apiAccess = apiAccess{domain: domain, accessToken: accessToken, invokerMetadata: invokerMetadata}
-
-	return nil
+	return c.initManagementClients(domain, accessToken)
 }
 
 // resolveEnvAccessToken returns the access token for env-mode auth, preferring a

@@ -1,6 +1,9 @@
 package portals
 
-import "strings"
+import (
+	"cmp"
+	"strings"
+)
 
 // The scopes the portal application needs on each API, as listed in the setup guide.
 var (
@@ -116,6 +119,8 @@ type portalApplication struct {
 	// The host the portal is served from: the custom domain, or the tenant domain.
 	host           string
 	isCustomDomain bool
+	// Where users land after they log out. Empty means the host of the portal.
+	logoutURL string
 }
 
 // The type of the application of a portal, and how it proves who it is at the token endpoint.
@@ -138,8 +143,8 @@ func portalClientSettings(app portalApplication) ClientSettings {
 		TokenEndpointAuthMethod: portalTokenAuthMethod,
 		IPHeaderTrusted:         boolPointer(true),
 		Callbacks:               []string{"https://" + app.host + "/portals/auth/callback"},
-		// Users land on the host of the portal after they log out.
-		AllowedLogoutURLs:           []string{"https://" + app.host},
+		// The portal logs out with no returnTo, so users land on the first allowed logout URL.
+		AllowedLogoutURLs:           []string{cmp.Or(app.logoutURL, "https://"+app.host)},
 		GrantTypes:                  append([]string(nil), portalGrantTypes...),
 		OrganizationUsage:           "allow",
 		OrganizationRequireBehavior: "no_prompt",

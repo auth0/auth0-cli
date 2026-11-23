@@ -112,6 +112,36 @@ func TestCustomClientWithRetries(t *testing.T) {
 	})
 }
 
+// namedTransport answers every request with its name in a header, so a test can tell which transport
+// sent a request.
+type namedTransport string
+
+func (n namedTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{"Sent-By": []string{string(n)}}, Request: request}, nil
+}
+
+func TestSwitchableTransport(t *testing.T) {
+	transport := &switchableTransport{base: namedTransport("base")}
+
+	sentBy := func() string {
+		request, err := http.NewRequest(http.MethodGet, "https://tenant.example/api/v2/clients", nil)
+		require.NoError(t, err)
+
+		response, err := transport.RoundTrip(request)
+		require.NoError(t, err)
+
+		return response.Header.Get("Sent-By")
+	}
+
+	assert.Equal(t, "base", sentBy(), "the base sends the requests by default")
+
+	restore := transport.use(namedTransport("front"))
+	assert.Equal(t, "front", sentBy(), "a transport put in front sends them until it is restored")
+
+	restore()
+	assert.Equal(t, "base", sentBy(), "restore sends them through the base again")
+}
+
 func TestRetryableErrorRetryFunc(t *testing.T) {
 	testCases := []struct {
 		name     string

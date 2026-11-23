@@ -197,8 +197,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 apis ls -n 100 --json
   auth0 apis ls -n 100 --json-compact
   auth0 apis ls --csv
+
+  # Discover the query schema
   auth0 apis list --schema
   auth0 apis list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apis list --query '{"identifiers":["https://my-api"]}'
   auth0 apis list --query '{"identifiers":["https://my-api"]}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -291,7 +295,12 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 apis search --parser scim --filter 'name co "billing"' -s name:1
   auth0 apis search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
   auth0 apis search --filter 'name:"My API"' --fields id,name,identifier --json
+
+  # Discover the query schema
   auth0 apis search --schema
+  auth0 apis search --schema --json
+
+  # JSON query (for agents and automation)
   auth0 apis search --query '{"q":"name co \"billing\"","parser":"scim","sort":"name"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{

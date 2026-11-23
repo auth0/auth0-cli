@@ -16,6 +16,9 @@ type SetupOptions struct {
 	UserQuery string
 	// Organization is the ID or name of the organization of that user, when they have several.
 	Organization string
+	// LogoutURL is where users land after they log out of the portal, usually the customer's application.
+	// Without it, a new application uses the host of the portal and a rerun keeps the URLs it has.
+	LogoutURL string
 }
 
 // SetupDeps is what setup works with.
@@ -142,6 +145,13 @@ func checkOptions(options SetupOptions, interactive bool) (SetupOptions, error) 
 		return options, &UsageError{
 			Message: fmt.Sprintf("The slug %q must match %s", options.Slug, SlugPattern),
 			Hints:   []string{"Use --slug with lowercase letters, digits and hyphens, starting with a letter."},
+		}
+	}
+
+	if options.LogoutURL != "" && !isAbsoluteHTTPURL(options.LogoutURL) {
+		return options, &UsageError{
+			Message: fmt.Sprintf("The logout URL %q must be an absolute http or https URL", options.LogoutURL),
+			Hints:   []string{"Use --logout-url with the URL of your application, for example https://app.example.com."},
 		}
 	}
 
@@ -404,6 +414,7 @@ func (r *setupRun) setUpApplication(ctx context.Context, appName, slug string, h
 			tenantDomain:   r.tenant,
 			host:           host.domain,
 			isCustomDomain: host.isCustom,
+			logoutURL:      r.options.LogoutURL,
 		})
 	})
 	if err != nil {
@@ -665,4 +676,11 @@ func (l testLink) result() *OrganizationResult {
 	}
 
 	return &OrganizationResult{ID: l.access.organizationID, Name: l.access.organizationName, HasRole: l.access.hasOrganizationRole}
+}
+
+// isAbsoluteHTTPURL reports whether value is an http or https URL with a host.
+func isAbsoluteHTTPURL(value string) bool {
+	parsed, err := url.Parse(value)
+
+	return err == nil && (parsed.Scheme == "https" || parsed.Scheme == "http") && parsed.Host != ""
 }

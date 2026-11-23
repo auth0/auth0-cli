@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -65,6 +66,11 @@ func (d *portalsDryRun) planned() []plannedRequest {
 
 // RoundTrip implements http.RoundTripper.
 func (d *portalsDryRun) RoundTrip(request *http.Request) (*http.Response, error) {
+	// The checks of the permissions go to the tenant: they are rejected, and change nothing.
+	if isProbe(request.Context()) {
+		return d.base.RoundTrip(request)
+	}
+
 	body, err := readAndRestoreBody(request)
 	if err != nil {
 		return nil, fmt.Errorf("read the request to %s: %w", request.URL.Path, err)
@@ -263,28 +269,26 @@ func jsonResponse(request *http.Request, body any) (*http.Response, error) {
 	}, nil
 }
 
-// dryRunTenant builds the tenant of a dry run: its clients read from the tenant and keep the writes.
-// It is built from what the clients of the CLI were built with.
-func dryRunTenant(access apiAccess) (*portalsTenant, *portalsDryRun, error) {
-	return dryRunTenantOver(customClientWithRetries(access.invokerMetadata).Transport, access)
+// dryRunTenant puts a dry run in front of the clients of the CLI, until restore is called: the reads go
+// to the tenant and the writes are kept.
+func dryRunTenant(transport *switchableTransport, api *auth0.API, apiv3 *auth0.APIV3) (tenant *portalsTenant, plan *portalsDryRun, restore func()) {
+	plan = newPortalsDryRun(transport.base)
+
+	return newPortalsTenant(api, apiv3), plan, transport.use(plan)
 }
 
-// dryRunTenantOver is dryRunTenant with the transport that sends the reads.
-func dryRunTenantOver(base http.RoundTripper, access apiAccess) (*portalsTenant, *portalsDryRun, error) {
-	plan := newPortalsDryRun(base)
-	httpClient := &http.Client{Transport: plan}
+// probeKey marks the context of a check of the permissions, which a dry run sends to the tenant.
+type probeKey struct{}
 
-	v1, err := initializeManagementClientWith(access.domain, access.accessToken, httpClient)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not prepare the dry run: %w", err)
-	}
+// withProbe marks ctx as the context of a check of the permissions.
+func withProbe(ctx context.Context) context.Context {
+	return context.WithValue(ctx, probeKey{}, true)
+}
 
-	v3, err := initializeManagementClientV3With(access.domain, access.accessToken, httpClient)
-	if err != nil {
-		return nil, nil, fmt.Errorf("could not prepare the dry run: %w", err)
-	}
+func isProbe(ctx context.Context) bool {
+	marked, _ := ctx.Value(probeKey{}).(bool)
 
-	return newPortalsTenant(auth0.NewAPI(v1), auth0.NewAPIV3(v3)), plan, nil
+	return marked
 }
 
 // dryRunResult is the result of setup for a dry run: the result of a real run, and the requests it

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -83,6 +84,8 @@ type (
 		StagePreLoginRate                   int
 		StagePreUserRegistrationMaxAttempts int
 		StagePreUserRegistrationRate        int
+		Data                                string
+		Schema                              bool
 	}
 )
 
@@ -133,12 +136,23 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 		Use:   "update",
 		Args:  cobra.NoArgs,
 		Short: "Update suspicious ip throttling settings",
-		Long:  "Update the suspicious ip throttling settings.",
+		Long: "Update the suspicious ip throttling settings.\n\n" +
+			"Use '--schema' to print the request payload schema and exit.\n" +
+			"Use '--data' to supply the full JSON payload (validated against the schema before sending).",
 		Example: `  auth0 protection suspicious-ip-throttling update
   auth0 ap sit update --enabled=true
   auth0 ap sit update --enabled=true --allowlist "178.178.178.178"
   auth0 ap sit update --enabled=false --allowlist "178.178.178.178" --shields block
-  auth0 ap sit update -e=true -l "178.178.178.178" -s block --json`,
+  auth0 ap sit update -e=true -l "178.178.178.178" -s block --json
+
+  # Discover the payload schema
+  auth0 ap sit update --schema
+  auth0 ap sit update --schema --json
+
+  # JSON input mode (for agents and automation)
+  auth0 ap sit update --data '{"enabled":true,"stage":{"pre-login":{"max_attempts":100,"rate":864000}}}'
+  auth0 ap sit update --data @suspicious-ip-throttling.json
+  cat suspicious-ip-throttling.json | auth0 ap sit update`,
 		RunE: updateSuspiciousIPThrottlingCmdRun(cli, &inputs),
 	}
 
@@ -151,6 +165,10 @@ func updateSuspiciousIPThrottlingCmd(cli *cli) *cobra.Command {
 	sitFlags.StagePreLoginRate.RegisterIntU(cmd, &inputs.StagePreLoginRate, 34560)
 	sitFlags.StagePreUserRegistrationMaxAttempts.RegisterIntU(cmd, &inputs.StagePreUserRegistrationMaxAttempts, 1)
 	sitFlags.StagePreUserRegistrationRate.RegisterIntU(cmd, &inputs.StagePreUserRegistrationRate, 1200)
+
+	dataFlag.RegisterString(cmd, &inputs.Data, "")
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	markDataExclusive(cmd)
 
 	return cmd
 }
@@ -177,8 +195,20 @@ func updateSuspiciousIPThrottlingCmdRun(
 	inputs *suspiciousIPThrottlingInputs,
 ) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		if inputs.Schema {
+			return printOperationSchema(cli, "PATCH", "/attack-protection/suspicious-ip-throttling")
+		}
+
+		payload, provided, err := ResolveData(cmd)
+		if err != nil {
+			return err
+		}
+		if provided {
+			return updateSuspiciousIPThrottlingFromJSON(cli, cmd, payload)
+		}
+
 		var sit *management.SuspiciousIPThrottling
-		err := ansi.Waiting(func() (err error) {
+		err = ansi.Waiting(func() (err error) {
 			sit, err = cli.api.AttackProtection.GetSuspiciousIPThrottling(cmd.Context())
 			return err
 		})
@@ -279,4 +309,21 @@ func updateSuspiciousIPThrottlingCmdRun(
 
 		return nil
 	}
+}
+
+func updateSuspiciousIPThrottlingFromJSON(cli *cli, cmd *cobra.Command, dataStr string) error {
+	sit, err := runJSONWrite[management.SuspiciousIPThrottling](cli, cmd, jsonWriteSpec{
+		Method:     http.MethodPatch,
+		SchemaPath: "/attack-protection/suspicious-ip-throttling",
+		URI:        cli.api.HTTPClient.URI("attack-protection", "suspicious-ip-throttling"),
+		Data:       dataStr,
+		SchemaCmd:  "auth0 protection suspicious-ip-throttling update",
+	})
+	if err != nil {
+		return err
+	}
+
+	cli.renderer.SuspiciousIPThrottlingUpdate(sit)
+
+	return nil
 }

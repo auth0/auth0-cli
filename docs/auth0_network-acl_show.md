@@ -24,7 +24,8 @@ auth0 network-acl show [flags]
 ## Flags
 
 ```
-      --json   Output in JSON format
+      --json           Output in JSON format
+      --json-compact   Output in compact json format.
 ```
 
 

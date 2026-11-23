@@ -269,7 +269,7 @@ func buildRootCmd(cli *cli) *cobra.Command {
 
 			// --schema prints a public OpenAPI schema and returns before any
 			// API call, so it needs no session — skip auth for offline discovery.
-			if f := cmd.Flags().Lookup("schema"); f != nil && f.Changed {
+			if schemaRequested(cmd) {
 				return nil
 			}
 
@@ -488,8 +488,10 @@ func commandRequiresAuthentication(invokedCommandName string) bool {
 		"auth0 help",
 		"auth0 login",
 		"auth0 logout",
+		"auth0 poppy doctor",
 		"auth0 tenants use",
 		"auth0 tenants list",
+		"auth0 skills install",
 		"auth0 agent skills install",
 	}
 
@@ -597,6 +599,7 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(logoutCmd(cli))
 	rootCmd.AddCommand(tenantsCmd(cli))
 	rootCmd.AddCommand(appsCmd(cli))
+	rootCmd.AddCommand(agentsCmd(cli))
 	rootCmd.AddCommand(aculCmd(cli))
 	rootCmd.AddCommand(usersCmd(cli))
 	rootCmd.AddCommand(rulesCmd(cli))
@@ -627,10 +630,12 @@ func addSubCommands(rootCmd *cobra.Command, cli *cli) {
 	rootCmd.AddCommand(guardianCmd(cli))
 	rootCmd.AddCommand(experimentationCmd(cli))
 	rootCmd.AddCommand(universalPortalsCmd(cli))
+	rootCmd.AddCommand(poppyCmd(cli))
 
 	rootCmd.AddCommand(docsCmd(cli))
 	rootCmd.AddCommand(commandsCmd(cli))
-	rootCmd.AddCommand(agentCmd(cli))
+	rootCmd.AddCommand(skillsCmd(cli))
+	rootCmd.AddCommand(agentCmd(cli)) // Deprecated: use skillsCmd.
 
 	// Keep completion at the bottom.
 	rootCmd.AddCommand(completionCmd(cli))
@@ -682,7 +687,10 @@ func renderErrorMessage(display *display.Renderer, err error) {
 			[]rune{unicode.ToUpper(rawErrorMessage[0])},
 			rawErrorMessage[1:]...,
 		),
-	) + "."
+	)
+	if !strings.HasSuffix(humanReadableErrorMessage, ".") {
+		humanReadableErrorMessage += "."
+	}
 
 	display.Errorf(humanReadableErrorMessage)
 

@@ -249,6 +249,20 @@ auth0 login --domain <domain> --client-id <client-id> --client-secret <client-se
 auth0 login --domain <domain> --client-id <client-id> --client-assertion-private-key <path-to-private-key / private-key> --client-assertion-signing-alg <signing-algorithm>
 ```
 
+### Extra scopes for `auth0 agents` and `auth0 poppy doctor`
+
+`auth0 poppy setup` and `config` work with the default login scopes. The `auth0 agents` commands and the `auth0 poppy doctor` checks that read the agents registered in your tenant also need the `read:agents` scope. `auth0 agents register` and `unregister` also need `create:agents` and `delete:agents`. These scopes are not requested by default because Agent as Principal is still in limited early access. If your tenant has it, log in again with them:
+
+```bash
+auth0 login --scopes read:agents,create:agents,delete:agents,read:client_credentials
+```
+
+The option `auth0 poppy setup --always-issue-refresh-tokens`, which adds a post-login Action, needs the `read:actions`, `create:actions` and `update:actions` scopes (a dry run only needs `read:actions`). Setup prints the same `auth0 login --scopes ...` command when one is missing.
+
+`auth0 agents list` and `show` also report each agent's application, its metadata status and the APIs it has grants on. They read these with the `read:clients` and `read:client_grants` scopes, and `show` also uses `read:client_credentials` to compare the stored keys. With `--poppy` they report only the grants on Poppy APIs, which also needs the `read:resource_servers` scope. When a scope is missing they still work: a value they cannot read shows as `unknown` (`null` in JSON, with the field named in `unknown_fields`), and they print one warning with the `auth0 login --scopes ...` command to run.
+
+If a scope is missing, `auth0 agents register` and `unregister` stop before changing anything and print the exact `auth0 login --scopes ...` command to run. The doctor skips the checks that need it and prints the same command. When you are logged in with client credentials (a machine-to-machine application), `auth0 login --scopes` does not apply, so `auth0 poppy setup`, `config`, `agents register` and `unregister` instead say to add the scope to the application's grant on the Auth0 Management API and log in again.
+
 ### Re-authentication
 
 When your access token expires, the CLI will prompt you to confirm whether to continue with your default tenant or select a different one:
@@ -265,6 +279,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 ## Available Commands
 
 - [auth0 actions](https://auth0.github.io/auth0-cli/auth0_actions.html) - Manage resources for actions
+- [auth0 agents](https://auth0.github.io/auth0-cli/auth0_agents.html) - Manage agents (Early Access)
 - [auth0 api](https://auth0.github.io/auth0-cli/auth0_api.html) - Makes an authenticated HTTP request to the Auth0 Management API
 - [auth0 apis](https://auth0.github.io/auth0-cli/auth0_apis.html) - Manage resources for APIs
 - [auth0 apps](https://auth0.github.io/auth0-cli/auth0_apps.html) - Manage resources for applications
@@ -282,6 +297,7 @@ Select **y** to proceed with your default tenant, or **N** to choose a different
 - [auth0 logout](https://auth0.github.io/auth0-cli/auth0_logout.html) - Log out of a tenant's session
 - [auth0 logs](https://auth0.github.io/auth0-cli/auth0_logs.html) - View tenant logs
 - [auth0 orgs](https://auth0.github.io/auth0-cli/auth0_orgs.html) - Manage resources for organizations
+- [auth0 poppy](https://auth0.github.io/auth0-cli/auth0_poppy.html) - (Experimental) Prepare your company for personal agents with the Personal Agent Protocol (Poppy)
 - [auth0 protection](https://auth0.github.io/auth0-cli/auth0_protection.html) - Manage resources for attack protection
 - [auth0 quickstarts](https://auth0.github.io/auth0-cli/auth0_quickstarts.html) - Quickstart support for getting bootstrapped
 - [auth0 refresh-tokens](https://auth0.github.io/auth0-cli/auth0_refresh-tokens.html) - Manage resources for refresh tokens

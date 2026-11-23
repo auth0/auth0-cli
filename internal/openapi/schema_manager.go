@@ -166,7 +166,12 @@ func (sm *SchemaManager) ValidateRequest(method, path string, body []byte) (*Val
 	// Validate against schema. MultiErrors collects every validation failure
 	// instead of stopping at the first, so the caller sees all issues at once.
 	// Some spec patterns use lookarounds, which RE2 can't compile; see compilePattern.
-	if err := requestSchema.Value.VisitJSON(data, openapi3.MultiErrors(), openapi3.SetSchemaRegexCompiler(compilePattern)); err != nil {
+	// IP and CIDR formats need validators for their oneOf branches; see ipStringFormats.
+	if err := requestSchema.Value.VisitJSON(data,
+		openapi3.MultiErrors(),
+		openapi3.SetSchemaRegexCompiler(compilePattern),
+		openapi3.WithStringFormatValidators(ipStringFormats),
+	); err != nil {
 		result.Status = StatusInvalid
 		result.addFieldErrors(fieldValidationErrors(err))
 		return result, nil
@@ -312,12 +317,56 @@ func isSimpleIdentifier(seg string) bool {
 	return true
 }
 
+// recursiveSchemaNote replaces a schema that contains itself (e.g. a flow action
+// whose params hold more flow actions), so rendering terminates.
+const recursiveSchemaNote = "Recursive reference to an enclosing schema."
+
+// composition is one schema composition keyword and its branches.
+type composition struct {
+	key   string // JSON key, e.g. "oneOf".
+	label string // Text heading, e.g. "One of".
+	refs  openapi3.SchemaRefs
+}
+
+// compositionsOf returns the schema's oneOf, anyOf and allOf branches.
+func compositionsOf(schema *openapi3.Schema) []composition {
+	return []composition{
+		{"oneOf", "One of", schema.OneOf},
+		{"anyOf", "Any of", schema.AnyOf},
+		{"allOf", "All of", schema.AllOf},
+	}
+}
+
+// variantName names a composition branch by its title or its $ref's last segment.
+func variantName(ref *openapi3.SchemaRef) string {
+	if ref.Value != nil && ref.Value.Title != "" {
+		return ref.Value.Title
+	}
+	return ref.Ref[strings.LastIndex(ref.Ref, "/")+1:]
+}
+
 // schemaToMap converts an OpenAPI schema to a map for JSON serialization.
 func schemaToMap(schema *openapi3.Schema) map[string]interface{} {
+	return schemaToMapGuarded(schema, map[*openapi3.Schema]bool{})
+}
+
+// schemaToMapGuarded is schemaToMap tracking the schemas on the current path, so a
+// schema that contains itself renders once instead of recursing forever.
+func schemaToMapGuarded(schema *openapi3.Schema, ancestors map[*openapi3.Schema]bool) map[string]interface{} {
+	if ancestors[schema] {
+		return map[string]interface{}{"description": recursiveSchemaNote}
+	}
+	ancestors[schema] = true
+	defer delete(ancestors, schema)
+
 	result := make(map[string]interface{})
 
 	if schema.Type != nil {
 		result["type"] = schema.Type.Slice()
+	}
+
+	if schema.Title != "" {
+		result["title"] = schema.Title
 	}
 
 	if schema.Description != "" {
@@ -332,14 +381,31 @@ func schemaToMap(schema *openapi3.Schema) map[string]interface{} {
 		props := make(map[string]interface{})
 		for name, propRef := range schema.Properties {
 			if propRef.Value != nil {
-				props[name] = schemaToMap(propRef.Value)
+				props[name] = schemaToMapGuarded(propRef.Value, ancestors)
 			}
 		}
 		result["properties"] = props
 	}
 
 	if schema.Items != nil && schema.Items.Value != nil {
-		result["items"] = schemaToMap(schema.Items.Value)
+		result["items"] = schemaToMapGuarded(schema.Items.Value, ancestors)
+	}
+
+	for _, c := range compositionsOf(schema) {
+		var variants []map[string]interface{}
+		for _, ref := range c.refs {
+			if ref.Value == nil {
+				continue
+			}
+			variant := schemaToMapGuarded(ref.Value, ancestors)
+			if name := variantName(ref); name != "" && variant["title"] == nil {
+				variant["title"] = name
+			}
+			variants = append(variants, variant)
+		}
+		if len(variants) > 0 {
+			result[c.key] = variants
+		}
 	}
 
 	if len(schema.Enum) > 0 {
@@ -375,6 +441,39 @@ func schemaToMap(schema *openapi3.Schema) map[string]interface{} {
 
 // formatSchema formats a schema as human-readable text.
 func formatSchema(schema *openapi3.Schema, indent string) string {
+	return formatSchemaGuarded(schema, indent, map[*openapi3.Schema]bool{})
+}
+
+// writeCompositions lists each oneOf/anyOf/allOf branch by name, then its fields.
+func writeCompositions(sb *strings.Builder, schema *openapi3.Schema, indent string, ancestors map[*openapi3.Schema]bool) {
+	for _, c := range compositionsOf(schema) {
+		if len(c.refs) == 0 {
+			continue
+		}
+		fmt.Fprintf(sb, "%s%s:\n", indent, c.label)
+		for i, ref := range c.refs {
+			if ref.Value == nil {
+				continue
+			}
+			fmt.Fprintf(sb, "%s  Variant %d", indent, i+1)
+			if name := variantName(ref); name != "" {
+				fmt.Fprintf(sb, ": %s", name)
+			}
+			sb.WriteString("\n")
+			sb.WriteString(formatSchemaGuarded(ref.Value, indent+"    ", ancestors))
+		}
+	}
+}
+
+// formatSchemaGuarded is formatSchema tracking the schemas on the current path, so
+// a schema that contains itself renders once instead of recursing forever.
+func formatSchemaGuarded(schema *openapi3.Schema, indent string, ancestors map[*openapi3.Schema]bool) string {
+	if ancestors[schema] {
+		return indent + recursiveSchemaNote + "\n"
+	}
+	ancestors[schema] = true
+	defer delete(ancestors, schema)
+
 	var sb strings.Builder
 
 	switch {
@@ -384,7 +483,7 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 			fmt.Fprintf(&sb, "%sRequired fields:\n", indent)
 			for _, fieldName := range schema.Required {
 				if propRef, ok := schema.Properties[fieldName]; ok && propRef.Value != nil {
-					sb.WriteString(formatField(fieldName, propRef.Value, indent+"  "))
+					sb.WriteString(formatFieldGuarded(fieldName, propRef.Value, indent+"  ", ancestors))
 				}
 			}
 			sb.WriteString("\n")
@@ -410,7 +509,7 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 			fmt.Fprintf(&sb, "%sOptional fields:\n", indent)
 			for _, fieldName := range optionalFields {
 				if propRef, ok := schema.Properties[fieldName]; ok && propRef.Value != nil {
-					sb.WriteString(formatField(fieldName, propRef.Value, indent+"  "))
+					sb.WriteString(formatFieldGuarded(fieldName, propRef.Value, indent+"  ", ancestors))
 				}
 			}
 		}
@@ -423,7 +522,7 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 			fmt.Fprintf(&sb, "%sDescription: %s\n", indent, schema.Description)
 		}
 		fmt.Fprintf(&sb, "%sEach item:\n", indent)
-		sb.WriteString(formatSchema(schema.Items.Value, indent+"  "))
+		sb.WriteString(formatSchemaGuarded(schema.Items.Value, indent+"  ", ancestors))
 	default:
 		// Non-object type.
 		if schema.Type != nil {
@@ -435,11 +534,19 @@ func formatSchema(schema *openapi3.Schema, indent string) string {
 		}
 	}
 
+	writeCompositions(&sb, schema, indent, ancestors)
+
 	return sb.String()
 }
 
 // formatField formats a single field with its type and description.
 func formatField(name string, schema *openapi3.Schema, indent string) string {
+	return formatFieldGuarded(name, schema, indent, map[*openapi3.Schema]bool{})
+}
+
+// formatFieldGuarded is formatField tracking the schemas on the current path, so a
+// field whose schema contains itself renders once instead of recursing forever.
+func formatFieldGuarded(name string, schema *openapi3.Schema, indent string, ancestors map[*openapi3.Schema]bool) string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "%s- %s", indent, name)
@@ -463,12 +570,19 @@ func formatField(name string, schema *openapi3.Schema, indent string) string {
 
 	sb.WriteString("\n")
 
+	if ancestors[schema] {
+		fmt.Fprintf(&sb, "%s  %s\n", indent, recursiveSchemaNote)
+		return sb.String()
+	}
+	ancestors[schema] = true
+	defer delete(ancestors, schema)
+
 	// If field is an object with properties, show nested structure.
 	if schema.Type != nil && schema.Type.Is("object") && len(schema.Properties) > 0 {
 		fmt.Fprintf(&sb, "%s  Properties:\n", indent)
 		for _, propName := range sortedPropertyNames(schema.Properties) {
 			if propRef := schema.Properties[propName]; propRef.Value != nil {
-				sb.WriteString(formatField(propName, propRef.Value, indent+"    "))
+				sb.WriteString(formatFieldGuarded(propName, propRef.Value, indent+"    ", ancestors))
 			}
 		}
 	}
@@ -480,11 +594,17 @@ func formatField(name string, schema *openapi3.Schema, indent string) string {
 			fmt.Fprintf(&sb, "%s  Item properties:\n", indent)
 			for _, propName := range sortedPropertyNames(itemSchema.Properties) {
 				if propRef := itemSchema.Properties[propName]; propRef.Value != nil {
-					sb.WriteString(formatField(propName, propRef.Value, indent+"    "))
+					sb.WriteString(formatFieldGuarded(propName, propRef.Value, indent+"    ", ancestors))
 				}
 			}
 		}
+		if len(itemSchema.OneOf)+len(itemSchema.AnyOf)+len(itemSchema.AllOf) > 0 {
+			fmt.Fprintf(&sb, "%s  Each item:\n", indent)
+			writeCompositions(&sb, itemSchema, indent+"    ", ancestors)
+		}
 	}
+
+	writeCompositions(&sb, schema, indent+"  ", ancestors)
 
 	return sb.String()
 }

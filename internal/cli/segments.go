@@ -146,8 +146,12 @@ func listSegmentsCmd(cli *cli) *cobra.Command {
   auth0 experimentation segments list --type self
   auth0 experimentation segments list --json
   auth0 experimentation segments list --csv
+
+  # Discover the query schema
   auth0 experimentation segments list --schema
   auth0 experimentation segments list --schema --json
+
+  # JSON query (for agents and automation)
   auth0 experimentation segments list --query '{"type":"self","take":10}'
   auth0 experimentation segments list --query '{"type":"self"}' --json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

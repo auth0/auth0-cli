@@ -19,7 +19,10 @@ auth0 acul config list [flags]
 ```
   auth0 acul config list --prompt reset-password
   auth0 acul config list --rendering-mode advanced --include-fields true --fields head_tags,context_configuration
+
+  # Discover the query schema
   auth0 acul config list --schema
+  auth0 acul config list --schema --json
 ```
 
 
