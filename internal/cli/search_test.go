@@ -18,7 +18,7 @@ func TestSearchFilterFlag(t *testing.T) {
 	assert.Equal(t, "filter", flag.LongForm)
 	assert.Equal(t,
 		"Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. "+
-			"Supported fields: id,name,metadata.{key}. Maximum 5 filter operations. "+
+			"Supported fields: id,name,metadata.{key}.\nMaximum 5 filter operations. "+
 			"Equivalent to --query '{\"q\":\"<expression>\"}'.\n\n"+
 			`For example: 'name:"My App"' or, with --parser scim, 'name co "billing"'.`,
 		flag.Help,

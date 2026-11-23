@@ -38,7 +38,7 @@ func searchFilterFlag(fields []string, luceneExample, scimExample string) Flag {
 		Name:     "Filter",
 		LongForm: "filter",
 		Help: "Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. " +
-			"Supported fields: " + strings.Join(fields, ",") + ".\n Maximum 5 filter operations. Equivalent to --query '{\"q\":\"<expression>\"}'.\n\n" +
+			"Supported fields: " + strings.Join(fields, ",") + ".\nMaximum 5 filter operations. Equivalent to --query '{\"q\":\"<expression>\"}'.\n\n" +
 			"For example: '" + luceneExample + "' or, with --parser scim, '" + scimExample + "'.",
 	}
 }
