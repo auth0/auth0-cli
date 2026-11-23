@@ -301,7 +301,7 @@ func searchOrganizationsCmd(cli *cli) *cobra.Command {
 		Short: "Search your organizations (Early Access)",
 		Long: `[Early Access] Search your organizations using Lucene or SCIM filter syntax.
 Results are eventually consistent; use ` + "`auth0 orgs list`" + ` for up-to-date data.
-'metadata' can be filtered on, but is never returned. Substring matches need at least 3 characters.
+'metadata' can be filtered on, but 'metadata' and 'client' are never returned.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,

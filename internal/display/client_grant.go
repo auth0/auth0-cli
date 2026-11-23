@@ -105,13 +105,12 @@ type clientGrantTableView struct {
 }
 
 // ClientGrantTableColumns are the `client-grants list` and `client-grants search` table
-// columns, keyed by their API field name. The Client ID cell falls back to default_for,
-// and the Scopes cell reads allow_all_scopes, so those fields also keep their column.
+// columns, keyed by their API field name.
 var ClientGrantTableColumns = TableColumns{
 	{Field: "id", Header: "ID"},
-	{Field: "client_id", Header: "Client ID", Also: []string{"default_for"}},
+	{Field: "client_id", Header: "Client ID"},
 	{Field: "audience", Header: "Audience"},
-	{Field: "scope", Header: "Scopes", Also: []string{"allow_all_scopes"}},
+	{Field: "scope", Header: "Scopes"},
 }
 
 func (v *clientGrantTableView) AsTableHeader() []string {

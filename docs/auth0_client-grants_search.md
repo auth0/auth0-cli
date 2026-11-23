@@ -7,8 +7,8 @@ has_toc: false
 
 [Early Access] Search your client grants using Lucene or SCIM filter syntax.
 Results are eventually consistent; use `auth0 client-grants list` for up-to-date data.
-Filter by client, audience, subject type or organization with '--filter'; the `list` filter flags are not available here.
-With '--fields', keep 'allow_all_scopes' next to 'scope', and 'default_for' next to 'client_id', so the Scopes and Client ID columns stay complete.
+'--fields' always sends 'scope' with 'allow_all_scopes', and 'client_id' with 'default_for', so the Scopes and Client ID columns stay correct.
+'--query' sends its fields unchanged, so include both fields of a pair there.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
@@ -33,7 +33,7 @@ auth0 client-grants search [flags]
   auth0 client-grants search --schema --json
 
   # JSON query (for agents and automation)
-  auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience"}'
+  auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience","fields":"client_id,default_for,scope,allow_all_scopes"}'
 ```
 
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -313,8 +314,8 @@ func searchClientGrantsCmd(cli *cli) *cobra.Command {
 		Short: "Search your client grants (Early Access)",
 		Long: `[Early Access] Search your client grants using Lucene or SCIM filter syntax.
 Results are eventually consistent; use ` + "`auth0 client-grants list`" + ` for up-to-date data.
-Filter by client, audience, subject type or organization with '--filter'; the ` + "`list`" + ` filter flags are not available here.
-With '--fields', keep 'allow_all_scopes' next to 'scope', and 'default_for' next to 'client_id', so the Scopes and Client ID columns stay complete.
+'--fields' always sends 'scope' with 'allow_all_scopes', and 'client_id' with 'default_for', so the Scopes and Client ID columns stay correct.
+'--query' sends its fields unchanged, so include both fields of a pair there.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
@@ -330,7 +331,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
   auth0 client-grants search --schema --json
 
   # JSON query (for agents and automation)
-  auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience"}'`,
+  auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience","fields":"client_id,default_for,scope,allow_all_scopes"}'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{
 				Path:      "client-grants/search",
@@ -342,6 +343,8 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 			if err := validateSearchNumber(inputs.Number); err != nil {
 				return err
 			}
+
+			inputs.Fields = pairClientGrantSearchFields(inputs.Fields)
 
 			request, err := buildClientGrantSearchRequest(inputs.searchInputs)
 			if err != nil {
@@ -411,6 +414,32 @@ func buildClientGrantSearchRequest(inputs searchInputs) (*managementv3.SearchCli
 	}
 
 	return request, nil
+}
+
+// clientGrantSearchFieldPairs are fields that one table cell reads together: the
+// Client ID cell falls back to default_for, and the Scopes cell shows "all" from
+// allow_all_scopes.
+var clientGrantSearchFieldPairs = [][2]string{
+	{"client_id", "default_for"},
+	{"scope", "allow_all_scopes"},
+}
+
+// pairClientGrantSearchFields adds the partner of each paired field in a --fields
+// value, so a pair is always returned together (or, with --exclude-fields, left out
+// together) and the table cells that read it stay correct.
+func pairClientGrantSearchFields(fields string) string {
+	names := parseSearchFields(fields)
+	for _, pair := range clientGrantSearchFieldPairs {
+		hasFirst, hasSecond := slices.Contains(names, pair[0]), slices.Contains(names, pair[1])
+		switch {
+		case hasFirst && !hasSecond:
+			names = append(names, pair[1])
+		case hasSecond && !hasFirst:
+			names = append(names, pair[0])
+		}
+	}
+
+	return strings.Join(names, ",")
 }
 
 // clientGrantSortFields are the fields `client-grants search` can sort by.

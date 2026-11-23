@@ -994,6 +994,29 @@ func TestClientGrantSortField(t *testing.T) {
 	}
 }
 
+func TestPairClientGrantSearchFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		fields string
+		want   string
+	}{
+		{name: "leaves an empty value empty", fields: "", want: ""},
+		{name: "leaves fields without a pair unchanged", fields: "id,audience", want: "id,audience"},
+		{name: "adds allow_all_scopes to scope", fields: "id,scope", want: "id,scope,allow_all_scopes"},
+		{name: "adds scope to allow_all_scopes", fields: "allow_all_scopes", want: "allow_all_scopes,scope"},
+		{name: "adds default_for to client_id", fields: "client_id", want: "client_id,default_for"},
+		{name: "adds client_id to default_for", fields: "default_for", want: "default_for,client_id"},
+		{name: "keeps a complete pair as is", fields: "scope,allow_all_scopes", want: "scope,allow_all_scopes"},
+		{name: "pairs both pairs and trims the list", fields: " scope , ,client_id ", want: "scope,client_id,default_for,allow_all_scopes"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, pairClientGrantSearchFields(test.fields))
+		})
+	}
+}
+
 func TestBuildClientGrantSearchRequest(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -1112,14 +1135,46 @@ func TestSearchClientGrantsCmd(t *testing.T) {
 			},
 		},
 		{
-			name:       "keeps a column when only its extra field is requested",
+			name:       "sends the partner of each paired field",
+			args:       []string{"--fields", "id,scope,client_id"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "id,scope,client_id,default_for,allow_all_scopes", *req.Fields)
+			},
+		},
+		{
+			name:       "keeps a column when only the partner field is requested",
 			args:       []string{"--fields", "default_for,allow_all_scopes"},
 			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "default_for,allow_all_scopes,client_id,scope", *req.Fields)
+			},
 			assertOutput: func(t testing.TB, stdout, stderr string) {
 				assert.Contains(t, stdout, "CLIENT ID")
 				assert.Contains(t, stdout, "SCOPES")
 				assert.NotContains(t, stdout, "AUDIENCE")
 				assert.NotContains(t, stderr, "No table columns")
+			},
+		},
+		{
+			name:       "excludes both fields of a pair with --exclude-fields",
+			args:       []string{"--fields", "scope", "--exclude-fields"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "scope,allow_all_scopes", *req.Fields)
+				assert.False(t, *req.IncludeFields)
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "AUDIENCE")
+				assert.NotContains(t, stdout, "SCOPES")
+			},
+		},
+		{
+			name:       "sends --query fields unchanged",
+			args:       []string{"-q", `{"fields":"scope"}`},
+			serverBody: `{"client_grants":[]}`,
+			assertHTTP: func(t testing.TB, r *http.Request) {
+				assert.Equal(t, "scope", r.URL.Query().Get("fields"))
 			},
 		},
 		{

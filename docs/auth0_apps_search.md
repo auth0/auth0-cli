@@ -7,7 +7,7 @@ has_toc: false
 
 [Early Access] Search your applications using Lucene or SCIM filter syntax.
 Results are eventually consistent; use `auth0 apps list` for up-to-date data.
-Client secrets and keys are never returned.
+The search API never returns 'client_secret', 'encryption_key', 'signing_keys', 'owners', or 'addons'.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).

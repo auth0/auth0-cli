@@ -38,34 +38,6 @@ func TestTableColumns_Left(t *testing.T) {
 	}
 }
 
-func TestTableColumns_LeftWithExtraFields(t *testing.T) {
-	columns := TableColumns{
-		{Field: "id", Header: "ID"},
-		{Field: "scope", Header: "Scopes", Also: []string{"allow_all_scopes"}},
-	}
-
-	tests := []struct {
-		name    string
-		fields  []string
-		exclude bool
-		want    []string
-	}{
-		{name: "keeps the column for its main field", fields: []string{"scope"}, want: []string{"scope"}},
-		{name: "keeps the column for an extra field alone", fields: []string{"allow_all_scopes"}, want: []string{"scope"}},
-		{name: "keeps the column when only its main field is excluded", fields: []string{"scope"}, exclude: true, want: []string{"id", "scope"}},
-		{name: "drops the column when all its fields are excluded", fields: []string{"scope", "allow_all_scopes"}, exclude: true, want: []string{"id"}},
-		{name: "lists the column once with both fields", fields: []string{"scope", "allow_all_scopes"}, want: []string{"scope"}},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.want, columns.Left(test.fields, test.exclude))
-		})
-	}
-
-	assert.Equal(t, []string{"id", "scope"}, columns.Fields(), "Fields lists only the main fields")
-}
-
 func TestTableColumns_HeadersAndRow(t *testing.T) {
 	values := map[string]string{"id": "1", "name": "a", "type": "spa"}
 

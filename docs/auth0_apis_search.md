@@ -8,6 +8,7 @@ has_toc: false
 [Early Access] Search your APIs using Lucene or SCIM filter syntax.
 Results are eventually consistent; use `auth0 apis list` for up-to-date data.
 'updated_at' can be filtered and sorted on, but is never returned.
+The search API does not support 'signing_secret'.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).
