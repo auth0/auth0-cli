@@ -41,7 +41,7 @@ auth0 orgs search [flags]
 ```
       --csv             Output in csv format.
       --filter string   Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: id,name,display_name,created_at,metadata.{key}.
-                         Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
+                        Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                         
                         For example: 'name:"acme"' or, with --parser scim, 'display_name co "Acme" and created_at gt "2026-01-01"'.
       --json            Output in json format.

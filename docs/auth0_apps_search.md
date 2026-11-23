@@ -43,7 +43,7 @@ auth0 apps search [flags]
       --exclude-fields   Exclude the --fields list from the response instead of returning only those fields.
       --fields string    Comma-separated list of fields to include in the response, e.g. 'client_id,name,app_type'.
       --filter string    Filter expression, sent as the 'q' query parameter. Uses Lucene syntax, or SCIM syntax with --parser scim. Supported fields: client_id,external_client_id,name,app_type,is_first_party,updated_at,metadata.{key},client_grant.organization_id,client_grant.allow_any_organization.
-                          Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
+                         Maximum 5 filter operations. Equivalent to --query '{"q":"<expression>"}'.
                          
                          For example: 'app_type:spa' or, with --parser scim, 'name co "billing" and is_first_party eq true'.
       --json             Output in json format.
