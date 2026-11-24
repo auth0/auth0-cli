@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -57,6 +58,9 @@ type cli struct {
 	agentMode           bool
 	detectedAgent       string
 	executedCommandPath string
+
+	// The transport of the Management API clients, so a command can see or keep their requests.
+	transport *switchableTransport
 
 	Config config.Config
 }
@@ -223,14 +227,15 @@ func refreshClientCredentials(ctx context.Context, tenant *config.Tenant) error 
 // initManagementClients builds the Management API clients of the tenant from an
 // access token that was already resolved, so the keyring is not read again.
 func (c *cli) initManagementClients(domain, accessToken string) error {
-	invokerMetadata := c.invokerMetadataHeaderValue()
+	c.transport = &switchableTransport{base: customClientWithRetries(c.invokerMetadataHeaderValue()).Transport}
+	httpClient := &http.Client{Transport: c.transport}
 
-	api, err := initializeManagementClient(domain, accessToken, invokerMetadata)
+	api, err := initializeManagementClient(domain, accessToken, httpClient)
 	if err != nil {
 		return authError{err: err, reason: "client_init_failed"}
 	}
 
-	apiv3, err := initializeManagementClientV3(domain, accessToken, invokerMetadata)
+	apiv3, err := initializeManagementClientV3(domain, accessToken, httpClient)
 	if err != nil {
 		return authError{err: err, reason: "client_init_failed"}
 	}

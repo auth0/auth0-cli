@@ -433,16 +433,6 @@ func scopesFromToken(tokenStr string) []string {
 	return strings.Fields(claims.Scope)
 }
 
-// deriveServiceURL returns the base URL for a service (e.g. "manage") from the
-// tenant domain, dropping the 2-letter region code that public envs carry.
-func deriveServiceURL(service, tenantDomain string) string {
-	parts := strings.Split(tenantDomain, ".")
-	if len(parts) >= 4 && len(parts[1]) == 2 {
-		return "https://" + service + "." + strings.Join(parts[2:], ".")
-	}
-	return "https://" + service + "." + strings.Join(parts[1:], ".")
-}
-
 func formatManageTenantURL(tenant string, cfg *config.Config) string {
 	if len(tenant) == 0 {
 		return ""

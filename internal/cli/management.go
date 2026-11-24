@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/rehttp"
@@ -19,20 +20,20 @@ import (
 	"github.com/auth0/auth0-cli/internal/buildinfo"
 )
 
-func initializeManagementClient(tenantDomain string, accessToken string, invokerMetadata string) (*management.Management, error) {
+func initializeManagementClient(tenantDomain string, accessToken string, httpClient *http.Client) (*management.Management, error) {
 	client, err := management.New(
 		tenantDomain,
 		management.WithStaticToken(accessToken),
 		management.WithUserAgent(fmt.Sprintf("%v/%v", userAgent, strings.TrimPrefix(buildinfo.Version, "v"))),
 		management.WithAuth0ClientEnvEntry("Auth0-CLI", strings.TrimPrefix(buildinfo.Version, "v")),
 		management.WithNoRetries(),
-		management.WithClient(customClientWithRetries(invokerMetadata)),
+		management.WithClient(httpClient),
 	)
 
 	return client, err
 }
 
-func initializeManagementClientV3(tenantDomain string, accessToken string, invokerMetadata string) (*managementv3.Management, error) {
+func initializeManagementClientV3(tenantDomain string, accessToken string, httpClient *http.Client) (*managementv3.Management, error) {
 	client, err := managementv3.New(
 		tenantDomain,
 		option.WithToken(accessToken),
@@ -42,9 +43,44 @@ func initializeManagementClientV3(tenantDomain string, accessToken string, invok
 		// Setting it to 1 to avoid retries from `go-auth0` since we have our own retry logic in the custom HTTP client.
 		// TODO: confirm this assumption, or check if this needs to be excluded like terraform provider.
 		option.WithMaxAttempts(1),
-		option.WithHTTPClient(customClientWithRetries(invokerMetadata)),
+		option.WithHTTPClient(httpClient),
 	)
 	return client, err
+}
+
+// switchableTransport sends the requests of the Management API clients. A command can put a transport
+// in front of it for as long as it runs, for example to keep the writes of a dry run.
+type switchableTransport struct {
+	base http.RoundTripper
+
+	mu    sync.RWMutex
+	front http.RoundTripper
+}
+
+// RoundTrip implements http.RoundTripper.
+func (t *switchableTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	t.mu.RLock()
+	next := t.front
+	t.mu.RUnlock()
+
+	if next == nil {
+		next = t.base
+	}
+
+	return next.RoundTrip(request)
+}
+
+// use sends the requests through front until restore is called.
+func (t *switchableTransport) use(front http.RoundTripper) (restore func()) {
+	t.mu.Lock()
+	t.front = front
+	t.mu.Unlock()
+
+	return func() {
+		t.mu.Lock()
+		t.front = nil
+		t.mu.Unlock()
+	}
 }
 
 func customClientWithRetries(invokerMetadata string) *http.Client {

@@ -49,6 +49,21 @@ type OrganizationAPI interface {
 	// See: https://auth0.com/docs/api/management/v2/#!/Organizations/get_enabled_connections
 	Connections(ctx context.Context, id string, opts ...management.RequestOption) (c *management.OrganizationConnectionList, err error)
 
+	// AddConnection enables a connection for an organization.
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Organizations/post_enabled_connections
+	AddConnection(ctx context.Context, id string, c *management.OrganizationConnection, opts ...management.RequestOption) (err error)
+
+	// AddMembers adds users to an organization as members.
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Organizations/post_members
+	AddMembers(ctx context.Context, id string, memberIDs []string, opts ...management.RequestOption) (err error)
+
+	// AssignMemberRoles assigns roles to a member of an organization.
+	//
+	// See: https://auth0.com/docs/api/management/v2#!/Organizations/post_organization_member_roles
+	AssignMemberRoles(ctx context.Context, id string, memberID string, roles []string, opts ...management.RequestOption) (err error)
+
 	// DiscoveryDomains retrieves the discovery domains for an organization.
 	DiscoveryDomains(ctx context.Context, id string, opts ...management.RequestOption) (d *management.DiscoveryDomainList, err error)
 

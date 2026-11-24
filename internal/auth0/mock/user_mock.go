@@ -181,6 +181,26 @@ func (mr *MockUserAPIMockRecorder) ListByEmail(ctx, email any, opts ...any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmail", reflect.TypeOf((*MockUserAPI)(nil).ListByEmail), varargs...)
 }
 
+// Organizations mocks base method.
+func (m *MockUserAPI) Organizations(ctx context.Context, id string, opts ...management.RequestOption) (*management.OrganizationList, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Organizations", varargs...)
+	ret0, _ := ret[0].(*management.OrganizationList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Organizations indicates an expected call of Organizations.
+func (mr *MockUserAPIMockRecorder) Organizations(ctx, id any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Organizations", reflect.TypeOf((*MockUserAPI)(nil).Organizations), varargs...)
+}
+
 // Read mocks base method.
 func (m *MockUserAPI) Read(ctx context.Context, id string, opts ...management.RequestOption) (*management.User, error) {
 	m.ctrl.T.Helper()

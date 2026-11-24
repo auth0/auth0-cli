@@ -82,6 +82,7 @@ type APIV3 struct {
 	ClientGrantOrganization      ClientGrantOrganizationAPIV3
 	Events                       EventsAPIV3
 	Form                         FormAPIV3
+	Portal                       PortalAPIV3
 	Flow                         FlowAPIV3
 	FlowExecution                FlowExecutionAPIV3
 	FlowVaultConnection          FlowVaultConnectionAPIV3
@@ -102,6 +103,7 @@ type APIV3 struct {
 	NetworkACLKey                NetworkACLKeyAPIV3
 	Connection                   ConnectionAPIV3
 	ConnectionEnabledClient      ConnectionEnabledClientAPIV3
+	ClientConnection             ClientConnectionAPIV3
 	Experiments                  ExperimentsAPI
 	FeatureFlags                 FeatureFlagsAPI
 	Variations                   VariationsAPI
@@ -120,6 +122,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		ClientGrantOrganization:      m.ClientGrants.Organizations,
 		Events:                       m.Events,
 		Form:                         m.Forms,
+		Portal:                       m.Portals,
 		Flow:                         m.Flows,
 		FlowExecution:                m.Flows.Executions,
 		FlowVaultConnection:          m.Flows.Vault.Connections,
@@ -140,6 +143,7 @@ func NewAPIV3(m *managementv3.Management) *APIV3 {
 		NetworkACLKey:                m.Keys.NetworkACLs,
 		Connection:                   m.Connections,
 		ConnectionEnabledClient:      m.Connections.Clients,
+		ClientConnection:             m.Clients.Connections,
 		Experiments:                  m.Experimentation.Experiments,
 		FeatureFlags:                 m.Experimentation.FeatureFlags,
 		Variations:                   m.Experimentation.FeatureFlags.Variations,

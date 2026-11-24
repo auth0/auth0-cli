@@ -272,7 +272,7 @@ func TestManagementClientV1SendsInvokerMetadata(t *testing.T) {
 
 	metadata := invokerMetadata{InvokerKind: "agent", InvokerAgent: "claude-code", CI: true}
 
-	api, err := initializeManagementClient(domainOf(server), "test-token", metadata.headerValue())
+	api, err := initializeManagementClient(domainOf(server), "test-token", customClientWithRetries(metadata.headerValue()))
 	require.NoError(t, err)
 
 	_, err = api.ResourceServer.List(t.Context())
@@ -293,7 +293,7 @@ func TestManagementClientV3SendsInvokerMetadata(t *testing.T) {
 
 	metadata := invokerMetadata{InvokerKind: "human", InvokerAgent: "unknown", CI: false}
 
-	api, err := initializeManagementClientV3(domainOf(server), "test-token", metadata.headerValue())
+	api, err := initializeManagementClientV3(domainOf(server), "test-token", customClientWithRetries(metadata.headerValue()))
 	require.NoError(t, err)
 
 	_, err = api.ClientGrants.List(t.Context(), &management.ListClientGrantsRequestParameters{})
@@ -329,7 +329,7 @@ func TestManagementClientSendsMetadataOnRetries(t *testing.T) {
 
 	metadata := invokerMetadata{InvokerKind: "agent", InvokerAgent: "cursor", CI: false}
 
-	api, err := initializeManagementClient(domainOf(server), "test-token", metadata.headerValue())
+	api, err := initializeManagementClient(domainOf(server), "test-token", customClientWithRetries(metadata.headerValue()))
 	require.NoError(t, err)
 
 	_, err = api.ResourceServer.List(t.Context())

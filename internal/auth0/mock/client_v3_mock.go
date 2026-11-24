@@ -205,3 +205,47 @@ func (mr *MockClientCredentialAPIV3MockRecorder) List(ctx, clientID any, opts ..
 	varargs := append([]any{ctx, clientID}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientCredentialAPIV3)(nil).List), varargs...)
 }
+
+// MockClientConnectionAPIV3 is a mock of ClientConnectionAPIV3 interface.
+type MockClientConnectionAPIV3 struct {
+	ctrl     *gomock.Controller
+	recorder *MockClientConnectionAPIV3MockRecorder
+	isgomock struct{}
+}
+
+// MockClientConnectionAPIV3MockRecorder is the mock recorder for MockClientConnectionAPIV3.
+type MockClientConnectionAPIV3MockRecorder struct {
+	mock *MockClientConnectionAPIV3
+}
+
+// NewMockClientConnectionAPIV3 creates a new mock instance.
+func NewMockClientConnectionAPIV3(ctrl *gomock.Controller) *MockClientConnectionAPIV3 {
+	mock := &MockClientConnectionAPIV3{ctrl: ctrl}
+	mock.recorder = &MockClientConnectionAPIV3MockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockClientConnectionAPIV3) EXPECT() *MockClientConnectionAPIV3MockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MockClientConnectionAPIV3) Get(ctx context.Context, id string, request *management.ConnectionsGetRequest, opts ...option.RequestOption) (*auth0.ClientConnectionPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, id, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Get", varargs...)
+	ret0, _ := ret[0].(*auth0.ClientConnectionPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockClientConnectionAPIV3MockRecorder) Get(ctx, id, request any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, id, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockClientConnectionAPIV3)(nil).Get), varargs...)
+}

@@ -1,0 +1,356 @@
+package portals
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+	"slices"
+	"strings"
+)
+
+// snapshot is everything the audit needs to know about one portal, read from the tenant. The rules work
+// on the snapshot only, so they can be tested without a tenant.
+type snapshot struct {
+	TenantDomain string
+	Portal       Portal
+	// Application is nil when the portal has none, or when it was deleted.
+	Application *Client
+	Grants      []ClientGrant
+	// ResourceServers are the identifiers of the resource servers of the tenant.
+	ResourceServers []string
+	// Forms are the forms the portal uses, and whether each exists in the tenant.
+	Forms []formStatus
+	// ApplicationConnections are the connections enabled for the application.
+	ApplicationConnections []Connection
+	CustomDomain           *CustomDomain
+	Organization           *snapshotOrganization
+	// Unchecked are the reads the session was not allowed to make. The rules that need them do not run.
+	Unchecked []UncheckedCheck
+}
+
+// skip records a read the session was refused for a scope, so the audit goes on without it.
+func (s *snapshot) skip(check string, rules []string, err error) {
+	reason := "the session may not read it"
+	if gap, isGap := ParseScopeGap("", err); isGap {
+		reason = "needs " + strings.Join(gap.Required(), ", ")
+	}
+
+	s.Unchecked = append(s.Unchecked, UncheckedCheck{Check: check, Rules: rules, Reason: reason})
+}
+
+// wasChecked reports whether a read was made, so the rules that need it can run.
+func (s snapshot) wasChecked(check string) bool {
+	return !slices.ContainsFunc(s.Unchecked, func(unchecked UncheckedCheck) bool { return unchecked.Check == check })
+}
+
+// refused reports whether every failure in the error is a refusal for a missing scope. One that is
+// not, such as a server error, still stops the audit.
+func refused(err error) bool {
+	if joined, isJoined := err.(interface{ Unwrap() []error }); isJoined {
+		for _, inner := range joined.Unwrap() {
+			if !refused(inner) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	return IsStatus(err, http.StatusForbidden)
+}
+
+// formStatus is a form a portal uses.
+type formStatus struct {
+	ID     string
+	Exists bool
+}
+
+// snapshotOrganization is the organization the portal opens in.
+type snapshotOrganization struct {
+	ID   string
+	Name string
+	// Connections are the IDs of the connections enabled for the organization.
+	Connections []string
+}
+
+// host returns where the portal is served from: the custom domain when it is ready.
+func (s snapshot) host() string {
+	if s.CustomDomain != nil && s.CustomDomain.IsReady() {
+		return s.CustomDomain.Domain
+	}
+
+	return s.TenantDomain
+}
+
+func (p Portal) pages() []Page {
+	if p.Pages == nil {
+		return nil
+	}
+
+	return p.Pages.Standard
+}
+
+func (p Portal) homePage() string {
+	if p.Pages == nil {
+		return ""
+	}
+
+	return p.Pages.Default
+}
+
+func (p Portal) sidebar() []SidebarComponent {
+	if p.Navigation == nil || p.Navigation.Sidebar == nil {
+		return nil
+	}
+
+	return p.Navigation.Sidebar.Components
+}
+
+// children returns the components held by a section.
+func (c Component) children() []Component {
+	items, _ := c.Config["children"].([]any)
+	children := make([]Component, 0, len(items))
+
+	for _, item := range items {
+		entry, isObject := item.(map[string]any)
+		if !isObject {
+			continue
+		}
+
+		child := Component{}
+		child.Type, _ = entry["type"].(string)
+		child.Config, _ = entry["config"].(map[string]any)
+		children = append(children, child)
+	}
+
+	return children
+}
+
+// allComponents returns the components of the pages and the ones they hold, in the order they come.
+func allComponents(pages []Page) []Component {
+	var all []Component
+
+	var visit func(components []Component)
+
+	visit = func(components []Component) {
+		for _, component := range components {
+			all = append(all, component)
+			visit(component.children())
+		}
+	}
+
+	for _, page := range pages {
+		visit(page.Components)
+	}
+
+	return all
+}
+
+// formIDsOf returns the IDs of the forms the pages use, each once.
+func formIDsOf(portal Portal) []string {
+	var ids []string
+
+	for _, component := range allComponents(portal.pages()) {
+		if component.Type != formComponentType {
+			continue
+		}
+
+		if id, _ := component.Config["form_id"].(string); id != "" && !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+
+	return ids
+}
+
+const formComponentType = "page:component:auth0:form"
+
+// readSnapshot reads the portal, and then what the audit needs to know about it. The reads do not
+// depend on each other, so they are sent together.
+func readSnapshot(ctx context.Context, api API, portalID, tenantDomain, organizationID string) (snapshot, error) {
+	portal, err := api.ReadPortal(ctx, portalID)
+	if err != nil {
+		return snapshot{}, fmt.Errorf("read portal %q: %w", portalID, err)
+	}
+
+	result := snapshot{TenantDomain: tenantDomain, Portal: portal}
+
+	// A read of something the audit only compares the portal with is skipped when the session may not make
+	// it. The portal and its application are what the audit is about, so those stop it.
+	reads := []struct {
+		check string
+		rules []string
+		run   func() error
+	}{
+		{run: func() error { return result.readApplication(ctx, api) }},
+		{check: "resource servers", rules: []string{"P018"}, run: func() error { return result.readResourceServers(ctx, api) }},
+		{check: "forms", rules: []string{"P007"}, run: func() error { return result.readForms(ctx, api) }},
+		{check: "custom domain", rules: []string{"P008", "P012"}, run: func() error { return result.readCustomDomain(ctx, api) }},
+	}
+
+	if organizationID != "" {
+		reads = append(reads, struct {
+			check string
+			rules []string
+			run   func() error
+		}{check: "organization", rules: []string{"P022"}, run: func() error { return result.readOrganization(ctx, api, organizationID) }})
+	}
+
+	// Each read fills a part of the result of its own.
+	failures := make([]error, len(reads))
+	forEachParallel(len(reads), func(index int) { failures[index] = reads[index].run() })
+
+	var stopping []error
+
+	for index, failure := range failures {
+		switch {
+		case failure == nil:
+		case reads[index].check != "" && refused(failure):
+			result.skip(reads[index].check, reads[index].rules, failure)
+		default:
+			stopping = append(stopping, failure)
+		}
+	}
+
+	if err := errors.Join(stopping...); err != nil {
+		return snapshot{}, err
+	}
+
+	return result, nil
+}
+
+// readApplication reads the application, and when it exists its grants and connections. A portal can
+// still point at an application that was deleted. That is a finding (P009) and not a failure of the
+// audit, so a 404 means no application.
+func (s *snapshot) readApplication(ctx context.Context, api API) error {
+	if s.Portal.Client == nil || s.Portal.Client.ClientID == "" {
+		return nil
+	}
+
+	clientID := s.Portal.Client.ClientID
+
+	client, err := api.ReadClient(ctx, clientID)
+	if IsStatus(err, http.StatusNotFound) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("read application %q: %w", clientID, err)
+	}
+
+	var (
+		grants      []ClientGrant
+		connections []Connection
+	)
+
+	failures := make([]error, 2)
+	forEachParallel(2, func(index int) {
+		if index == 0 {
+			grants, failures[0] = api.ListClientGrants(ctx, clientID)
+		} else {
+			connections, failures[1] = api.ListClientConnections(ctx, clientID)
+		}
+	})
+
+	// The grants are only compared with what the portal needs, so a refusal skips the rules that use them.
+	if failures[0] != nil && refused(failures[0]) {
+		s.skip("client grants", []string{"P011", "P019"}, failures[0])
+
+		failures[0] = nil
+	}
+
+	// The same goes for the connections, which P021 and P022 compare.
+	if failures[1] != nil && refused(failures[1]) {
+		s.skip("application connections", []string{"P021", "P022"}, failures[1])
+
+		failures[1] = nil
+	}
+
+	if err := errors.Join(failures...); err != nil {
+		return fmt.Errorf("read the grants and connections of application %q: %w", clientID, err)
+	}
+
+	s.Application = &client
+	s.Grants = grants
+	s.ApplicationConnections = connections
+
+	return nil
+}
+
+func (s *snapshot) readResourceServers(ctx context.Context, api API) error {
+	servers, err := api.ListResourceServers(ctx)
+	if err != nil {
+		return fmt.Errorf("list the resource servers: %w", err)
+	}
+
+	for _, server := range servers {
+		s.ResourceServers = append(s.ResourceServers, server.Identifier)
+	}
+
+	return nil
+}
+
+// readForms checks that each form of the portal exists. The API answers 400 for an ID it cannot match
+// to a form, because the ID fails its schema, which is the same finding as a deleted form (P007), so
+// both mean the form is missing.
+func (s *snapshot) readForms(ctx context.Context, api API) error {
+	ids := formIDsOf(s.Portal)
+	statuses := make([]formStatus, len(ids))
+	failures := make([]error, len(ids))
+
+	forEachParallel(len(ids), func(index int) {
+		_, err := api.ReadForm(ctx, ids[index])
+		statuses[index] = formStatus{ID: ids[index], Exists: err == nil}
+
+		if err != nil && !IsStatus(err, http.StatusNotFound, http.StatusBadRequest) {
+			failures[index] = fmt.Errorf("read form %q: %w", ids[index], err)
+		}
+	})
+
+	if err := errors.Join(failures...); err != nil {
+		return err
+	}
+
+	s.Forms = statuses
+
+	return nil
+}
+
+// readCustomDomain reads the custom domain the portal is served from, the same one setup picks.
+func (s *snapshot) readCustomDomain(ctx context.Context, api API) error {
+	choice, err := chooseCustomDomain(ctx, api, s.TenantDomain)
+	if err != nil {
+		return err
+	}
+
+	s.CustomDomain = choice.custom
+
+	return nil
+}
+
+func (s *snapshot) readOrganization(ctx context.Context, api API, organizationID string) error {
+	organization, err := api.ReadOrganization(ctx, organizationID)
+	if err != nil {
+		return fmt.Errorf("read organization %q: %w", organizationID, err)
+	}
+
+	connections, err := api.ListOrganizationConnections(ctx, organizationID)
+	if err != nil {
+		return fmt.Errorf("list the connections of organization %q: %w", organizationID, err)
+	}
+
+	s.Organization = &snapshotOrganization{ID: organization.ID, Name: organization.Name, Connections: connections}
+
+	return nil
+}
+
+// componentLabel is the name of a component in what the audit shows.
+func componentLabel(component Component) string {
+	name := component.Type
+	if index := strings.LastIndex(name, ":"); index >= 0 {
+		name = name[index+1:]
+	}
+
+	return strings.ReplaceAll(name, "_", " ")
+}

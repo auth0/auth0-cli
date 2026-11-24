@@ -1,0 +1,142 @@
+{
+  "version": "4.0.0",
+  "form": {
+    "name": "Profile update (Universal Portals)",
+    "languages": {
+      "primary": "en"
+    },
+    "nodes": [
+      {
+        "id": "step_BL3V",
+        "type": "STEP",
+        "coordinates": {
+          "x": 346,
+          "y": -221
+        },
+        "config": {
+          "components": [
+            {
+              "id": "full_name",
+              "category": "FIELD",
+              "type": "TEXT",
+              "label": "Full name",
+              "required": false,
+              "sensitive": false,
+              "config": {
+                "multiline": false
+              }
+            },
+            {
+              "id": "job_title",
+              "category": "FIELD",
+              "type": "TEXT",
+              "label": "Job title",
+              "required": false,
+              "sensitive": false,
+              "config": {
+                "multiline": false
+              }
+            },
+            {
+              "id": "mobile_number",
+              "category": "FIELD",
+              "type": "TEL",
+              "label": "Mobile number",
+              "required": false,
+              "sensitive": false,
+              "config": {
+                "country_picker": true
+              }
+            },
+            {
+              "id": "date_of_birth",
+              "category": "FIELD",
+              "type": "DATE",
+              "label": "Date of birth",
+              "required": false,
+              "sensitive": false,
+              "config": {
+                "format": "DATE"
+              }
+            },
+            {
+              "id": "linkedin",
+              "category": "FIELD",
+              "type": "URL",
+              "label": "LinkedIn",
+              "required": false,
+              "sensitive": false
+            },
+            {
+              "id": "next_button_UmEY",
+              "category": "BLOCK",
+              "type": "NEXT_BUTTON",
+              "config": {
+                "text": "Update"
+              }
+            }
+          ],
+          "next_node": "flow_DcHK"
+        }
+      },
+      {
+        "id": "flow_DcHK",
+        "type": "FLOW",
+        "coordinates": {
+          "x": 988,
+          "y": 9
+        },
+        "config": {
+          "flow_id": "#FLOW-1#",
+          "next_node": "$ending"
+        }
+      }
+    ],
+    "start": {
+      "next_node": "step_BL3V",
+      "coordinates": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    "ending": {
+      "resume_flow": true,
+      "coordinates": {
+        "x": 1367,
+        "y": -7
+      }
+    }
+  },
+  "flows": {
+    "#FLOW-1#": {
+      "name": "Update profile",
+      "actions": [
+        {
+          "id": "update_user_v4C0",
+          "type": "AUTH0",
+          "action": "UPDATE_USER",
+          "allow_failure": false,
+          "mask_output": false,
+          "params": {
+            "connection_id": "#CONN-1#",
+            "user_id": "{{context.user.user_id}}",
+            "changes": {
+              "user_metadata": {
+                "linkedin": "{{fields.linkedin}}",
+                "full_name": "{{fields.full_name}}",
+                "job_title": "{{fields.job_title}}",
+                "date_of_birth": "{{fields.date_of_birth}}",
+                "mobile_number": "{{fields.mobile_number.international_number}}"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "connections": {
+    "#CONN-1#": {
+      "id": "$VAULT_CONNECTION_ID"
+    }
+  }
+}

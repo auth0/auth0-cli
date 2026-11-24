@@ -56,6 +56,9 @@ type UserAPI interface {
 	// Roles lists all roles associated with a user.
 	Roles(ctx context.Context, id string, opts ...management.RequestOption) (r *management.RoleList, err error)
 
+	// Organizations lists the organizations a user is a member of.
+	Organizations(ctx context.Context, id string, opts ...management.RequestOption) (p *management.OrganizationList, err error)
+
 	// AssignRoles assigns roles to a user.
 	AssignRoles(ctx context.Context, id string, roles []*management.Role, opts ...management.RequestOption) error
 
