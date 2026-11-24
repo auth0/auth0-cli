@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+# [v1.41.0-beta.1](https://github.com/auth0/auth0-cli/tree/v1.41.0-beta.1) (November 24, 2026)
+
+[Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.41.0-beta.0...v1.41.0-beta.1)
+
+### Added
+- Add `auth0 universal-portals audit` command to check a portal against the setup guide and apply fixes with `--fix` (Beta) [#1756]
+- Add `--template`, `--user`, `--organization`, `--logout-url`, `--dry-run`, and `--json` flags to `auth0 universal-portals setup` (Beta) [#1756]
+
+### Changed
+- `auth0 universal-portals setup` now sets up consumer and business portals natively, checks the session's permissions before creating anything, and reuses what already exists when run again (Beta) [#1756]
+
+
 # [v1.41.0-beta.0](https://github.com/auth0/auth0-cli/tree/v1.41.0-beta.0) (November 20, 2026)
 
 [Full Changelog](https://github.com/auth0/auth0-cli/compare/v1.40.0...v1.41.0-beta.0)
@@ -939,7 +951,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `auth0 tenants add` command in favor of `auth0 login` [#546]
 - Updating of action triggers which inevitably results in error [#597]
 
-[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.41.0-beta.0...HEAD
+[unreleased]: https://github.com/auth0/auth0-cli/compare/v1.41.0-beta.1...HEAD
 [#1778]: https://github.com/auth0/auth0-cli/pull/1778
 [#1777]: https://github.com/auth0/auth0-cli/pull/1777
 [#1775]: https://github.com/auth0/auth0-cli/pull/1775
@@ -948,6 +960,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#1767]: https://github.com/auth0/auth0-cli/pull/1767
 [#1761]: https://github.com/auth0/auth0-cli/pull/1761
 [#1760]: https://github.com/auth0/auth0-cli/pull/1760
+[#1756]: https://github.com/auth0/auth0-cli/pull/1756
 [#1755]: https://github.com/auth0/auth0-cli/pull/1755
 [#1724]: https://github.com/auth0/auth0-cli/pull/1724
 [#1723]: https://github.com/auth0/auth0-cli/pull/1723
