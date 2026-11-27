@@ -87,12 +87,8 @@
         }
       }
     },
-    "scopeTable": {
-      "description": "Opaque to this schema."
-    },
-    "secretFields": {
-      "description": "Opaque to this schema."
-    }
+    "scopeTable": { "$ref": "#/$defs/scopeTable" },
+    "secretFields": { "$ref": "#/$defs/secretFields" }
   },
   "$defs": {
     "httpsURL": {
@@ -135,6 +131,67 @@
         "linux-arm64-musl",
         "windows-x64"
       ]
+    },
+    "scopeTable": {
+      "description": "The Management API calls that the plugin proxy allows, and the scopes that allow each. A call that no rule matches is denied. Unknown fields are rejected, as this is security data.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formatVersion", "rules"],
+      "properties": {
+        "formatVersion": { "type": "integer", "const": 1 },
+        "rules": {
+          "type": "array",
+          "maxItems": 5000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["method", "path", "anyOf"],
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+              },
+              "path": {
+                "description": "Path template that starts with /api/v2/ and has 1 to 16 more segments. A segment is a literal or a parameter in braces, such as {id}, which matches any one segment. There is no trailing slash.",
+                "type": "string",
+                "maxLength": 1024,
+                "pattern": "^/api/v2(/([A-Za-z0-9._~-]+|\\{[A-Za-z][A-Za-z0-9_]*\\})){1,16}$"
+              },
+              "anyOf": {
+                "description": "Scopes of which a plugin must have declared at least one to make the call.",
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z]+:[a-z0-9_]+$"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "secretFields": {
+      "description": "Names of the fields that the plugin proxy removes from every response, at any depth and without regard to case. Unknown fields are rejected, as this is security data.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formatVersion", "names"],
+      "properties": {
+        "formatVersion": { "type": "integer", "const": 1 },
+        "names": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        }
+      }
     },
     "plugin": {
       "type": "object",
