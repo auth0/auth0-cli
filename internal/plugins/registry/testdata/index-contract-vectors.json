@@ -1,0 +1,423 @@
+{
+  "description": "Vectors for the rules that every producer and consumer of the registry index must apply the same way. Each document is unsigned. A valid document must be accepted. An invalid document must be rejected for its reason, and its error must contain the text of names. A vector has either a document, or raw text when the problem cannot be written as a JSON value, such as a repeated key.",
+  "valid": [
+    {
+      "name": "a minimal index with no permissions",
+      "document": {
+        "formatVersion": 1,
+        "version": 1,
+        "expires": "2030-01-01T00:00:00Z",
+        "plugins": [
+          {
+            "id": "auth0/checkmate",
+            "description": "Checks a tenant against a set of rules.",
+            "owner": {
+              "team": "Developer Experience",
+              "bugs": "https://example.com/bugs"
+            },
+            "latest": "1.0.0",
+            "versions": [
+              {
+                "version": "1.0.0",
+                "platforms": [
+                  "darwin-arm64",
+                  "linux-x64"
+                ],
+                "permissionsHash": "sha256:dd771866a3a00c769e64e94a6bef4afc83158f63b097e5504d123a9042e4e26e",
+                "permissions": {
+                  "scopes": [],
+                  "hosts": [],
+                  "files": [],
+                  "env": []
+                },
+                "commands": [
+                  {
+                    "name": "run",
+                    "interactive": false
+                  }
+                ],
+                "artifacts": [
+                  {
+                    "os": "darwin",
+                    "arch": "arm64",
+                    "url": "https://downloads.example.com/1.0.0/plugin-darwin-arm64",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 1024,
+                    "format": "raw",
+                    "bin": "plugin"
+                  },
+                  {
+                    "os": "linux",
+                    "arch": "x64",
+                    "libc": "glibc",
+                    "url": "https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 2048,
+                    "format": "tar.gz",
+                    "bin": "plugin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "sorted and distinct permissions",
+      "document": {
+        "formatVersion": 1,
+        "version": 1,
+        "expires": "2030-01-01T00:00:00Z",
+        "plugins": [
+          {
+            "id": "auth0/checkmate",
+            "description": "Checks a tenant against a set of rules.",
+            "owner": {
+              "team": "Developer Experience",
+              "bugs": "https://example.com/bugs"
+            },
+            "latest": "1.0.0",
+            "versions": [
+              {
+                "version": "1.0.0",
+                "platforms": [
+                  "darwin-arm64",
+                  "linux-x64"
+                ],
+                "permissionsHash": "sha256:7541f6b653e55f8b3a7dca6b82c38f5b86f8629d5d173b7b12f10190b4aca794",
+                "permissions": {
+                  "scopes": [
+                    "read:clients",
+                    "read:users"
+                  ],
+                  "hosts": [
+                    {
+                      "host": "a.example.com",
+                      "reason": "Reads the tenant."
+                    },
+                    {
+                      "host": "b.example.com",
+                      "reason": "Reads the tenant."
+                    }
+                  ],
+                  "files": [],
+                  "env": []
+                },
+                "commands": [
+                  {
+                    "name": "run",
+                    "interactive": false
+                  }
+                ],
+                "artifacts": [
+                  {
+                    "os": "darwin",
+                    "arch": "arm64",
+                    "url": "https://downloads.example.com/1.0.0/plugin-darwin-arm64",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 1024,
+                    "format": "raw",
+                    "bin": "plugin"
+                  },
+                  {
+                    "os": "linux",
+                    "arch": "x64",
+                    "libc": "glibc",
+                    "url": "https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 2048,
+                    "format": "tar.gz",
+                    "bin": "plugin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "a key that appears twice",
+      "reason": "duplicate-key",
+      "names": "$",
+      "raw": "{\"version\":1,\"formatVersion\":1,\"version\":1,\"expires\":\"2030-01-01T00:00:00Z\",\"plugins\":[{\"id\":\"auth0/checkmate\",\"description\":\"Checks a tenant against a set of rules.\",\"owner\":{\"team\":\"Developer Experience\",\"bugs\":\"https://example.com/bugs\"},\"latest\":\"1.0.0\",\"versions\":[{\"version\":\"1.0.0\",\"platforms\":[\"darwin-arm64\",\"linux-x64\"],\"permissionsHash\":\"sha256:dd771866a3a00c769e64e94a6bef4afc83158f63b097e5504d123a9042e4e26e\",\"permissions\":{\"scopes\":[],\"hosts\":[],\"files\":[],\"env\":[]},\"commands\":[{\"name\":\"run\",\"interactive\":false}],\"artifacts\":[{\"os\":\"darwin\",\"arch\":\"arm64\",\"url\":\"https://downloads.example.com/1.0.0/plugin-darwin-arm64\",\"sha256\":\"92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305\",\"size\":1024,\"format\":\"raw\",\"bin\":\"plugin\"},{\"os\":\"linux\",\"arch\":\"x64\",\"libc\":\"glibc\",\"url\":\"https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz\",\"sha256\":\"92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305\",\"size\":2048,\"format\":\"tar.gz\",\"bin\":\"plugin\"}]}]}]}"
+    },
+    {
+      "name": "a key written in another case",
+      "reason": "case-variant-key",
+      "names": "Version",
+      "raw": "{\"formatVersion\":1,\"Version\":2,\"version\":1,\"expires\":\"2030-01-01T00:00:00Z\",\"plugins\":[{\"id\":\"auth0/checkmate\",\"description\":\"Checks a tenant against a set of rules.\",\"owner\":{\"team\":\"Developer Experience\",\"bugs\":\"https://example.com/bugs\"},\"latest\":\"1.0.0\",\"versions\":[{\"version\":\"1.0.0\",\"platforms\":[\"darwin-arm64\",\"linux-x64\"],\"permissionsHash\":\"sha256:dd771866a3a00c769e64e94a6bef4afc83158f63b097e5504d123a9042e4e26e\",\"permissions\":{\"scopes\":[],\"hosts\":[],\"files\":[],\"env\":[]},\"commands\":[{\"name\":\"run\",\"interactive\":false}],\"artifacts\":[{\"os\":\"darwin\",\"arch\":\"arm64\",\"url\":\"https://downloads.example.com/1.0.0/plugin-darwin-arm64\",\"sha256\":\"92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305\",\"size\":1024,\"format\":\"raw\",\"bin\":\"plugin\"},{\"os\":\"linux\",\"arch\":\"x64\",\"libc\":\"glibc\",\"url\":\"https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz\",\"sha256\":\"92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305\",\"size\":2048,\"format\":\"tar.gz\",\"bin\":\"plugin\"}]}]}]}"
+    },
+    {
+      "name": "scopes that are not sorted",
+      "reason": "unsorted-permissions",
+      "names": "plugins[0].versions[0].permissions.scopes",
+      "document": {
+        "formatVersion": 1,
+        "version": 1,
+        "expires": "2030-01-01T00:00:00Z",
+        "plugins": [
+          {
+            "id": "auth0/checkmate",
+            "description": "Checks a tenant against a set of rules.",
+            "owner": {
+              "team": "Developer Experience",
+              "bugs": "https://example.com/bugs"
+            },
+            "latest": "1.0.0",
+            "versions": [
+              {
+                "version": "1.0.0",
+                "platforms": [
+                  "darwin-arm64",
+                  "linux-x64"
+                ],
+                "permissionsHash": "sha256:2ae7c33920d8ab591911219da8a9eab14f474d7c46c6053fb908ff3b0757c0a5",
+                "permissions": {
+                  "scopes": [
+                    "read:users",
+                    "read:clients"
+                  ],
+                  "hosts": [],
+                  "files": [],
+                  "env": []
+                },
+                "commands": [
+                  {
+                    "name": "run",
+                    "interactive": false
+                  }
+                ],
+                "artifacts": [
+                  {
+                    "os": "darwin",
+                    "arch": "arm64",
+                    "url": "https://downloads.example.com/1.0.0/plugin-darwin-arm64",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 1024,
+                    "format": "raw",
+                    "bin": "plugin"
+                  },
+                  {
+                    "os": "linux",
+                    "arch": "x64",
+                    "libc": "glibc",
+                    "url": "https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 2048,
+                    "format": "tar.gz",
+                    "bin": "plugin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a host that is listed twice",
+      "reason": "duplicate-permissions",
+      "names": "plugins[0].versions[0].permissions.hosts",
+      "document": {
+        "formatVersion": 1,
+        "version": 1,
+        "expires": "2030-01-01T00:00:00Z",
+        "plugins": [
+          {
+            "id": "auth0/checkmate",
+            "description": "Checks a tenant against a set of rules.",
+            "owner": {
+              "team": "Developer Experience",
+              "bugs": "https://example.com/bugs"
+            },
+            "latest": "1.0.0",
+            "versions": [
+              {
+                "version": "1.0.0",
+                "platforms": [
+                  "darwin-arm64",
+                  "linux-x64"
+                ],
+                "permissionsHash": "sha256:0797d41347f43a69160d0c04dbb6bbd1100cbd94c522423c29b2ce1032a205aa",
+                "permissions": {
+                  "scopes": [],
+                  "hosts": [
+                    {
+                      "host": "a.example.com",
+                      "reason": "Reads the tenant."
+                    },
+                    {
+                      "host": "a.example.com",
+                      "reason": "Reads the tenant."
+                    }
+                  ],
+                  "files": [],
+                  "env": []
+                },
+                "commands": [
+                  {
+                    "name": "run",
+                    "interactive": false
+                  }
+                ],
+                "artifacts": [
+                  {
+                    "os": "darwin",
+                    "arch": "arm64",
+                    "url": "https://downloads.example.com/1.0.0/plugin-darwin-arm64",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 1024,
+                    "format": "raw",
+                    "bin": "plugin"
+                  },
+                  {
+                    "os": "linux",
+                    "arch": "x64",
+                    "libc": "glibc",
+                    "url": "https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 2048,
+                    "format": "tar.gz",
+                    "bin": "plugin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a permissions hash that does not match the permissions",
+      "reason": "permissions-hash-mismatch",
+      "names": "plugins[0].versions[0].permissionsHash",
+      "document": {
+        "formatVersion": 1,
+        "version": 1,
+        "expires": "2030-01-01T00:00:00Z",
+        "plugins": [
+          {
+            "id": "auth0/checkmate",
+            "description": "Checks a tenant against a set of rules.",
+            "owner": {
+              "team": "Developer Experience",
+              "bugs": "https://example.com/bugs"
+            },
+            "latest": "1.0.0",
+            "versions": [
+              {
+                "version": "1.0.0",
+                "platforms": [
+                  "darwin-arm64",
+                  "linux-x64"
+                ],
+                "permissionsHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "permissions": {
+                  "scopes": [],
+                  "hosts": [],
+                  "files": [],
+                  "env": []
+                },
+                "commands": [
+                  {
+                    "name": "run",
+                    "interactive": false
+                  }
+                ],
+                "artifacts": [
+                  {
+                    "os": "darwin",
+                    "arch": "arm64",
+                    "url": "https://downloads.example.com/1.0.0/plugin-darwin-arm64",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 1024,
+                    "format": "raw",
+                    "bin": "plugin"
+                  },
+                  {
+                    "os": "linux",
+                    "arch": "x64",
+                    "libc": "glibc",
+                    "url": "https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 2048,
+                    "format": "tar.gz",
+                    "bin": "plugin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a description that is too long and has a C1 control character",
+      "reason": "unsafe-text",
+      "names": "plugins[0].description",
+      "document": {
+        "formatVersion": 1,
+        "version": 1,
+        "expires": "2030-01-01T00:00:00Z",
+        "plugins": [
+          {
+            "id": "auth0/checkmate",
+            "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\u009b",
+            "owner": {
+              "team": "Developer Experience",
+              "bugs": "https://example.com/bugs"
+            },
+            "latest": "1.0.0",
+            "versions": [
+              {
+                "version": "1.0.0",
+                "platforms": [
+                  "darwin-arm64",
+                  "linux-x64"
+                ],
+                "permissionsHash": "sha256:dd771866a3a00c769e64e94a6bef4afc83158f63b097e5504d123a9042e4e26e",
+                "permissions": {
+                  "scopes": [],
+                  "hosts": [],
+                  "files": [],
+                  "env": []
+                },
+                "commands": [
+                  {
+                    "name": "run",
+                    "interactive": false
+                  }
+                ],
+                "artifacts": [
+                  {
+                    "os": "darwin",
+                    "arch": "arm64",
+                    "url": "https://downloads.example.com/1.0.0/plugin-darwin-arm64",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 1024,
+                    "format": "raw",
+                    "bin": "plugin"
+                  },
+                  {
+                    "os": "linux",
+                    "arch": "x64",
+                    "libc": "glibc",
+                    "url": "https://downloads.example.com/1.0.0/plugin-linux-x64.tar.gz",
+                    "sha256": "92521fc3cbd964bdc9f584a991b89fddaa5754ed1cc96d6d42445338669c1305",
+                    "size": 2048,
+                    "format": "tar.gz",
+                    "bin": "plugin"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

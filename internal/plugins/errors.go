@@ -1,10 +1,12 @@
 package plugins
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/santhosh-tekuri/jsonschema/v6/kind"
@@ -24,25 +26,37 @@ func (e *ValidationError) Error() string {
 	return strings.Join(e.Errors, "\n")
 }
 
-// problemList collects the problems found by the checks written in Go.
-type problemList []string
+// ProblemList collects the problems found by checks that are written in Go
+// because JSON Schema cannot express them. A problem is a message that starts
+// with the JSON path of the offending field.
+type ProblemList []string
 
-// addf adds a formatted problem.
-func (p *problemList) addf(format string, args ...any) {
+// Addf adds a formatted problem.
+func (p *ProblemList) Addf(format string, args ...any) {
 	*p = append(*p, fmt.Sprintf(format, args...))
 }
 
-// checkUnique adds a problem when value was already seen on another item. The
+// CheckUnique adds a problem when value was already seen on another item. The
 // seen map holds the path of the first item that used each value. The problem
 // is reported on the field of the item at path, with what naming the thing that
 // must be unique.
-func (p *problemList) checkUnique(seen map[string]string, value, path, field, what string) {
+func (p *ProblemList) CheckUnique(seen map[string]string, value, path, field, what string) {
 	if first, duplicate := seen[value]; duplicate {
-		p.addf("%s.%s: duplicate %s %q, already used by %s", path, field, what, value, first)
+		p.Addf("%s.%s: duplicate %s %q, already used by %s", path, field, what, value, first)
 		return
 	}
 
 	seen[value] = path
+}
+
+// CheckTimeout reports why value is not a timeout, which is a Go duration
+// greater than zero such as "30s" or "10m". It returns nil for a timeout.
+func CheckTimeout(value string) error {
+	if timeout, err := time.ParseDuration(value); err != nil || timeout <= 0 {
+		return fmt.Errorf("%q must be a Go duration greater than zero, for example \"30s\" or \"10m\"", value)
+	}
+
+	return nil
 }
 
 // itemPath returns the path of the item at index in the list field of parent,
@@ -55,9 +69,15 @@ func itemPath(parent, list string, index int) string {
 	return fmt.Sprintf("%s.%s[%d]", parent, list, index)
 }
 
-// collectSchemaErrors flattens a schema validation error tree into one message
-// per problem, each prefixed with the JSON path of the offending field.
-func collectSchemaErrors(root *jsonschema.ValidationError) []string {
+// SchemaProblems reports the problems found by a JSON Schema validation, one
+// message per problem, each prefixed with the JSON path of the offending field.
+// It returns nil when err is not a schema validation error.
+func SchemaProblems(err error) []string {
+	var root *jsonschema.ValidationError
+	if !errors.As(err, &root) {
+		return nil
+	}
+
 	printer := message.NewPrinter(language.English)
 
 	var problems []string

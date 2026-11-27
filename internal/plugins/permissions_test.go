@@ -101,6 +101,34 @@ func TestManifest_Permissions(t *testing.T) {
 	})
 }
 
+func TestNormalizePermissions(t *testing.T) {
+	t.Run("sorts, dedupes and never returns a nil slice", func(t *testing.T) {
+		got := NormalizePermissions(Permissions{
+			Scopes: []string{"b:x", "a:x", "b:x"},
+			Hosts:  []HostPermission{{Host: "b.example.com", Reason: "B"}, {Host: "a.example.com", Reason: "A"}, {Host: "a.example.com", Reason: "A"}},
+		})
+
+		assert.Equal(t, []string{"a:x", "b:x"}, got.Scopes)
+		assert.Equal(t, []HostPermission{{Host: "a.example.com", Reason: "A"}, {Host: "b.example.com", Reason: "B"}}, got.Hosts)
+		assert.NotNil(t, got.Files)
+		assert.NotNil(t, got.Env)
+	})
+
+	t.Run("does not change its argument", func(t *testing.T) {
+		scopes := []string{"b:x", "a:x"}
+
+		NormalizePermissions(Permissions{Scopes: scopes})
+
+		assert.Equal(t, []string{"b:x", "a:x"}, scopes)
+	})
+
+	t.Run("is idempotent", func(t *testing.T) {
+		once := NormalizePermissions(Permissions{Scopes: []string{"b:x", "a:x"}})
+
+		assert.Equal(t, once, NormalizePermissions(once))
+	})
+}
+
 func TestManifest_PermissionsHash(t *testing.T) {
 	// The base manifest has two commands. Each case replaces it with a variant
 	// and says whether the hash must stay the same.
@@ -310,6 +338,7 @@ var trickyStrings = []string{
 	"backspace\bform\ffeed",
 	"control\x00\x01\x1f",
 	"delete\x7f",
+	"c1 controls\u0080\u009b\u009f",
 	"unicode é世界😀",
 	"separators\u2028\u2029",
 	"invalid utf8 \xff\xfe end",
