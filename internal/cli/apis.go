@@ -22,7 +22,10 @@ import (
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
-const apiDefaultTokenLifetime = 86400
+const (
+	apiDefaultTokenLifetime = 86400
+	apiMaxTokenLifetime     = 2592000 // Auth0 rejects longer access token lifetimes (30 days).
+)
 
 var (
 	apiID = Argument{
