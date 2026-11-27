@@ -224,7 +224,7 @@ func (v *applicationSearchView) AsTableRow() []string {
 	return ApplicationSearchColumns.row(v.fields, map[string]string{
 		"client_id":                  ansi.Faint(v.ClientID),
 		"name":                       v.Name,
-		"app_type":                   v.Type,
+		"app_type":                   ApplyColorToFriendlyAppType(v.Type),
 		"resource_server_identifier": v.ResourceServer,
 	})
 }

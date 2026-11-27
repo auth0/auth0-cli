@@ -1282,6 +1282,11 @@ func TestSearchClientGrantsCmd(t *testing.T) {
 			wantErr: "--csv needs at least one table column (id, client_id, audience, scope) left by --fields",
 		},
 		{
+			name:    "rejects --csv when excluding one field of each pair removes every column",
+			args:    []string{"--fields", "id,audience,scope,default_for", "--exclude-fields", "--csv"},
+			wantErr: "--csv needs at least one table column (id, client_id, audience, scope) left by --fields",
+		},
+		{
 			name:    "rejects an invalid --sort before calling the API",
 			args:    []string{"-s", "client_id"},
 			wantErr: `invalid --sort "client_id": must be one of audience,updated_at`,

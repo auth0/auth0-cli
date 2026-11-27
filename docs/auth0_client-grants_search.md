@@ -7,7 +7,9 @@ has_toc: false
 
 [Early Access] Search your client grants using Lucene or SCIM filter syntax.
 Results are eventually consistent; use `auth0 client-grants list` for up-to-date data.
-'--fields' always sends 'scope' with 'allow_all_scopes', and 'client_id' with 'default_for', so the Scopes and Client ID columns stay correct.
+'scope' and 'allow_all_scopes' are one pair, and so are 'client_id' and 'default_for', because the Scopes and Client ID columns read both fields.
+With '--fields', listing one field of a pair is the same as listing both.
+With '--exclude-fields', excluding one field of a pair is the same as excluding both.
 '--query' sends its fields unchanged, so include both fields of a pair there.
 
 Use '--schema' to see available query parameters.
