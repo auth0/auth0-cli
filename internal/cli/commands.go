@@ -39,7 +39,27 @@ type commandNode struct {
 	RequiresAuth bool          `json:"requiresAuth"`
 	Flags        []commandFlag `json:"flags,omitempty"`
 	Note         string        `json:"note,omitempty"`
-	Subcommands  []commandNode `json:"subcommands,omitempty"`
+
+	// Source is "plugin" for a command that an installed plugin adds, and is left
+	// out for a core command of the CLI, so no source means a core command and the
+	// output for the core commands does not change. The fields below are set for
+	// plugin commands only.
+	Source         string         `json:"source,omitempty"`
+	PluginID       string         `json:"pluginId,omitempty"`
+	PluginVersion  string         `json:"pluginVersion,omitempty"`
+	RequiredScopes []string       `json:"requiredScopes,omitempty"`
+	Interactive    bool           `json:"interactive,omitempty"`
+	Output         *commandOutput `json:"output,omitempty"`
+
+	Subcommands []commandNode `json:"subcommands,omitempty"`
+}
+
+// commandOutput is the output a plugin command supports, as its manifest declares
+// it: the --json and --json-compact flags, the --csv flag, and agent mode.
+type commandOutput struct {
+	JSON      bool `json:"json"`
+	CSV       bool `json:"csv"`
+	AgentMode bool `json:"agentMode"`
 }
 
 // rawAPIFallbackNote points an agent to `auth0 api` when the listed flags don't
@@ -173,6 +193,15 @@ func buildNode(cmd *cobra.Command, level, maxDepth int, detailed bool) commandNo
 		Short:        cmd.Short,
 		Runnable:     isRunnableLeaf(cmd),
 		RequiresAuth: commandRequiresAuthentication(cmd.CommandPath()),
+	}
+
+	if info, ok := pluginInfoOf(cmd); ok {
+		node.Source = "plugin"
+		node.PluginID = info.ID
+		node.PluginVersion = info.Version
+		node.RequiredScopes = info.Scopes
+		node.Interactive = info.Interactive
+		node.Output = info.Output
 	}
 
 	if detailed {

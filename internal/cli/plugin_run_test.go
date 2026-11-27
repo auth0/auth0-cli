@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -29,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	gokeyring "github.com/zalando/go-keyring"
 
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/config"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/keyring"
@@ -94,7 +96,14 @@ func runPluginFixture(args []string) (code int, ok bool) {
 
 		return 0, true
 	case "call":
-		return fixtureCall(options["--path"]), true
+		code := fixtureCall(options["--path"])
+
+		// A call that is followed by a failure, with --code.
+		if exit, err := strconv.Atoi(options["--code"]); err == nil && code == 0 {
+			code = exit
+		}
+
+		return code, true
 	default:
 		return fixtureReport(args[1:]), true
 	}
@@ -537,12 +546,17 @@ func TestRegisterPluginCommands_Shape(t *testing.T) {
 		assert.Equal(t, "Check a tenant", top.Short)
 		assert.True(t, top.DisableFlagParsing)
 		assert.True(t, top.Runnable())
+		annotations := maps.Clone(top.Annotations)
+		info := annotations[pluginInfoAnnotation]
+		delete(annotations, pluginInfoAnnotation)
+
 		assert.Equal(t, map[string]string{
 			pluginCommandAnnotation: "true",
 			pluginRootAnnotation:    "true",
 			skipDocsAnnotation:      "true",
 			skipAuthAnnotation:      "true",
-		}, top.Annotations)
+		}, annotations)
+		assert.JSONEq(t, `{"id":"auth0/checkmate","version":"1.0.0","scopes":["read:clients"],"output":{"json":true,"csv":true,"agentMode":true}}`, info)
 
 		// The root command of the manifest is the top command and not a subcommand.
 		var names []string
@@ -2188,7 +2202,7 @@ func TestPluginFailure(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := p.failure(test.err)
+			err := p.failure(test.err, "")
 
 			var failed pluginError
 
@@ -2453,5 +2467,517 @@ func TestInterruptGuard(t *testing.T) {
 
 		assert.NotPanics(t, release)
 		assert.False(t, interrupted(context.Background()))
+	})
+}
+
+// tree returns the command tree the way Execute builds it, so that the help and
+// the completion are those of the real CLI.
+func (r *runEnv) tree() *cobra.Command {
+	return newRootTree(r.cli)
+}
+
+// newRootTree returns the command tree the way Execute builds it.
+func newRootTree(c *cli) *cobra.Command {
+	root := buildRootCmd(c)
+	root.SetUsageTemplate(namespaceUsageTemplate())
+
+	addPersistentFlags(root, c)
+	addSubCommands(root, c)
+	enforceUnknownSubcommand(root)
+	overrideHelpAndVersionFlagText(root)
+
+	return root
+}
+
+func TestRegisterPluginCommands_HelpGroups(t *testing.T) {
+	t.Setenv(agentModeEnvVar, "false")
+
+	// The part of the usage of the root that lists the commands.
+	section := func(usage, heading string) string {
+		start := strings.Index(usage, heading)
+		require.GreaterOrEqual(t, start, 0, "no %q in\n%s", heading, usage)
+
+		rest := usage[start+len(heading):]
+		end := strings.Index(rest, "\n\n")
+		require.GreaterOrEqual(t, end, 0)
+
+		return rest[:end]
+	}
+
+	t.Run("without a plugin the help is the one it was", func(t *testing.T) {
+		e := newPluginEnv(t)
+		root := newRootTree(e.cli)
+
+		assert.Empty(t, root.Groups())
+		assert.Equal(t, namespaceUsageTemplate(), root.UsageTemplate())
+
+		for _, command := range root.Commands() {
+			assert.Empty(t, command.GroupID, command.Name())
+		}
+
+		usage := root.UsageString()
+
+		assert.Contains(t, usage, "Available Resources:")
+		assert.NotContains(t, usage, "Plugin Commands:")
+	})
+
+	t.Run("a build without the plugin feature has no heading either", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+
+		original := buildinfo.Version
+		buildinfo.Version = "1.39.0"
+
+		t.Cleanup(func() { buildinfo.Version = original })
+
+		root := r.tree()
+
+		assert.Empty(t, root.Groups())
+		assert.NotContains(t, root.UsageString(), "Plugin Commands:")
+		assert.NotContains(t, root.UsageString(), "checkmate")
+	})
+
+	t.Run("a plugin has its own heading after the core commands", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		root := r.tree()
+
+		require.Len(t, root.Groups(), 2)
+		assert.Equal(t, coreGroupID, root.Groups()[0].ID)
+		assert.Equal(t, pluginGroupID, root.Groups()[1].ID)
+
+		usage := root.UsageString()
+
+		require.Less(t, strings.Index(usage, "Available Resources:"), strings.Index(usage, "Plugin Commands:"))
+
+		core := section(usage, "Available Resources:")
+		pluginSection := section(usage, "Plugin Commands:")
+
+		for _, name := range []string{"login", "apps", "plugin", "docs", "commands", "completion"} {
+			assert.Contains(t, core, name)
+			assert.NotContains(t, pluginSection, name+" ")
+		}
+
+		assert.NotContains(t, core, "checkmate")
+		assert.Regexp(t, `^\s+checkmate\s+Check a tenant\s*$`, pluginSection)
+
+		for _, command := range root.Commands() {
+			want := coreGroupID
+			if command.Name() == pluginTestBin {
+				want = pluginGroupID
+			}
+
+			assert.Equal(t, want, command.GroupID, command.Name())
+		}
+
+		// The help renders for a person the same way.
+		var help bytes.Buffer
+
+		root.SetOut(&help)
+		require.NoError(t, root.Help())
+		assert.Contains(t, help.String(), "Plugin Commands:")
+	})
+
+	t.Run("a plugin that a core command shadows is not listed", func(t *testing.T) {
+		e := newPluginEnv(t)
+
+		apps := e.releaseAs("auth0/apps", e.platform, "1.0.0")
+		fine := e.releaseAs("auth0/pluginless", e.platform, "1.0.0")
+
+		e.publish(registrytest.NewIndexBuilder().
+			AddPlugin(registrytest.NewPlugin("auth0/apps", apps)).
+			AddPlugin(registrytest.NewPlugin("auth0/pluginless", fine)))
+
+		e.installPlugin("auth0/apps", "1.0.0")
+
+		// Alone, the shadowed plugin adds no heading.
+		assert.Empty(t, newRootTree(e.cli).Groups())
+
+		e.installPlugin("auth0/pluginless", "1.0.0")
+
+		usage := newRootTree(e.cli).UsageString()
+
+		assert.Regexp(t, `^\s+pluginless\s`, section(usage, "Plugin Commands:"))
+		assert.NotContains(t, strings.TrimSpace(section(usage, "Plugin Commands:")), "\n", "one plugin is listed")
+		assert.Contains(t, section(usage, "Available Resources:"), "apps")
+	})
+}
+
+func TestPluginCommand_Completion(t *testing.T) {
+	t.Setenv(agentModeEnvVar, "false")
+
+	r := newRunEnv(t, fixtureCommands())
+
+	// Complete runs the hidden command of Cobra and returns the lines it printed
+	// before the directive.
+	complete := func(args ...string) []string {
+		t.Helper()
+
+		require.NoError(t, r.exec(append([]string{cobra.ShellCompRequestCmd}, args...)...))
+
+		var lines []string
+
+		for _, line := range strings.Split(strings.TrimSpace(r.stdout.String()), "\n") {
+			if strings.HasPrefix(line, ":") || strings.HasPrefix(line, "Completion ended") {
+				continue
+			}
+
+			lines = append(lines, line)
+		}
+
+		assert.False(t, r.started(), "completing never runs the plugin")
+		assert.Zero(t, r.logins)
+
+		return lines
+	}
+
+	t.Run("the name of the plugin with its description", func(t *testing.T) {
+		assert.Contains(t, complete(""), "checkmate\tCheck a tenant")
+		assert.Equal(t, []string{"checkmate\tCheck a tenant"}, complete("check"))
+	})
+
+	t.Run("the subcommands", func(t *testing.T) {
+		lines := complete("checkmate", "")
+
+		assert.Contains(t, lines, "scan\tScan the users")
+		assert.Contains(t, lines, "report\tWrite a report")
+
+		for _, line := range lines {
+			assert.False(t, strings.HasPrefix(line, "--validators") || strings.HasPrefix(line, "--json") || strings.HasPrefix(line, "--csv"), "the flags of the plugin wait for a dash: %s", line)
+		}
+
+		for _, line := range complete("checkmate", "scan", "") {
+			assert.False(t, strings.HasPrefix(line, "--depth"), "the flags of the plugin wait for a dash: %s", line)
+		}
+	})
+
+	t.Run("the flags of the manifest", func(t *testing.T) {
+		assert.Contains(t, complete("checkmate", "scan", "--"), "--depth\tHow deep to scan")
+		assert.Contains(t, complete("checkmate", "scan", "--de"), "--depth\tHow deep to scan")
+		assert.NotContains(t, complete("checkmate", "scan", "--va"), "--validators\tThe validators to run", "the flags of another command")
+
+		lines := complete("checkmate", "--")
+
+		assert.Contains(t, lines, "--validators\tThe validators to run")
+		assert.Contains(t, lines, "--json\tOutput in json format.")
+		assert.Contains(t, lines, "--csv\tOutput in csv format.")
+		assert.NotContains(t, lines, "--depth\tHow deep to scan")
+	})
+
+	t.Run("an output flag that the command does not support", func(t *testing.T) {
+		for _, line := range complete("checkmate", "scan", "--") {
+			assert.False(t, strings.HasPrefix(line, "--json"), line)
+			assert.False(t, strings.HasPrefix(line, "--csv"), line)
+		}
+
+		assert.Contains(t, complete("checkmate", "report", "--"), "--json\tOutput in json format.")
+	})
+
+	t.Run("each flag once, whatever has been typed", func(t *testing.T) {
+		tree := r.tree()
+
+		for _, path := range [][]string{{"checkmate"}, {"checkmate", "scan"}, {"checkmate", "report"}} {
+			command, _, err := tree.Find(path)
+			require.NoError(t, err)
+
+			// The flags of the CLI and of the command that are not hidden.
+			var names []string
+
+			for _, flags := range []*pflag.FlagSet{command.InheritedFlags(), command.LocalFlags()} {
+				flags.VisitAll(func(flag *pflag.Flag) {
+					if !flag.Hidden && flag.Name != "help" {
+						names = append(names, "--"+flag.Name)
+					}
+				})
+			}
+
+			for _, typed := range []string{"-", "--", "--d", "--de", "--dep", "--depth", "--j", "--js", "--json", "--json-c", "--v", "--n", "--no", "--c", "--cs", "--t", "--a", "--z"} {
+				var want []string
+
+				for _, name := range names {
+					if strings.HasPrefix(name, typed) {
+						want = append(want, name)
+					}
+				}
+
+				var got []string
+
+				for _, line := range complete(append(path, typed)...) {
+					got = append(got, strings.SplitN(line, "\t", 2)[0])
+				}
+
+				assert.ElementsMatch(t, want, got, "%v %s", path, typed)
+			}
+		}
+	})
+
+	t.Run("no value and no completion after a flag is written", func(t *testing.T) {
+		assert.Empty(t, complete("checkmate", "scan", "--depth="))
+		assert.Empty(t, complete("checkmate", "scan", "x"))
+	})
+}
+
+func TestCompletePluginFlags_NotTheHelpFlag(t *testing.T) {
+	t.Setenv(agentModeEnvVar, "false")
+
+	r := newRunEnv(t, fixtureCommands())
+	tree := r.tree()
+
+	scan, _, err := tree.Find([]string{"checkmate", "scan"})
+	require.NoError(t, err)
+
+	// A command that has run before has the help flag, and a flag of the CLI that
+	// is marked the way the CLI marks them makes cobra leave the flags of the plugin
+	// out.
+	scan.InitDefaultHelpFlag()
+	require.NoError(t, tree.PersistentFlags().SetAnnotation("debug", cobra.BashCompOneRequiredFlag, []string{"false"}))
+
+	completions, directive := completePluginFlags(scan, nil, "--")
+
+	assert.Equal(t, cobra.ShellCompDirectiveNoFileComp, directive)
+	assert.Contains(t, completions, "--depth\tHow deep to scan")
+
+	for _, completion := range completions {
+		assert.False(t, strings.HasPrefix(completion, "--help"), completion)
+	}
+}
+
+func TestCommands_PluginSource(t *testing.T) {
+	t.Setenv(agentModeEnvVar, "false")
+
+	commands := fixtureCommands()
+	commands[2].Interactive = true
+
+	r := newRunEnv(t, commands)
+	root := r.tree()
+
+	var find func(nodes []commandNode, path string) (commandNode, bool)
+
+	find = func(nodes []commandNode, path string) (commandNode, bool) {
+		for _, node := range nodes {
+			if node.Path == path {
+				return node, true
+			}
+
+			if found, ok := find(node.Subcommands, path); ok {
+				return found, true
+			}
+		}
+
+		return commandNode{}, false
+	}
+
+	// Every node of the plugin, whatever the form of the list, says where it comes
+	// from, and no other node does.
+	checkSource := func(t *testing.T, nodes []commandNode) {
+		t.Helper()
+
+		seen := 0
+
+		var walk func(nodes []commandNode)
+
+		walk = func(nodes []commandNode) {
+			for _, node := range nodes {
+				if node.Path == "auth0 checkmate" || strings.HasPrefix(node.Path, "auth0 checkmate ") {
+					seen++
+
+					assert.Equal(t, "plugin", node.Source, node.Path)
+					assert.Equal(t, "auth0/checkmate", node.PluginID, node.Path)
+					assert.Equal(t, "1.0.0", node.PluginVersion, node.Path)
+				} else {
+					assert.Empty(t, node.Source, node.Path)
+					assert.Empty(t, node.PluginID, node.Path)
+					assert.Empty(t, node.PluginVersion, node.Path)
+					assert.Empty(t, node.RequiredScopes, node.Path)
+					assert.False(t, node.Interactive, node.Path)
+					assert.Nil(t, node.Output, node.Path)
+				}
+
+				walk(node.Subcommands)
+			}
+		}
+
+		walk(nodes)
+
+		assert.Positive(t, seen)
+	}
+
+	t.Run("the tree", func(t *testing.T) {
+		for _, detailed := range []bool{false, true} {
+			tree := buildCommandTree(root, 0, detailed)
+
+			checkSource(t, tree)
+
+			top, ok := find(tree, "auth0 checkmate")
+			require.True(t, ok)
+			assert.Equal(t, []string{"read:clients"}, top.RequiredScopes)
+			assert.Equal(t, &commandOutput{JSON: true, CSV: true, AgentMode: true}, top.Output)
+			assert.True(t, top.RequiresAuth)
+
+			scan, ok := find(tree, "auth0 checkmate scan")
+			require.True(t, ok)
+			assert.Equal(t, []string{"read:users"}, scan.RequiredScopes)
+			assert.Equal(t, &commandOutput{}, scan.Output, "a command without output declares none")
+			assert.False(t, scan.Interactive)
+			assert.True(t, scan.RequiresAuth)
+
+			report, ok := find(tree, "auth0 checkmate report")
+			require.True(t, ok)
+			assert.Empty(t, report.RequiredScopes)
+			assert.True(t, report.Interactive)
+			assert.Equal(t, &commandOutput{JSON: true}, report.Output)
+		}
+	})
+
+	t.Run("the flat list", func(t *testing.T) {
+		for _, detailed := range []bool{false, true} {
+			nodes := flattenCommands(root, false, detailed)
+
+			checkSource(t, nodes)
+
+			scan, ok := find(nodes, "auth0 checkmate scan")
+			require.True(t, ok)
+			assert.Equal(t, []string{"read:users"}, scan.RequiredScopes)
+		}
+	})
+
+	t.Run("one command", func(t *testing.T) {
+		scan, _, err := root.Find([]string{"checkmate", "scan"})
+		require.NoError(t, err)
+
+		checkSource(t, []commandNode{buildNode(scan, 1, 1, true)})
+
+		nodes := flattenCommands(scan, true, true)
+		require.Len(t, nodes, 1)
+		assert.Equal(t, "plugin", nodes[0].Source)
+	})
+
+	t.Run("the command prints it", func(t *testing.T) {
+		var nodes []commandNode
+
+		out := captureOutput(t, func() { require.NoError(t, r.exec("commands", "checkmate", "scan", "--json", "--detailed")) })
+		require.NoError(t, json.Unmarshal([]byte(out), &nodes), out)
+		require.Len(t, nodes, 1)
+
+		assert.Equal(t, "plugin", nodes[0].Source)
+		assert.Equal(t, []string{"read:users"}, nodes[0].RequiredScopes)
+		assert.Contains(t, out, `"source": "plugin"`)
+		assert.Contains(t, out, `"requiredScopes"`)
+
+		out = captureOutput(t, func() { require.NoError(t, r.exec("commands", "checkmate", "--flat", "--json")) })
+		require.NoError(t, json.Unmarshal([]byte(out), &nodes), out)
+
+		checkSource(t, nodes)
+
+		out = captureOutput(t, func() { require.NoError(t, r.exec("commands", "checkmate")) })
+		assert.Contains(t, out, "scan")
+		assert.Contains(t, out, "Scan the users")
+	})
+
+	t.Run("a core command is the same with and without plugins", func(t *testing.T) {
+		// Both trees are new, because listing a tree changes how a command writes
+		// its usage line.
+		with, without := buildCommandTree(r.tree(), 0, true), buildCommandTree(newRootTree(&cli{}), 0, true)
+
+		for _, node := range with {
+			if node.Source != "" {
+				continue
+			}
+
+			expected, ok := find(without, node.Path)
+			require.True(t, ok, node.Path)
+
+			got, err := json.Marshal(node)
+			require.NoError(t, err)
+
+			want, err := json.Marshal(expected)
+			require.NoError(t, err)
+
+			assert.Equal(t, string(want), string(got), node.Path)
+		}
+	})
+
+	t.Run("a core node has no new field", func(t *testing.T) {
+		data, err := json.Marshal(commandNode{Path: "auth0 login", Name: "login", Short: "Authenticate", Runnable: true, RequiresAuth: false})
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{"path":"auth0 login","name":"login","short":"Authenticate","runnable":true,"requiresAuth":false}`, string(data))
+	})
+}
+
+func TestPluginRun_DeniedCallsInTheEnvelope(t *testing.T) {
+	t.Setenv(agentModeEnvVar, "false")
+
+	denied := func(t *testing.T, err error) string {
+		t.Helper()
+
+		var details struct {
+			PluginID    string `json:"pluginId"`
+			ExitCode    int    `json:"exitCode"`
+			DeniedCalls string `json:"deniedCalls"`
+		}
+
+		require.NoError(t, json.Unmarshal(buildErrorEnvelope(err).Error.Details, &details))
+		assert.Equal(t, "auth0/checkmate", details.PluginID)
+
+		return details.DeniedCalls
+	}
+
+	t.Run("a failed run in agent mode carries the summary and prints nothing", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		err := r.exec("checkmate", "--agent-mode", "--mode=call", "--path=/api/v2/users", "--code=3")
+
+		require.Error(t, err)
+		assert.Equal(t, "plugin_exit", errorReason(err))
+		assert.Contains(t, denied(t, err), "API call was denied")
+		assert.NotContains(t, r.stderr.String(), "API call was denied", "stderr stays free of the human line")
+		assert.Empty(t, r.stderr.String())
+	})
+
+	t.Run("a failed run with a person still gets the line, and the envelope has it too", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		err := r.exec("checkmate", "--mode=call", "--path=/api/v2/users", "--code=3")
+
+		require.Error(t, err)
+		assert.Contains(t, r.stderr.String(), "API call was denied")
+		assert.Contains(t, denied(t, err), "API call was denied")
+	})
+
+	t.Run("a run that ends well adds nothing", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		require.NoError(t, r.exec("checkmate", "--agent-mode", "--mode=call", "--path=/api/v2/users"))
+
+		assert.Contains(t, r.stdout.String(), "status=403")
+		assert.Empty(t, r.stderr.String())
+	})
+
+	t.Run("a failed run without a denied call adds nothing", func(t *testing.T) {
+		r := newRunEnv(t, fixtureCommands())
+		r.approve()
+
+		err := r.exec("checkmate", "--agent-mode", "--mode=call", "--path=/api/v2/clients", "--code=3")
+
+		require.Error(t, err)
+		assert.JSONEq(t, `{"pluginId":"auth0/checkmate","version":"1.0.0","exitCode":3}`, string(buildErrorEnvelope(err).Error.Details))
+	})
+
+	t.Run("every way a run ends badly carries it", func(t *testing.T) {
+		p := &pluginCommand{id: pluginTestID, version: "1.0.0"}
+
+		for _, failure := range []error{
+			&runner.ExitError{Code: 2},
+			&runner.TimeoutError{After: time.Second},
+			&runner.InterruptedError{},
+			errors.New("could not start"),
+		} {
+			err := p.failure(failure, "1 API call was denied.")
+
+			assert.Equal(t, "1 API call was denied.", denied(t, err), failure)
+			assert.NotContains(t, string(buildErrorEnvelope(p.failure(failure, "")).Error.Details), "deniedCalls", failure)
+		}
 	})
 }
