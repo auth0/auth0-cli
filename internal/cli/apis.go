@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
@@ -90,43 +88,21 @@ var (
 		LongForm: "token-dialect",
 		Help:     "Dialect of access tokens for this API. Can be one of access_token, access_token_authz, rfc9068_profile, or rfc9068_profile_authz.",
 	}
-	apiSearchFilter = Flag{
-		Name:     "Filter",
-		LongForm: "filter",
-		Help: "Filter expression, sent as the API's 'q' parameter. Lucene syntax by default, or SCIM with --parser scim. " +
-			"Supported fields: id, identifier, name, updated_at. Maximum 5 filter operations.\n\n" +
-			"For example: 'name:\"My API\"' or, with --parser scim, 'name co \"billing\" and updated_at gt \"2026-01-01\"'. " +
-			"Equivalent to --query '{\"q\":\"<expression>\"}'.",
-	}
-	apiSearchParser = Flag{
-		Name:     "Parser",
-		LongForm: "parser",
-		Help:     "Syntax of --filter: 'lucene' or 'scim'.",
-	}
-	apiSearchSort = Flag{
-		Name:      "Sort",
-		LongForm:  "sort",
-		ShortForm: "s",
-		Help: "Field to sort by, ascending only: 'name', 'identifier' or 'updated_at'. " +
-			"The 'field:1' form is also accepted. Defaults to insertion order.",
-	}
-	apiSearchFields = Flag{
-		Name:     "Fields",
-		LongForm: "fields",
-		Help: "Comma-separated list of fields to include in the response, e.g. 'id,name,identifier'. " +
-			"'updated_at' can be filtered and sorted on but is never returned.",
-	}
-	apiSearchExcludeFields = Flag{
-		Name:     "Exclude Fields",
-		LongForm: "exclude-fields",
-		Help:     "Exclude the --fields list from the response instead of returning only those fields.",
-	}
+	apiSearchFilter = searchFilterFlag(
+		[]string{"id", "identifier", "name", "updated_at"},
+		`name:"My API"`,
+		`name co "billing" and updated_at gt "2026-01-01"`,
+	)
+	apiSearchSort   = searchSortFlag(resourceServerSortFields...)
+	apiSearchFields = searchFieldsFlag("id", "name", "identifier")
 )
 
-const (
-	apiSearchPageSize  = 100  // Max `take` per request.
-	apiSearchMaxLength = 1000 // Max length of the `q` and `fields` params.
-)
+// resourceServerSortFields are the fields `apis search` can sort by.
+var resourceServerSortFields = []string{
+	string(managementv3.ResourceServerSortFieldEnumName),
+	string(managementv3.ResourceServerSortFieldEnumIdentifier),
+	string(managementv3.ResourceServerSortFieldEnumUpdatedAt),
+}
 
 var (
 	apiTokenDialectNone    = "<NONE>"
@@ -263,19 +239,9 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 	return cmd
 }
 
-// apiSearchInputs holds the typed-mode flags of `apis search`.
-type apiSearchInputs struct {
-	Filter        string
-	Parser        string
-	Sort          string
-	Fields        string
-	ExcludeFields bool
-	Number        int
-}
-
 func searchApisCmd(cli *cli) *cobra.Command {
 	var inputs struct {
-		apiSearchInputs
+		searchInputs
 		Query  string
 		Schema bool
 	}
@@ -286,6 +252,8 @@ func searchApisCmd(cli *cli) *cobra.Command {
 		Short: "Search your APIs (Early Access)",
 		Long: `[Early Access] Search your APIs using Lucene or SCIM filter syntax.
 Results are eventually consistent; use ` + "`auth0 apis list`" + ` for up-to-date data.
+'updated_at' can be filtered and sorted on, but is never returned.
+The search API does not support 'signing_secret'.
 
 Use '--schema' to see available query parameters.
 Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
@@ -310,18 +278,18 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 				return err
 			}
 
-			if inputs.Number < 1 || inputs.Number > 1000 {
-				return validationError{err: fmt.Errorf("number flag invalid, please pass a number between 1 and 1000")}
+			if err := validateSearchNumber(inputs.Number); err != nil {
+				return err
 			}
 
-			request, err := buildResourceServerSearchRequest(inputs.apiSearchInputs)
+			request, err := buildResourceServerSearchRequest(inputs.searchInputs)
 			if err != nil {
 				return err
 			}
 
 			fields := parseSearchFields(inputs.Fields)
-			if cli.csv && len(display.APISearchColumns(fields, inputs.ExcludeFields)) == 0 {
-				return validationError{err: fmt.Errorf("--csv needs at least one table column (id, name, identifier, scopes) left by --fields")}
+			if err := validateSearchCSV(cli, display.APITableColumns, fields, inputs.ExcludeFields); err != nil {
+				return err
 			}
 
 			results, err := collectV3Pages(cmd.Context(), inputs.Number,
@@ -332,14 +300,7 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 				return searchError("APIs", err)
 			}
 
-			if len(results) == inputs.Number {
-				hint := "Refine --filter or raise --number (max 1000)."
-				if inputs.Number == 1000 {
-					hint = "Refine --filter."
-				}
-
-				cli.renderer.Warnf("Results may be limited by --number; more may match. %s", hint)
-			}
+			warnSearchLimit(cli, len(results), inputs.Number)
 
 			cli.renderer.APISearchList(results, fields, inputs.ExcludeFields)
 
@@ -353,10 +314,10 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
 
 	apiSearchFilter.RegisterString(cmd, &inputs.Filter, "")
-	apiSearchParser.RegisterString(cmd, &inputs.Parser, "lucene")
+	searchParser.RegisterString(cmd, &inputs.Parser, "lucene")
 	apiSearchSort.RegisterString(cmd, &inputs.Sort, "")
 	apiSearchFields.RegisterString(cmd, &inputs.Fields, "")
-	apiSearchExcludeFields.RegisterBool(cmd, &inputs.ExcludeFields, false)
+	searchExcludeFields.RegisterBool(cmd, &inputs.ExcludeFields, false)
 	apiNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
 	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
 	searchQueryFlag.RegisterString(cmd, &inputs.Query, "")
@@ -366,43 +327,18 @@ Use '--query' to filter results via a JSON object (any API-supported parameter w
 }
 
 // buildResourceServerSearchRequest validates the flag values and maps them onto the SDK request.
-func buildResourceServerSearchRequest(inputs apiSearchInputs) (*managementv3.SearchResourceServersRequestParameters, error) {
-	fields := strings.Join(parseSearchFields(inputs.Fields), ",")
-
-	// The API caps both at 1000 characters; reject early with a clearer error than its 400.
-	if utf8.RuneCountInString(inputs.Filter) > apiSearchMaxLength {
-		return nil, validationError{err: fmt.Errorf("--filter must be at most %d characters", apiSearchMaxLength)}
-	}
-	if utf8.RuneCountInString(fields) > apiSearchMaxLength {
-		return nil, validationError{err: fmt.Errorf("--fields must be at most %d characters", apiSearchMaxLength)}
-	}
-	if inputs.ExcludeFields && fields == "" {
-		return nil, validationError{err: fmt.Errorf("--exclude-fields requires --fields")}
+func buildResourceServerSearchRequest(inputs searchInputs) (*managementv3.SearchResourceServersRequestParameters, error) {
+	params, err := parseSearchInputs(inputs)
+	if err != nil {
+		return nil, err
 	}
 
 	request := &managementv3.SearchResourceServersRequestParameters{
-		Take: auth0.Int(min(inputs.Number, apiSearchPageSize)),
-	}
-
-	switch inputs.Parser {
-	case "", "lucene":
-		request.Parser = managementv3.SearchParserEnumLucene.Ptr()
-	case "scim":
-		request.Parser = managementv3.SearchParserEnumSCIM.Ptr()
-	default:
-		return nil, validationError{err: fmt.Errorf("invalid --parser %q: must be 'lucene' or 'scim'", inputs.Parser)}
-	}
-
-	if inputs.Filter != "" {
-		request.Q = auth0.String(inputs.Filter)
-	}
-
-	if fields != "" {
-		request.Fields = auth0.String(fields)
-	}
-
-	if inputs.ExcludeFields {
-		request.IncludeFields = auth0.Bool(false)
+		Q:             params.Q,
+		Parser:        params.Parser,
+		Fields:        params.Fields,
+		IncludeFields: params.IncludeFields,
+		Take:          params.Take,
 	}
 
 	if inputs.Sort != "" {
@@ -416,36 +352,11 @@ func buildResourceServerSearchRequest(inputs apiSearchInputs) (*managementv3.Sea
 	return request, nil
 }
 
-// parseSearchFields splits a --fields value into trimmed, non-empty field names.
-func parseSearchFields(fields string) []string {
-	var names []string
-	for name := range strings.SplitSeq(fields, ",") {
-		if name = strings.TrimSpace(name); name != "" {
-			names = append(names, name)
-		}
-	}
-
-	return names
-}
-
-// resourceServerSortField maps 'field' or 'field:1' onto the SDK enum. The
-// endpoint only sorts ascending, so 'field:-1' is rejected.
+// resourceServerSortField maps 'field' or 'field:1' onto the SDK enum.
 func resourceServerSortField(s string) (managementv3.ResourceServerSortFieldEnum, error) {
-	field, order, hasOrder := strings.Cut(s, ":")
-	if hasOrder && order != "1" {
-		return "", validationError{err: fmt.Errorf("invalid --sort %q: the search endpoint only sorts ascending, use 'field' or 'field:1'", s)}
-	}
+	field, err := parseSearchSort(s, resourceServerSortFields...)
 
-	switch field {
-	case "name":
-		return managementv3.ResourceServerSortFieldEnumName, nil
-	case "identifier":
-		return managementv3.ResourceServerSortFieldEnumIdentifier, nil
-	case "updated_at":
-		return managementv3.ResourceServerSortFieldEnumUpdatedAt, nil
-	default:
-		return "", validationError{err: fmt.Errorf("invalid --sort %q: must be 'name', 'identifier' or 'updated_at'", s)}
-	}
+	return managementv3.ResourceServerSortFieldEnum(field), err
 }
 
 func showAPICmd(cli *cli) *cobra.Command {

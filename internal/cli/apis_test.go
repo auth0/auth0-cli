@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
@@ -177,7 +176,7 @@ func TestResourceServerSortField(t *testing.T) {
 		{input: "updated_at", want: managementv3.ResourceServerSortFieldEnumUpdatedAt},
 		{input: "name:1", want: managementv3.ResourceServerSortFieldEnumName},
 		{input: "name:-1", wantErr: `invalid --sort "name:-1": the search endpoint only sorts ascending, use 'field' or 'field:1'`},
-		{input: "created_at", wantErr: `invalid --sort "created_at": must be 'name', 'identifier' or 'updated_at'`},
+		{input: "created_at", wantErr: `invalid --sort "created_at": must be one of name,identifier,updated_at`},
 	}
 
 	for _, test := range tests {
@@ -197,13 +196,13 @@ func TestResourceServerSortField(t *testing.T) {
 func TestBuildResourceServerSearchRequest(t *testing.T) {
 	tests := []struct {
 		name    string
-		inputs  apiSearchInputs
+		inputs  searchInputs
 		want    *managementv3.SearchResourceServersRequestParameters
 		wantErr string
 	}{
 		{
 			name:   "defaults to lucene and omits unset params",
-			inputs: apiSearchInputs{Number: 50},
+			inputs: searchInputs{Number: 50},
 			want: &managementv3.SearchResourceServersRequestParameters{
 				Parser: managementv3.SearchParserEnumLucene.Ptr(),
 				Take:   auth0.Int(50),
@@ -211,7 +210,7 @@ func TestBuildResourceServerSearchRequest(t *testing.T) {
 		},
 		{
 			name:   "maps every flag onto the request",
-			inputs: apiSearchInputs{Filter: `name co "billing"`, Parser: "scim", Sort: "updated_at:1", Fields: "id,name", Number: 20},
+			inputs: searchInputs{Filter: `name co "billing"`, Parser: "scim", Sort: "updated_at:1", Fields: "id,name", Number: 20},
 			want: &managementv3.SearchResourceServersRequestParameters{
 				Q:      auth0.String(`name co "billing"`),
 				Parser: managementv3.SearchParserEnumSCIM.Ptr(),
@@ -221,35 +220,8 @@ func TestBuildResourceServerSearchRequest(t *testing.T) {
 			},
 		},
 		{
-			name:   "caps the page size at 100",
-			inputs: apiSearchInputs{Number: 1000},
-			want: &managementv3.SearchResourceServersRequestParameters{
-				Parser: managementv3.SearchParserEnumLucene.Ptr(),
-				Take:   auth0.Int(100),
-			},
-		},
-		{
-			name:   "trims and normalizes the fields list",
-			inputs: apiSearchInputs{Fields: " id, name ,,identifier ", Number: 50},
-			want: &managementv3.SearchResourceServersRequestParameters{
-				Fields: auth0.String("id,name,identifier"),
-				Parser: managementv3.SearchParserEnumLucene.Ptr(),
-				Take:   auth0.Int(50),
-			},
-		},
-		{
-			name:    "rejects an unknown parser",
-			inputs:  apiSearchInputs{Parser: "sql", Number: 50},
-			wantErr: `invalid --parser "sql": must be 'lucene' or 'scim'`,
-		},
-		{
-			name:    "rejects an invalid sort",
-			inputs:  apiSearchInputs{Sort: "name:-1", Number: 50},
-			wantErr: `invalid --sort "name:-1": the search endpoint only sorts ascending, use 'field' or 'field:1'`,
-		},
-		{
 			name:   "sends include_fields=false with --exclude-fields",
-			inputs: apiSearchInputs{Fields: "scopes", ExcludeFields: true, Number: 50},
+			inputs: searchInputs{Fields: "scopes", ExcludeFields: true, Number: 50},
 			want: &managementv3.SearchResourceServersRequestParameters{
 				Fields:        auth0.String("scopes"),
 				IncludeFields: auth0.Bool(false),
@@ -258,50 +230,14 @@ func TestBuildResourceServerSearchRequest(t *testing.T) {
 			},
 		},
 		{
-			name:    "rejects --exclude-fields without --fields",
-			inputs:  apiSearchInputs{ExcludeFields: true, Number: 50},
-			wantErr: "--exclude-fields requires --fields",
+			name:    "rejects an invalid sort",
+			inputs:  searchInputs{Sort: "name:-1", Number: 50},
+			wantErr: `invalid --sort "name:-1": the search endpoint only sorts ascending, use 'field' or 'field:1'`,
 		},
 		{
-			name:    "rejects a --filter over 1000 characters",
-			inputs:  apiSearchInputs{Filter: strings.Repeat("a", 1001), Number: 50},
-			wantErr: "--filter must be at most 1000 characters",
-		},
-		{
-			name:   "counts --filter length in characters, not bytes",
-			inputs: apiSearchInputs{Filter: strings.Repeat("界", 400), Number: 50},
-			want: &managementv3.SearchResourceServersRequestParameters{
-				Q:      auth0.String(strings.Repeat("界", 400)),
-				Parser: managementv3.SearchParserEnumLucene.Ptr(),
-				Take:   auth0.Int(50),
-			},
-		},
-		{
-			name:   "measures --fields after trimming",
-			inputs: apiSearchInputs{Fields: strings.Repeat(" ,", 600) + "id", Number: 50},
-			want: &managementv3.SearchResourceServersRequestParameters{
-				Fields: auth0.String("id"),
-				Parser: managementv3.SearchParserEnumLucene.Ptr(),
-				Take:   auth0.Int(50),
-			},
-		},
-		{
-			name:   "treats a blank --fields as unset",
-			inputs: apiSearchInputs{Fields: " , ,", Number: 50},
-			want: &managementv3.SearchResourceServersRequestParameters{
-				Parser: managementv3.SearchParserEnumLucene.Ptr(),
-				Take:   auth0.Int(50),
-			},
-		},
-		{
-			name:    "rejects --exclude-fields with a blank --fields",
-			inputs:  apiSearchInputs{Fields: " , ", ExcludeFields: true, Number: 50},
-			wantErr: "--exclude-fields requires --fields",
-		},
-		{
-			name:    "rejects --fields over 1000 characters",
-			inputs:  apiSearchInputs{Fields: strings.Repeat("a", 1001), Number: 50},
-			wantErr: "--fields must be at most 1000 characters",
+			name:    "rejects invalid shared inputs",
+			inputs:  searchInputs{Parser: "sql", Number: 50},
+			wantErr: `invalid --parser "sql": must be 'lucene' or 'scim'`,
 		},
 	}
 

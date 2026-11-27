@@ -122,6 +122,26 @@ func (mr *MockClientGrantAPIV3MockRecorder) List(ctx, request any, opts ...any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockClientGrantAPIV3)(nil).List), varargs...)
 }
 
+// Search mocks base method.
+func (m *MockClientGrantAPIV3) Search(ctx context.Context, request *management.SearchClientGrantsRequestParameters, opts ...option.RequestOption) (*auth0.ClientGrantSearchPage, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, request}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Search", varargs...)
+	ret0, _ := ret[0].(*auth0.ClientGrantSearchPage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Search indicates an expected call of Search.
+func (mr *MockClientGrantAPIV3MockRecorder) Search(ctx, request any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, request}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockClientGrantAPIV3)(nil).Search), varargs...)
+}
+
 // Update mocks base method.
 func (m *MockClientGrantAPIV3) Update(ctx context.Context, id string, request *management.UpdateClientGrantRequestContent, opts ...option.RequestOption) (*management.UpdateClientGrantResponseContent, error) {
 	m.ctrl.T.Helper()

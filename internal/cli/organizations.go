@@ -11,9 +11,11 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 	"github.com/spf13/cobra"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
+	"github.com/auth0/auth0-cli/internal/auth0"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -86,6 +88,13 @@ var (
 		LongForm:  "number",
 		ShortForm: "n",
 	}
+
+	organizationSearchFilter = searchFilterFlag(
+		[]string{"id", "name", "display_name", "created_at", "metadata.{key}"},
+		`name:"acme"`,
+		`display_name co "Acme" and created_at gt "2026-01-01"`,
+	)
+	organizationSearchSort = searchSortFlag(organizationSortFields...)
 
 	organizationIDFlag = Flag{
 		Name:       "Organization ID",
@@ -179,6 +188,7 @@ func organizationsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listOrganizationsCmd(cli))
+	cmd.AddCommand(searchOrganizationsCmd(cli))
 	cmd.AddCommand(createOrganizationCmd(cli))
 	cmd.AddCommand(showOrganizationCmd(cli))
 	cmd.AddCommand(updateOrganizationCmd(cli))
@@ -276,6 +286,125 @@ func listOrganizationsCmd(cli *cli) *cobra.Command {
 	listQueryFlag.RegisterString(cmd, &inputs.Query, "")
 
 	return cmd
+}
+
+func searchOrganizationsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		searchInputs
+		Query  string
+		Schema bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "search",
+		Args:  cobra.NoArgs,
+		Short: "Search your organizations (Early Access)",
+		Long: `[Early Access] Search your organizations using Lucene or SCIM filter syntax.
+Results are eventually consistent; use ` + "`auth0 orgs list`" + ` for up-to-date data.
+'metadata' can be filtered on, but 'metadata' and 'client' are never returned.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
+		Example: `  auth0 orgs search
+  auth0 orgs search --filter 'name:"acme"'
+  auth0 orgs search --filter 'metadata.tier:gold' --sort display_name
+  auth0 orgs search --parser scim --filter 'display_name co "Acme"' -s name:1
+  auth0 orgs search --parser scim --filter 'created_at gt "2026-01-01"' -n 200 --csv
+  auth0 orgs search --filter 'id:<org-id>' --json
+
+  # Discover the query schema
+  auth0 orgs search --schema
+  auth0 orgs search --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 orgs search --query '{"q":"name sw \"acme\"","parser":"scim","sort":"name"}'`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{
+				Path:      "organizations/search",
+				SchemaCmd: "auth0 orgs search",
+			}, "organizations", inputs.Schema, inputs.Query); handled {
+				return err
+			}
+
+			if err := validateSearchNumber(inputs.Number); err != nil {
+				return err
+			}
+
+			request, err := buildOrganizationSearchRequest(inputs.searchInputs)
+			if err != nil {
+				return err
+			}
+
+			results, err := collectV3Pages(cmd.Context(), inputs.Number,
+				func(ctx context.Context) (*auth0.OrganizationSearchPage, error) {
+					return cli.apiv3.OrganizationV3.Search(ctx, request)
+				})
+			if err != nil {
+				return searchError("organizations", err)
+			}
+
+			warnSearchLimit(cli, len(results), inputs.Number)
+
+			cli.renderer.OrganizationSearchList(results)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+
+	organizationSearchFilter.RegisterString(cmd, &inputs.Filter, "")
+	searchParser.RegisterString(cmd, &inputs.Parser, "lucene")
+	organizationSearchSort.RegisterString(cmd, &inputs.Sort, "")
+	organizationNumber.Help = "Number of organizations to retrieve. Minimum 1, maximum 1000."
+	organizationNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	searchQueryFlag.RegisterString(cmd, &inputs.Query, "")
+	markQueryExclusive(cmd)
+
+	return cmd
+}
+
+// buildOrganizationSearchRequest validates the flag values and maps them onto the SDK
+// request. The endpoint has no field selection, so it takes no fields.
+func buildOrganizationSearchRequest(inputs searchInputs) (*managementv3.SearchOrganizationsRequestParameters, error) {
+	params, err := parseSearchInputs(inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	request := &managementv3.SearchOrganizationsRequestParameters{
+		Q:      params.Q,
+		Parser: params.Parser,
+		Take:   params.Take,
+	}
+
+	if inputs.Sort != "" {
+		field, err := organizationSortField(inputs.Sort)
+		if err != nil {
+			return nil, err
+		}
+		request.Sort = field.Ptr()
+	}
+
+	return request, nil
+}
+
+// organizationSortFields are the fields `orgs search` can sort by.
+var organizationSortFields = []string{
+	string(managementv3.OrganizationSortFieldEnumName),
+	string(managementv3.OrganizationSortFieldEnumDisplayName),
+	string(managementv3.OrganizationSortFieldEnumCreatedAt),
+}
+
+// organizationSortField maps 'field' or 'field:1' onto the SDK enum.
+func organizationSortField(s string) (managementv3.OrganizationSortFieldEnum, error) {
+	field, err := parseSearchSort(s, organizationSortFields...)
+
+	return managementv3.OrganizationSortFieldEnum(field), err
 }
 
 func showOrganizationCmd(cli *cli) *cobra.Command {

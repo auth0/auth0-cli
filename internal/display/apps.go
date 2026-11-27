@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
@@ -193,6 +194,66 @@ func (r *Renderer) ApplicationList(clients []*management.Client, revealSecrets b
 	}
 
 	r.Results(res)
+}
+
+// ApplicationSearchColumns are the `apps search` table columns, keyed by their API field name.
+// They match the `apps list` columns; search never returns the client secret.
+var ApplicationSearchColumns = TableColumns{
+	{Field: "client_id", Header: "Client ID"},
+	{Field: "name", Header: "Name"},
+	{Field: "app_type", Header: "Type"},
+	{Field: "resource_server_identifier", Header: "Resource Server"},
+}
+
+type applicationSearchView struct {
+	ClientID       string
+	Name           string
+	Type           string
+	ResourceServer string
+
+	// Fields limits the columns to these API fields; empty shows every column.
+	fields []string
+	raw    interface{}
+}
+
+func (v *applicationSearchView) AsTableHeader() []string {
+	return ApplicationSearchColumns.headers(v.fields)
+}
+
+func (v *applicationSearchView) AsTableRow() []string {
+	return ApplicationSearchColumns.row(v.fields, map[string]string{
+		"client_id":                  ansi.Faint(v.ClientID),
+		"name":                       v.Name,
+		"app_type":                   ApplyColorToFriendlyAppType(v.Type),
+		"resource_server_identifier": v.ResourceServer,
+	})
+}
+
+func (v *applicationSearchView) Object() interface{} {
+	return v.raw
+}
+
+// ApplicationSearchList renders search results, limiting the table to the columns left by fields.
+func (r *Renderer) ApplicationSearchList(clients []*managementv3.ClientSearchResponse, fields []string, exclude bool) {
+	columns := ApplicationSearchColumns.Left(fields, exclude)
+	if r.searchJSONFallback(ApplicationSearchColumns, columns, len(clients), clients) {
+		return
+	}
+
+	views := make([]View, 0, len(clients))
+	for _, client := range clients {
+		views = append(views, &applicationSearchView{
+			ClientID:       client.GetClientID(),
+			Name:           client.GetName(),
+			Type:           FriendlyAppType(string(client.GetAppType())),
+			ResourceServer: client.GetResourceServerIdentifier(),
+
+			fields: columns,
+			raw:    client,
+		})
+	}
+
+	r.tableResults("applications", searchEmptyHint, views)
 }
 
 func (r *Renderer) ApplicationShow(client *management.Client, revealSecrets bool) {

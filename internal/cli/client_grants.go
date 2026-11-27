@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 	"github.com/auth0/auth0-cli/internal/auth0"
+	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/prompt"
 )
 
@@ -89,6 +91,13 @@ var (
 		ShortForm: "n",
 		Help:      "Number of client grants to retrieve. Minimum 1, maximum 1000.",
 	}
+	clientGrantSearchFilter = searchFilterFlag(
+		[]string{"audience", "client_id", "subject_type", "allow_any_organization", "organization_id", "updated_at", "default_for"},
+		`audience:"https://api.example.com"`,
+		`client_id eq "<client-id>" and subject_type eq "client"`,
+	)
+	clientGrantSearchSort   = searchSortFlag(clientGrantSortFields...)
+	clientGrantSearchFields = searchFieldsFlag("id", "client_id", "audience")
 
 	clientGrantFilterClientID = Flag{
 		Name:      "Client ID",
@@ -151,6 +160,7 @@ func clientGrantsCmd(cli *cli) *cobra.Command {
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
 	cmd.AddCommand(listClientGrantsCmd(cli))
+	cmd.AddCommand(searchClientGrantsCmd(cli))
 	cmd.AddCommand(createClientGrantCmd(cli))
 	cmd.AddCommand(showClientGrantCmd(cli))
 	cmd.AddCommand(updateClientGrantCmd(cli))
@@ -289,6 +299,162 @@ func listClientGrantsCmd(cli *cli) *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("client-id", "default-for")
 
 	return cmd
+}
+
+func searchClientGrantsCmd(cli *cli) *cobra.Command {
+	var inputs struct {
+		searchInputs
+		Query  string
+		Schema bool
+	}
+
+	cmd := &cobra.Command{
+		Use:   "search",
+		Args:  cobra.NoArgs,
+		Short: "Search your client grants (Early Access)",
+		Long: `[Early Access] Search your client grants using Lucene or SCIM filter syntax.
+Results are eventually consistent; use ` + "`auth0 client-grants list`" + ` for up-to-date data.
+'scope' and 'allow_all_scopes' are one pair, and so are 'client_id' and 'default_for', because the Scopes and Client ID columns read both fields.
+With '--fields', listing one field of a pair is the same as listing both.
+With '--exclude-fields', excluding one field of a pair is the same as excluding both.
+'--query' sends its fields unchanged, so include both fields of a pair there.
+
+Use '--schema' to see available query parameters.
+Use '--query' to filter results via a JSON object (any API-supported parameter works immediately).`,
+		Example: `  auth0 client-grants search
+  auth0 client-grants search --filter 'audience:"https://api.example.com"'
+  auth0 client-grants search --filter 'client_id:<client-id>' --sort audience
+  auth0 client-grants search --parser scim --filter 'audience co "example" and organization_id eq "<org-id>"' -s audience:1
+  auth0 client-grants search --parser scim --filter 'updated_at gt "2026-01-01"' -n 200 --csv
+  auth0 client-grants search --filter 'default_for:third_party_clients' --fields id,default_for,audience --json
+
+  # Discover the query schema
+  auth0 client-grants search --schema
+  auth0 client-grants search --schema --json
+
+  # JSON query (for agents and automation)
+  auth0 client-grants search --query '{"q":"subject_type eq \"client\"","parser":"scim","sort":"audience","fields":"client_id,default_for,scope,allow_all_scopes"}'`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if handled, err := runSearchSchemaOrQuery(cli, cmd, jsonQuerySpec{
+				Path:      "client-grants/search",
+				SchemaCmd: "auth0 client-grants search",
+			}, "client grants", inputs.Schema, inputs.Query); handled {
+				return err
+			}
+
+			if err := validateSearchNumber(inputs.Number); err != nil {
+				return err
+			}
+
+			inputs.Fields = pairClientGrantSearchFields(inputs.Fields)
+
+			request, err := buildClientGrantSearchRequest(inputs.searchInputs)
+			if err != nil {
+				return err
+			}
+
+			fields := parseSearchFields(inputs.Fields)
+			if err := validateSearchCSV(cli, display.ClientGrantTableColumns, fields, inputs.ExcludeFields); err != nil {
+				return err
+			}
+
+			results, err := collectV3Pages(cmd.Context(), inputs.Number,
+				func(ctx context.Context) (*auth0.ClientGrantSearchPage, error) {
+					return cli.apiv3.ClientGrant.Search(ctx, request)
+				})
+			if err != nil {
+				return searchError("client grants", err)
+			}
+
+			warnSearchLimit(cli, len(results), inputs.Number)
+
+			cli.renderer.ClientGrantSearchList(results, fields, inputs.ExcludeFields)
+
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.Flags().BoolVar(&cli.csv, "csv", false, "Output in csv format.")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact", "csv")
+
+	clientGrantSearchFilter.RegisterString(cmd, &inputs.Filter, "")
+	searchParser.RegisterString(cmd, &inputs.Parser, "lucene")
+	clientGrantSearchSort.RegisterString(cmd, &inputs.Sort, "")
+	clientGrantSearchFields.RegisterString(cmd, &inputs.Fields, "")
+	searchExcludeFields.RegisterBool(cmd, &inputs.ExcludeFields, false)
+	clientGrantNumber.RegisterInt(cmd, &inputs.Number, defaultPageSize)
+	schemaFlag.RegisterBool(cmd, &inputs.Schema, false)
+	searchQueryFlag.RegisterString(cmd, &inputs.Query, "")
+	markQueryExclusive(cmd)
+
+	return cmd
+}
+
+// buildClientGrantSearchRequest validates the flag values and maps them onto the SDK request.
+func buildClientGrantSearchRequest(inputs searchInputs) (*managementv3.SearchClientGrantsRequestParameters, error) {
+	params, err := parseSearchInputs(inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	request := &managementv3.SearchClientGrantsRequestParameters{
+		Q:             params.Q,
+		Parser:        params.Parser,
+		Fields:        params.Fields,
+		IncludeFields: params.IncludeFields,
+		Take:          params.Take,
+	}
+
+	if inputs.Sort != "" {
+		field, err := clientGrantSortField(inputs.Sort)
+		if err != nil {
+			return nil, err
+		}
+		request.Sort = field.Ptr()
+	}
+
+	return request, nil
+}
+
+// clientGrantSearchFieldPairs are fields that one table cell reads together: the
+// Client ID cell falls back to default_for, and the Scopes cell shows "all" from
+// allow_all_scopes.
+var clientGrantSearchFieldPairs = [][2]string{
+	{"client_id", "default_for"},
+	{"scope", "allow_all_scopes"},
+}
+
+// pairClientGrantSearchFields adds the partner of each paired field in a --fields
+// value, so a pair is always returned together (or, with --exclude-fields, left out
+// together) and the table cells that read it stay correct.
+func pairClientGrantSearchFields(fields string) string {
+	names := parseSearchFields(fields)
+	for _, pair := range clientGrantSearchFieldPairs {
+		hasFirst, hasSecond := slices.Contains(names, pair[0]), slices.Contains(names, pair[1])
+		switch {
+		case hasFirst && !hasSecond:
+			names = append(names, pair[1])
+		case hasSecond && !hasFirst:
+			names = append(names, pair[0])
+		}
+	}
+
+	return strings.Join(names, ",")
+}
+
+// clientGrantSortFields are the fields `client-grants search` can sort by.
+var clientGrantSortFields = []string{
+	string(managementv3.ClientGrantSortFieldEnumAudience),
+	string(managementv3.ClientGrantSortFieldEnumUpdatedAt),
+}
+
+// clientGrantSortField maps 'field' or 'field:1' onto the SDK enum.
+func clientGrantSortField(s string) (managementv3.ClientGrantSortFieldEnum, error) {
+	field, err := parseSearchSort(s, clientGrantSortFields...)
+
+	return managementv3.ClientGrantSortFieldEnum(field), err
 }
 
 func showClientGrantCmd(cli *cli) *cobra.Command {

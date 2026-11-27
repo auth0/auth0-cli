@@ -15,6 +15,10 @@ import (
 // instantiated generic types) sees a plain named type in the interface.
 type ClientGrantPage = core.Page[*string, *managementv3.ClientGrantResponseContent, *managementv3.ListClientGrantPaginatedResponseContent]
 
+// ClientGrantSearchPage is one cursor-paginated page of client-grants search results.
+// It is aliased for the same reason as ClientGrantPage.
+type ClientGrantSearchPage = core.Page[*string, *managementv3.ClientGrantResponseContent, *managementv3.SearchClientGrantsResponseContent]
+
 // ClientGrantAPIV3 is the interface for the /client-grants endpoint.
 type ClientGrantAPIV3 interface {
 	// List client grants, including the scopes associated with the application/API pair.
@@ -27,6 +31,18 @@ type ClientGrantAPIV3 interface {
 		request *managementv3.ListClientGrantsRequestParameters,
 		opts ...option.RequestOption,
 	) (*ClientGrantPage, error)
+
+	// Search client grants using SCIM or Lucene filter syntax. Results are
+	// eventually consistent.
+	//
+	// Required scope: `read:client_grants`
+	//
+	// See: https://auth0.com/docs/api/management/v2/client-grants/get-client-grants-search
+	Search(
+		ctx context.Context,
+		request *managementv3.SearchClientGrantsRequestParameters,
+		opts ...option.RequestOption,
+	) (*ClientGrantSearchPage, error)
 
 	// Create a client grant, authorizing a client for the specified API (audience).
 	//

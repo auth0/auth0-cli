@@ -2,7 +2,6 @@ package display
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -69,14 +68,12 @@ func (v *apiView) Object() interface{} {
 	return v.raw
 }
 
-type apiTableColumn struct{ field, header string }
-
-// apiTableColumns are the table columns, keyed by their API field name.
-var apiTableColumns = []apiTableColumn{
-	{"id", "ID"},
-	{"name", "Name"},
-	{"identifier", "Identifier"},
-	{"scopes", "Scopes"},
+// APITableColumns are the `apis list` and `apis search` table columns, keyed by their API field name.
+var APITableColumns = TableColumns{
+	{Field: "id", Header: "ID"},
+	{Field: "name", Header: "Name"},
+	{Field: "identifier", Header: "Identifier"},
+	{Field: "scopes", Header: "Scopes"},
 }
 
 type apiTableView struct {
@@ -91,36 +88,16 @@ type apiTableView struct {
 }
 
 func (v *apiTableView) AsTableHeader() []string {
-	var header []string
-	for _, column := range apiTableColumns {
-		if v.shows(column.field) {
-			header = append(header, column.header)
-		}
-	}
-
-	return header
+	return APITableColumns.headers(v.fields)
 }
 
 func (v *apiTableView) AsTableRow() []string {
-	values := map[string]string{
+	return APITableColumns.row(v.fields, map[string]string{
 		"id":         ansi.Faint(v.ID),
 		"name":       v.Name,
 		"identifier": v.Identifier,
 		"scopes":     fmt.Sprint(v.Scopes),
-	}
-
-	var row []string
-	for _, column := range apiTableColumns {
-		if v.shows(column.field) {
-			row = append(row, values[column.field])
-		}
-	}
-
-	return row
-}
-
-func (v *apiTableView) shows(field string) bool {
-	return len(v.fields) == 0 || slices.Contains(v.fields, field)
+	})
 }
 
 func (v *apiTableView) Object() interface{} {
@@ -128,38 +105,22 @@ func (v *apiTableView) Object() interface{} {
 }
 
 func (r *Renderer) APIList(apis []*management.ResourceServer) {
-	views := make([]*apiTableView, 0, len(apis))
+	views := make([]View, 0, len(apis))
 	for _, api := range apis {
 		views = append(views, makeAPITableView(api))
 	}
 
-	r.apiTableResults(views, "Use 'auth0 apis create' to add one")
-}
-
-// APISearchColumns returns the table columns left in the response by the --fields list
-// (or, with exclude, by --exclude-fields). Empty fields keeps every column.
-func APISearchColumns(fields []string, exclude bool) []string {
-	var columns []string
-	for _, column := range apiTableColumns {
-		if len(fields) == 0 || slices.Contains(fields, column.field) != exclude {
-			columns = append(columns, column.field)
-		}
-	}
-
-	return columns
+	r.tableResults("apis", "Use 'auth0 apis create' to add one", views)
 }
 
 // APISearchList renders search results, limiting the table to the columns left by fields.
 func (r *Renderer) APISearchList(apis []*managementv3.ResourceServerSearchResponse, fields []string, exclude bool) {
-	columns := APISearchColumns(fields, exclude)
-
-	if len(columns) == 0 && len(apis) > 0 && r.Format == "" {
-		r.Infof("No table columns (id, name, identifier, scopes) are left in the response; showing JSON instead.")
-		r.JSONResult(apis)
+	columns := APITableColumns.Left(fields, exclude)
+	if r.searchJSONFallback(APITableColumns, columns, len(apis), apis) {
 		return
 	}
 
-	views := make([]*apiTableView, 0, len(apis))
+	views := make([]View, 0, len(apis))
 	for _, api := range apis {
 		views = append(views, &apiTableView{
 			ID:         api.GetID(),
@@ -172,25 +133,7 @@ func (r *Renderer) APISearchList(apis []*managementv3.ResourceServerSearchRespon
 		})
 	}
 
-	r.apiTableResults(views, "Try a broader --filter; results may lag very recent writes")
-}
-
-func (r *Renderer) apiTableResults(views []*apiTableView, emptyHint string) {
-	resource := "apis"
-
-	r.Heading(fmt.Sprintf("%s (%d)", resource, len(views)))
-
-	if len(views) == 0 {
-		r.EmptyState(resource, emptyHint)
-		return
-	}
-
-	results := make([]View, 0, len(views))
-	for _, view := range views {
-		results = append(results, view)
-	}
-
-	r.Results(results)
+	r.tableResults("apis", searchEmptyHint, views)
 }
 
 func (r *Renderer) APIShow(api *management.ResourceServer, jsonFlag bool) {

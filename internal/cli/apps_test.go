@@ -5,10 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
+	"github.com/auth0/go-auth0/v3/management/option"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -640,4 +646,381 @@ func TestFilterEmptyStrings(t *testing.T) {
 	assert.Equal(t, []string{}, excludeEmptyEntries([]string{"", ""}))
 	assert.Equal(t, []string{"a"}, excludeEmptyEntries([]string{"a"}))
 	assert.Equal(t, []string{"a", "b"}, excludeEmptyEntries([]string{"a", "", "b"}))
+}
+
+// newClientSearchPages chains pages of search results, ending with core.ErrNoPages.
+func newClientSearchPages(pages ...[]*managementv3.ClientSearchResponse) *auth0.ClientSearchPage {
+	var build func(i int) *auth0.ClientSearchPage
+	build = func(i int) *auth0.ClientSearchPage {
+		return &auth0.ClientSearchPage{
+			Results: pages[i],
+			NextPageFunc: func(context.Context) (*auth0.ClientSearchPage, error) {
+				if i+1 >= len(pages) {
+					return nil, core.ErrNoPages
+				}
+				return build(i + 1), nil
+			},
+		}
+	}
+
+	return build(0)
+}
+
+// searchClients returns one search result per client ID.
+func searchClients(ids ...string) []*managementv3.ClientSearchResponse {
+	clients := make([]*managementv3.ClientSearchResponse, 0, len(ids))
+	for _, id := range ids {
+		clients = append(clients, &managementv3.ClientSearchResponse{ClientID: auth0.String(id)})
+	}
+
+	return clients
+}
+
+func TestClientSortField(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    managementv3.ClientSortFieldEnum
+		wantErr string
+	}{
+		{input: "name", want: managementv3.ClientSortFieldEnumName},
+		{input: "updated_at", want: managementv3.ClientSortFieldEnumUpdatedAt},
+		{input: "name:1", want: managementv3.ClientSortFieldEnumName},
+		{input: "name:-1", wantErr: `invalid --sort "name:-1": the search endpoint only sorts ascending, use 'field' or 'field:1'`},
+		{input: "app_type", wantErr: `invalid --sort "app_type": must be one of name,updated_at`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			got, err := clientSortField(test.input)
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestBuildClientSearchRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		inputs  searchInputs
+		want    *managementv3.SearchClientsRequestParameters
+		wantErr string
+	}{
+		{
+			name:   "defaults to lucene and omits unset params",
+			inputs: searchInputs{Number: 50},
+			want: &managementv3.SearchClientsRequestParameters{
+				Parser: managementv3.SearchParserEnumLucene.Ptr(),
+				Take:   auth0.Int(50),
+			},
+		},
+		{
+			name:   "maps every flag onto the request",
+			inputs: searchInputs{Filter: `name co "billing"`, Parser: "scim", Sort: "updated_at:1", Fields: "client_id,name", Number: 20},
+			want: &managementv3.SearchClientsRequestParameters{
+				Q:      auth0.String(`name co "billing"`),
+				Parser: managementv3.SearchParserEnumSCIM.Ptr(),
+				Sort:   managementv3.ClientSortFieldEnumUpdatedAt.Ptr(),
+				Fields: auth0.String("client_id,name"),
+				Take:   auth0.Int(20),
+			},
+		},
+		{
+			name:   "sends include_fields=false with --exclude-fields",
+			inputs: searchInputs{Fields: "callbacks", ExcludeFields: true, Number: 50},
+			want: &managementv3.SearchClientsRequestParameters{
+				Fields:        auth0.String("callbacks"),
+				IncludeFields: auth0.Bool(false),
+				Parser:        managementv3.SearchParserEnumLucene.Ptr(),
+				Take:          auth0.Int(50),
+			},
+		},
+		{
+			name:   "caps the page size at 100",
+			inputs: searchInputs{Number: 1000},
+			want: &managementv3.SearchClientsRequestParameters{
+				Parser: managementv3.SearchParserEnumLucene.Ptr(),
+				Take:   auth0.Int(100),
+			},
+		},
+		{
+			name:    "rejects an invalid sort",
+			inputs:  searchInputs{Sort: "app_type", Number: 50},
+			wantErr: `invalid --sort "app_type": must be one of name,updated_at`,
+		},
+		{
+			name:    "rejects invalid shared inputs",
+			inputs:  searchInputs{ExcludeFields: true, Number: 50},
+			wantErr: "--exclude-fields requires --fields",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := buildClientSearchRequest(test.inputs)
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestSearchAppsCmd(t *testing.T) {
+	thousandIDs := make([]string, 1000)
+	for i := range thousandIDs {
+		thousandIDs[i] = fmt.Sprintf("client_%d", i)
+	}
+
+	tests := []struct {
+		name          string
+		args          []string
+		searchPage    *auth0.ClientSearchPage
+		searchErr     error
+		serverStatus  int
+		serverBody    string
+		assertRequest func(t testing.TB, req *managementv3.SearchClientsRequestParameters)
+		assertHTTP    func(t testing.TB, r *http.Request)
+		assertOutput  func(t testing.TB, stdout, stderr string)
+		wantErr       string
+	}{
+		{
+			name:       "sends the flags to the search endpoint",
+			args:       []string{"--filter", `name:"My App"`, "-s", "name", "--fields", "client_id,name", "-n", "10"},
+			searchPage: newClientSearchPages(searchClients("client_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientsRequestParameters) {
+				assert.Equal(t, `name:"My App"`, *req.Q)
+				assert.Equal(t, managementv3.SearchParserEnumLucene, *req.Parser)
+				assert.Equal(t, managementv3.ClientSortFieldEnumName, *req.Sort)
+				assert.Equal(t, "client_id,name", *req.Fields)
+				assert.Equal(t, 10, *req.Take)
+			},
+		},
+		{
+			name: "renders the apps list columns",
+			searchPage: newClientSearchPages([]*managementv3.ClientSearchResponse{{
+				ClientID:                 auth0.String("client_1"),
+				Name:                     auth0.String("My App"),
+				AppType:                  managementv3.ClientAppTypeEnumSpa.Ptr(),
+				ResourceServerIdentifier: auth0.String("https://api.example.com"),
+			}}),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				expectTable(t, stdout,
+					[]string{"CLIENT ID", "NAME", "TYPE", "RESOURCE SERVER"},
+					[][]string{{"client_1", "My App", "Single Page Web Application", "https://api.example.com"}},
+				)
+			},
+		},
+		{
+			name:       "sends --exclude-fields as include_fields=false",
+			args:       []string{"--fields", "app_type", "--exclude-fields"},
+			searchPage: newClientSearchPages(searchClients("client_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientsRequestParameters) {
+				assert.Equal(t, "app_type", *req.Fields)
+				assert.False(t, *req.IncludeFields)
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "CLIENT ID")
+				assert.NotContains(t, stdout, "TYPE")
+			},
+		},
+		{
+			name:       "shows JSON when --fields leaves no table column",
+			args:       []string{"--fields", "description"},
+			searchPage: newClientSearchPages(searchClients("client_1")),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, "No table columns (client_id, name, app_type, resource_server_identifier) are left in the response; showing JSON instead.")
+				assert.Contains(t, stdout, `"client_id": "client_1"`)
+			},
+		},
+		{
+			name:       "collects results across pages up to --number",
+			args:       []string{"--filter", "name:*", "-n", "3", "--json"},
+			searchPage: newClientSearchPages(searchClients("client_1", "client_2"), searchClients("client_3", "client_4")),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "client_3")
+				assert.NotContains(t, stdout, "client_4")
+				assert.Contains(t, stderr, "Results may be limited by --number; more may match.")
+			},
+		},
+		{
+			name:       "does not suggest raising --number when it is already at the maximum",
+			args:       []string{"-n", "1000", "--json"},
+			searchPage: newClientSearchPages(searchClients(thousandIDs...)),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, "more may match. Refine --filter.")
+				assert.NotContains(t, stderr, "raise --number")
+			},
+		},
+		{
+			name:       "renders an empty result",
+			args:       []string{"--filter", `name:"missing"`},
+			searchPage: newClientSearchPages(searchClients()),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, "applications (0)")
+				assert.Contains(t, stderr, "Try a broader --filter")
+			},
+		},
+		{
+			name:       "sends --query JSON params to the search endpoint",
+			args:       []string{"-q", `{"q":"name co \"billing\"","parser":"scim"}`},
+			serverBody: `{"clients":[{"client_id":"client_1"}]}`,
+			assertHTTP: func(t testing.TB, r *http.Request) {
+				assert.Equal(t, "/api/v2/clients/search", r.URL.Path)
+				assert.Equal(t, `name co "billing"`, r.URL.Query().Get("q"))
+				assert.Equal(t, "scim", r.URL.Query().Get("parser"))
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "client_1")
+			},
+		},
+		{
+			name:       "allows --number with --query, which ignores it",
+			args:       []string{"-q", `{"q":"name:*"}`, "-n", "5"},
+			serverBody: `{"clients":[]}`,
+			assertHTTP: func(t testing.TB, r *http.Request) {
+				assert.Empty(t, r.URL.Query().Get("take"))
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, `--number is ignored with --query; set "take" (max 100) in the JSON instead.`)
+			},
+		},
+		{
+			name:    "rejects --query combined with --filter",
+			args:    []string{"-q", `{"q":"name:*"}`, "--filter", "name:*"},
+			wantErr: "if any flags in the group [query filter] are set none of the others can be; [filter query] were all set",
+		},
+		{
+			name:    "rejects --query combined with --parser",
+			args:    []string{"-q", `{"q":"name:*"}`, "--parser", "scim"},
+			wantErr: "if any flags in the group [query parser] are set none of the others can be; [parser query] were all set",
+		},
+		{
+			name:    "rejects --query combined with --sort",
+			args:    []string{"-q", `{"q":"name:*"}`, "--sort", "name"},
+			wantErr: "if any flags in the group [query sort] are set none of the others can be; [query sort] were all set",
+		},
+		{
+			name:    "rejects --query combined with --fields",
+			args:    []string{"-q", `{"q":"name:*"}`, "--fields", "name"},
+			wantErr: "if any flags in the group [query fields] are set none of the others can be; [fields query] were all set",
+		},
+		{
+			name:    "rejects --query combined with --exclude-fields",
+			args:    []string{"-q", `{"q":"name:*"}`, "--exclude-fields"},
+			wantErr: "if any flags in the group [query exclude-fields] are set none of the others can be; [exclude-fields query] were all set",
+		},
+		{
+			name:    "rejects --csv when --fields leaves no table column",
+			args:    []string{"--fields", "description", "--csv"},
+			wantErr: "--csv needs at least one table column (client_id, name, app_type, resource_server_identifier) left by --fields",
+		},
+		{
+			name:    "rejects an invalid --sort before calling the API",
+			args:    []string{"-s", "app_type"},
+			wantErr: `invalid --sort "app_type": must be one of name,updated_at`,
+		},
+		{
+			name:    "rejects an out-of-range --number before calling the API",
+			args:    []string{"--filter", "name:*", "-n", "1001"},
+			wantErr: "number flag invalid, please pass a number between 1 and 1000",
+		},
+		{
+			name:    "does not offer --reveal-secrets, as search never returns secrets",
+			args:    []string{"--reveal-secrets"},
+			wantErr: "unknown flag: --reveal-secrets",
+		},
+		{
+			name:      "wraps a generic API error",
+			args:      []string{"--filter", "name:*"},
+			searchErr: errors.New("boom"),
+			wantErr:   "failed to search applications: boom",
+		},
+		{
+			name:      "explains a search timeout",
+			args:      []string{"--filter", "name:*"},
+			searchErr: core.NewAPIError(http.StatusGatewayTimeout, nil, errors.New("timeout")),
+			wantErr:   "failed to search applications: the search timed out, simplify your query and try again: 504: timeout",
+		},
+		{
+			name:      "explains an unavailable Early Access endpoint",
+			args:      []string{"--filter", "name:*"},
+			searchErr: core.NewAPIError(http.StatusNotFound, nil, errors.New("not found")),
+			wantErr:   "failed to search applications: the search endpoint is in Early Access and may not be enabled for this tenant: 404: not found",
+		},
+		{
+			name:         "explains a search timeout in --query mode",
+			args:         []string{"-q", `{"q":"name:*"}`},
+			serverStatus: http.StatusGatewayTimeout,
+			wantErr:      "failed to search applications: the search timed out, simplify your query and try again: 504: API request failed: Gateway Timeout",
+		},
+		{
+			name:         "explains an unavailable Early Access endpoint in --query mode",
+			args:         []string{"-q", `{"q":"name:*"}`},
+			serverStatus: http.StatusNotFound,
+			wantErr:      "failed to search applications: the search endpoint is in Early Access and may not be enabled for this tenant: 404: API request failed: Not Found",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			var captured *managementv3.SearchClientsRequestParameters
+			searchAPI := mock.NewMockClientAPIV3(ctrl)
+			if test.searchPage != nil || test.searchErr != nil {
+				searchAPI.EXPECT().
+					Search(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req *managementv3.SearchClientsRequestParameters, _ ...option.RequestOption) (*auth0.ClientSearchPage, error) {
+						captured = req
+						return test.searchPage, test.searchErr
+					})
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if test.assertHTTP != nil {
+					test.assertHTTP(t, r)
+				}
+				if test.serverStatus != 0 {
+					w.WriteHeader(test.serverStatus)
+					_, _ = w.Write([]byte(http.StatusText(test.serverStatus)))
+					return
+				}
+				_, _ = w.Write([]byte(test.serverBody))
+			}))
+			defer server.Close()
+
+			renderer := testRenderer()
+			cli := &cli{
+				api:      &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+				apiv3:    &auth0.APIV3{ClientV3: searchAPI},
+				renderer: renderer,
+			}
+
+			cmd := searchAppsCmd(cli)
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			if test.assertRequest != nil {
+				test.assertRequest(t, captured)
+			}
+			if test.assertOutput != nil {
+				test.assertOutput(t, fmt.Sprint(renderer.ResultWriter), fmt.Sprint(renderer.MessageWriter))
+			}
+		})
+	}
 }

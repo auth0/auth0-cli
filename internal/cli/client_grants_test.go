@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/auth0/go-auth0/management"
 	managementv3 "github.com/auth0/go-auth0/v3/management"
+	"github.com/auth0/go-auth0/v3/management/core"
 	"github.com/auth0/go-auth0/v3/management/option"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -933,4 +937,454 @@ func TestNonSystemAPIIdentifierPickerOptions(t *testing.T) {
 
 		assert.ErrorContains(t, err, "there are currently no APIs to choose from")
 	})
+}
+
+// newClientGrantSearchPages chains pages of search results, ending with core.ErrNoPages.
+func newClientGrantSearchPages(pages ...[]*managementv3.ClientGrantResponseContent) *auth0.ClientGrantSearchPage {
+	var build func(i int) *auth0.ClientGrantSearchPage
+	build = func(i int) *auth0.ClientGrantSearchPage {
+		return &auth0.ClientGrantSearchPage{
+			Results: pages[i],
+			NextPageFunc: func(context.Context) (*auth0.ClientGrantSearchPage, error) {
+				if i+1 >= len(pages) {
+					return nil, core.ErrNoPages
+				}
+				return build(i + 1), nil
+			},
+		}
+	}
+
+	return build(0)
+}
+
+// searchClientGrants returns one search result per grant ID.
+func searchClientGrants(ids ...string) []*managementv3.ClientGrantResponseContent {
+	grants := make([]*managementv3.ClientGrantResponseContent, 0, len(ids))
+	for _, id := range ids {
+		grants = append(grants, &managementv3.ClientGrantResponseContent{ID: auth0.String(id)})
+	}
+
+	return grants
+}
+
+func TestClientGrantSortField(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    managementv3.ClientGrantSortFieldEnum
+		wantErr string
+	}{
+		{input: "audience", want: managementv3.ClientGrantSortFieldEnumAudience},
+		{input: "updated_at", want: managementv3.ClientGrantSortFieldEnumUpdatedAt},
+		{input: "audience:1", want: managementv3.ClientGrantSortFieldEnumAudience},
+		{input: "audience:-1", wantErr: `invalid --sort "audience:-1": the search endpoint only sorts ascending, use 'field' or 'field:1'`},
+		{input: "client_id", wantErr: `invalid --sort "client_id": must be one of audience,updated_at`},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			got, err := clientGrantSortField(test.input)
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestPairClientGrantSearchFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		fields string
+		want   string
+	}{
+		{name: "leaves an empty value empty", fields: "", want: ""},
+		{name: "leaves fields without a pair unchanged", fields: "id,audience", want: "id,audience"},
+		{name: "adds allow_all_scopes to scope", fields: "id,scope", want: "id,scope,allow_all_scopes"},
+		{name: "adds scope to allow_all_scopes", fields: "allow_all_scopes", want: "allow_all_scopes,scope"},
+		{name: "adds default_for to client_id", fields: "client_id", want: "client_id,default_for"},
+		{name: "adds client_id to default_for", fields: "default_for", want: "default_for,client_id"},
+		{name: "keeps a complete pair as is", fields: "scope,allow_all_scopes", want: "scope,allow_all_scopes"},
+		{name: "pairs both pairs and trims the list", fields: " scope , ,client_id ", want: "scope,client_id,default_for,allow_all_scopes"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, pairClientGrantSearchFields(test.fields))
+		})
+	}
+}
+
+func TestBuildClientGrantSearchRequest(t *testing.T) {
+	tests := []struct {
+		name    string
+		inputs  searchInputs
+		want    *managementv3.SearchClientGrantsRequestParameters
+		wantErr string
+	}{
+		{
+			name:   "defaults to lucene and omits unset params",
+			inputs: searchInputs{Number: 50},
+			want: &managementv3.SearchClientGrantsRequestParameters{
+				Parser: managementv3.SearchParserEnumLucene.Ptr(),
+				Take:   auth0.Int(50),
+			},
+		},
+		{
+			name:   "maps every flag onto the request",
+			inputs: searchInputs{Filter: `audience co "example"`, Parser: "scim", Sort: "updated_at:1", Fields: "id,audience", Number: 20},
+			want: &managementv3.SearchClientGrantsRequestParameters{
+				Q:      auth0.String(`audience co "example"`),
+				Parser: managementv3.SearchParserEnumSCIM.Ptr(),
+				Sort:   managementv3.ClientGrantSortFieldEnumUpdatedAt.Ptr(),
+				Fields: auth0.String("id,audience"),
+				Take:   auth0.Int(20),
+			},
+		},
+		{
+			name:   "sends include_fields=false with --exclude-fields",
+			inputs: searchInputs{Fields: "scope", ExcludeFields: true, Number: 50},
+			want: &managementv3.SearchClientGrantsRequestParameters{
+				Fields:        auth0.String("scope"),
+				IncludeFields: auth0.Bool(false),
+				Parser:        managementv3.SearchParserEnumLucene.Ptr(),
+				Take:          auth0.Int(50),
+			},
+		},
+		{
+			name:   "caps the page size at 100",
+			inputs: searchInputs{Number: 1000},
+			want: &managementv3.SearchClientGrantsRequestParameters{
+				Parser: managementv3.SearchParserEnumLucene.Ptr(),
+				Take:   auth0.Int(100),
+			},
+		},
+		{
+			name:    "rejects an invalid sort",
+			inputs:  searchInputs{Sort: "client_id", Number: 50},
+			wantErr: `invalid --sort "client_id": must be one of audience,updated_at`,
+		},
+		{
+			name:    "rejects invalid shared inputs",
+			inputs:  searchInputs{ExcludeFields: true, Number: 50},
+			wantErr: "--exclude-fields requires --fields",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := buildClientGrantSearchRequest(test.inputs)
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, test.want, got)
+		})
+	}
+}
+
+func TestSearchClientGrantsCmd(t *testing.T) {
+	thousandIDs := make([]string, 1000)
+	for i := range thousandIDs {
+		thousandIDs[i] = fmt.Sprintf("cgr_%d", i)
+	}
+
+	allowAll := true
+	tests := []struct {
+		name          string
+		args          []string
+		searchPage    *auth0.ClientGrantSearchPage
+		searchErr     error
+		serverStatus  int
+		serverBody    string
+		assertRequest func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters)
+		assertHTTP    func(t testing.TB, r *http.Request)
+		assertOutput  func(t testing.TB, stdout, stderr string)
+		wantErr       string
+	}{
+		{
+			name:       "sends the flags to the search endpoint",
+			args:       []string{"--filter", `audience:"https://api.example.com"`, "-s", "audience", "--fields", "id,audience", "-n", "10"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, `audience:"https://api.example.com"`, *req.Q)
+				assert.Equal(t, managementv3.SearchParserEnumLucene, *req.Parser)
+				assert.Equal(t, managementv3.ClientGrantSortFieldEnumAudience, *req.Sort)
+				assert.Equal(t, "id,audience", *req.Fields)
+				assert.Equal(t, 10, *req.Take)
+			},
+		},
+		{
+			name: "renders the client-grants list columns",
+			searchPage: newClientGrantSearchPages([]*managementv3.ClientGrantResponseContent{
+				{ID: auth0.String("cgr_1"), ClientID: auth0.String("client_1"), Audience: auth0.String("https://api.example.com"), Scope: []string{"read:a", "write:a"}},
+				{ID: auth0.String("cgr_2"), DefaultFor: managementv3.ClientGrantDefaultForEnumThirdPartyClients.Ptr(), Audience: auth0.String("https://other"), AllowAllScopes: &allowAll},
+			}),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				expectTable(t, stdout,
+					[]string{"ID", "CLIENT ID", "AUDIENCE", "SCOPES"},
+					[][]string{
+						{"cgr_1", "client_1", "https://api.example.com", "2"},
+						{"cgr_2", "third_party_clients", "https://other", "all"},
+					},
+				)
+			},
+		},
+		{
+			name:       "sends the partner of each paired field",
+			args:       []string{"--fields", "id,scope,client_id"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "id,scope,client_id,default_for,allow_all_scopes", *req.Fields)
+			},
+		},
+		{
+			name:       "keeps a column when only the partner field is requested",
+			args:       []string{"--fields", "default_for,allow_all_scopes"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "default_for,allow_all_scopes,client_id,scope", *req.Fields)
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "CLIENT ID")
+				assert.Contains(t, stdout, "SCOPES")
+				assert.NotContains(t, stdout, "AUDIENCE")
+				assert.NotContains(t, stderr, "No table columns")
+			},
+		},
+		{
+			name:       "excludes both fields of a pair with --exclude-fields",
+			args:       []string{"--fields", "scope", "--exclude-fields"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "scope,allow_all_scopes", *req.Fields)
+				assert.False(t, *req.IncludeFields)
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "AUDIENCE")
+				assert.NotContains(t, stdout, "SCOPES")
+			},
+		},
+		{
+			name:       "sends --query fields unchanged",
+			args:       []string{"-q", `{"fields":"scope"}`},
+			serverBody: `{"client_grants":[]}`,
+			assertHTTP: func(t testing.TB, r *http.Request) {
+				assert.Equal(t, "scope", r.URL.Query().Get("fields"))
+			},
+		},
+		{
+			name:       "sends --exclude-fields as include_fields=false",
+			args:       []string{"--fields", "audience", "--exclude-fields"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertRequest: func(t testing.TB, req *managementv3.SearchClientGrantsRequestParameters) {
+				assert.Equal(t, "audience", *req.Fields)
+				assert.False(t, *req.IncludeFields)
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "CLIENT ID")
+				assert.NotContains(t, stdout, "AUDIENCE")
+			},
+		},
+		{
+			name:       "shows JSON when --fields leaves no table column",
+			args:       []string{"--fields", "subject_type"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1")),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, "No table columns (id, client_id, audience, scope) are left in the response; showing JSON instead.")
+				assert.Contains(t, stdout, `"id": "cgr_1"`)
+			},
+		},
+		{
+			name:       "collects results across pages up to --number",
+			args:       []string{"--filter", "audience:*", "-n", "3", "--json"},
+			searchPage: newClientGrantSearchPages(searchClientGrants("cgr_1", "cgr_2"), searchClientGrants("cgr_3", "cgr_4")),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "cgr_3")
+				assert.NotContains(t, stdout, "cgr_4")
+				assert.Contains(t, stderr, "Results may be limited by --number; more may match.")
+			},
+		},
+		{
+			name:       "does not suggest raising --number when it is already at the maximum",
+			args:       []string{"-n", "1000", "--json"},
+			searchPage: newClientGrantSearchPages(searchClientGrants(thousandIDs...)),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, "more may match. Refine --filter.")
+				assert.NotContains(t, stderr, "raise --number")
+			},
+		},
+		{
+			name:       "renders an empty result",
+			args:       []string{"--filter", `audience:"missing"`},
+			searchPage: newClientGrantSearchPages(searchClientGrants()),
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, "client grants (0)")
+				assert.Contains(t, stderr, "Try a broader --filter")
+			},
+		},
+		{
+			name:       "sends --query JSON params to the search endpoint",
+			args:       []string{"-q", `{"q":"audience co \"example\"","parser":"scim"}`},
+			serverBody: `{"client_grants":[{"id":"cgr_1"}]}`,
+			assertHTTP: func(t testing.TB, r *http.Request) {
+				assert.Equal(t, "/api/v2/client-grants/search", r.URL.Path)
+				assert.Equal(t, `audience co "example"`, r.URL.Query().Get("q"))
+				assert.Equal(t, "scim", r.URL.Query().Get("parser"))
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stdout, "cgr_1")
+			},
+		},
+		{
+			name:       "allows --number with --query, which ignores it",
+			args:       []string{"-q", `{"q":"audience:*"}`, "-n", "5"},
+			serverBody: `{"client_grants":[]}`,
+			assertHTTP: func(t testing.TB, r *http.Request) {
+				assert.Empty(t, r.URL.Query().Get("take"))
+			},
+			assertOutput: func(t testing.TB, stdout, stderr string) {
+				assert.Contains(t, stderr, `--number is ignored with --query; set "take" (max 100) in the JSON instead.`)
+			},
+		},
+		{
+			name:    "rejects --query combined with --filter",
+			args:    []string{"-q", `{"q":"audience:*"}`, "--filter", "audience:*"},
+			wantErr: "if any flags in the group [query filter] are set none of the others can be; [filter query] were all set",
+		},
+		{
+			name:    "rejects --query combined with --parser",
+			args:    []string{"-q", `{"q":"audience:*"}`, "--parser", "scim"},
+			wantErr: "if any flags in the group [query parser] are set none of the others can be; [parser query] were all set",
+		},
+		{
+			name:    "rejects --query combined with --sort",
+			args:    []string{"-q", `{"q":"audience:*"}`, "--sort", "audience"},
+			wantErr: "if any flags in the group [query sort] are set none of the others can be; [query sort] were all set",
+		},
+		{
+			name:    "rejects --query combined with --fields",
+			args:    []string{"-q", `{"q":"audience:*"}`, "--fields", "id"},
+			wantErr: "if any flags in the group [query fields] are set none of the others can be; [fields query] were all set",
+		},
+		{
+			name:    "rejects --query combined with --exclude-fields",
+			args:    []string{"-q", `{"q":"audience:*"}`, "--exclude-fields"},
+			wantErr: "if any flags in the group [query exclude-fields] are set none of the others can be; [exclude-fields query] were all set",
+		},
+		{
+			name:    "rejects --csv when --fields leaves no table column",
+			args:    []string{"--fields", "subject_type", "--csv"},
+			wantErr: "--csv needs at least one table column (id, client_id, audience, scope) left by --fields",
+		},
+		{
+			name:    "rejects --csv when excluding one field of each pair removes every column",
+			args:    []string{"--fields", "id,audience,scope,default_for", "--exclude-fields", "--csv"},
+			wantErr: "--csv needs at least one table column (id, client_id, audience, scope) left by --fields",
+		},
+		{
+			name:    "rejects an invalid --sort before calling the API",
+			args:    []string{"-s", "client_id"},
+			wantErr: `invalid --sort "client_id": must be one of audience,updated_at`,
+		},
+		{
+			name:    "rejects an out-of-range --number before calling the API",
+			args:    []string{"--filter", "audience:*", "-n", "1001"},
+			wantErr: "number flag invalid, please pass a number between 1 and 1000",
+		},
+		{
+			name:    "does not offer the list filter flags",
+			args:    []string{"--client-id", "client_1"},
+			wantErr: "unknown flag: --client-id",
+		},
+		{
+			name:      "wraps a generic API error",
+			args:      []string{"--filter", "audience:*"},
+			searchErr: errors.New("boom"),
+			wantErr:   "failed to search client grants: boom",
+		},
+		{
+			name:      "explains a search timeout",
+			args:      []string{"--filter", "audience:*"},
+			searchErr: core.NewAPIError(http.StatusGatewayTimeout, nil, errors.New("timeout")),
+			wantErr:   "failed to search client grants: the search timed out, simplify your query and try again: 504: timeout",
+		},
+		{
+			name:      "explains an unavailable Early Access endpoint",
+			args:      []string{"--filter", "audience:*"},
+			searchErr: core.NewAPIError(http.StatusNotFound, nil, errors.New("not found")),
+			wantErr:   "failed to search client grants: the search endpoint is in Early Access and may not be enabled for this tenant: 404: not found",
+		},
+		{
+			name:         "explains a search timeout in --query mode",
+			args:         []string{"-q", `{"q":"audience:*"}`},
+			serverStatus: http.StatusGatewayTimeout,
+			wantErr:      "failed to search client grants: the search timed out, simplify your query and try again: 504: API request failed: Gateway Timeout",
+		},
+		{
+			name:         "explains an unavailable Early Access endpoint in --query mode",
+			args:         []string{"-q", `{"q":"audience:*"}`},
+			serverStatus: http.StatusNotFound,
+			wantErr:      "failed to search client grants: the search endpoint is in Early Access and may not be enabled for this tenant: 404: API request failed: Not Found",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			var captured *managementv3.SearchClientGrantsRequestParameters
+			grantAPI := mock.NewMockClientGrantAPIV3(ctrl)
+			if test.searchPage != nil || test.searchErr != nil {
+				grantAPI.EXPECT().
+					Search(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req *managementv3.SearchClientGrantsRequestParameters, _ ...option.RequestOption) (*auth0.ClientGrantSearchPage, error) {
+						captured = req
+						return test.searchPage, test.searchErr
+					})
+			}
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if test.assertHTTP != nil {
+					test.assertHTTP(t, r)
+				}
+				if test.serverStatus != 0 {
+					w.WriteHeader(test.serverStatus)
+					_, _ = w.Write([]byte(http.StatusText(test.serverStatus)))
+					return
+				}
+				_, _ = w.Write([]byte(test.serverBody))
+			}))
+			defer server.Close()
+
+			renderer := testRenderer()
+			cli := &cli{
+				api:      &auth0.API{HTTPClient: &mockHTTPClientAPI{baseURL: server.URL}},
+				apiv3:    &auth0.APIV3{ClientGrant: grantAPI},
+				renderer: renderer,
+			}
+
+			cmd := searchClientGrantsCmd(cli)
+			cmd.SetArgs(test.args)
+			err := cmd.Execute()
+
+			if test.wantErr != "" {
+				assert.EqualError(t, err, test.wantErr)
+				return
+			}
+
+			assert.NoError(t, err)
+			if test.assertRequest != nil {
+				test.assertRequest(t, captured)
+			}
+			if test.assertOutput != nil {
+				test.assertOutput(t, fmt.Sprint(renderer.ResultWriter), fmt.Sprint(renderer.MessageWriter))
+			}
+		})
+	}
 }

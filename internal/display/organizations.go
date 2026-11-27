@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/auth0/go-auth0/management"
+	managementv3 "github.com/auth0/go-auth0/v3/management"
 
 	"github.com/auth0/auth0-cli/internal/ansi"
 )
@@ -59,6 +60,21 @@ func (r *Renderer) OrganizationList(organizations []*management.Organization) {
 	}
 
 	r.Results(res)
+}
+
+// OrganizationSearchList renders search results with the `orgs list` columns.
+func (r *Renderer) OrganizationSearchList(organizations []*managementv3.SearchOrganization) {
+	views := make([]View, 0, len(organizations))
+	for _, organization := range organizations {
+		views = append(views, &organizationView{
+			ID:          organization.GetID(),
+			Name:        organization.GetName(),
+			DisplayName: organization.GetDisplayName(),
+			raw:         organization,
+		})
+	}
+
+	r.tableResults("organizations", searchEmptyHint, views)
 }
 
 func (r *Renderer) OrganizationShow(organization *management.Organization) {
