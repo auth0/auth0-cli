@@ -10,8 +10,8 @@ import (
 // unsafeFile says why another local account could change the file or directory
 // after it was checked, or returns an empty string when none could: it is
 // writable by its group or by everyone, or it is a regular file with another
-// hard link that can be written through.
-func unsafeFile(info os.FileInfo) string {
+// hard link that can be written through. The open file is only used on Windows.
+func unsafeFile(_ *os.File, info os.FileInfo) string {
 	if info.Mode().Perm()&0o022 != 0 {
 		return "is writable by other users"
 	}

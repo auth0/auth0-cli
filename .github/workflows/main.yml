@@ -63,6 +63,34 @@ jobs:
           name: unit-tests-artifact
           path: ./coverage-unit-tests.out
 
+  windows-tests:
+    name: Plugin Tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Run plugin library tests
+        run: go test -count=1 ./internal/plugins/...
+
+      - name: Run plugin command tests
+        if: ${{ !cancelled() }}
+        run: go test -count=1 -run 'Plugin|Approvals|Commands|InterruptGuard|OwnedFlags|NamespaceJSONHelp|RegistryNextAction' ./internal/cli
+
+      - name: Run plugin library tests with the test registry key
+        if: ${{ !cancelled() }}
+        run: go test -count=1 -tags plugintest ./internal/plugins/...
+
+      - name: Run plugin command tests with the test registry key
+        if: ${{ !cancelled() }}
+        run: go test -count=1 -tags plugintest -run 'Plugin|Approvals|Commands|InterruptGuard|OwnedFlags|NamespaceJSONHelp|RegistryNextAction' ./internal/cli
+
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
