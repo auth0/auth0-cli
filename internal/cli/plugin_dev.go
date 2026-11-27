@@ -7,16 +7,19 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/auth0/auth0-cli/internal/buildinfo"
 	"github.com/auth0/auth0-cli/internal/display"
 	"github.com/auth0/auth0-cli/internal/plugins"
 	"github.com/auth0/auth0-cli/internal/plugins/devlink"
 	"github.com/auth0/auth0-cli/internal/plugins/devpolicy"
 	"github.com/auth0/auth0-cli/internal/plugins/registry"
+	"github.com/auth0/auth0-cli/internal/plugins/scaffold"
 	"github.com/auth0/auth0-cli/internal/plugins/store"
 )
 
@@ -37,6 +40,83 @@ var pluginDevPolicy = Flag{
 	LongForm: "policy",
 	Help:     "File with the scope rules that this linked build may use. Defaults to " + devpolicy.FileName + " in the plugin directory.",
 }
+
+const (
+	pluginCreateDefaultVersion     = "0.1.0"
+	pluginCreateDefaultDescription = "A plugin for the Auth0 CLI"
+	pluginCreateDefaultLicense     = "UNLICENSED"
+	pluginCreateDefaultScope       = "read:clients"
+)
+
+var (
+	pluginCreateName = Argument{
+		Name: "Name",
+		Help: "Short name of the plugin: lowercase letters, digits and hyphens. The plugin runs as auth0 <name>.",
+	}
+	pluginCreateLang = Flag{
+		Name:       "Language",
+		LongForm:   "lang",
+		Help:       "Language of the starter project: go or ts.",
+		IsRequired: true,
+	}
+	pluginCreateAuthor = Flag{
+		Name:       "Author",
+		LongForm:   "author",
+		Help:       "Team or person that owns the plugin. It becomes owner.team in plugin.json.",
+		IsRequired: true,
+	}
+	pluginCreateBugs = Flag{
+		Name:       "Bugs URL",
+		LongForm:   "bugs",
+		Help:       "HTTPS URL where people report problems with the plugin. It becomes owner.bugs in plugin.json.",
+		IsRequired: true,
+	}
+	pluginCreateID = Flag{
+		Name:     "ID",
+		LongForm: "id",
+		Help:     "ID of the plugin, " + registry.DefaultRegistryName + "/<name>. The default is " + registry.DefaultRegistryName + "/ followed by the name.",
+	}
+	pluginCreateVersion = Flag{
+		Name:     "Version",
+		LongForm: "version",
+		Help:     "First version of the plugin, as MAJOR.MINOR.PATCH.",
+	}
+	pluginCreateDescription = Flag{
+		Name:     "Description",
+		LongForm: "description",
+		Help:     "One line that says what the plugin does, up to 120 characters.",
+	}
+	pluginCreateCommand = Flag{
+		Name:     "Command",
+		LongForm: "command",
+		Help:     "Name of the first command. When it is the name of the plugin it runs as `auth0 <name>`, otherwise as `auth0 <name> <command>`. The default is the name of the plugin.",
+	}
+	pluginCreateCommandDescription = Flag{
+		Name:     "Command Description",
+		LongForm: "command-description",
+		Help:     "What the first command does. The default is the description of the plugin.",
+	}
+	pluginCreateDir = Flag{
+		Name:     "Directory",
+		LongForm: "dir",
+		Help:     "Where to write the project. It may not exist, or may be empty. The default is a directory named like the plugin.",
+	}
+	pluginCreateLicense = Flag{
+		Name:     "License",
+		LongForm: "license",
+		Help:     "License of the project, written into its files. There is no LICENSE file.",
+	}
+	pluginCreateScopes = Flag{
+		Name:     "Scopes",
+		LongForm: "scopes",
+		Help:     "Comma-separated Management API scopes that the first command may use.",
+	}
+	pluginCreateFrom = Flag{
+		Name:     "From",
+		LongForm: "from",
+		Help:     "A directory with your own starter projects, laid out like the built-in ones: go and ts, each a project. A file named X.tmpl is written as X.",
+	}
+)
 
 // pluginDevMode reports whether dev mode is on. It reads one variable and
 // nothing else, so it is cheap to ask on every start of the CLI.
@@ -63,16 +143,147 @@ func pluginDevCmd(cli *cli) *cobra.Command {
 		Long: "Commands for plugin authors. They are available only in dev mode, which you turn on with " + pluginDevModeEnv + "=true.\n\n" +
 			"A linked plugin runs as `auth0 <name>` from the directory of your build, through the same proxy, permissions and approval as an installed plugin. " +
 			"Only the checks that make no sense for a build that is not published are skipped: the hashes of its files, the lockfile and the revocation list.",
-		Example: `  auth0 plugin dev validate
+		Example: `  auth0 plugin dev create checkmate --lang go --author "Platform team" --bugs https://github.com/acme/checkmate/issues
+  auth0 plugin dev validate
   auth0 plugin dev link ./checkmate`,
 		// The commands for authors show in the help only in dev mode.
 		Hidden: !pluginDevMode(),
 	}
 
 	cmd.SetUsageTemplate(resourceUsageTemplate())
+	cmd.AddCommand(createPluginCmd(cli))
 	cmd.AddCommand(linkPluginCmd(cli))
 	cmd.AddCommand(unlinkPluginCmd(cli))
 	cmd.AddCommand(validatePluginCmd(cli))
+
+	return cmd
+}
+
+func createPluginCmd(cli *cli) *cobra.Command {
+	var (
+		opts    scaffold.Options
+		lang    string
+		from    string
+		version = pluginCreateDefaultVersion
+		scopes  []string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "create [name]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Create a new plugin project",
+		Long: "Write a new plugin project into a directory: a plugin.json, and a small starter project in Go or TypeScript that calls the Management API through the CLI. " +
+			"The project builds, tests and releases with the tools of its language, and the README says how.\n\n" +
+			"The name is the short name of the plugin: lowercase letters, digits and hyphens, starting with a letter. The plugin runs as `auth0 <name>`. " +
+			"The directory may not exist or may be empty, and an existing project is never overwritten. " +
+			"Missing values are asked for in a terminal and are an error otherwise.\n\n" +
+			"With `--from` the starter projects come from a directory of yours instead of the CLI. They may not hold links, more than 64 files, or more than 256 KB.",
+		Example: `  auth0 plugin dev create checkmate --lang go --author "Platform team" --bugs https://github.com/acme/checkmate/issues
+  auth0 plugin dev create checkmate --lang ts --author "Platform team" --bugs https://github.com/acme/checkmate/issues --scopes read:clients,read:users
+  auth0 plugin dev create checkmate --lang go --author "Platform team" --bugs https://github.com/acme/checkmate/issues --dir ./plugins/checkmate --json`,
+		// The gate comes before the check of the required flags.
+		PreRunE: func(*cobra.Command, []string) error { return requirePluginDevMode() },
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				opts.Name = args[0]
+			}
+
+			if opts.Name == "" {
+				if !canPrompt(cmd) {
+					return createInvalid(fmt.Errorf("<name> is required: %s", strings.TrimSuffix(pluginCreateName.Help, ".")))
+				}
+
+				if err := pluginCreateName.Ask(cmd, &opts.Name); err != nil {
+					return err
+				}
+			}
+
+			// A name that is typed goes through the same checks as one that is given.
+			if err := scaffold.CheckName(opts.Name); err != nil {
+				return createInvalid(err)
+			}
+
+			if err := checkPluginNameAvailable(cmd.Root(), opts.Name); err != nil {
+				return err
+			}
+
+			if err := pluginCreateLang.Select(cmd, &lang, []string{string(scaffold.LangGo), string(scaffold.LangTypeScript)}, nil); err != nil {
+				return err
+			}
+
+			if err := pluginCreateAuthor.Ask(cmd, &opts.Team, nil); err != nil {
+				return err
+			}
+
+			if err := pluginCreateBugs.Ask(cmd, &opts.Bugs, nil); err != nil {
+				return err
+			}
+
+			for _, missing := range []struct {
+				flag  Flag
+				value string
+			}{{pluginCreateLang, lang}, {pluginCreateAuthor, opts.Team}, {pluginCreateBugs, opts.Bugs}} {
+				if missing.value == "" {
+					return createInvalid(fmt.Errorf("--%s is required: %s", missing.flag.LongForm, strings.TrimSuffix(missing.flag.Help, ".")))
+				}
+			}
+
+			for i := range scopes {
+				scopes[i] = strings.TrimSpace(scopes[i])
+			}
+
+			opts.Lang = scaffold.Lang(lang)
+			opts.Version = version
+			opts.Scopes = scopes
+			opts.CLIVersion = buildinfo.Version
+
+			// The values that were not given.
+			setDefault(&opts.ID, registry.DefaultRegistryName+"/"+opts.Name)
+			setDefault(&opts.Description, pluginCreateDefaultDescription)
+			setDefault(&opts.Command, opts.Name)
+			setDefault(&opts.CommandDescription, opts.Description)
+			setDefault(&opts.Dir, opts.Name)
+			setDefault(&opts.License, pluginCreateDefaultLicense)
+
+			templates := scaffold.Embedded()
+
+			if from != "" {
+				info, err := os.Stat(from)
+				if err == nil && !info.IsDir() {
+					err = fmt.Errorf("%s is not a directory", from)
+				}
+
+				if err != nil {
+					return createInvalid(fmt.Errorf("cannot use --from: %w", err))
+				}
+
+				templates = os.DirFS(from)
+			}
+
+			files, err := scaffold.Create(opts, templates)
+			if err != nil {
+				return createFailed(err)
+			}
+
+			return sayCreated(cli, opts, files)
+		},
+	}
+
+	pluginCreateLang.RegisterString(cmd, &lang, "")
+	pluginCreateAuthor.RegisterString(cmd, &opts.Team, "")
+	pluginCreateBugs.RegisterString(cmd, &opts.Bugs, "")
+	pluginCreateID.RegisterString(cmd, &opts.ID, "")
+	pluginCreateVersion.RegisterString(cmd, &version, pluginCreateDefaultVersion)
+	pluginCreateDescription.RegisterString(cmd, &opts.Description, "")
+	pluginCreateCommand.RegisterString(cmd, &opts.Command, "")
+	pluginCreateCommandDescription.RegisterString(cmd, &opts.CommandDescription, "")
+	pluginCreateDir.RegisterString(cmd, &opts.Dir, "")
+	pluginCreateLicense.RegisterString(cmd, &opts.License, "")
+	pluginCreateScopes.RegisterStringSlice(cmd, &scopes, []string{pluginCreateDefaultScope})
+	pluginCreateFrom.RegisterString(cmd, &from, "")
+	cmd.Flags().BoolVar(&cli.json, "json", false, "Output in json format.")
+	cmd.Flags().BoolVar(&cli.jsonCompact, "json-compact", false, "Output in compact json format.")
+	cmd.MarkFlagsMutuallyExclusive("json", "json-compact")
 
 	return cmd
 }
@@ -662,4 +873,152 @@ func linkedConsent(manifest *plugins.Manifest, dir, policy string) (string, *dev
 	}
 
 	return devpolicy.ConsentHash(hash, file), file
+}
+
+// setDefault sets a value that was not given.
+func setDefault(value *string, fallback string) {
+	if *value == "" {
+		*value = fallback
+	}
+}
+
+// createInvalid is the failure of an input or a target that cannot be used. The
+// text may hold a path or a name from a directory given with --from, so it is
+// made safe to print.
+func createInvalid(err error) error {
+	return validationError{err: errors.New(plugins.SafeText(err.Error())), reason: "plugin_create_invalid"}
+}
+
+// createFailed is the failure of scaffold.Create. Only a failure that the person
+// can fix by changing what they gave has the reason of an invalid input, and any
+// other, such as a full disk, is a plain error that names the path. The text may
+// hold a path or a name from a directory given with --from, so it is made safe to
+// print.
+func createFailed(err error) error {
+	var input *scaffold.InputError
+	if errors.As(err, &input) {
+		return createInvalid(err)
+	}
+
+	return errors.New(plugins.SafeText(err.Error()))
+}
+
+// sayCreated tells the person what was written and what to do next, and prints
+// the result for a machine.
+func sayCreated(cli *cli, opts scaffold.Options, files []string) error {
+	dir, err := filepath.Abs(opts.Dir)
+	if err != nil {
+		return createInvalid(err)
+	}
+
+	r := cli.renderer
+
+	r.Infof("Created %s in %s (%s).", opts.ID, plugins.SafeText(dir), pluralize(len(files), "file", "files"))
+
+	var warnings []string
+
+	if len(opts.Scopes) == 0 {
+		warnings = append(warnings, "The first command declares no scopes, so the Management API call of the sample is denied. Add the scopes it needs under permissions.scopes in plugin.json.")
+	}
+
+	for _, warning := range warnings {
+		r.Warnf("%s", warning)
+	}
+
+	r.Infof("Next:")
+
+	for _, step := range createNextSteps(opts) {
+		r.Detailf("%s", step)
+	}
+
+	written := slices.Contains(files, devpolicy.FileName)
+
+	if written {
+		r.Infof("%s holds the scope rules of the linked build. Edit it when the plugin calls routes the starter does not cover, and run auth0 plugin approve %s again after any change.", devpolicy.FileName, opts.Name)
+	}
+
+	if skipped := opts.SkippedScopes(); len(skipped) > 0 {
+		r.Warnf("%s", skippedScopesWarning(skipped, written))
+	}
+
+	r.Infof("To publish it, push the project to a new GitHub repository: the first push to main releases version %s. Release again with: %s", opts.Version, createReleaseCommand(opts.Lang))
+
+	r.PluginCreated(display.PluginCreateResult{Dir: dir, Files: files, ID: opts.ID, Lang: string(opts.Lang), Warnings: warnings})
+
+	return nil
+}
+
+// skippedScopesWarning says which scopes got no starter rule, and what that
+// means for dev validate and the linked build. Written tells whether the project
+// has a dev-policy.json.
+func skippedScopesWarning(skipped []string, written bool) string {
+	safe := make([]string, 0, len(skipped))
+	for _, scope := range skipped {
+		safe = append(safe, plugins.SafeText(scope))
+	}
+
+	pronoun := "them"
+	if len(safe) == 1 {
+		pronoun = "it"
+	}
+
+	remedy := "until a rule for " + pronoun + " is added to " + devpolicy.FileName
+	if !written {
+		remedy = "until " + devpolicy.FileName + " is created with a rule for " + pronoun
+	}
+
+	return fmt.Sprintf("%s got no starter rule, because the CLI writes rules only for the read, create, update and delete scopes of a resource. auth0 plugin dev validate fails %s.", strings.Join(safe, ", "), remedy)
+}
+
+// createNextSteps returns the commands to run after the project is created, in
+// order. They are the ones in the README of the project.
+func createNextSteps(opts scaffold.Options) []string {
+	build := "go mod tidy && go build -o " + opts.Name + " ."
+	if opts.Lang == scaffold.LangTypeScript {
+		build = "bun install && bun run build"
+	}
+
+	run := "auth0 " + opts.Name
+	if opts.Command != opts.Name {
+		run += " " + opts.Command
+	}
+
+	return []string{
+		"cd " + shellWord(opts.Dir),
+		build,
+		pluginDevModeEnv + "=true auth0 plugin dev link",
+		"auth0 plugin approve " + opts.Name,
+		run,
+	}
+}
+
+// createReleaseCommand returns the command of the project that releases a new
+// version.
+func createReleaseCommand(lang scaffold.Lang) string {
+	if lang == scaffold.LangTypeScript {
+		return "bun run release minor"
+	}
+
+	return "make release BUMP=minor"
+}
+
+// shellWord returns a path as one word of a shell command line.
+func shellWord(path string) string {
+	return quoteWord(path, runtime.GOOS == "windows")
+}
+
+// quoteWord quotes a path that has a character the shell treats as special. The
+// Windows shells do not read single quotes, and a Windows path holds no double
+// quote, so it is wrapped in double quotes as it is.
+func quoteWord(path string, windows bool) string {
+	path = plugins.SafeText(path)
+	if !strings.ContainsAny(path, " \t'\"$`\\&;|<>()*?[]{}!#~") {
+		return path
+	}
+
+	if windows {
+		return `"` + path + `"`
+	}
+
+	return "'" + strings.ReplaceAll(path, "'", `'\''`) + "'"
 }

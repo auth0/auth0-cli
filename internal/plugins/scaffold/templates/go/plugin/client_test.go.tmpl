@@ -1,0 +1,65 @@
+package plugin
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestNewClientEnvironment(t *testing.T) {
+	notPEM := filepath.Join(t.TempDir(), "not-a-certificate")
+	if err := os.WriteFile(notPEM, []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name    string
+		env     map[string]string
+		wantErr string
+	}{
+		{
+			name:    "no domain",
+			env:     map[string]string{EnvToken: "t", EnvCACert: notPEM},
+			wantErr: EnvDomain + " is not set",
+		},
+		{
+			name:    "no token",
+			env:     map[string]string{EnvDomain: "127.0.0.1:1", EnvCACert: notPEM},
+			wantErr: EnvToken + " is not set",
+		},
+		{
+			name:    "no certificate path",
+			env:     map[string]string{EnvDomain: "127.0.0.1:1", EnvToken: "t"},
+			wantErr: EnvCACert + " is not set",
+		},
+		{
+			name:    "certificate file is missing",
+			env:     map[string]string{EnvDomain: "127.0.0.1:1", EnvToken: "t", EnvCACert: filepath.Join(t.TempDir(), "missing")},
+			wantErr: "cannot read the proxy certificate",
+		},
+		{
+			name:    "certificate is not PEM",
+			env:     map[string]string{EnvDomain: "127.0.0.1:1", EnvToken: "t", EnvCACert: notPEM},
+			wantErr: "does not hold a PEM certificate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, name := range []string{EnvDomain, EnvToken, EnvCACert} {
+				t.Setenv(name, tt.env[name])
+			}
+
+			_, err := NewClient()
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("error = %v, want one that contains %q", err, tt.wantErr)
+			}
+
+			// Whoever runs the file directly must learn how to run it.
+			if strings.HasSuffix(tt.wantErr, "is not set") && !strings.Contains(err.Error(), "auth0 "+Name) {
+				t.Errorf("error = %v, want it to name `auth0 %s`", err, Name)
+			}
+		})
+	}
+}

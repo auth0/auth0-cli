@@ -1,0 +1,19 @@
+import { ManagementClient } from "auth0";
+
+import { ENV, requireEnv, type Env } from "./env";
+
+/**
+ * Returns the Management API client of the auth0 package for this run. Every
+ * call goes through the proxy of the CLI, which allows only the scopes that
+ * plugin.json declares for the command.
+ *
+ * The package builds https://<domain>/api/v2 from the domain, so host:port works.
+ * Tests pass their own fetch function.
+ */
+export function createClient(env: Env = process.env, fetchFn?: typeof fetch): ManagementClient {
+  return new ManagementClient({
+    domain: requireEnv(ENV.domain, env),
+    token: requireEnv(ENV.token, env),
+    fetch: fetchFn,
+  });
+}

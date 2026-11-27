@@ -1,0 +1,26 @@
+package plugin
+
+import (
+	"context"
+
+	"github.com/auth0/go-auth0/v3/management/core"
+)
+
+// Collect walks every page of a list call and returns all the items. Pass it
+// the result of any SDK List method:
+//
+//	page, err := api.Clients.List(ctx, request)
+//	if err != nil { ... }
+//	clients, err := plugin.Collect(ctx, page)
+//
+// The result is never nil, so JSON output of an empty list is [] and not null.
+func Collect[C comparable, T, R any](ctx context.Context, page *core.Page[C, T, R]) ([]T, error) {
+	items := []T{}
+
+	iter := page.Iterator()
+	for iter.Next(ctx) {
+		items = append(items, iter.Current())
+	}
+
+	return items, iter.Err()
+}

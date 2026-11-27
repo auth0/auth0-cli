@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Usage: build-archive.sh PLATFORM
+# Compiles the plugin for one platform of plugin.json (Bun target bun-PLATFORM)
+# into out/<name>_<version>_<platform>.tar.gz, or .zip for Windows. The CLI wants
+# exactly the executable and plugin.json at the root.
+set -euo pipefail
+# shellcheck source=lib.sh
+# shellcheck source-path=SCRIPTDIR
+source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+
+platform=${1:?usage: build-archive.sh PLATFORM}
+
+version=$(project_version)
+name=__PLUGIN_NAME__
+binary=$name
+extension=tar.gz
+if [[ $platform == windows-* ]]; then
+  binary=$name.exe
+  extension=zip
+fi
+archive="out/${name}_${version}_${platform}.${extension}"
+
+rm -rf stage
+mkdir -p stage out
+bun build --compile --target="bun-$platform" --outfile "stage/$binary" src/index.ts
+cp plugin.json stage/
+
+if [[ $extension == zip ]]; then
+  rm -f "$archive"
+  (cd stage && zip -q -X "../$archive" "$binary" plugin.json)
+else
+  tar -czf "$archive" -C stage "$binary" plugin.json
+fi
+echo "$archive"

@@ -1,0 +1,97 @@
+// Package commands holds the commands of the plugin, one file each. A command
+// registers itself in an init function, so adding a file adds a command.
+package commands
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"strings"
+
+	"example.com/__PLUGIN_NAME__/plugin"
+)
+
+// Command is one command of the plugin. Every command also needs an entry under
+// "commands" in plugin.json, with the Management API scopes it uses.
+//
+// A command named like the plugin is the root command, run as
+// `auth0 __PLUGIN_NAME__`. Any other command is run as
+// `auth0 __PLUGIN_NAME__ <name>`, and the CLI then passes the name as the first argument.
+type Command struct {
+	Name string
+	Help string
+	Run  func(ctx context.Context, args []string, out *plugin.Output) error
+}
+
+var registered []Command
+
+// Register adds a command. It panics on a second command with the same name,
+// which is a mistake in the code and shows up the first time the plugin runs.
+func Register(command Command) {
+	if slices.ContainsFunc(registered, func(c Command) bool { return c.Name == command.Name }) {
+		panic("commands: two commands are named " + command.Name)
+	}
+
+	registered = append(registered, command)
+}
+
+// Run picks the command from the arguments the CLI passed, runs it and returns
+// the exit code. The CLI has already removed its own flags (--json, --tenant),
+// so what is left belongs to the plugin.
+func Run(ctx context.Context, args []string, out *plugin.Output) int {
+	if len(args) > 0 && args[0] == "--version" {
+		_, _ = fmt.Fprintf(out.Stdout, "%s %s\n", plugin.Name, plugin.Version)
+
+		return plugin.ExitOK
+	}
+
+	command, rest, err := find(args)
+	if err != nil && len(args) > 0 && (args[0] == "help" || args[0] == "-h" || args[0] == "--help") {
+		printHelp(out)
+
+		return plugin.ExitOK
+	}
+
+	if err == nil {
+		err = command.Run(ctx, rest, out)
+	}
+
+	return plugin.Report(out, err)
+}
+
+// find returns the command for the arguments and the arguments that are left.
+func find(args []string) (Command, []string, error) {
+	if len(args) > 0 {
+		for _, c := range registered {
+			if c.Name == args[0] && c.Name != plugin.Name {
+				return c, args[1:], nil
+			}
+		}
+	}
+
+	for _, c := range registered {
+		if c.Name == plugin.Name {
+			return c, args, nil
+		}
+	}
+
+	if len(args) == 0 {
+		return Command{}, nil, plugin.UsageError{Message: "a command is required"}
+	}
+
+	return Command{}, nil, plugin.UsageError{Message: fmt.Sprintf("unknown command %q", args[0])}
+}
+
+// printHelp lists the commands, for people who run the file directly.
+// `auth0 __PLUGIN_NAME__ --help` is answered by the CLI from plugin.json.
+func printHelp(out *plugin.Output) {
+	lines := make([]string, 0, len(registered))
+	for _, c := range registered {
+		lines = append(lines, fmt.Sprintf("  %-36s %s", plugin.Invocation(c.Name), c.Help))
+	}
+
+	slices.Sort(lines)
+
+	_, _ = fmt.Fprintf(out.Stdout, "%s is a plugin for the Auth0 CLI. Run it with `auth0`, not directly.\n\nCommands:\n%s\n",
+		plugin.Name, strings.Join(lines, "\n"))
+}

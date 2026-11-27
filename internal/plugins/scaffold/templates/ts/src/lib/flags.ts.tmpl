@@ -1,0 +1,17 @@
+import { parseArgs, type ParseArgsConfig } from "node:util";
+
+import { UsageError } from "./errors";
+
+/**
+ * Parses the arguments of one command and rejects unknown flags and stray
+ * arguments with a UsageError. Declare the flags of a command in `options`, and
+ * list them in plugin.json so that the CLI shows them in its help. The flags
+ * that the CLI owns (--json, --tenant and so on) never get here.
+ */
+export function parseFlags(args: string[], options: NonNullable<ParseArgsConfig["options"]> = {}) {
+  try {
+    return parseArgs({ args, options, strict: true, allowPositionals: false });
+  } catch (error) {
+    throw new UsageError(error instanceof Error ? error.message : String(error));
+  }
+}

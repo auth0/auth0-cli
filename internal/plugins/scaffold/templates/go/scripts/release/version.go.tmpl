@@ -1,0 +1,146 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
+)
+
+// semver matches a semantic version without build metadata.
+var semver = regexp.MustCompile(`^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$`)
+
+// nextVersion returns the version that request (patch, minor, major or an exact
+// version) leads to.
+func nextVersion(current, request string) (string, error) {
+	parts := semver.FindStringSubmatch(current)
+	if parts == nil {
+		return "", fmt.Errorf("the version %q in plugin.json is not a semantic version such as 1.2.3", current)
+	}
+
+	switch request {
+	case "patch", "minor", "major":
+		if parts[4] != "" {
+			return "", fmt.Errorf("the current version %s is a prerelease, so %q is ambiguous: give the exact version, for example %s.%s.%s",
+				current, request, parts[1], parts[2], parts[3])
+		}
+
+		var n [3]uint64
+
+		for i := range n {
+			// Thirty-two bits keep the increment below from overflowing.
+			v, err := strconv.ParseUint(parts[i+1], 10, 32)
+			if err != nil {
+				return "", fmt.Errorf("the version %s in plugin.json has a number too large to raise", current)
+			}
+
+			n[i] = v
+		}
+
+		switch request {
+		case "major":
+			n = [3]uint64{n[0] + 1, 0, 0}
+		case "minor":
+			n = [3]uint64{n[0], n[1] + 1, 0}
+		default:
+			n[2]++
+		}
+
+		return fmt.Sprintf("%d.%d.%d", n[0], n[1], n[2]), nil
+	}
+
+	if !semver.MatchString(request) {
+		hint := ""
+		if strings.HasPrefix(request, "v") && semver.MatchString(request[1:]) {
+			hint = fmt.Sprintf(" Write %s without the v.", request[1:])
+		}
+
+		return "", fmt.Errorf("%q is not patch, minor, major or a semantic version such as 1.2.3 (no build metadata).%s", request, hint)
+	}
+
+	if request == current {
+		return "", fmt.Errorf("%s is already the version in plugin.json", current)
+	}
+
+	return request, nil
+}
+
+// versionSpan finds the top-level "version" string of a JSON object: its value
+// and the byte range of the value, quotes included.
+func versionSpan(doc []byte) (value string, start, end int, err error) {
+	decoder := json.NewDecoder(bytes.NewReader(doc))
+
+	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
+		return "", 0, 0, errors.New("the file is not a JSON object")
+	}
+
+	found := false
+
+	for decoder.More() {
+		key, err := decoder.Token()
+		if err != nil {
+			return "", 0, 0, err
+		}
+
+		var raw json.RawMessage
+		if err := decoder.Decode(&raw); err != nil {
+			return "", 0, 0, err
+		}
+
+		if key != "version" {
+			continue
+		}
+
+		if found {
+			return "", 0, 0, errors.New(`the file has two "version" keys`)
+		}
+
+		if err := json.Unmarshal(raw, &value); err != nil {
+			return "", 0, 0, errors.New(`"version" is not a string`)
+		}
+
+		end = int(decoder.InputOffset())
+		start = end - len(raw)
+		found = true
+
+		if !bytes.Equal(doc[start:end], raw) {
+			return "", 0, 0, errors.New(`cannot locate "version" in the file`)
+		}
+	}
+
+	if !found {
+		return "", 0, 0, errors.New(`the file has no "version" key`)
+	}
+
+	return value, start, end, nil
+}
+
+func readVersion(doc []byte) (string, error) {
+	value, _, _, err := versionSpan(doc)
+
+	return value, err
+}
+
+// setVersion replaces the top-level "version" and leaves every other byte as it
+// was, so the diff of a release is one line.
+func setVersion(doc []byte, version string) ([]byte, error) {
+	if !semver.MatchString(version) {
+		return nil, fmt.Errorf("%q is not a semantic version", version)
+	}
+
+	_, start, end, err := versionSpan(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	out := append(append(append([]byte{}, doc[:start]...), strconv.Quote(version)...), doc[end:]...)
+
+	if got, err := readVersion(out); err != nil || got != version {
+		return nil, errors.New(`could not set "version" in the file`)
+	}
+
+	return out, nil
+}

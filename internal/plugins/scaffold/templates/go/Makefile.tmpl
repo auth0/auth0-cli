@@ -1,0 +1,16 @@
+.PHONY: build test lint release release-snapshot
+
+build: ## Build the plugin for this machine.
+	go build -trimpath -o __PLUGIN_NAME__ .
+
+test: ## Run the tests.
+	go test ./...
+
+lint: ## Run golangci-lint (https://golangci-lint.run/welcome/install/).
+	golangci-lint run ./...
+
+release: ## Start a release: make release BUMP=patch|minor|major or VERSION=1.2.3. Add DRY_RUN=1 to preview.
+	@go run ./scripts/release $(if $(DRY_RUN),--dry-run) "$(or $(VERSION),$(BUMP))"
+
+release-snapshot: ## Build every release archive into dist/ without publishing (needs goreleaser).
+	goreleaser release --snapshot --clean

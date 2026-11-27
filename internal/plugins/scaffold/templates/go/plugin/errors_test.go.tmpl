@@ -1,0 +1,80 @@
+package plugin
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"flag"
+	"fmt"
+	"net/url"
+	"testing"
+)
+
+func TestReport(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		wantCode int
+		wantErr  string
+	}{
+		{name: "success", wantCode: ExitOK},
+		{name: "help", err: ErrHelp, wantCode: ExitOK},
+		{name: "usage", err: UsageError{"bad flag"}, wantCode: ExitUsage, wantErr: "error: bad flag"},
+		{name: "wrapped usage", err: fmt.Errorf("x: %w", UsageError{"bad flag"}), wantCode: ExitUsage, wantErr: "error: bad flag"},
+		{name: "interrupted", err: fmt.Errorf("list: %w", context.Canceled), wantCode: ExitError, wantErr: "interrupted"},
+		{name: "other", err: errors.New("boom"), wantCode: ExitError, wantErr: "error: boom"},
+		{
+			name:     "proxy not reachable",
+			err:      &url.Error{Op: "Get", URL: "https://127.0.0.1:1/api/v2/clients", Err: errors.New("dial tcp 127.0.0.1:1: connect: connection refused")},
+			wantCode: ExitError,
+			wantErr:  "error: could not reach the CLI proxy: dial tcp 127.0.0.1:1: connect: connection refused",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var stderr bytes.Buffer
+
+			code := Report(&Output{Stdout: &bytes.Buffer{}, Stderr: &stderr}, tt.err)
+			if code != tt.wantCode {
+				t.Errorf("exit code = %d, want %d", code, tt.wantCode)
+			}
+
+			if tt.wantErr != "" && !bytes.Contains(stderr.Bytes(), []byte(tt.wantErr)) {
+				t.Errorf("stderr = %q, want it to contain %q", stderr.String(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseFlags(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want error
+	}{
+		{name: "no arguments"},
+		{name: "help", args: []string{"-h"}, want: ErrHelp},
+		{name: "unknown flag", args: []string{"--nope"}, want: UsageError{}},
+		{name: "positional argument", args: []string{"extra"}, want: UsageError{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := &Output{Stdout: &bytes.Buffer{}, Stderr: &bytes.Buffer{}}
+
+			err := ParseFlags(flag.NewFlagSet("cmd", flag.ContinueOnError), tt.args, out)
+
+			var usage UsageError
+
+			switch {
+			case tt.want == nil && err != nil:
+				t.Errorf("error = %v, want none", err)
+			case errors.Is(tt.want, ErrHelp) && !errors.Is(err, ErrHelp):
+				t.Errorf("error = %v, want ErrHelp", err)
+			case errors.As(tt.want, &usage) && !errors.As(err, &usage):
+				t.Errorf("error = %v, want a UsageError", err)
+			}
+		})
+	}
+}

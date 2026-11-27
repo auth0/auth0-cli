@@ -1,0 +1,148 @@
+// Raises the version in plugin.json (and package.json) on a release branch,
+// commits, pushes and opens a pull request, which runs the Release workflow
+// when merged. It uses your own git and gh, so your credentials apply.
+//
+// Usage: bun run release [--dry-run] patch|minor|major|X.Y.Z
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { nextVersion, readVersion, setVersion } from "./version";
+
+function run(command: string, ...args: string[]): string {
+  const result = Bun.spawnSync([command, ...args], { stdin: "inherit", stdout: "pipe", stderr: "pipe" });
+  if (!result.success) {
+    throw new Error(`${command} ${args[0]}: ${result.stderr.toString().trim() || `exit code ${result.exitCode}`}`);
+  }
+  return result.stdout.toString().trim();
+}
+
+function read(file: string): [string, string | undefined] {
+  const text = readFileSync(file, "utf8");
+  try {
+    return [text, readVersion(text)];
+  } catch (error) {
+    throw new Error(`${file}: ${(error as Error).message}`);
+  }
+}
+
+function checkTools(): void {
+  for (const [tool, url] of [["git", "https://git-scm.com"], ["gh", "https://cli.github.com"]] as const) {
+    if (!Bun.which(tool)) throw new Error(`${tool} is not installed. Install it from ${url}`);
+  }
+  try {
+    run("gh", "auth", "status");
+  } catch (error) {
+    throw new Error(`gh is not logged in. Run: gh auth login\n${(error as Error).message}`);
+  }
+}
+
+function defaultBranch(): string {
+  const first = run("git", "ls-remote", "--symref", "origin", "HEAD").split("\n")[0] ?? "";
+  const match = /^ref: refs\/heads\/([^\t]+)\t/.exec(first);
+  if (!match?.[1]) throw new Error("origin did not say which branch is its default branch");
+  return match[1];
+}
+
+// Requires a clean checkout of the default branch, level with origin.
+function checkBranch(base: string): void {
+  const current = run("git", "branch", "--show-current");
+  if (current !== base) throw new Error(`you are on ${current || "a detached HEAD"}. Switch to ${base} first: git switch ${base}`);
+
+  const changes = run("git", "status", "--porcelain", "--untracked-files=no");
+  if (changes !== "") throw new Error(`there are uncommitted changes. Commit or stash them first:\n${changes}`);
+
+  const head = run("git", "rev-parse", "HEAD");
+  const tip = run("git", "ls-remote", "origin", `refs/heads/${base}`).split("\t")[0] ?? "";
+  if (tip !== head) {
+    throw new Error(`${base} is not level with origin/${base} (here ${head.slice(0, 8)}, origin ${tip.slice(0, 8)}). Run git pull or git push first`);
+  }
+}
+
+// Refuses a tag or branch that exists here or on origin.
+function checkFree(tag: string, branch: string): void {
+  const refs = [`refs/tags/${tag}`, `refs/heads/${branch}`];
+  const local = run("git", "for-each-ref", "--format=%(refname)", ...refs);
+  const remote = run("git", "ls-remote", "origin", ...refs);
+
+  // Remote lines are "<sha><tab><ref>", plus ^{} on an annotated tag.
+  for (const line of `${local}\n${remote}`.split("\n")) {
+    const ref = (line.split("\t").pop() ?? "").replace(/\^\{\}$/, "");
+    if (refs.includes(ref)) throw new Error(`${ref} already exists, here or on origin. Pick another version, or delete it first`);
+  }
+}
+
+// Creates the branch and the pull request. Before the push, a failure restores
+// the repository.
+function publish(base: string, branch: string, tag: string, edited: Map<string, string>): void {
+  run("git", "switch", "-c", branch);
+  try {
+    for (const [file, text] of edited) writeFileSync(file, text, { mode: statSync(file).mode & 0o777 });
+    run("git", "add", "--", ...edited.keys());
+    run("git", "commit", "-m", `chore: release ${tag}`);
+    run("git", "push", "--set-upstream", "origin", branch);
+  } catch (error) {
+    for (const undo of [["restore", "--staged", "--worktree", "--", ...edited.keys()], ["switch", base], ["branch", "-D", branch]]) {
+      try {
+        run("git", ...undo);
+      } catch {
+        // Keep going to leave as little behind as possible.
+      }
+    }
+    throw error;
+  }
+
+  const body = `Merging this pull request releases ${tag}: the Release workflow tests, builds, tags and publishes it.`;
+  let url: string;
+  try {
+    url = run("gh", "pr", "create", "--base", base, "--head", branch, "--title", `Release ${tag}`, "--body", body);
+  } catch (error) {
+    throw new Error(`the branch ${branch} is pushed but the pull request was not opened. Open it with: gh pr create --head ${branch}\n${(error as Error).message}`);
+  }
+  run("git", "switch", base);
+  console.log(`${url}\nMerge the pull request to publish ${tag}.`);
+}
+
+function release(request: string, dryRun: boolean): void {
+  checkTools();
+  const base = defaultBranch();
+  checkBranch(base);
+
+  const [plugin, current] = read("plugin.json");
+  if (current === undefined) throw new Error('plugin.json: the file has no "version" key');
+
+  // package.json need not have a version, but when it does, it follows plugin.json.
+  const [other, otherVersion] = existsSync("package.json") ? read("package.json") : ["", undefined];
+  if (otherVersion !== undefined && otherVersion !== current) {
+    throw new Error(`plugin.json has version ${current} but package.json has ${otherVersion}. Make them the same first`);
+  }
+
+  const version = nextVersion(current, request);
+  const tag = `v${version}`;
+  const branch = `release/${tag}`;
+  checkFree(tag, branch);
+
+  const edited = new Map([["plugin.json", setVersion(plugin, version)]]);
+  if (otherVersion !== undefined) edited.set("package.json", setVersion(other, version));
+  console.log(
+    `Releasing ${version} (now ${current}) from ${base}:\n  create branch ${branch}, set the version in ${[...edited.keys()].join(" and ")},\n` +
+      `  commit "chore: release ${tag}", push and open the pull request "Release ${tag}"`,
+  );
+  if (dryRun) {
+    console.log("Dry run: nothing was changed.");
+    return;
+  }
+  publish(base, branch, tag, edited);
+}
+
+const args = process.argv.slice(2);
+const dryRun = args.includes("--dry-run");
+const positional = args.filter((arg) => arg !== "--dry-run");
+const request = positional[0];
+if (request === undefined || positional.length > 1 || request.startsWith("-")) {
+  console.error("usage: bun run release [--dry-run] patch|minor|major|X.Y.Z");
+  process.exit(2);
+}
+try {
+  release(request, dryRun);
+} catch (error) {
+  console.error(`release: ${(error as Error).message}`);
+  process.exit(1);
+}

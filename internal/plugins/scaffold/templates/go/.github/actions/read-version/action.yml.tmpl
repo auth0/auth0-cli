@@ -1,0 +1,26 @@
+name: Read version
+description: Read the version from plugin.json and report what exists for its tag.
+
+outputs:
+  version:
+    description: Version, such as 1.2.3.
+    value: ${{ steps.read.outputs.version }}
+  tag:
+    description: Tag, such as v1.2.3.
+    value: ${{ steps.read.outputs.tag }}
+  tag-exists:
+    description: true when the tag exists.
+    value: ${{ steps.read.outputs.tag-exists }}
+  release-exists:
+    description: true when the release is complete.
+    value: ${{ steps.read.outputs.release-exists }}
+
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: bash .github/scripts/read-version.sh >> "$GITHUB_OUTPUT"
