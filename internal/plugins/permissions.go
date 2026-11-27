@@ -101,12 +101,18 @@ type ConsentCommand struct {
 // applied to the permissions union returned by Permissions and to the name and
 // interactive value of every command.
 func (m *Manifest) PermissionsHash() string {
+	return ConsentHash(m.Permissions(), m.ConsentCommands())
+}
+
+// ConsentCommands returns the name and interactive value of every command of
+// the manifest, in the order of the manifest.
+func (m *Manifest) ConsentCommands() []ConsentCommand {
 	commands := make([]ConsentCommand, 0, len(m.Commands))
 	for _, command := range m.Commands {
 		commands = append(commands, ConsentCommand{Name: command.Name, Interactive: command.Interactive})
 	}
 
-	return ConsentHash(m.Permissions(), commands)
+	return commands
 }
 
 // ConsentHash returns "sha256:" followed by the lowercase hex SHA-256 of the
