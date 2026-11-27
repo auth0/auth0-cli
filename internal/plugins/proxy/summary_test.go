@@ -103,6 +103,93 @@ func TestDenialLog_summary(t *testing.T) {
 	}
 }
 
+// longPath returns a path of the given number of bytes that a rule can hold.
+func longPath(n int) string {
+	return "/api/v2/" + strings.Repeat("a", n-len("/api/v2/"))
+}
+
+func TestDenialLog_summaryWithADevPolicy(t *testing.T) {
+	const file = "/work/dev-policy.json"
+
+	tests := []struct {
+		name string
+		do   func(l *denialLog)
+		want string
+	}{
+		{
+			name: "a call that no rule matches",
+			do:   func(l *denialLog) { l.denyUnmatched("POST", "/api/v2/x/12") },
+			want: `Plugin checkmate: 1 API call was denied (POST /api/v2/x/12). Review permissions.scopes in plugin.json. Add to /work/dev-policy.json: { "method": "POST", "path": "/api/v2/x/12", "anyOf": ["<scope>"] } (use {id} where the path has an id)`,
+		},
+		{
+			name: "a path with characters a rule cannot hold",
+			do:   func(l *denialLog) { l.denyUnmatched("GET", "/api/v2/users/a b?x=1") },
+			want: `Plugin checkmate: 1 API call was denied (GET /api/v2/users/a b?x=1). Review permissions.scopes in plugin.json. Add a rule to /work/dev-policy.json for GET /api/v2/users/a b?x=1. Use {id} for the parts that change.`,
+		},
+		{
+			name: "a path of 256 bytes is suggested whole",
+			do:   func(l *denialLog) { l.denyUnmatched("GET", longPath(256)) },
+			want: `Plugin checkmate: 1 API call was denied (GET ` + safeText(longPath(256)) + `). Review permissions.scopes in plugin.json. Add to /work/dev-policy.json: { "method": "GET", "path": "` + longPath(256) +
+				`", "anyOf": ["<scope>"] } (use {id} where the path has an id)`,
+		},
+		{
+			name: "a path of more than 256 bytes gets no rule",
+			do:   func(l *denialLog) { l.denyUnmatched("GET", longPath(257)) },
+			want: `Plugin checkmate: 1 API call was denied (GET ` + safeText(longPath(257)) + `). Review permissions.scopes in plugin.json. Add a rule to /work/dev-policy.json for GET ` + safeText(longPath(257)) +
+				`. Use {id} for the parts that change.`,
+		},
+		{
+			name: "a scope that is not declared",
+			do:   func(l *denialLog) { l.deny("read:users", "GET", "/api/v2/users") },
+			want: `Plugin checkmate: 1 API call was denied (read:users for GET /api/v2/users). Review permissions.scopes in plugin.json. Declare "read:users" under permissions.scopes in plugin.json.`,
+		},
+		{
+			name: "a denial for another reason has no hint",
+			do:   func(l *denialLog) { l.deny("", "GET", "/oauth/token") },
+			want: "Plugin checkmate: 1 API call was denied (GET /oauth/token). Review permissions.scopes in plugin.json.",
+		},
+		{
+			name: "both kinds",
+			do: func(l *denialLog) {
+				l.denyUnmatched("GET", "/api/v2/roles")
+				l.deny("read:users", "GET", "/api/v2/users")
+			},
+			want: `Plugin checkmate: 2 API calls were denied (read:users for GET /api/v2/users, GET /api/v2/roles). Review permissions.scopes in plugin.json. ` +
+				`Declare "read:users" under permissions.scopes in plugin.json. Add to /work/dev-policy.json: { "method": "GET", "path": "/api/v2/roles", "anyOf": ["<scope>"] } (use {id} where the path has an id)`,
+		},
+		{
+			name: "only Auth0 refused",
+			do:   func(l *denialLog) { l.refuse() },
+			want: "Plugin checkmate: Auth0 refused 1 call because your session lacks a scope. Review permissions.scopes in plugin.json.",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			log := denialLog{devPolicyFile: file}
+			test.do(&log)
+
+			assert.Equal(t, test.want, log.summary("checkmate"))
+		})
+	}
+}
+
+// Without a dev policy the summary is what it was before the hints existed,
+// whether a call was unmatched or not.
+func TestDenialLog_summaryWithoutADevPolicyIsUnchanged(t *testing.T) {
+	var plain, unmatched denialLog
+
+	plain.deny("", "POST", "/api/v2/x/12")
+	plain.deny("read:users", "GET", "/api/v2/users")
+	unmatched.denyUnmatched("POST", "/api/v2/x/12")
+	unmatched.deny("read:users", "GET", "/api/v2/users")
+
+	want := "Plugin checkmate: 2 API calls were denied (read:users for GET /api/v2/users, POST /api/v2/x/12). Review permissions.scopes in plugin.json."
+
+	assert.Equal(t, want, plain.summary("checkmate"))
+	assert.Equal(t, want, unmatched.summary("checkmate"))
+}
+
 func TestDenialLog_keepsAtMostTwentyDifferentCalls(t *testing.T) {
 	var log denialLog
 
