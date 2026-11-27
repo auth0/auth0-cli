@@ -106,6 +106,19 @@ func validateAuthMode(getenv func(string) string) error {
 	}
 }
 
+// envTenantConflictError is the error for a --tenant that names another tenant
+// than the AUTH0_DOMAIN that fixes it in env auth mode.
+func envTenantConflictError(tenant, domain string) error {
+	return authError{
+		err: fmt.Errorf(
+			"--tenant %q conflicts with %s=%q; in %s=%s mode the tenant is fixed by %s. "+
+				"Drop --tenant, or set %s to the tenant you want to target",
+			tenant, envDomain, domain, authModeEnvVar, authModeEnv, envDomain, envDomain,
+		),
+		reason: "env_auth_tenant_conflict",
+	}
+}
+
 // setupWithEnvAuthentication authenticates purely from environment variables,
 // touching neither the on-disk config nor the keychain. It accepts a pre-minted
 // Management API token via AUTH0_API_TOKEN, or client credentials via
@@ -136,14 +149,7 @@ func (c *cli) setupWithEnvAuthentication(ctx context.Context) error {
 	// tenant.
 	if c.tenantExplicit {
 		if requested := strings.TrimSpace(c.tenant); !strings.EqualFold(requested, domain) {
-			return authError{
-				err: fmt.Errorf(
-					"--tenant %q conflicts with %s=%q; in %s=%s mode the tenant is fixed by %s. "+
-						"Drop --tenant, or set %s to the tenant you want to target",
-					c.tenant, envDomain, domain, authModeEnvVar, authModeEnv, envDomain, envDomain,
-				),
-				reason: "env_auth_tenant_conflict",
-			}
+			return envTenantConflictError(c.tenant, domain)
 		}
 	}
 
